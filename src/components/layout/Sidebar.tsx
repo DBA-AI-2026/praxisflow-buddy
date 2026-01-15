@@ -10,6 +10,7 @@ import {
   Calendar,
   LogOut,
 } from "lucide-react";
+import logo from "@/assets/logo.jpeg";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -32,12 +33,10 @@ export function Sidebar() {
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border">
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <div className="flex h-16 items-center gap-2 px-6 border-b border-sidebar-border">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary">
-            <Building2 className="h-5 w-5 text-sidebar-primary-foreground" />
-          </div>
+        <div className="flex h-16 items-center gap-3 px-6 border-b border-sidebar-border">
+          <img src={logo} alt="Honorarfuchs Logo" className="h-10 w-10 rounded-lg object-contain" />
           <div>
-            <span className="text-lg font-semibold text-sidebar-foreground">Qodia</span>
+            <span className="text-lg font-semibold text-sidebar-foreground">Honorarfuchs</span>
             <span className="text-xs block text-sidebar-foreground/60">Portal</span>
           </div>
         </div>
