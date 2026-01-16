@@ -38,7 +38,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-4 md:px-6 border-b border-sidebar-border">
-        <img src={logo} alt="Honorarfuchs Logo" className="h-9 w-9 md:h-10 md:w-10 rounded-lg object-contain" />
+        <img src={logo} alt="Honorarfuchs Logo" className="h-11 w-11 md:h-12 md:w-12 rounded-full object-cover" />
         <div>
           <span className="text-base md:text-lg font-semibold text-sidebar-foreground">Honorarfuchs</span>
           <span className="text-xs block text-sidebar-foreground/60">Portal</span>
