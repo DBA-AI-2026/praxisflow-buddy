@@ -6,26 +6,26 @@
 
 @layer base {
   :root {
-    /* Honorarfuchs Theme - Rot & Dunkelblau */
+    /* Honorarfuchs Theme - Rot (#b6193d) & Dunkelblau (#0b367f) */
     --background: 210 20% 98%;
-    --foreground: 218 84% 20%;
+    --foreground: 218 84% 27%;
 
     --card: 0 0% 100%;
-    --card-foreground: 218 84% 20%;
+    --card-foreground: 218 84% 27%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 218 84% 20%;
+    --popover-foreground: 218 84% 27%;
 
-    --primary: 347 76% 41%;
+    --primary: 350 78% 40%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 218 30% 93%;
-    --secondary-foreground: 218 84% 28%;
+    --secondary-foreground: 218 84% 27%;
 
     --muted: 210 15% 95%;
     --muted-foreground: 218 30% 45%;
 
-    --accent: 218 84% 28%;
+    --accent: 218 84% 27%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
@@ -39,23 +39,23 @@
 
     --border: 218 20% 88%;
     --input: 218 20% 88%;
-    --ring: 347 76% 41%;
+    --ring: 350 78% 40%;
 
     --radius: 0.5rem;
 
-    /* Sidebar - Dunkelblau */
-    --sidebar-background: 218 84% 18%;
+    /* Sidebar - Dunkelblau (#0b367f) */
+    --sidebar-background: 218 84% 27%;
     --sidebar-foreground: 210 15% 95%;
-    --sidebar-primary: 347 76% 41%;
+    --sidebar-primary: 350 78% 40%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 218 70% 25%;
+    --sidebar-accent: 218 70% 32%;
     --sidebar-accent-foreground: 210 15% 98%;
-    --sidebar-border: 218 60% 25%;
-    --sidebar-ring: 347 76% 41%;
+    --sidebar-border: 218 60% 32%;
+    --sidebar-ring: 350 78% 40%;
 
     /* Custom tokens */
-    --gradient-primary: linear-gradient(135deg, hsl(347 76% 41%) 0%, hsl(347 76% 50%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(218 84% 28%) 0%, hsl(218 84% 38%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(350 78% 40%) 0%, hsl(350 78% 50%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(218 84% 27%) 0%, hsl(218 84% 37%) 100%);
     --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
     --shadow-elevated: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
     --shadow-sidebar: 4px 0 12px -2px rgb(0 0 0 / 0.1);
@@ -94,16 +94,16 @@
 
     --border: 218 35% 22%;
     --input: 218 35% 22%;
-    --ring: 347 76% 45%;
+    --ring: 350 78% 45%;
 
-    --sidebar-background: 218 84% 12%;
+    --sidebar-background: 218 84% 20%;
     --sidebar-foreground: 210 15% 90%;
-    --sidebar-primary: 347 76% 45%;
+    --sidebar-primary: 350 78% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 218 60% 18%;
+    --sidebar-accent: 218 60% 25%;
     --sidebar-accent-foreground: 210 15% 95%;
-    --sidebar-border: 218 50% 18%;
-    --sidebar-ring: 347 76% 45%;
+    --sidebar-border: 218 50% 25%;
+    --sidebar-ring: 350 78% 45%;
   }
 }
 
