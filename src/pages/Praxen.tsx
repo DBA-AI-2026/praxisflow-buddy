@@ -51,9 +51,9 @@ const initialPraxen: Praxis[] = [
     telefon: "+49 89 12345678",
     email: "praxis@mueller.de",
     mpNr: "MP-123456",
-    produkt: "Qodia Premium",
-    module: ["Dokumentation", "KI-Analyse"],
-    preis: 299,
+    produkt: "HFX GOÄ",
+    module: ["GOÄ-Prüfung", "Live-Check"],
+    preis: 0,
     buchungsDatum: "2024-12-15",
     status: "aktiv",
   },
@@ -66,9 +66,9 @@ const initialPraxen: Praxis[] = [
     telefon: "+49 30 98765432",
     email: "info@zahnarzt-schmidt.de",
     mpNr: "MP-789012",
-    produkt: "Qodia Basis",
-    module: ["Dokumentation"],
-    preis: 149,
+    produkt: "HFX GOZ Live-Check",
+    module: ["GOZ-Prüfung"],
+    preis: 0,
     buchungsDatum: "2025-01-10",
     status: "aktiv",
   },
@@ -81,9 +81,9 @@ const initialPraxen: Praxis[] = [
     telefon: "+49 221 55443322",
     email: "verwaltung@mvz-gesundheit.de",
     mpNr: "MP-345678",
-    produkt: "Qodia Enterprise",
-    module: ["Dokumentation", "KI-Analyse", "API", "Multi-User"],
-    preis: 599,
+    produkt: "HFX EBM",
+    module: ["EBM-Prüfung", "Benchmark"],
+    preis: 0,
     buchungsDatum: "2024-11-20",
     status: "aktiv",
   },
@@ -96,9 +96,9 @@ const initialPraxen: Praxis[] = [
     telefon: "+49 69 11223344",
     email: "kontakt@praxis-weber.de",
     mpNr: "MP-901234",
-    produkt: "Qodia Premium",
-    module: ["Dokumentation", "KI-Analyse"],
-    preis: 299,
+    produkt: "HFX Wingmann",
+    module: ["KI-Assistent"],
+    preis: 0,
     buchungsDatum: "2025-01-05",
     status: "aktiv",
   },
@@ -206,13 +206,8 @@ export default function Praxen() {
                     email: formData.get("email") as string,
                     mpNr: `MP-${Math.random().toString().slice(2, 8)}`,
                     produkt: formData.get("produkt") as string,
-                    module: ["Dokumentation"],
-                    preis:
-                      formData.get("produkt") === "Qodia Basis"
-                        ? 149
-                        : formData.get("produkt") === "Qodia Premium"
-                        ? 299
-                        : 599,
+                    module: [],
+                    preis: 0,
                     buchungsDatum: new Date().toISOString().split("T")[0],
                     status: "aktiv",
                   };
@@ -254,20 +249,19 @@ export default function Praxen() {
                   </div>
                   <div className="col-span-2">
                     <Label htmlFor="produkt">Produkt</Label>
-                    <Select name="produkt" defaultValue="Qodia Basis">
+                    <Select name="produkt" defaultValue="HFX GOÄ">
                       <SelectTrigger className="mt-1">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Qodia Basis">
-                          Qodia Basis (149 €/Monat)
-                        </SelectItem>
-                        <SelectItem value="Qodia Premium">
-                          Qodia Premium (299 €/Monat)
-                        </SelectItem>
-                        <SelectItem value="Qodia Enterprise">
-                          Qodia Enterprise (599 €/Monat)
-                        </SelectItem>
+                        <SelectItem value="HFX GOÄ">HFX GOÄ</SelectItem>
+                        <SelectItem value="HFX EBM">HFX EBM</SelectItem>
+                        <SelectItem value="HFX Benchmark KZV">HFX Benchmark KZV</SelectItem>
+                        <SelectItem value="HFX Doku">HFX Doku</SelectItem>
+                        <SelectItem value="HFX Wingmann">HFX Wingmann</SelectItem>
+                        <SelectItem value="HFX GOÄ Live-Check">HFX GOÄ Live-Check</SelectItem>
+                        <SelectItem value="HFX GOZ Live-Check">HFX GOZ Live-Check</SelectItem>
+                        <SelectItem value="HFX Praxismanagement Zahnmedizin">HFX Praxismanagement Zahnmedizin</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

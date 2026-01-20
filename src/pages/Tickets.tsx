@@ -55,7 +55,7 @@ const initialTickets: Ticket[] = [
     termin: "2025-01-20T10:00:00",
     zustaendig: "Lisa Schmidt",
     teamsLink: "https://teams.microsoft.com/l/meetup-join/...",
-    beschreibung: "Produktvorstellung Qodia Premium",
+    beschreibung: "Produktvorstellung HFX GOÄ",
   },
   {
     id: "TK-2025-003",
