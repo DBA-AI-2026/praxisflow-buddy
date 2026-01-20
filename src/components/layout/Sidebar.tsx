@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   BookMarked,
+  Euro,
 } from "lucide-react";
 import logo from "@/assets/fox-logo.jpeg";
 import { useState } from "react";
@@ -27,6 +28,10 @@ const navigation = [
   { name: "Kalender", href: "/kalender", icon: Calendar },
   { name: "Lizenzen", href: "/lizenzen", icon: Key },
   { name: "Datenexport", href: "/export", icon: FileDown },
+];
+
+const vertriebNavigation = [
+  { name: "Provisionen", href: "/vertrieb/provisionen", icon: Euro },
 ];
 
 const adminNavigation = [
@@ -70,6 +75,24 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           Hauptmenü
         </div>
         {navigation.map((item) => {
+          const isActive = location.pathname === item.href;
+          return (
+            <Link
+              key={item.name}
+              to={item.href}
+              onClick={onNavigate}
+              className={`sidebar-link ${isActive ? "active" : ""}`}
+            >
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+              <span className="truncate">{item.name}</span>
+            </Link>
+          );
+        })}
+
+        <div className="mt-8 mb-2 px-3 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
+          Vertrieb
+        </div>
+        {vertriebNavigation.map((item) => {
           const isActive = location.pathname === item.href;
           return (
             <Link
