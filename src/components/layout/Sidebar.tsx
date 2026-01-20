@@ -11,6 +11,7 @@ import {
   LogOut,
   Menu,
   X,
+  BookMarked,
 } from "lucide-react";
 import logo from "@/assets/fox-logo.jpeg";
 import { useState } from "react";
@@ -19,6 +20,7 @@ import { Button } from "@/components/ui/button";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Reservierungen", href: "/reservierungen", icon: BookMarked },
   { name: "Praxen", href: "/praxen", icon: Building2 },
   { name: "Tickets", href: "/tickets", icon: Ticket },
   { name: "Kalender", href: "/kalender", icon: Calendar },
