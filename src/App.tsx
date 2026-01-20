@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Praxen from "./pages/Praxen";
 import Tickets from "./pages/Tickets";
@@ -12,30 +14,34 @@ import Export from "./pages/Export";
 import Reservierungen from "./pages/Reservierungen";
 import AdminUsers from "./pages/admin/Users";
 import AdminSettings from "./pages/admin/Settings";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/reservierungen" element={<Reservierungen />} />
-          <Route path="/praxen" element={<Praxen />} />
-          <Route path="/tickets" element={<Tickets />} />
-          <Route path="/kalender" element={<Kalender />} />
-          <Route path="/lizenzen" element={<Lizenzen />} />
-          <Route path="/export" element={<Export />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/settings" element={<AdminSettings />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/reservierungen" element={<ProtectedRoute><Reservierungen /></ProtectedRoute>} />
+            <Route path="/praxen" element={<ProtectedRoute><Praxen /></ProtectedRoute>} />
+            <Route path="/tickets" element={<ProtectedRoute><Tickets /></ProtectedRoute>} />
+            <Route path="/kalender" element={<ProtectedRoute><Kalender /></ProtectedRoute>} />
+            <Route path="/lizenzen" element={<ProtectedRoute><Lizenzen /></ProtectedRoute>} />
+            <Route path="/export" element={<ProtectedRoute><Export /></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
+            <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

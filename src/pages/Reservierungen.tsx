@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Calendar, Building2, User, Phone, MapPin, Edit2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, addMonths } from "date-fns";
@@ -45,6 +46,7 @@ export default function Reservierungen() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState<ReservationFormData>(initialFormData);
   const { toast } = useToast();
+  const { user, profile } = useAuth();
   const queryClient = useQueryClient();
 
   // Fetch reservations
@@ -76,7 +78,8 @@ export default function Reservierungen() {
         telefon: data.telefon,
         reservation_months: data.reservation_months,
         reserved_until: reservedUntil.toISOString(),
-        reserved_by_name: "Konstantin Eckert", // TODO: Get from auth
+        reserved_by: user?.id,
+        reserved_by_name: profile?.full_name || user?.email || "Unbekannt",
         notes: data.notes || null,
       });
       

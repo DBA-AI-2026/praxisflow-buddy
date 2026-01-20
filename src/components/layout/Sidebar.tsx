@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Building2,
@@ -10,13 +10,13 @@ import {
   Calendar,
   LogOut,
   Menu,
-  X,
   BookMarked,
 } from "lucide-react";
 import logo from "@/assets/fox-logo.jpeg";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -35,6 +35,21 @@ const adminNavigation = [
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, profile, signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/auth");
+  };
+
+  const displayName = profile?.full_name || user?.email?.split("@")[0] || "Benutzer";
+  const initials = displayName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <div className="flex h-full flex-col">
@@ -90,17 +105,21 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <div className="border-t border-sidebar-border p-3 md:p-4">
         <div className="flex items-center gap-2 md:gap-3 rounded-lg bg-sidebar-accent p-2 md:p-3">
           <div className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-full bg-sidebar-primary text-xs md:text-sm font-medium text-sidebar-primary-foreground flex-shrink-0">
-            AD
+            {initials}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-sidebar-foreground truncate">
-              Admin Demo
+              {displayName}
             </p>
             <p className="text-xs text-sidebar-foreground/60 truncate">
-              admin@qodia.de
+              {user?.email || ""}
             </p>
           </div>
-          <button className="p-1.5 rounded-md hover:bg-sidebar-border/50 transition-colors flex-shrink-0">
+          <button 
+            onClick={handleLogout}
+            className="p-1.5 rounded-md hover:bg-sidebar-border/50 transition-colors flex-shrink-0"
+            title="Abmelden"
+          >
             <LogOut className="h-4 w-4 text-sidebar-foreground/60" />
           </button>
         </div>
