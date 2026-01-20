@@ -7,6 +7,7 @@ import {
   Settings,
   Users,
   FileDown,
+  UserPlus,
   Calendar,
   LogOut,
   Menu,
@@ -29,6 +30,7 @@ const navigation = [
 ];
 
 const adminNavigation = [
+  { name: "Zugangsanfragen", href: "/admin/access-requests", icon: UserPlus },
   { name: "Benutzerverwaltung", href: "/admin/users", icon: Users },
   { name: "Einstellungen", href: "/admin/settings", icon: Settings },
 ];
