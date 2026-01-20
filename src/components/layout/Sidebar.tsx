@@ -31,6 +31,7 @@ const navigation = [
 ];
 
 const vertriebNavigation = [
+  { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users },
   { name: "Provisionen", href: "/vertrieb/provisionen", icon: Euro },
 ];
 
