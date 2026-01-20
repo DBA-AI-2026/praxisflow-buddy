@@ -7,8 +7,9 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth();
+  const { user, session, isLoading } = useAuth();
 
+  // Always show loading state while checking authentication
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -17,7 +18,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  if (!user) {
+  // No session means not authenticated - redirect to login
+  if (!session || !user) {
+    console.log("ProtectedRoute: No session, redirecting to /auth");
     return <Navigate to="/auth" replace />;
   }
 

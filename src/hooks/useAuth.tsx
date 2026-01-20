@@ -26,18 +26,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      (event, currentSession) => {
+        console.log("Auth state changed:", event, currentSession?.user?.email);
+        
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        
+        // Mark as initialized after first auth state change
+        if (!isInitialized) {
+          setIsInitialized(true);
+          setIsLoading(false);
+        }
         
         // Defer profile fetch with setTimeout to prevent deadlock
-        if (session?.user) {
+        if (currentSession?.user) {
           setTimeout(() => {
-            fetchProfile(session.user.id);
+            fetchProfile(currentSession.user.id);
           }, 0);
         } else {
           setProfile(null);
@@ -46,17 +55,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
+    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+      console.log("Initial session check:", existingSession?.user?.email ?? "No session");
+      
+      setSession(existingSession);
+      setUser(existingSession?.user ?? null);
+      
+      if (existingSession?.user) {
+        fetchProfile(existingSession.user.id);
       }
-      setIsLoading(false);
+      
+      // Only set loading to false here if we haven't already via onAuthStateChange
+      if (!isInitialized) {
+        setIsInitialized(true);
+        setIsLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isInitialized]);
 
   const fetchProfile = async (userId: string) => {
     const { data, error } = await supabase
