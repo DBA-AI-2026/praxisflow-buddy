@@ -171,8 +171,8 @@ export default function Auth() {
             />
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold text-foreground">Honorarfuchs Portal</CardTitle>
-            <CardDescription>Abrechnungsservices für Vertriebspartner</CardDescription>
+            <CardTitle className="text-2xl font-bold text-foreground">HFX Honorarfuchs Sales</CardTitle>
+            <CardDescription>das Portal für den Vertrieb</CardDescription>
           </div>
         </CardHeader>
         
