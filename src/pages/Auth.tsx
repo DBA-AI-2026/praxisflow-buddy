@@ -7,26 +7,27 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import logo from "@/assets/fox-logo.jpeg";
 import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
 
 const loginSchema = z.object({
   email: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
   password: z.string().min(6, "Das Passwort muss mindestens 6 Zeichen lang sein"),
 });
 
-const signupSchema = loginSchema.extend({
+const requestSchema = z.object({
   fullName: z.string().min(2, "Bitte geben Sie Ihren vollständigen Namen ein"),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Die Passwörter stimmen nicht überein",
-  path: ["confirmPassword"],
+  email: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
+  company: z.string().optional(),
+  message: z.string().optional(),
 });
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { signIn, signUp, user, isLoading: authLoading } = useAuth();
+  const { signIn, user, isLoading: authLoading } = useAuth();
   
   const [activeTab, setActiveTab] = useState("login");
   const [isLoading, setIsLoading] = useState(false);
@@ -37,11 +38,11 @@ export default function Auth() {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   
-  // Signup form state
-  const [signupEmail, setSignupEmail] = useState("");
-  const [signupPassword, setSignupPassword] = useState("");
-  const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
-  const [signupFullName, setSignupFullName] = useState("");
+  // Access request form state
+  const [requestEmail, setRequestEmail] = useState("");
+  const [requestFullName, setRequestFullName] = useState("");
+  const [requestCompany, setRequestCompany] = useState("");
+  const [requestMessage, setRequestMessage] = useState("");
 
   // Redirect if already logged in
   useEffect(() => {
@@ -83,18 +84,18 @@ export default function Auth() {
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleAccessRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
     setIsLoading(true);
 
     try {
-      const validation = signupSchema.safeParse({
-        email: signupEmail,
-        password: signupPassword,
-        confirmPassword: signupConfirmPassword,
-        fullName: signupFullName,
+      const validation = requestSchema.safeParse({
+        email: requestEmail,
+        fullName: requestFullName,
+        company: requestCompany,
+        message: requestMessage,
       });
 
       if (!validation.success) {
@@ -103,16 +104,45 @@ export default function Auth() {
         return;
       }
 
-      const { error } = await signUp(signupEmail, signupPassword, signupFullName);
-      
-      if (error) {
-        if (error.message.includes("User already registered")) {
-          setError("Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an.");
+      // Check if request already exists
+      const { data: existingRequest } = await supabase
+        .from("registration_requests")
+        .select("id, status")
+        .eq("email", requestEmail)
+        .maybeSingle();
+
+      if (existingRequest) {
+        if (existingRequest.status === "pending") {
+          setError("Eine Anfrage mit dieser E-Mail-Adresse ist bereits eingegangen und wird bearbeitet.");
+        } else if (existingRequest.status === "approved") {
+          setError("Ihre Anfrage wurde bereits genehmigt. Bitte melden Sie sich an.");
+          setActiveTab("login");
         } else {
-          setError(error.message);
+          setError("Ihre vorherige Anfrage wurde abgelehnt. Bitte kontaktieren Sie den Administrator.");
         }
+        setIsLoading(false);
+        return;
+      }
+
+      // Insert new request
+      const { error: insertError } = await supabase
+        .from("registration_requests")
+        .insert({
+          full_name: requestFullName,
+          email: requestEmail,
+          company: requestCompany || null,
+          message: requestMessage || null,
+        });
+
+      if (insertError) {
+        setError("Fehler beim Senden der Anfrage. Bitte versuchen Sie es erneut.");
+        console.error("Insert error:", insertError);
       } else {
-        setSuccess("Registrierung erfolgreich! Sie werden weitergeleitet...");
+        setSuccess("Ihre Zugangsanfrage wurde erfolgreich gesendet. Ein Administrator wird sich mit Ihnen in Verbindung setzen.");
+        setRequestEmail("");
+        setRequestFullName("");
+        setRequestCompany("");
+        setRequestMessage("");
       }
     } catch (err) {
       setError("Ein unerwarteter Fehler ist aufgetreten.");
@@ -150,7 +180,7 @@ export default function Auth() {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Anmelden</TabsTrigger>
-              <TabsTrigger value="signup">Registrieren</TabsTrigger>
+              <TabsTrigger value="request">Zugang anfragen</TabsTrigger>
             </TabsList>
             
             {error && (
@@ -162,6 +192,7 @@ export default function Auth() {
             
             {success && (
               <Alert className="mt-4 border-green-500 bg-green-50 text-green-700">
+                <CheckCircle2 className="h-4 w-4" />
                 <AlertDescription>{success}</AlertDescription>
               </Alert>
             )}
@@ -205,64 +236,62 @@ export default function Auth() {
               </form>
             </TabsContent>
             
-            <TabsContent value="signup" className="mt-4">
-              <form onSubmit={handleSignup} className="space-y-4">
+            <TabsContent value="request" className="mt-4">
+              <form onSubmit={handleAccessRequest} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-name">Vollständiger Name</Label>
+                  <Label htmlFor="request-name">Vollständiger Name *</Label>
                   <Input
-                    id="signup-name"
+                    id="request-name"
                     type="text"
                     placeholder="z.B. Konstantin Eckert"
-                    value={signupFullName}
-                    onChange={(e) => setSignupFullName(e.target.value)}
+                    value={requestFullName}
+                    onChange={(e) => setRequestFullName(e.target.value)}
                     required
                     disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">E-Mail</Label>
+                  <Label htmlFor="request-email">E-Mail *</Label>
                   <Input
-                    id="signup-email"
+                    id="request-email"
                     type="email"
                     placeholder="ihre.email@example.com"
-                    value={signupEmail}
-                    onChange={(e) => setSignupEmail(e.target.value)}
+                    value={requestEmail}
+                    onChange={(e) => setRequestEmail(e.target.value)}
                     required
                     disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Passwort</Label>
+                  <Label htmlFor="request-company">Firma (optional)</Label>
                   <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    required
+                    id="request-company"
+                    type="text"
+                    placeholder="z.B. Medizin GmbH"
+                    value={requestCompany}
+                    onChange={(e) => setRequestCompany(e.target.value)}
                     disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-confirm">Passwort bestätigen</Label>
-                  <Input
-                    id="signup-confirm"
-                    type="password"
-                    placeholder="••••••••"
-                    value={signupConfirmPassword}
-                    onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                    required
+                  <Label htmlFor="request-message">Nachricht (optional)</Label>
+                  <Textarea
+                    id="request-message"
+                    placeholder="Warum möchten Sie Zugang zum Portal?"
+                    value={requestMessage}
+                    onChange={(e) => setRequestMessage(e.target.value)}
                     disabled={isLoading}
+                    rows={3}
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Wird registriert...
+                      Wird gesendet...
                     </>
                   ) : (
-                    "Registrieren"
+                    "Zugang anfragen"
                   )}
                 </Button>
               </form>
@@ -273,8 +302,8 @@ export default function Auth() {
         <CardFooter className="text-center text-sm text-muted-foreground">
           <p className="w-full">
             {activeTab === "login" 
-              ? "Noch kein Konto? Wechseln Sie zur Registrierung." 
-              : "Bereits registriert? Wechseln Sie zur Anmeldung."}
+              ? "Noch keinen Zugang? Stellen Sie eine Anfrage." 
+              : "Bereits Zugang erhalten? Wechseln Sie zur Anmeldung."}
           </p>
         </CardFooter>
       </Card>
