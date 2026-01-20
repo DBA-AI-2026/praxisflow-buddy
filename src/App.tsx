@@ -9,6 +9,7 @@ import Tickets from "./pages/Tickets";
 import Kalender from "./pages/Kalender";
 import Lizenzen from "./pages/Lizenzen";
 import Export from "./pages/Export";
+import Reservierungen from "./pages/Reservierungen";
 import AdminUsers from "./pages/admin/Users";
 import AdminSettings from "./pages/admin/Settings";
 import NotFound from "./pages/NotFound";
@@ -23,6 +24,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/reservierungen" element={<Reservierungen />} />
           <Route path="/praxen" element={<Praxen />} />
           <Route path="/tickets" element={<Tickets />} />
           <Route path="/kalender" element={<Kalender />} />
