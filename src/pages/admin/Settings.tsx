@@ -9,16 +9,26 @@ import { useToast } from "@/hooks/use-toast";
 import { Save, Euro, Bell, Database } from "lucide-react";
 
 interface Pricing {
-  basis: number;
-  premium: number;
-  enterprise: number;
+  hfxGoae: number;
+  hfxEbm: number;
+  hfxBenchmarkKzv: number;
+  hfxDoku: number;
+  hfxWingmann: number;
+  hfxGoaeLiveCheck: number;
+  hfxGozLiveCheck: number;
+  hfxPraxismanagementZahn: number;
 }
 
 export default function AdminSettings() {
   const [pricing, setPricing] = useState<Pricing>({
-    basis: 149,
-    premium: 299,
-    enterprise: 599,
+    hfxGoae: 0,
+    hfxEbm: 0,
+    hfxBenchmarkKzv: 0,
+    hfxDoku: 0,
+    hfxWingmann: 0,
+    hfxGoaeLiveCheck: 0,
+    hfxGozLiveCheck: 0,
+    hfxPraxismanagementZahn: 0,
   });
   const [notifications, setNotifications] = useState({
     newTicket: true,
@@ -84,44 +94,101 @@ export default function AdminSettings() {
               Produktpakete.
             </p>
 
-            <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="basis">Qodia Basis (€/Monat)</Label>
+                <Label htmlFor="hfxGoae">HFX GOÄ (€/Monat)</Label>
                 <Input
-                  id="basis"
+                  id="hfxGoae"
                   type="number"
-                  value={pricing.basis}
+                  value={pricing.hfxGoae}
                   onChange={(e) =>
-                    setPricing({ ...pricing, basis: parseInt(e.target.value) })
+                    setPricing({ ...pricing, hfxGoae: parseInt(e.target.value) || 0 })
                   }
-                  className="mt-1 max-w-xs"
+                  className="mt-1"
                 />
               </div>
               <div>
-                <Label htmlFor="premium">Qodia Premium (€/Monat)</Label>
+                <Label htmlFor="hfxEbm">HFX EBM (€/Monat)</Label>
                 <Input
-                  id="premium"
+                  id="hfxEbm"
                   type="number"
-                  value={pricing.premium}
+                  value={pricing.hfxEbm}
                   onChange={(e) =>
-                    setPricing({ ...pricing, premium: parseInt(e.target.value) })
+                    setPricing({ ...pricing, hfxEbm: parseInt(e.target.value) || 0 })
                   }
-                  className="mt-1 max-w-xs"
+                  className="mt-1"
                 />
               </div>
               <div>
-                <Label htmlFor="enterprise">Qodia Enterprise (€/Monat)</Label>
+                <Label htmlFor="hfxBenchmarkKzv">HFX Benchmark KZV (€/Monat)</Label>
                 <Input
-                  id="enterprise"
+                  id="hfxBenchmarkKzv"
                   type="number"
-                  value={pricing.enterprise}
+                  value={pricing.hfxBenchmarkKzv}
                   onChange={(e) =>
-                    setPricing({
-                      ...pricing,
-                      enterprise: parseInt(e.target.value),
-                    })
+                    setPricing({ ...pricing, hfxBenchmarkKzv: parseInt(e.target.value) || 0 })
                   }
-                  className="mt-1 max-w-xs"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="hfxDoku">HFX Doku (€/Monat)</Label>
+                <Input
+                  id="hfxDoku"
+                  type="number"
+                  value={pricing.hfxDoku}
+                  onChange={(e) =>
+                    setPricing({ ...pricing, hfxDoku: parseInt(e.target.value) || 0 })
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="hfxWingmann">HFX Wingmann (€/Monat)</Label>
+                <Input
+                  id="hfxWingmann"
+                  type="number"
+                  value={pricing.hfxWingmann}
+                  onChange={(e) =>
+                    setPricing({ ...pricing, hfxWingmann: parseInt(e.target.value) || 0 })
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="hfxGoaeLiveCheck">HFX GOÄ Live-Check (€/Monat)</Label>
+                <Input
+                  id="hfxGoaeLiveCheck"
+                  type="number"
+                  value={pricing.hfxGoaeLiveCheck}
+                  onChange={(e) =>
+                    setPricing({ ...pricing, hfxGoaeLiveCheck: parseInt(e.target.value) || 0 })
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="hfxGozLiveCheck">HFX GOZ Live-Check (€/Monat)</Label>
+                <Input
+                  id="hfxGozLiveCheck"
+                  type="number"
+                  value={pricing.hfxGozLiveCheck}
+                  onChange={(e) =>
+                    setPricing({ ...pricing, hfxGozLiveCheck: parseInt(e.target.value) || 0 })
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="hfxPraxismanagementZahn">HFX Praxismanagement Zahnmedizin (€/Monat)</Label>
+                <Input
+                  id="hfxPraxismanagementZahn"
+                  type="number"
+                  value={pricing.hfxPraxismanagementZahn}
+                  onChange={(e) =>
+                    setPricing({ ...pricing, hfxPraxismanagementZahn: parseInt(e.target.value) || 0 })
+                  }
+                  className="mt-1"
                 />
               </div>
             </div>

@@ -33,36 +33,36 @@ interface Lizenz {
 const initialLizenzen: Lizenz[] = [
   {
     id: "1",
-    lizenzKey: "QOD-PRE-2025-A1B2C3D4",
+    lizenzKey: "HFX-GOA-2025-A1B2C3D4",
     praxis: "Dr. med. Hans Müller",
-    produkt: "Qodia Premium",
+    produkt: "HFX GOÄ",
     status: "aktiv",
     erstelltAm: "2024-12-15",
     gueltigBis: "2025-12-15",
   },
   {
     id: "2",
-    lizenzKey: "QOD-BAS-2025-E5F6G7H8",
+    lizenzKey: "HFX-GOZ-2025-E5F6G7H8",
     praxis: "Zahnarztpraxis Schmidt",
-    produkt: "Qodia Basis",
+    produkt: "HFX GOZ Live-Check",
     status: "aktiv",
     erstelltAm: "2025-01-10",
     gueltigBis: "2026-01-10",
   },
   {
     id: "3",
-    lizenzKey: "QOD-ENT-2024-I9J0K1L2",
+    lizenzKey: "HFX-EBM-2024-I9J0K1L2",
     praxis: "MVZ Gesundheit GmbH",
-    produkt: "Qodia Enterprise",
+    produkt: "HFX EBM",
     status: "aktiv",
     erstelltAm: "2024-11-20",
     gueltigBis: "2025-11-20",
   },
   {
     id: "4",
-    lizenzKey: "QOD-PRE-2024-M3N4O5P6",
+    lizenzKey: "HFX-WNG-2024-M3N4O5P6",
     praxis: "Praxis Dr. Weber",
-    produkt: "Qodia Premium",
+    produkt: "HFX Wingmann",
     status: "inaktiv",
     erstelltAm: "2024-06-01",
     gueltigBis: "2024-12-01",
@@ -76,9 +76,14 @@ const statusColors: Record<string, string> = {
 };
 
 const produktPrefixes: Record<string, string> = {
-  "Qodia Basis": "BAS",
-  "Qodia Premium": "PRE",
-  "Qodia Enterprise": "ENT",
+  "HFX GOÄ": "GOA",
+  "HFX EBM": "EBM",
+  "HFX Benchmark KZV": "KZV",
+  "HFX Doku": "DOK",
+  "HFX Wingmann": "WNG",
+  "HFX GOÄ Live-Check": "GLC",
+  "HFX GOZ Live-Check": "GOZ",
+  "HFX Praxismanagement Zahnmedizin": "PMZ",
 };
 
 export default function Lizenzen() {
@@ -95,10 +100,10 @@ export default function Lizenzen() {
   );
 
   const generateLizenzKey = (produkt: string) => {
-    const prefix = produktPrefixes[produkt] || "STD";
+    const prefix = produktPrefixes[produkt] || "HFX";
     const year = new Date().getFullYear();
     const random = Math.random().toString(36).substring(2, 10).toUpperCase();
-    return `QOD-${prefix}-${year}-${random}`;
+    return `HFX-${prefix}-${year}-${random}`;
   };
 
   const copyToClipboard = async (key: string, id: string) => {
@@ -213,16 +218,19 @@ export default function Lizenzen() {
               </div>
               <div>
                 <Label htmlFor="produkt">Produkt</Label>
-                <Select name="produkt" defaultValue="Qodia Basis">
+                <Select name="produkt" defaultValue="HFX GOÄ">
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Qodia Basis">Qodia Basis</SelectItem>
-                    <SelectItem value="Qodia Premium">Qodia Premium</SelectItem>
-                    <SelectItem value="Qodia Enterprise">
-                      Qodia Enterprise
-                    </SelectItem>
+                    <SelectItem value="HFX GOÄ">HFX GOÄ</SelectItem>
+                    <SelectItem value="HFX EBM">HFX EBM</SelectItem>
+                    <SelectItem value="HFX Benchmark KZV">HFX Benchmark KZV</SelectItem>
+                    <SelectItem value="HFX Doku">HFX Doku</SelectItem>
+                    <SelectItem value="HFX Wingmann">HFX Wingmann</SelectItem>
+                    <SelectItem value="HFX GOÄ Live-Check">HFX GOÄ Live-Check</SelectItem>
+                    <SelectItem value="HFX GOZ Live-Check">HFX GOZ Live-Check</SelectItem>
+                    <SelectItem value="HFX Praxismanagement Zahnmedizin">HFX Praxismanagement Zahnmedizin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -16,7 +16,7 @@ const events: Record<string, CalendarEvent[]> = {
   "2025-01-20": [
     {
       id: "1",
-      title: "Demo Qodia Premium",
+      title: "Demo HFX GOÄ",
       praxis: "Zahnarztpraxis Schmidt",
       typ: "demo",
       time: "10:00",
@@ -43,7 +43,7 @@ const events: Record<string, CalendarEvent[]> = {
   "2025-01-24": [
     {
       id: "4",
-      title: "Demo Enterprise",
+      title: "Demo HFX EBM",
       praxis: "Klinikum Nord",
       typ: "demo",
       time: "09:00",
