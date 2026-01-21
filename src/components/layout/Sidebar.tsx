@@ -13,6 +13,7 @@ import {
   Menu,
   BookMarked,
   Euro,
+  Link2,
 } from "lucide-react";
 import logo from "@/assets/fox-logo.jpeg";
 import { useState } from "react";
@@ -28,6 +29,7 @@ const navigation = [
   { name: "Kalender", href: "/kalender", icon: Calendar },
   { name: "Lizenzen", href: "/lizenzen", icon: Key },
   { name: "Datenexport", href: "/export", icon: FileDown },
+  { name: "Integrationen", href: "/integrationen", icon: Link2 },
 ];
 
 const vertriebNavigation = [
