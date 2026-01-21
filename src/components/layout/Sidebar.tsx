@@ -28,6 +28,7 @@ const navigation = [
   { name: "Tickets", href: "/tickets", icon: Ticket },
   { name: "Kalender", href: "/kalender", icon: Calendar },
   { name: "Lizenzen", href: "/lizenzen", icon: Key },
+  { name: "Umsätze", href: "/umsaetze", icon: Euro },
   { name: "Datenexport", href: "/export", icon: FileDown },
   { name: "Integrationen", href: "/integrationen", icon: Link2 },
 ];

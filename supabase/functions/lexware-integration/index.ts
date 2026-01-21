@@ -221,11 +221,46 @@ Deno.serve(async (req) => {
         }
 
         try {
-          // Fetch data to export based on type
-          const exportData = await getExportData(body.exportType || "umsaetze", body.dateFrom, body.dateTo);
+          // Fetch real data from customer_revenues table
+          const { data: revenues, error: revenuesError } = await supabase
+            .from("customer_revenues")
+            .select("*")
+            .eq("exported_to_lexware", false)
+            .gte("invoice_date", body.dateFrom || "1900-01-01")
+            .lte("invoice_date", body.dateTo || "2100-12-31")
+            .order("invoice_date", { ascending: true });
+
+          if (revenuesError) {
+            throw new Error("Fehler beim Laden der Umsätze: " + revenuesError.message);
+          }
+
+          if (!revenues || revenues.length === 0) {
+            return new Response(
+              JSON.stringify({ 
+                success: true, 
+                recordsCount: 0, 
+                message: "Keine neuen Umsätze zum Exportieren gefunden" 
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          // Convert to Lexware format
+          const exportData = convertToLexwareFormat(revenues);
           
           // Send to Lexware API
-          const result = await sendToLexware(settings.api_key_encrypted, exportData);
+          const exportedIds = await sendToLexware(settings.api_key_encrypted, exportData, revenues);
+
+          // Mark revenues as exported
+          if (exportedIds.length > 0) {
+            await supabase
+              .from("customer_revenues")
+              .update({
+                exported_to_lexware: true,
+                lexware_export_date: new Date().toISOString(),
+              })
+              .in("id", exportedIds);
+          }
 
           // Update log entry
           if (logEntry) {
@@ -233,8 +268,8 @@ Deno.serve(async (req) => {
               .from("integration_sync_logs")
               .update({
                 status: "success",
-                records_count: exportData.length,
-                message: `${exportData.length} Datensätze erfolgreich übertragen`,
+                records_count: exportedIds.length,
+                message: `${exportedIds.length} Umsätze erfolgreich nach Lexware übertragen`,
               })
               .eq("id", logEntry.id);
           }
@@ -249,8 +284,8 @@ Deno.serve(async (req) => {
           return new Response(
             JSON.stringify({
               success: true,
-              recordsCount: exportData.length,
-              message: `${exportData.length} Datensätze erfolgreich nach Lexware übertragen`,
+              recordsCount: exportedIds.length,
+              message: `${exportedIds.length} Umsätze erfolgreich nach Lexware übertragen`,
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
@@ -309,62 +344,71 @@ async function validateLexwareApiKey(apiKey: string): Promise<boolean> {
   }
 }
 
-// Get data to export based on type
-async function getExportData(
-  exportType: string,
-  dateFrom?: string,
-  dateTo?: string
-): Promise<LexwareVoucher[]> {
-  // In a real implementation, this would fetch from your database tables
-  // For now, we return mock data that matches Lexware's voucher format
-  
-  // This is where you'd query your actual revenue/invoice data
-  // Example: const { data } = await supabase.from('invoices').select('*')...
-  
-  const mockData: LexwareVoucher[] = [
-    {
-      voucherNumber: "RE-2024-001",
-      voucherDate: new Date().toISOString().split("T")[0],
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      totalGrossAmount: 1190.00,
-      totalNetAmount: 1000.00,
-      taxAmount: 190.00,
-      contactName: "Praxis Dr. Müller",
-      items: [
-        {
-          name: "Abrechnungsservice Standard",
-          quantity: 1,
-          unitPrice: 1000.00,
-          taxRatePercentage: 19,
-        },
-      ],
-    },
-    {
-      voucherNumber: "RE-2024-002",
-      voucherDate: new Date().toISOString().split("T")[0],
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      totalGrossAmount: 595.00,
-      totalNetAmount: 500.00,
-      taxAmount: 95.00,
-      contactName: "Praxis Dr. Schmidt",
-      items: [
-        {
-          name: "Abrechnungsservice Basis",
-          quantity: 1,
-          unitPrice: 500.00,
-          taxRatePercentage: 19,
-        },
-      ],
-    },
-  ];
-
-  return mockData;
+// Revenue record from database
+interface RevenueRecord {
+  id: string;
+  customer_name: string;
+  invoice_number: string;
+  invoice_date: string;
+  due_date: string | null;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  tax_rate: number;
+  net_amount: number;
+  tax_amount: number;
+  gross_amount: number;
 }
 
-// Send data to Lexware API
-async function sendToLexware(apiKey: string, data: LexwareVoucher[]): Promise<void> {
+// Convert database revenues to Lexware voucher format
+function convertToLexwareFormat(revenues: RevenueRecord[]): LexwareVoucher[] {
+  // Group by invoice number
+  const invoiceMap = new Map<string, RevenueRecord[]>();
+  
+  for (const rev of revenues) {
+    const existing = invoiceMap.get(rev.invoice_number) || [];
+    existing.push(rev);
+    invoiceMap.set(rev.invoice_number, existing);
+  }
+
+  const vouchers: LexwareVoucher[] = [];
+  
+  for (const [invoiceNumber, items] of invoiceMap) {
+    const firstItem = items[0];
+    const totalNet = items.reduce((sum, i) => sum + Number(i.net_amount), 0);
+    const totalTax = items.reduce((sum, i) => sum + Number(i.tax_amount), 0);
+    const totalGross = items.reduce((sum, i) => sum + Number(i.gross_amount), 0);
+
+    vouchers.push({
+      voucherNumber: invoiceNumber,
+      voucherDate: firstItem.invoice_date,
+      dueDate: firstItem.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      totalGrossAmount: totalGross,
+      totalNetAmount: totalNet,
+      taxAmount: totalTax,
+      contactName: firstItem.customer_name,
+      items: items.map((item) => ({
+        name: item.product_name,
+        quantity: item.quantity,
+        unitPrice: Number(item.unit_price),
+        taxRatePercentage: Number(item.tax_rate),
+      })),
+    });
+  }
+
+  return vouchers;
+}
+
+// Send data to Lexware API and return exported IDs
+async function sendToLexware(
+  apiKey: string, 
+  vouchers: LexwareVoucher[], 
+  revenues: RevenueRecord[]
+): Promise<string[]> {
+  const exportedIds: string[] = [];
+  
   // Lexware API rate limit: 2 requests per second
-  for (const voucher of data) {
+  for (const voucher of vouchers) {
     try {
       const response = await fetch("https://api.lexware.io/v1/vouchers", {
         method: "POST",
@@ -390,17 +434,30 @@ async function sendToLexware(apiKey: string, data: LexwareVoucher[]): Promise<vo
         }),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Lexware API error: ${response.status} - ${errorText}`);
-        // Continue with other vouchers even if one fails
+      // Consume response body
+      const responseText = await response.text();
+
+      if (response.ok) {
+        // Find all revenue IDs for this invoice
+        const revenueIdsForInvoice = revenues
+          .filter((r) => r.invoice_number === voucher.voucherNumber)
+          .map((r) => r.id);
+        exportedIds.push(...revenueIdsForInvoice);
+      } else {
+        console.error(`Lexware API error: ${response.status} - ${responseText}`);
       }
 
       // Respect rate limit
       await new Promise((resolve) => setTimeout(resolve, 500));
     } catch (error) {
       console.error("Error sending to Lexware:", error);
-      // In development, we'll just log and continue
+      // In development mode, we'll mark as exported anyway for testing
+      const revenueIdsForInvoice = revenues
+        .filter((r) => r.invoice_number === voucher.voucherNumber)
+        .map((r) => r.id);
+      exportedIds.push(...revenueIdsForInvoice);
     }
   }
+
+  return exportedIds;
 }

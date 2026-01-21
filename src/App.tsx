@@ -12,6 +12,7 @@ import Kalender from "./pages/Kalender";
 import Lizenzen from "./pages/Lizenzen";
 import Export from "./pages/Export";
 import Integrationen from "./pages/Integrationen";
+import Umsaetze from "./pages/Umsaetze";
 import Reservierungen from "./pages/Reservierungen";
 import Provisionen from "./pages/vertrieb/Provisionen";
 import Vertriebler from "./pages/vertrieb/Vertriebler";
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/tickets" element={<ProtectedRoute><Tickets /></ProtectedRoute>} />
             <Route path="/kalender" element={<ProtectedRoute><Kalender /></ProtectedRoute>} />
             <Route path="/lizenzen" element={<ProtectedRoute><Lizenzen /></ProtectedRoute>} />
+            <Route path="/umsaetze" element={<ProtectedRoute><Umsaetze /></ProtectedRoute>} />
             <Route path="/export" element={<ProtectedRoute><Export /></ProtectedRoute>} />
             <Route path="/integrationen" element={<ProtectedRoute><Integrationen /></ProtectedRoute>} />
             <Route path="/vertrieb/vertriebler" element={<ProtectedRoute><Vertriebler /></ProtectedRoute>} />
