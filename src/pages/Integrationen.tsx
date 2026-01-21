@@ -24,128 +24,67 @@ import {
   Building2,
   Euro,
   Calendar,
+  Loader2,
 } from "lucide-react";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
-
-interface SyncLog {
-  id: string;
-  date: string;
-  type: "export" | "import";
-  status: "success" | "error" | "pending";
-  records: number;
-  message: string;
-}
-
-const mockSyncLogs: SyncLog[] = [
-  {
-    id: "1",
-    date: "2024-01-21 14:30",
-    type: "export",
-    status: "success",
-    records: 156,
-    message: "156 Umsätze erfolgreich übertragen",
-  },
-  {
-    id: "2",
-    date: "2024-01-20 14:30",
-    type: "export",
-    status: "success",
-    records: 142,
-    message: "142 Umsätze erfolgreich übertragen",
-  },
-  {
-    id: "3",
-    date: "2024-01-19 14:30",
-    type: "export",
-    status: "error",
-    records: 0,
-    message: "Verbindungsfehler: API-Key ungültig",
-  },
-];
+import { useState, useEffect } from "react";
+import { useLexwareIntegration } from "@/hooks/useLexwareIntegration";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
 
 export default function Integrationen() {
-  const { toast } = useToast();
-  
+  const {
+    settings,
+    syncLogs,
+    isLoading,
+    isConnecting,
+    isExporting,
+    connect,
+    disconnect,
+    exportData,
+    updateSettings,
+    refresh,
+  } = useLexwareIntegration();
+
   // Lexware Settings
   const [lexwareApiKey, setLexwareApiKey] = useState("");
-  const [lexwareConnected, setLexwareConnected] = useState(false);
-  const [lexwareAutoSync, setLexwareAutoSync] = useState(false);
-  const [lexwareSyncInterval, setLexwareSyncInterval] = useState("daily");
-  const [lexwareSyncTime, setLexwareSyncTime] = useState("14:00");
-  
-  // DATEV Settings (for future)
-  const [datevConnected] = useState(false);
-  
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
+  const [syncInterval, setSyncInterval] = useState("daily");
+  const [syncTime, setSyncTime] = useState("14:00");
+
   // Export Settings
   const [exportDateFrom, setExportDateFrom] = useState("");
   const [exportDateTo, setExportDateTo] = useState("");
-  const [exportType, setExportType] = useState("umsaetze");
-  const [isExporting, setIsExporting] = useState(false);
+  const [exportType, setExportType] = useState<"umsaetze" | "rechnungen" | "provisionen">("umsaetze");
 
-  const handleLexwareConnect = () => {
-    if (!lexwareApiKey) {
-      toast({
-        title: "API-Key erforderlich",
-        description: "Bitte geben Sie Ihren Lexware API-Key ein.",
-        variant: "destructive",
-      });
-      return;
+  // Sync local state with settings from backend
+  useEffect(() => {
+    if (settings) {
+      setAutoSyncEnabled(settings.auto_sync_enabled);
+      setSyncInterval(settings.sync_interval);
+      setSyncTime(settings.sync_time);
     }
-    
-    // Simulate connection
-    setLexwareConnected(true);
-    toast({
-      title: "Verbindung hergestellt",
-      description: "Lexware wurde erfolgreich verbunden.",
-    });
-  };
+  }, [settings]);
 
-  const handleLexwareDisconnect = () => {
-    setLexwareConnected(false);
-    setLexwareAutoSync(false);
-    toast({
-      title: "Verbindung getrennt",
-      description: "Lexware-Verbindung wurde getrennt.",
-    });
-  };
-
-  const handleManualExport = async () => {
-    if (!lexwareConnected) {
-      toast({
-        title: "Nicht verbunden",
-        description: "Bitte verbinden Sie zuerst Lexware.",
-        variant: "destructive",
-      });
-      return;
+  const handleConnect = async () => {
+    const success = await connect(lexwareApiKey);
+    if (success) {
+      setLexwareApiKey("");
     }
-
-    setIsExporting(true);
-    toast({
-      title: "Export gestartet",
-      description: "Daten werden nach Lexware übertragen...",
-    });
-
-    // Simulate export
-    setTimeout(() => {
-      setIsExporting(false);
-      toast({
-        title: "Export abgeschlossen",
-        description: "156 Umsätze wurden erfolgreich nach Lexware übertragen.",
-      });
-    }, 2000);
   };
 
-  const handleSaveAutoSync = () => {
-    toast({
-      title: "Einstellungen gespeichert",
-      description: lexwareAutoSync 
-        ? `Auto-Sync aktiviert: ${lexwareSyncInterval === "daily" ? "Täglich" : lexwareSyncInterval === "weekly" ? "Wöchentlich" : "Monatlich"} um ${lexwareSyncTime} Uhr`
-        : "Auto-Sync deaktiviert",
-    });
+  const handleDisconnect = async () => {
+    await disconnect();
   };
 
-  const getStatusIcon = (status: SyncLog["status"]) => {
+  const handleExport = async () => {
+    await exportData(exportType, exportDateFrom, exportDateTo);
+  };
+
+  const handleSaveAutoSync = async () => {
+    await updateSettings(autoSyncEnabled, syncInterval, syncTime);
+  };
+
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case "success":
         return <CheckCircle2 className="h-4 w-4 text-green-500" />;
@@ -153,10 +92,12 @@ export default function Integrationen() {
         return <AlertCircle className="h-4 w-4 text-destructive" />;
       case "pending":
         return <Clock className="h-4 w-4 text-warning" />;
+      default:
+        return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
-  const getStatusBadge = (status: SyncLog["status"]) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "success":
         return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">Erfolgreich</Badge>;
@@ -164,8 +105,30 @@ export default function Integrationen() {
         return <Badge variant="destructive">Fehler</Badge>;
       case "pending":
         return <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">Ausstehend</Badge>;
+      default:
+        return <Badge variant="outline">Unbekannt</Badge>;
     }
   };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), "dd.MM.yyyy HH:mm", { locale: de });
+    } catch {
+      return dateString;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <MainLayout title="Buchhaltungs-Integrationen" subtitle="Laden...">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  const isConnected = settings?.is_connected ?? false;
 
   return (
     <MainLayout 
@@ -192,7 +155,7 @@ export default function Integrationen() {
               <div className="card-elevated p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-foreground">Verbindung</h2>
-                  {lexwareConnected ? (
+                  {isConnected ? (
                     <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
                       <CheckCircle2 className="h-3 w-3 mr-1" />
                       Verbunden
@@ -210,10 +173,10 @@ export default function Integrationen() {
                     <Input
                       id="lexware-api-key"
                       type="password"
-                      placeholder="Ihr Lexware API-Key"
+                      placeholder={isConnected ? "****" : "Ihr Lexware API-Key"}
                       value={lexwareApiKey}
                       onChange={(e) => setLexwareApiKey(e.target.value)}
-                      disabled={lexwareConnected}
+                      disabled={isConnected || isConnecting}
                       className="mt-1"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
@@ -221,17 +184,28 @@ export default function Integrationen() {
                     </p>
                   </div>
 
-                  {lexwareConnected ? (
+                  {isConnected ? (
                     <Button 
                       variant="outline" 
-                      onClick={handleLexwareDisconnect}
+                      onClick={handleDisconnect}
                       className="w-full"
                     >
                       Verbindung trennen
                     </Button>
                   ) : (
-                    <Button onClick={handleLexwareConnect} className="w-full">
-                      Verbinden
+                    <Button 
+                      onClick={handleConnect} 
+                      className="w-full"
+                      disabled={isConnecting || !lexwareApiKey}
+                    >
+                      {isConnecting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Verbinde...
+                        </>
+                      ) : (
+                        "Verbinden"
+                      )}
                     </Button>
                   )}
                 </div>
@@ -253,17 +227,17 @@ export default function Integrationen() {
                       </p>
                     </div>
                     <Switch
-                      checked={lexwareAutoSync}
-                      onCheckedChange={setLexwareAutoSync}
-                      disabled={!lexwareConnected}
+                      checked={autoSyncEnabled}
+                      onCheckedChange={setAutoSyncEnabled}
+                      disabled={!isConnected}
                     />
                   </div>
 
-                  {lexwareAutoSync && (
+                  {autoSyncEnabled && (
                     <>
                       <div>
                         <Label>Intervall</Label>
-                        <Select value={lexwareSyncInterval} onValueChange={setLexwareSyncInterval}>
+                        <Select value={syncInterval} onValueChange={setSyncInterval}>
                           <SelectTrigger className="mt-1">
                             <SelectValue />
                           </SelectTrigger>
@@ -279,8 +253,8 @@ export default function Integrationen() {
                         <Label>Uhrzeit</Label>
                         <Input
                           type="time"
-                          value={lexwareSyncTime}
-                          onChange={(e) => setLexwareSyncTime(e.target.value)}
+                          value={syncTime}
+                          onChange={(e) => setSyncTime(e.target.value)}
                           className="mt-1"
                         />
                       </div>
@@ -290,11 +264,17 @@ export default function Integrationen() {
                   <Button 
                     variant="outline" 
                     onClick={handleSaveAutoSync}
-                    disabled={!lexwareConnected}
+                    disabled={!isConnected}
                     className="w-full"
                   >
                     Einstellungen speichern
                   </Button>
+
+                  {settings?.last_sync_at && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Letzter Sync: {formatDate(settings.last_sync_at)}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -311,7 +291,7 @@ export default function Integrationen() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
                     <Label>Datentyp</Label>
-                    <Select value={exportType} onValueChange={setExportType}>
+                    <Select value={exportType} onValueChange={(v) => setExportType(v as typeof exportType)}>
                       <SelectTrigger className="mt-1">
                         <SelectValue />
                       </SelectTrigger>
@@ -366,13 +346,13 @@ export default function Integrationen() {
 
                   <div className="flex items-end">
                     <Button 
-                      onClick={handleManualExport} 
-                      disabled={!lexwareConnected || isExporting}
+                      onClick={handleExport} 
+                      disabled={!isConnected || isExporting}
                       className="w-full"
                     >
                       {isExporting ? (
                         <>
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           Übertrage...
                         </>
                       ) : (
@@ -401,14 +381,14 @@ export default function Integrationen() {
               <div className="card-elevated p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-foreground">Übertragungshistorie</h2>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={refresh}>
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Aktualisieren
                   </Button>
                 </div>
 
                 <div className="space-y-3">
-                  {mockSyncLogs.map((log) => (
+                  {syncLogs.map((log) => (
                     <div
                       key={log.id}
                       className="flex items-center gap-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
@@ -419,7 +399,7 @@ export default function Integrationen() {
                           {log.message}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {log.date}
+                          {formatDate(log.created_at)}
                         </p>
                       </div>
                       {getStatusBadge(log.status)}
@@ -427,7 +407,7 @@ export default function Integrationen() {
                   ))}
                 </div>
 
-                {mockSyncLogs.length === 0 && (
+                {syncLogs.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     <p>Noch keine Übertragungen durchgeführt</p>

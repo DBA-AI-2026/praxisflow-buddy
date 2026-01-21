@@ -14,6 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
+      integration_settings: {
+        Row: {
+          api_key_encrypted: string | null
+          auto_sync_enabled: boolean
+          created_at: string
+          id: string
+          integration_type: string
+          is_connected: boolean
+          last_sync_at: string | null
+          sync_interval: string | null
+          sync_time: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_key_encrypted?: string | null
+          auto_sync_enabled?: boolean
+          created_at?: string
+          id?: string
+          integration_type: string
+          is_connected?: boolean
+          last_sync_at?: string | null
+          sync_interval?: string | null
+          sync_time?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_key_encrypted?: string | null
+          auto_sync_enabled?: boolean
+          created_at?: string
+          id?: string
+          integration_type?: string
+          is_connected?: boolean
+          last_sync_at?: string | null
+          sync_interval?: string | null
+          sync_time?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      integration_sync_logs: {
+        Row: {
+          created_at: string
+          error_details: string | null
+          id: string
+          integration_type: string
+          message: string | null
+          records_count: number | null
+          status: string
+          sync_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_details?: string | null
+          id?: string
+          integration_type: string
+          message?: string | null
+          records_count?: number | null
+          status: string
+          sync_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_details?: string | null
+          id?: string
+          integration_type?: string
+          message?: string | null
+          records_count?: number | null
+          status?: string
+          sync_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       praxis_reservations: {
         Row: {
           arzt_namen: string
