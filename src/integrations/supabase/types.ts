@@ -14,6 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
+      customer_revenues: {
+        Row: {
+          created_at: string
+          customer_name: string
+          customer_number: string | null
+          due_date: string | null
+          exported_to_lexware: boolean
+          gross_amount: number
+          id: string
+          invoice_date: string
+          invoice_number: string
+          lexware_export_date: string | null
+          lexware_voucher_id: string | null
+          net_amount: number
+          notes: string | null
+          paid_at: string | null
+          payment_status: string
+          praxis_id: string | null
+          product_category: string | null
+          product_name: string
+          quantity: number
+          tax_amount: number
+          tax_rate: number
+          unit_price: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name: string
+          customer_number?: string | null
+          due_date?: string | null
+          exported_to_lexware?: boolean
+          gross_amount: number
+          id?: string
+          invoice_date: string
+          invoice_number: string
+          lexware_export_date?: string | null
+          lexware_voucher_id?: string | null
+          net_amount: number
+          notes?: string | null
+          paid_at?: string | null
+          payment_status?: string
+          praxis_id?: string | null
+          product_category?: string | null
+          product_name: string
+          quantity?: number
+          tax_amount: number
+          tax_rate?: number
+          unit_price: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string
+          customer_number?: string | null
+          due_date?: string | null
+          exported_to_lexware?: boolean
+          gross_amount?: number
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          lexware_export_date?: string | null
+          lexware_voucher_id?: string | null
+          net_amount?: number
+          notes?: string | null
+          paid_at?: string | null
+          payment_status?: string
+          praxis_id?: string | null
+          product_category?: string | null
+          product_name?: string
+          quantity?: number
+          tax_amount?: number
+          tax_rate?: number
+          unit_price?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_revenues_praxis_id_fkey"
+            columns: ["praxis_id"]
+            isOneToOne: false
+            referencedRelation: "praxis_reservations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integration_settings: {
         Row: {
           api_key_encrypted: string | null
