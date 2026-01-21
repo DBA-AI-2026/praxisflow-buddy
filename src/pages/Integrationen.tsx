@@ -6,12 +6,29 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Download,
   Upload,
@@ -25,11 +42,26 @@ import {
   Euro,
   Calendar,
   Loader2,
+  Eye,
+  FileCheck,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLexwareIntegration } from "@/hooks/useLexwareIntegration";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+
+interface PreviewRevenue {
+  id: string;
+  customer_name: string;
+  invoice_number: string;
+  invoice_date: string;
+  product_name: string;
+  quantity: number;
+  net_amount: number;
+  tax_amount: number;
+  gross_amount: number;
+}
 
 export default function Integrationen() {
   const {
@@ -56,6 +88,11 @@ export default function Integrationen() {
   const [exportDateTo, setExportDateTo] = useState("");
   const [exportType, setExportType] = useState<"umsaetze" | "rechnungen" | "provisionen">("umsaetze");
 
+  // Preview Dialog
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewData, setPreviewData] = useState<PreviewRevenue[]>([]);
+
   // Sync local state with settings from backend
   useEffect(() => {
     if (settings) {
@@ -76,7 +113,38 @@ export default function Integrationen() {
     await disconnect();
   };
 
+  const handleShowPreview = async () => {
+    setPreviewLoading(true);
+    setPreviewOpen(true);
+
+    try {
+      let query = supabase
+        .from("customer_revenues")
+        .select("id, customer_name, invoice_number, invoice_date, product_name, quantity, net_amount, tax_amount, gross_amount")
+        .eq("exported_to_lexware", false)
+        .order("invoice_date", { ascending: true });
+
+      if (exportDateFrom) {
+        query = query.gte("invoice_date", exportDateFrom);
+      }
+      if (exportDateTo) {
+        query = query.lte("invoice_date", exportDateTo);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      setPreviewData((data as PreviewRevenue[]) || []);
+    } catch (error) {
+      console.error("Error loading preview:", error);
+      setPreviewData([]);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   const handleExport = async () => {
+    setPreviewOpen(false);
     await exportData(exportType, exportDateFrom, exportDateTo);
   };
 
@@ -118,6 +186,29 @@ export default function Integrationen() {
     }
   };
 
+  const formatShortDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), "dd.MM.yyyy", { locale: de });
+    } catch {
+      return dateString;
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("de-DE", {
+      style: "currency",
+      currency: "EUR",
+    }).format(amount);
+  };
+
+  // Calculate preview totals
+  const previewTotals = {
+    count: previewData.length,
+    netTotal: previewData.reduce((sum, r) => sum + Number(r.net_amount), 0),
+    taxTotal: previewData.reduce((sum, r) => sum + Number(r.tax_amount), 0),
+    grossTotal: previewData.reduce((sum, r) => sum + Number(r.gross_amount), 0),
+  };
+
   if (isLoading) {
     return (
       <MainLayout title="Buchhaltungs-Integrationen" subtitle="Laden...">
@@ -135,6 +226,109 @@ export default function Integrationen() {
       title="Buchhaltungs-Integrationen" 
       subtitle="Lexware und DATEV Schnittstellen für automatische Umsatzübertragung"
     >
+      {/* Export Preview Dialog */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Export-Vorschau
+            </DialogTitle>
+            <DialogDescription>
+              Diese Umsätze werden nach Lexware übertragen. Überprüfen Sie die Daten vor dem Export.
+            </DialogDescription>
+          </DialogHeader>
+
+          {previewLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : previewData.length === 0 ? (
+            <div className="text-center py-12">
+              <FileCheck className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <p className="text-lg font-medium text-foreground">Keine Daten zum Exportieren</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Alle Umsätze wurden bereits exportiert oder es gibt keine Umsätze im gewählten Zeitraum.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-4 gap-4 mb-4">
+                <div className="p-3 rounded-lg bg-muted/50">
+                  <p className="text-xs text-muted-foreground">Anzahl</p>
+                  <p className="text-lg font-semibold">{previewTotals.count} Positionen</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/50">
+                  <p className="text-xs text-muted-foreground">Netto</p>
+                  <p className="text-lg font-semibold">{formatCurrency(previewTotals.netTotal)}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/50">
+                  <p className="text-xs text-muted-foreground">MwSt.</p>
+                  <p className="text-lg font-semibold">{formatCurrency(previewTotals.taxTotal)}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-primary/10">
+                  <p className="text-xs text-muted-foreground">Brutto</p>
+                  <p className="text-lg font-semibold text-primary">{formatCurrency(previewTotals.grossTotal)}</p>
+                </div>
+              </div>
+
+              {/* Data Table */}
+              <ScrollArea className="h-[400px] rounded-md border">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background">
+                    <TableRow>
+                      <TableHead>Rechnungsnr.</TableHead>
+                      <TableHead>Kunde</TableHead>
+                      <TableHead>Produkt</TableHead>
+                      <TableHead>Datum</TableHead>
+                      <TableHead className="text-right">Menge</TableHead>
+                      <TableHead className="text-right">Netto</TableHead>
+                      <TableHead className="text-right">Brutto</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {previewData.map((revenue) => (
+                      <TableRow key={revenue.id}>
+                        <TableCell className="font-medium">{revenue.invoice_number}</TableCell>
+                        <TableCell>{revenue.customer_name}</TableCell>
+                        <TableCell>{revenue.product_name}</TableCell>
+                        <TableCell>{formatShortDate(revenue.invoice_date)}</TableCell>
+                        <TableCell className="text-right">{revenue.quantity}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(Number(revenue.net_amount))}</TableCell>
+                        <TableCell className="text-right font-medium">{formatCurrency(Number(revenue.gross_amount))}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPreviewOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button 
+              onClick={handleExport} 
+              disabled={previewData.length === 0 || isExporting}
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Exportiere...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  {previewTotals.count} Positionen exportieren
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Tabs defaultValue="lexware" className="space-y-6">
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="lexware" className="flex items-center gap-2">
@@ -344,25 +538,37 @@ export default function Integrationen() {
                     </div>
                   </div>
 
-                  <div className="flex items-end">
+                  <div className="flex items-end gap-2">
                     <Button 
-                      onClick={handleExport} 
-                      disabled={!isConnected || isExporting}
-                      className="w-full"
+                      variant="outline"
+                      onClick={handleShowPreview} 
+                      disabled={!isConnected}
+                      className="flex-1"
                     >
-                      {isExporting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Übertrage...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Nach Lexware
-                        </>
-                      )}
+                      <Eye className="h-4 w-4 mr-2" />
+                      Vorschau
                     </Button>
                   </div>
+                </div>
+
+                <div className="mt-4 flex gap-3">
+                  <Button 
+                    onClick={handleShowPreview} 
+                    disabled={!isConnected || isExporting}
+                    className="flex-1"
+                  >
+                    {isExporting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Übertrage...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Vorschau & Export nach Lexware
+                      </>
+                    )}
+                  </Button>
                 </div>
 
                 <div className="mt-4 p-3 rounded-lg bg-muted/50 flex items-start gap-2">
