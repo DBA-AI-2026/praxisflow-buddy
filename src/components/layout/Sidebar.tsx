@@ -92,7 +92,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <div className="flex h-16 items-center gap-3 px-4 md:px-6 border-b border-sidebar-border">
         <img src={logo} alt="Honorarfuchs Logo" className="h-11 w-11 md:h-12 md:w-12 rounded-full object-cover" />
         <div>
-          <span className="text-base md:text-lg font-semibold text-sidebar-foreground">HFX Honorarfuchs Sales</span>
+          <span className="text-base md:text-lg font-semibold text-sidebar-foreground">HFX Sales</span>
           <span className="text-xs block text-sidebar-foreground/60">das Portal für den Vertrieb</span>
         </div>
       </div>
