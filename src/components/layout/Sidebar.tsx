@@ -14,12 +14,15 @@ import {
   BookMarked,
   Euro,
   Link2,
+  Lock,
 } from "lucide-react";
 import logo from "@/assets/fox-logo.jpeg";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -48,6 +51,27 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdminRole = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      
+      setIsAdmin(!!data && !error);
+    };
+
+    checkAdminRole();
+  }, [user]);
 
   const handleLogout = async () => {
     await signOut();
@@ -116,6 +140,26 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </div>
         {adminNavigation.map((item) => {
           const isActive = location.pathname === item.href;
+          
+          if (!isAdmin) {
+            return (
+              <Tooltip key={item.name}>
+                <TooltipTrigger asChild>
+                  <div
+                    className="sidebar-link opacity-40 cursor-not-allowed select-none"
+                  >
+                    <item.icon className="h-5 w-5 flex-shrink-0" />
+                    <span className="truncate flex-1">{item.name}</span>
+                    <Lock className="h-3.5 w-3.5 flex-shrink-0" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>Nur für Administratoren</p>
+                </TooltipContent>
+              </Tooltip>
+            );
+          }
+          
           return (
             <Link
               key={item.name}
