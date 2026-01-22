@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,10 +8,10 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -18,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Key, Shield } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,96 +29,143 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
-interface User {
-  id: string;
-  name: string;
+type AppRole = Database["public"]["Enums"]["app_role"];
+
+interface UserWithRole {
+  user_id: string;
+  role: AppRole;
+  full_name: string;
   email: string;
-  rolle: "admin" | "user";
-  datenexport: boolean;
-  erstelltAm: string;
-  letzteAnmeldung: string;
-  status: "aktiv" | "inaktiv";
+  created_at: string;
 }
 
-const initialUsers: User[] = [
-  {
-    id: "1",
-    name: "Admin Demo",
-    email: "admin@qodia.de",
-    rolle: "admin",
-    datenexport: true,
-    erstelltAm: "2024-01-01",
-    letzteAnmeldung: "2025-01-15T09:30:00",
-    status: "aktiv",
-  },
-  {
-    id: "2",
-    name: "Max Mustermann",
-    email: "max.mustermann@qodia.de",
-    rolle: "user",
-    datenexport: true,
-    erstelltAm: "2024-06-15",
-    letzteAnmeldung: "2025-01-14T14:20:00",
-    status: "aktiv",
-  },
-  {
-    id: "3",
-    name: "Lisa Schmidt",
-    email: "lisa.schmidt@qodia.de",
-    rolle: "user",
-    datenexport: false,
-    erstelltAm: "2024-09-01",
-    letzteAnmeldung: "2025-01-15T08:15:00",
-    status: "aktiv",
-  },
-  {
-    id: "4",
-    name: "Tom Weber",
-    email: "tom.weber@qodia.de",
-    rolle: "user",
-    datenexport: false,
-    erstelltAm: "2024-11-20",
-    letzteAnmeldung: "2025-01-13T16:45:00",
-    status: "aktiv",
-  },
-];
-
-const rolleColors: Record<string, string> = {
-  admin: "badge-info",
-  user: "badge-status bg-secondary text-secondary-foreground",
+const roleConfig: Record<AppRole, { label: string; color: string }> = {
+  admin: { label: "Admin", color: "bg-primary/10 text-primary" },
+  sales_partner: { label: "Vertriebspartner", color: "bg-blue-100 text-blue-800" },
+  user: { label: "Benutzer", color: "bg-secondary text-secondary-foreground" },
 };
 
 export default function AdminUsers() {
-  const [users, setUsers] = useState<User[]>(initialUsers);
   const [search, setSearch] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
+  const [selectedRole, setSelectedRole] = useState<AppRole>("user");
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch users with roles
+  const { data: users = [], isLoading } = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: async () => {
+      // Get all user roles
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role, created_at");
+
+      if (rolesError) throw rolesError;
+
+      // Get all profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email");
+
+      if (profilesError) throw profilesError;
+
+      // Merge roles with profiles
+      const usersWithRoles: UserWithRole[] = roles.map((role) => {
+        const profile = profiles.find((p) => p.user_id === role.user_id);
+        return {
+          user_id: role.user_id,
+          role: role.role,
+          full_name: profile?.full_name || "Unbekannt",
+          email: profile?.email || "-",
+          created_at: role.created_at,
+        };
+      });
+
+      return usersWithRoles;
+    },
+  });
+
+  // Update role mutation
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
+      const { error } = await supabase
+        .from("user_roles")
+        .update({ role: newRole })
+        .eq("user_id", userId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      setEditDialogOpen(false);
+      setSelectedUser(null);
+      toast({
+        title: "Rolle aktualisiert",
+        description: "Die Benutzerrolle wurde erfolgreich geändert.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Fehler",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete user mutation (removes role, not the auth user)
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      setDeleteDialogOpen(false);
+      setSelectedUser(null);
+      toast({
+        title: "Benutzer entfernt",
+        description: "Die Rolle wurde erfolgreich entfernt.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Fehler",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const filteredUsers = users.filter(
     (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
+      u.full_name.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  const toggleDatenexport = (userId: string) => {
-    setUsers(
-      users.map((u) =>
-        u.id === userId ? { ...u, datenexport: !u.datenexport } : u
-      )
-    );
-    toast({
-      title: "Berechtigung aktualisiert",
-      description: "Die Datenexport-Berechtigung wurde geändert.",
-    });
+  const adminCount = users.filter((u) => u.role === "admin").length;
+  const salesPartnerCount = users.filter((u) => u.role === "sales_partner").length;
+  const userCount = users.filter((u) => u.role === "user").length;
+
+  const handleEditClick = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setSelectedRole(user.role);
+    setEditDialogOpen(true);
   };
 
-  const deleteUser = (userId: string) => {
-    setUsers(users.filter((u) => u.id !== userId));
-    toast({
-      title: "Benutzer gelöscht",
-      description: "Der Benutzer wurde erfolgreich entfernt.",
-    });
+  const handleDeleteClick = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setDeleteDialogOpen(true);
   };
 
   return (
@@ -130,41 +179,35 @@ export default function AdminUsers() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Admins</p>
-              <p className="text-2xl font-semibold text-foreground">
-                {users.filter((u) => u.rolle === "admin").length}
-              </p>
+              <p className="text-2xl font-semibold text-foreground">{adminCount}</p>
+            </div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg p-3 bg-blue-100">
+              <Users className="h-5 w-5 text-blue-700" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Vertriebspartner</p>
+              <p className="text-2xl font-semibold text-foreground">{salesPartnerCount}</p>
             </div>
           </div>
         </div>
         <div className="stat-card">
           <div className="flex items-center gap-3">
             <div className="rounded-lg p-3 bg-secondary">
-              <Shield className="h-5 w-5 text-secondary-foreground" />
+              <Users className="h-5 w-5 text-secondary-foreground" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">User</p>
-              <p className="text-2xl font-semibold text-foreground">
-                {users.filter((u) => u.rolle === "user").length}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg p-3 bg-accent/10">
-              <Key className="h-5 w-5 text-accent" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Mit Datenexport</p>
-              <p className="text-2xl font-semibold text-foreground">
-                {users.filter((u) => u.datenexport).length}
-              </p>
+              <p className="text-sm text-muted-foreground">Benutzer</p>
+              <p className="text-2xl font-semibold text-foreground">{userCount}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Toolbar */}
+      {/* Search */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -175,178 +218,200 @@ export default function AdminUsers() {
             className="pl-9"
           />
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Neuer Benutzer
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Neuen Benutzer anlegen</DialogTitle>
-            </DialogHeader>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-                const newUser: User = {
-                  id: crypto.randomUUID(),
-                  name: formData.get("name") as string,
-                  email: formData.get("email") as string,
-                  rolle: formData.get("rolle") as "admin" | "user",
-                  datenexport: formData.get("datenexport") === "on",
-                  erstelltAm: new Date().toISOString().split("T")[0],
-                  letzteAnmeldung: "-",
-                  status: "aktiv",
-                };
-                setUsers([newUser, ...users]);
-                setIsDialogOpen(false);
-                toast({
-                  title: "Benutzer angelegt",
-                  description: `${newUser.name} wurde erfolgreich hinzugefügt.`,
-                });
-              }}
-              className="space-y-4"
-            >
-              <div>
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" name="name" required className="mt-1" />
-              </div>
-              <div>
-                <Label htmlFor="email">E-Mail</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="rolle">Rolle</Label>
-                <Select name="rolle" defaultValue="user">
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="datenexport">Datenexport erlauben</Label>
-                <Switch id="datenexport" name="datenexport" />
-              </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Abbrechen
-                </Button>
-                <Button type="submit">Benutzer anlegen</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <p className="text-sm text-muted-foreground">
+          Neue Benutzer werden über Zugangsanfragen angelegt
+        </p>
       </div>
 
       {/* Table */}
       <div className="card-elevated overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="data-table">
-            <thead className="bg-muted/50">
-              <tr>
-                <th>Benutzer</th>
-                <th>Rolle</th>
-                <th>Datenexport</th>
-                <th>Erstellt am</th>
-                <th>Letzte Anmeldung</th>
-                <th className="w-12"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((user) => (
-                <tr key={user.id}>
-                  <td>
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
-                        {user.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </div>
-                      <div>
-                        <span className="font-medium text-foreground">
-                          {user.name}
-                        </span>
-                        <span className="block text-xs text-muted-foreground">
-                          {user.email}
-                        </span>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={`badge-status ${rolleColors[user.rolle]}`}>
-                      {user.rolle === "admin" ? "Admin" : "User"}
-                    </span>
-                  </td>
-                  <td>
-                    <Switch
-                      checked={user.datenexport}
-                      onCheckedChange={() => toggleDatenexport(user.id)}
-                    />
-                  </td>
-                  <td className="text-muted-foreground">
-                    {new Date(user.erstelltAm).toLocaleDateString("de-DE")}
-                  </td>
-                  <td className="text-muted-foreground">
-                    {user.letzteAnmeldung === "-"
-                      ? "-"
-                      : new Date(user.letzteAnmeldung).toLocaleString("de-DE", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                  </td>
-                  <td>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Bearbeiten
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Key className="h-4 w-4 mr-2" />
-                          Passwort ändern
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => deleteUser(user.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Löschen
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              Keine Benutzer gefunden.
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th>Benutzer</th>
+                  <th>Rolle</th>
+                  <th>Erstellt am</th>
+                  <th className="w-12"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredUsers.map((user) => (
+                  <tr key={user.user_id}>
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
+                          {user.full_name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .slice(0, 2)}
+                        </div>
+                        <div>
+                          <span className="font-medium text-foreground">
+                            {user.full_name}
+                          </span>
+                          <span className="block text-xs text-muted-foreground">
+                            {user.email}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <Badge
+                        variant="secondary"
+                        className={roleConfig[user.role]?.color || ""}
+                      >
+                        {roleConfig[user.role]?.label || user.role}
+                      </Badge>
+                    </td>
+                    <td className="text-muted-foreground">
+                      {new Date(user.created_at).toLocaleDateString("de-DE")}
+                    </td>
+                    <td>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEditClick(user)}>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Rolle ändern
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => handleDeleteClick(user)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Entfernen
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
+
+      {/* Edit Role Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rolle ändern</DialogTitle>
+            <DialogDescription>
+              Ändern Sie die Rolle für diesen Benutzer.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedUser && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="font-medium">{selectedUser.full_name}</p>
+                <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Neue Rolle</Label>
+                <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AppRole)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">Benutzer</SelectItem>
+                    <SelectItem value="sales_partner">Vertriebspartner</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedUser) {
+                  updateRoleMutation.mutate({
+                    userId: selectedUser.user_id,
+                    newRole: selectedRole,
+                  });
+                }
+              }}
+              disabled={updateRoleMutation.isPending}
+            >
+              {updateRoleMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Wird gespeichert...
+                </>
+              ) : (
+                "Speichern"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Benutzer entfernen</DialogTitle>
+            <DialogDescription>
+              Sind Sie sicher, dass Sie diesen Benutzer entfernen möchten? 
+              Die Rolle wird entfernt, der Account bleibt jedoch bestehen.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedUser && (
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="font-medium">{selectedUser.full_name}</p>
+              <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (selectedUser) {
+                  deleteUserMutation.mutate(selectedUser.user_id);
+                }
+              }}
+              disabled={deleteUserMutation.isPending}
+            >
+              {deleteUserMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Wird entfernt...
+                </>
+              ) : (
+                "Entfernen"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
