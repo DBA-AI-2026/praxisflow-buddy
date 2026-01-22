@@ -138,6 +138,18 @@ export default function Auth() {
         setError("Fehler beim Senden der Anfrage. Bitte versuchen Sie es erneut.");
         console.error("Insert error:", insertError);
       } else {
+        // Send notification email to admin (fire and forget - don't block on errors)
+        supabase.functions.invoke("notify-new-request", {
+          body: {
+            fullName: requestFullName,
+            email: requestEmail,
+            company: requestCompany || null,
+            message: requestMessage || null,
+          },
+        }).catch((err) => {
+          console.error("Failed to send notification email:", err);
+        });
+
         setSuccess("Ihre Zugangsanfrage wurde erfolgreich gesendet. Ein Administrator wird sich mit Ihnen in Verbindung setzen.");
         setRequestEmail("");
         setRequestFullName("");
