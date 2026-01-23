@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus } from "lucide-react";
+import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, Eye, EyeOff, Copy, Check } from "lucide-react";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import {
   DropdownMenu,
@@ -41,6 +41,7 @@ interface UserWithRole {
   full_name: string;
   email: string;
   created_at: string;
+  temp_password: string | null;
 }
 
 const roleConfig: Record<AppRole, { label: string; color: string }> = {
@@ -57,8 +58,32 @@ export default function AdminUsers() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [selectedRole, setSelectedRole] = useState<AppRole>("user");
+  const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
+  const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const togglePasswordVisibility = (userId: string) => {
+    setVisiblePasswords(prev => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
+
+  const copyPassword = async (userId: string, password: string) => {
+    await navigator.clipboard.writeText(password);
+    setCopiedUserId(userId);
+    setTimeout(() => setCopiedUserId(null), 2000);
+    toast({
+      title: "Kopiert",
+      description: "Passwort in Zwischenablage kopiert.",
+    });
+  };
 
   // Fetch users with roles
   const { data: users = [], isLoading } = useQuery({
@@ -74,7 +99,7 @@ export default function AdminUsers() {
       // Get all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("user_id, full_name, email");
+        .select("user_id, full_name, email, temp_password");
 
       if (profilesError) throw profilesError;
 
@@ -87,6 +112,7 @@ export default function AdminUsers() {
           full_name: profile?.full_name || "Unbekannt",
           email: profile?.email || "-",
           created_at: role.created_at,
+          temp_password: profile?.temp_password || null,
         };
       });
 
@@ -256,6 +282,7 @@ export default function AdminUsers() {
                 <tr>
                   <th>Benutzer</th>
                   <th>Rolle</th>
+                  <th>Temp. Passwort</th>
                   <th>Erstellt am</th>
                   <th className="w-12"></th>
                 </tr>
@@ -289,6 +316,43 @@ export default function AdminUsers() {
                       >
                         {roleConfig[user.role]?.label || user.role}
                       </Badge>
+                    </td>
+                    <td>
+                      {user.temp_password ? (
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
+                            {visiblePasswords.has(user.user_id) 
+                              ? user.temp_password 
+                              : "••••••••"}
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => togglePasswordVisibility(user.user_id)}
+                          >
+                            {visiblePasswords.has(user.user_id) ? (
+                              <EyeOff className="h-3.5 w-3.5" />
+                            ) : (
+                              <Eye className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => copyPassword(user.user_id, user.temp_password!)}
+                          >
+                            {copiedUserId === user.user_id ? (
+                              <Check className="h-3.5 w-3.5 text-green-600" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="text-muted-foreground">
                       {new Date(user.created_at).toLocaleDateString("de-DE")}
