@@ -6,7 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Euro, Bell, Database } from "lucide-react";
+import { useSalesforceConnection } from "@/hooks/useSalesforceConnection";
+import { Save, Euro, Bell, Database, CheckCircle2, XCircle, Loader2, ExternalLink, Unplug } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface Pricing {
   hfxGoae: number;
@@ -36,12 +38,16 @@ export default function AdminSettings() {
     newPraxis: true,
     lizenzAblauf: true,
   });
-  const [salesforce, setSalesforce] = useState({
-    enabled: false,
-    apiKey: "",
-    syncInterval: "daily",
-  });
+  const [syncInterval, setSyncInterval] = useState("daily");
   const { toast } = useToast();
+
+  const {
+    connection: salesforce,
+    isLoading: sfLoading,
+    isConnecting: sfConnecting,
+    connect: connectSalesforce,
+    disconnect: disconnectSalesforce,
+  } = useSalesforceConnection();
 
   const savePricing = () => {
     toast({
@@ -57,12 +63,42 @@ export default function AdminSettings() {
     });
   };
 
-  const saveSalesforce = () => {
+  const handleConnectSalesforce = async () => {
+    try {
+      await connectSalesforce();
+      toast({
+        title: "Verbindung gestartet",
+        description: "Bitte melden Sie sich im Salesforce-Fenster an.",
+      });
+    } catch {
+      toast({
+        title: "Fehler",
+        description: "Die Verbindung konnte nicht gestartet werden.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDisconnectSalesforce = async () => {
+    try {
+      await disconnectSalesforce();
+      toast({
+        title: "Verbindung getrennt",
+        description: "Salesforce wurde erfolgreich getrennt.",
+      });
+    } catch {
+      toast({
+        title: "Fehler",
+        description: "Die Verbindung konnte nicht getrennt werden.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const saveSyncSettings = () => {
     toast({
-      title: "Salesforce-Einstellungen gespeichert",
-      description: salesforce.enabled
-        ? "Die Integration ist jetzt aktiv."
-        : "Die Integration wurde deaktiviert.",
+      title: "Sync-Einstellungen gespeichert",
+      description: "Die Synchronisationseinstellungen wurden aktualisiert.",
     });
   };
 
@@ -282,60 +318,85 @@ export default function AdminSettings() {
         </TabsContent>
 
         <TabsContent value="salesforce">
-          <div className="card-elevated p-6 max-w-xl">
-            <h2 className="text-lg font-semibold text-foreground mb-4">
-              Salesforce-Integration
-            </h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              Konfigurieren Sie die automatische Synchronisation mit Salesforce.
-            </p>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Integration aktivieren</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Automatischer Datenexport nach Salesforce
-                  </p>
-                </div>
-                <Switch
-                  checked={salesforce.enabled}
-                  onCheckedChange={(checked) =>
-                    setSalesforce({ ...salesforce, enabled: checked })
-                  }
-                />
+          <div className="space-y-6 max-w-xl">
+            {/* Connection Status Card */}
+            <div className="card-elevated p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-foreground">
+                  Salesforce-Verbindung
+                </h2>
+                {sfLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                ) : salesforce.isConnected ? (
+                  <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-500/20">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Verbunden
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                    <XCircle className="h-3 w-3 mr-1" />
+                    Nicht verbunden
+                  </Badge>
+                )}
               </div>
 
-              {salesforce.enabled && (
-                <>
-                  <div>
-                    <Label htmlFor="apiKey">Salesforce API Key</Label>
-                    <Input
-                      id="apiKey"
-                      type="password"
-                      value={salesforce.apiKey}
-                      onChange={(e) =>
-                        setSalesforce({ ...salesforce, apiKey: e.target.value })
-                      }
-                      placeholder="sf_api_xxxxxxxxxxxx"
-                      className="mt-1"
-                    />
-                  </div>
+              {salesforce.isConnected && salesforce.instanceUrl && (
+                <div className="mb-4 p-3 rounded-lg bg-muted/50">
+                  <p className="text-sm text-muted-foreground">Instanz</p>
+                  <p className="text-sm font-medium text-foreground flex items-center gap-1">
+                    {salesforce.instanceUrl}
+                    <ExternalLink className="h-3 w-3" />
+                  </p>
+                </div>
+              )}
+
+              <p className="text-sm text-muted-foreground mb-4">
+                {salesforce.isConnected
+                  ? "Ihre Salesforce-Instanz ist verbunden. Sie können Daten automatisch synchronisieren."
+                  : "Verbinden Sie Ihr Salesforce-Konto über OAuth 2.0, um Daten automatisch zu synchronisieren."}
+              </p>
+
+              {salesforce.isConnected ? (
+                <Button
+                  variant="outline"
+                  onClick={handleDisconnectSalesforce}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Unplug className="h-4 w-4 mr-2" />
+                  Verbindung trennen
+                </Button>
+              ) : (
+                <Button onClick={handleConnectSalesforce} disabled={sfConnecting}>
+                  {sfConnecting ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                  )}
+                  Mit Salesforce verbinden
+                </Button>
+              )}
+            </div>
+
+            {/* Sync Settings Card - Only show when connected */}
+            {salesforce.isConnected && (
+              <div className="card-elevated p-6">
+                <h2 className="text-lg font-semibold text-foreground mb-4">
+                  Synchronisations-Einstellungen
+                </h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Konfigurieren Sie, wie oft Daten mit Salesforce synchronisiert werden sollen.
+                </p>
+
+                <div className="space-y-4">
                   <div>
                     <Label>Sync-Intervall</Label>
                     <div className="flex gap-2 mt-2">
                       {["hourly", "daily", "weekly"].map((interval) => (
                         <Button
                           key={interval}
-                          variant={
-                            salesforce.syncInterval === interval
-                              ? "default"
-                              : "outline"
-                          }
+                          variant={syncInterval === interval ? "default" : "outline"}
                           size="sm"
-                          onClick={() =>
-                            setSalesforce({ ...salesforce, syncInterval: interval })
-                          }
+                          onClick={() => setSyncInterval(interval)}
                         >
                           {interval === "hourly"
                             ? "Stündlich"
@@ -346,14 +407,14 @@ export default function AdminSettings() {
                       ))}
                     </div>
                   </div>
-                </>
-              )}
-            </div>
+                </div>
 
-            <Button onClick={saveSalesforce} className="mt-6">
-              <Save className="h-4 w-4 mr-2" />
-              Einstellungen speichern
-            </Button>
+                <Button onClick={saveSyncSettings} className="mt-6">
+                  <Save className="h-4 w-4 mr-2" />
+                  Einstellungen speichern
+                </Button>
+              </div>
+            )}
           </div>
         </TabsContent>
       </Tabs>
