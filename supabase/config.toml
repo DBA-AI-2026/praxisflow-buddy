@@ -1,1 +1,7 @@
 project_id = "gvsxentbbzuyanqbqvea"
+
+[functions.salesforce-auth]
+verify_jwt = false
+
+[functions.salesforce-callback]
+verify_jwt = false
