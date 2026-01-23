@@ -53,12 +53,25 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
         body: { email, fullName, role },
       });
 
+      // Handle FunctionsHttpError - the error is in the response data
       if (response.error) {
-        throw new Error(response.error.message || "Failed to create user");
+        // Try to get error message from the response data first
+        const errorMessage = response.error.message || "Failed to create user";
+        throw new Error(errorMessage);
       }
 
+      // Also check if error is in the data object (for 4xx responses)
       if (response.data?.error) {
-        throw new Error(response.data.error);
+        const errorMsg = response.data.error;
+        // Translate common errors to German
+        if (errorMsg.includes("already been registered")) {
+          throw new Error("Ein Benutzer mit dieser E-Mail-Adresse existiert bereits.");
+        }
+        throw new Error(errorMsg);
+      }
+
+      if (!response.data?.success) {
+        throw new Error("Unerwarteter Fehler beim Erstellen des Benutzers");
       }
 
       return response.data;
