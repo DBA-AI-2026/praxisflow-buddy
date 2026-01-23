@@ -44,6 +44,7 @@ const vertriebNavigation = [
 const adminNavigation = [
   { name: "Zugangsanfragen", href: "/admin/access-requests", icon: UserPlus },
   { name: "Benutzerverwaltung", href: "/admin/users", icon: Users },
+  { name: "Audit-Protokoll", href: "/admin/audit-logs", icon: Lock },
   { name: "Einstellungen", href: "/admin/settings", icon: Settings },
 ];
 
