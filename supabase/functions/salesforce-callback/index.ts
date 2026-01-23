@@ -46,7 +46,27 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Exchange authorization code for access token
+    // Get the code verifier from database
+    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+    
+    const { data: connectionData, error: fetchError } = await supabase
+      .from("salesforce_connections")
+      .select("code_verifier")
+      .eq("id", "default")
+      .single();
+
+    if (fetchError || !connectionData?.code_verifier) {
+      console.error("Failed to retrieve code verifier:", fetchError);
+      return new Response(
+        `<html><body><h1>Fehler</h1><p>OAuth-Session abgelaufen. Bitte erneut versuchen.</p></body></html>`,
+        { headers: { "Content-Type": "text/html" } }
+      );
+    }
+
+    const codeVerifier = connectionData.code_verifier;
+    console.log("Retrieved code verifier for token exchange");
+
+    // Exchange authorization code for access token with PKCE
     const redirectUri = `${SUPABASE_URL}/functions/v1/salesforce-callback`;
     
     const tokenResponse = await fetch("https://login.salesforce.com/services/oauth2/token", {
@@ -60,6 +80,7 @@ Deno.serve(async (req) => {
         client_id: SALESFORCE_CLIENT_ID,
         client_secret: SALESFORCE_CLIENT_SECRET,
         redirect_uri: redirectUri,
+        code_verifier: codeVerifier,
       }),
     });
 
@@ -75,10 +96,7 @@ Deno.serve(async (req) => {
 
     console.log("Successfully obtained Salesforce tokens");
 
-    // Store the tokens in the database
-    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
-
-    // Upsert the connection (we'll use a single row for simplicity)
+    // Store the tokens in the database and clear code_verifier
     const { error: dbError } = await supabase
       .from("salesforce_connections")
       .upsert({
@@ -89,6 +107,7 @@ Deno.serve(async (req) => {
         token_type: tokenData.token_type,
         issued_at: new Date(parseInt(tokenData.issued_at)).toISOString(),
         is_connected: true,
+        code_verifier: null,
         updated_at: new Date().toISOString(),
       }, { onConflict: "id" });
 

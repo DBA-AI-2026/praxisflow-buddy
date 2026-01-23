@@ -1,9 +1,25 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { encode as base64UrlEncode } from "https://deno.land/std@0.208.0/encoding/base64url.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Generate a random code verifier for PKCE
+function generateCodeVerifier(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return base64UrlEncode(array);
+}
+
+// Generate code challenge from verifier using SHA-256
+async function generateCodeChallenge(verifier: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return base64UrlEncode(new Uint8Array(digest));
+}
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -14,6 +30,7 @@ Deno.serve(async (req) => {
   try {
     const SALESFORCE_CLIENT_ID = Deno.env.get("SALESFORCE_CLIENT_ID");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!SALESFORCE_CLIENT_ID) {
       console.error("Missing SALESFORCE_CLIENT_ID");
@@ -23,7 +40,33 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Build the Salesforce OAuth authorization URL
+    // Generate PKCE code verifier and challenge
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+    console.log("Generated PKCE code verifier and challenge");
+
+    // Store the code verifier in the database for later use in callback
+    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+    
+    const { error: dbError } = await supabase
+      .from("salesforce_connections")
+      .upsert({
+        id: "default",
+        code_verifier: codeVerifier,
+        is_connected: false,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "id" });
+
+    if (dbError) {
+      console.error("Failed to store code verifier:", dbError);
+      return new Response(
+        JSON.stringify({ error: "Failed to initialize OAuth flow" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Build the Salesforce OAuth authorization URL with PKCE
     const redirectUri = `${SUPABASE_URL}/functions/v1/salesforce-callback`;
     const scopes = "api refresh_token offline_access";
     
@@ -32,8 +75,10 @@ Deno.serve(async (req) => {
     authUrl.searchParams.set("client_id", SALESFORCE_CLIENT_ID);
     authUrl.searchParams.set("redirect_uri", redirectUri);
     authUrl.searchParams.set("scope", scopes);
+    authUrl.searchParams.set("code_challenge", codeChallenge);
+    authUrl.searchParams.set("code_challenge_method", "S256");
 
-    console.log("Generated Salesforce auth URL:", authUrl.toString());
+    console.log("Generated Salesforce auth URL with PKCE");
 
     return new Response(
       JSON.stringify({ authUrl: authUrl.toString() }),
