@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     const redirectUri = `${SUPABASE_URL}/functions/v1/salesforce-callback`;
     const scopes = "api refresh_token offline_access";
     
-    const authUrl = new URL("https://test.salesforce.com/services/oauth2/authorize");
+    const authUrl = new URL("https://carecapital--partial.sandbox.my.salesforce.com/services/oauth2/authorize");
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("client_id", SALESFORCE_CLIENT_ID);
     authUrl.searchParams.set("redirect_uri", redirectUri);
