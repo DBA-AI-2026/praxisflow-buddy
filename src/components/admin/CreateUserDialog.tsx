@@ -33,6 +33,7 @@ interface CreateUserDialogProps {
 interface CreatedCredentials {
   email: string;
   password: string;
+  isExistingUser?: boolean;
 }
 
 export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) {
@@ -78,12 +79,19 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      setCredentials(data.credentials);
+      setCredentials({
+        email: data.credentials.email,
+        password: data.credentials.password,
+        isExistingUser: data.isExistingUser,
+      });
+      const message = data.isExistingUser
+        ? "Das Passwort wurde zurückgesetzt."
+        : "Der Benutzer wurde angelegt.";
       toast({
-        title: "Benutzer erstellt",
+        title: data.isExistingUser ? "Passwort zurückgesetzt" : "Benutzer erstellt",
         description: data.emailSent 
-          ? "Die Zugangsdaten wurden per E-Mail gesendet." 
-          : "Der Benutzer wurde angelegt. E-Mail konnte nicht gesendet werden.",
+          ? `${message} Die Zugangsdaten wurden per E-Mail gesendet.`
+          : `${message} E-Mail konnte nicht gesendet werden.`,
       });
     },
     onError: (error: Error) => {
@@ -122,10 +130,18 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Benutzer anlegen</DialogTitle>
+          <DialogTitle>
+            {credentials
+              ? credentials.isExistingUser
+                ? "Passwort zurückgesetzt"
+                : "Benutzer angelegt"
+              : "Benutzer anlegen"}
+          </DialogTitle>
           <DialogDescription>
             {credentials
-              ? "Der Benutzer wurde erstellt. Teilen Sie die Zugangsdaten mit dem Benutzer."
+              ? credentials.isExistingUser
+                ? "Das Passwort wurde zurückgesetzt. Teilen Sie die neuen Zugangsdaten mit dem Benutzer."
+                : "Der Benutzer wurde erstellt. Teilen Sie die Zugangsdaten mit dem Benutzer."
               : "Erstellen Sie einen neuen Benutzer mit E-Mail und Rolle."}
           </DialogDescription>
         </DialogHeader>
