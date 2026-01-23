@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     // Exchange authorization code for access token with PKCE
     const redirectUri = `${SUPABASE_URL}/functions/v1/salesforce-callback`;
     
-    const tokenResponse = await fetch("https://login.salesforce.com/services/oauth2/token", {
+    const tokenResponse = await fetch("https://test.salesforce.com/services/oauth2/token", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
