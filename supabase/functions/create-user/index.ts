@@ -77,35 +77,83 @@ Deno.serve(async (req) => {
     // Generate secure password
     const password = generatePassword();
 
-    // Create the user
-    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { full_name: fullName },
-    });
+    // Check if user already exists
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
-    if (createError) {
-      console.error("Error creating user:", createError);
-      return new Response(
-        JSON.stringify({ error: createError.message }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    let userId: string;
+    let isExistingUser = false;
 
-    // Assign role
-    const { error: roleError } = await supabaseAdmin
-      .from("user_roles")
-      .insert({ user_id: newUser.user.id, role });
+    if (existingUser) {
+      // User exists - update their password
+      console.log("User exists, updating password for:", email);
+      isExistingUser = true;
+      userId = existingUser.id;
 
-    if (roleError) {
-      console.error("Error assigning role:", roleError);
-      // Try to clean up the created user
-      await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
-      return new Response(
-        JSON.stringify({ error: "Failed to assign role" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password,
+        user_metadata: { full_name: fullName },
+      });
+
+      if (updateError) {
+        console.error("Error updating user password:", updateError);
+        return new Response(
+          JSON.stringify({ error: updateError.message }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Update role if different
+      const { data: currentRole } = await supabaseAdmin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (currentRole?.role !== role) {
+        if (currentRole) {
+          await supabaseAdmin
+            .from("user_roles")
+            .update({ role })
+            .eq("user_id", userId);
+        } else {
+          await supabaseAdmin
+            .from("user_roles")
+            .insert({ user_id: userId, role });
+        }
+      }
+    } else {
+      // Create new user
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { full_name: fullName },
+      });
+
+      if (createError) {
+        console.error("Error creating user:", createError);
+        return new Response(
+          JSON.stringify({ error: createError.message }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      userId = newUser.user.id;
+
+      // Assign role
+      const { error: roleError } = await supabaseAdmin
+        .from("user_roles")
+        .insert({ user_id: userId, role });
+
+      if (roleError) {
+        console.error("Error assigning role:", roleError);
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+        return new Response(
+          JSON.stringify({ error: "Failed to assign role" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Send welcome email with credentials
@@ -189,8 +237,9 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         credentials: { email, password },
-        user: { id: newUser.user.id, email, fullName, role },
+        user: { id: userId, email, fullName, role },
         emailSent,
+        isExistingUser,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
