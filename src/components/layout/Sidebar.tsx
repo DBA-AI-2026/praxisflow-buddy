@@ -17,15 +17,11 @@ import {
   Lock,
 } from "lucide-react";
 import logo from "@/assets/fox-logo.jpeg";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { Database } from "@/integrations/supabase/types";
-
-type AppRole = Database["public"]["Enums"]["app_role"];
+import { useUserRole, AppRole } from "@/hooks/useUserRole";
 
 // Navigation items with role-based visibility
 const baseNavigation = [
@@ -55,32 +51,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
-  const [userRole, setUserRole] = useState<AppRole | null>(null);
-
-  useEffect(() => {
-    const checkUserRole = async () => {
-      if (!user) {
-        setUserRole(null);
-        return;
-      }
-      
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      
-      if (data && !error) {
-        setUserRole(data.role);
-      } else {
-        setUserRole(null);
-      }
-    };
-
-    checkUserRole();
-  }, [user]);
-
-  const isAdmin = userRole === "admin";
+  const { role: userRole, isAdmin } = useUserRole();
   
   // Filter navigation items based on user role
   const filteredNavigation = baseNavigation.filter(
