@@ -29,6 +29,7 @@ export const routePermissions: RoutePermission[] = [
   // Admin routes - Admin only
   { path: "/admin/access-requests", allowedRoles: ["admin"] },
   { path: "/admin/users", allowedRoles: ["admin"] },
+  { path: "/admin/audit-logs", allowedRoles: ["admin"] },
   { path: "/admin/settings", allowedRoles: ["admin"] },
 ];
 
