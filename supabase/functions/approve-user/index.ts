@@ -203,10 +203,17 @@ Deno.serve(async (req) => {
 });
 
 function generatePassword(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%";
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*";
+  const length = 16;  // Increased from 12 for better security
+  const randomBytes = new Uint8Array(length);
+  
+  // Use cryptographically secure random number generator
+  crypto.getRandomValues(randomBytes);
+  
   let password = "";
-  for (let i = 0; i < 12; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(randomBytes[i] % chars.length);
   }
+  
   return password;
 }
