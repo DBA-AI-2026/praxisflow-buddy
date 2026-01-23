@@ -23,22 +23,26 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { Database } from "@/integrations/supabase/types";
 
-const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Reservierungen", href: "/reservierungen", icon: BookMarked },
-  { name: "Praxen", href: "/praxen", icon: Building2 },
-  { name: "Tickets", href: "/tickets", icon: Ticket },
-  { name: "Kalender", href: "/kalender", icon: Calendar },
-  { name: "Lizenzen", href: "/lizenzen", icon: Key },
-  { name: "Umsätze", href: "/umsaetze", icon: Euro },
-  { name: "Datenexport", href: "/export", icon: FileDown },
-  { name: "Integrationen", href: "/integrationen", icon: Link2 },
+type AppRole = Database["public"]["Enums"]["app_role"];
+
+// Navigation items with role-based visibility
+const baseNavigation = [
+  { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
+  { name: "Reservierungen", href: "/reservierungen", icon: BookMarked, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
+  { name: "Praxen", href: "/praxen", icon: Building2, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
+  { name: "Tickets", href: "/tickets", icon: Ticket, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
+  { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "admin"] as AppRole[] },
+  { name: "Lizenzen", href: "/lizenzen", icon: Key, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
+  { name: "Umsätze", href: "/umsaetze", icon: Euro, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
+  { name: "Datenexport", href: "/export", icon: FileDown, roles: ["sales_lead", "admin"] as AppRole[] },
+  { name: "Integrationen", href: "/integrationen", icon: Link2, roles: ["sales_lead", "admin"] as AppRole[] },
 ];
 
 const vertriebNavigation = [
-  { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users },
-  { name: "Provisionen", href: "/vertrieb/provisionen", icon: Euro },
+  { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users, roles: ["sales_lead", "admin"] as AppRole[] },
+  { name: "Provisionen", href: "/vertrieb/provisionen", icon: Euro, roles: ["sales_lead", "admin"] as AppRole[] },
 ];
 
 const adminNavigation = [
@@ -51,12 +55,12 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState<AppRole | null>(null);
 
   useEffect(() => {
-    const checkAdminRole = async () => {
+    const checkUserRole = async () => {
       if (!user) {
-        setIsAdmin(false);
+        setUserRole(null);
         return;
       }
       
@@ -64,14 +68,28 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
-        .eq("role", "admin")
         .maybeSingle();
       
-      setIsAdmin(!!data && !error);
+      if (data && !error) {
+        setUserRole(data.role);
+      } else {
+        setUserRole(null);
+      }
     };
 
-    checkAdminRole();
+    checkUserRole();
   }, [user]);
+
+  const isAdmin = userRole === "admin";
+  
+  // Filter navigation items based on user role
+  const filteredNavigation = baseNavigation.filter(
+    (item) => userRole && item.roles.includes(userRole)
+  );
+  
+  const filteredVertriebNavigation = vertriebNavigation.filter(
+    (item) => userRole && item.roles.includes(userRole)
+  );
 
   const handleLogout = async () => {
     await signOut();
@@ -102,7 +120,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <div className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
           Hauptmenü
         </div>
-        {navigation.map((item) => {
+        {filteredNavigation.map((item) => {
           const isActive = location.pathname === item.href;
           return (
             <Link
@@ -117,61 +135,49 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           );
         })}
 
-        <div className="mt-8 mb-2 px-3 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
-          Vertrieb
-        </div>
-        {vertriebNavigation.map((item) => {
-          const isActive = location.pathname === item.href;
-          return (
-            <Link
-              key={item.name}
-              to={item.href}
-              onClick={onNavigate}
-              className={`sidebar-link ${isActive ? "active" : ""}`}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              <span className="truncate">{item.name}</span>
-            </Link>
-          );
-        })}
+        {filteredVertriebNavigation.length > 0 && (
+          <>
+            <div className="mt-8 mb-2 px-3 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
+              Vertrieb
+            </div>
+            {filteredVertriebNavigation.map((item) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={onNavigate}
+                  className={`sidebar-link ${isActive ? "active" : ""}`}
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  <span className="truncate">{item.name}</span>
+                </Link>
+              );
+            })}
+          </>
+        )}
 
-        <div className="mt-8 mb-2 px-3 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
-          Administration
-        </div>
-        {adminNavigation.map((item) => {
-          const isActive = location.pathname === item.href;
-          
-          if (!isAdmin) {
-            return (
-              <Tooltip key={item.name}>
-                <TooltipTrigger asChild>
-                  <div
-                    className="sidebar-link opacity-40 cursor-not-allowed select-none"
-                  >
-                    <item.icon className="h-5 w-5 flex-shrink-0" />
-                    <span className="truncate flex-1">{item.name}</span>
-                    <Lock className="h-3.5 w-3.5 flex-shrink-0" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>Nur für Administratoren</p>
-                </TooltipContent>
-              </Tooltip>
-            );
-          }
-          
-          return (
-            <Link
-              key={item.name}
-              to={item.href}
-              onClick={onNavigate}
-              className={`sidebar-link ${isActive ? "active" : ""}`}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              <span className="truncate">{item.name}</span>
-            </Link>
-          );
-        })}
+        {isAdmin && (
+          <>
+            <div className="mt-8 mb-2 px-3 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
+              Administration
+            </div>
+            {adminNavigation.map((item) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={onNavigate}
+                  className={`sidebar-link ${isActive ? "active" : ""}`}
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  <span className="truncate">{item.name}</span>
+                </Link>
+              );
+            })}
+          </>
+        )}
       </nav>
 
       {/* User */}
