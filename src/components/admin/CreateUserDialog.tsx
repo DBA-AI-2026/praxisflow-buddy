@@ -68,7 +68,9 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
       setCredentials(data.credentials);
       toast({
         title: "Benutzer erstellt",
-        description: "Der Benutzer wurde erfolgreich angelegt.",
+        description: data.emailSent 
+          ? "Die Zugangsdaten wurden per E-Mail gesendet." 
+          : "Der Benutzer wurde angelegt. E-Mail konnte nicht gesendet werden.",
       });
     },
     onError: (error: Error) => {
