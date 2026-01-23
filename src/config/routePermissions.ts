@@ -11,9 +11,13 @@ export interface RoutePermission {
 export const routePermissions: RoutePermission[] = [
   // Base routes - accessible by all authenticated users
   { path: "/", allowedRoles: ["user", "sales_partner", "sales_lead", "admin"] },
-  { path: "/reservierungen", allowedRoles: ["user", "sales_partner", "sales_lead", "admin"] },
   { path: "/praxen", allowedRoles: ["user", "sales_partner", "sales_lead", "admin"] },
   { path: "/tickets", allowedRoles: ["user", "sales_partner", "sales_lead", "admin"] },
+  { path: "/lizenzen", allowedRoles: ["user", "sales_partner", "sales_lead", "admin"] },
+  { path: "/umsaetze", allowedRoles: ["user", "sales_partner", "sales_lead", "admin"] },
+  
+  // Reservierungen - only sales partners and admins
+  { path: "/reservierungen", allowedRoles: ["sales_partner", "admin"] },
   { path: "/lizenzen", allowedRoles: ["user", "sales_partner", "sales_lead", "admin"] },
   { path: "/umsaetze", allowedRoles: ["user", "sales_partner", "sales_lead", "admin"] },
   
