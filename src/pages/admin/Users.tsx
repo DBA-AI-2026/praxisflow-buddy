@@ -20,7 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2 } from "lucide-react";
+import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus } from "lucide-react";
+import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +53,7 @@ export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [selectedRole, setSelectedRole] = useState<AppRole>("user");
   const { toast } = useToast();
@@ -207,7 +209,7 @@ export default function AdminUsers() {
         </div>
       </div>
 
-      {/* Search */}
+      {/* Search and Actions */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -218,9 +220,10 @@ export default function AdminUsers() {
             className="pl-9"
           />
         </div>
-        <p className="text-sm text-muted-foreground">
-          Neue Benutzer werden über Zugangsanfragen angelegt
-        </p>
+        <Button onClick={() => setCreateDialogOpen(true)}>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Benutzer anlegen
+        </Button>
       </div>
 
       {/* Table */}
@@ -412,6 +415,9 @@ export default function AdminUsers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Create User Dialog */}
+      <CreateUserDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
     </MainLayout>
   );
 }
