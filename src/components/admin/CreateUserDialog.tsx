@@ -181,9 +181,10 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+              <SelectContent>
                   <SelectItem value="user">Benutzer</SelectItem>
                   <SelectItem value="sales_partner">Vertriebspartner</SelectItem>
+                  <SelectItem value="sales_lead">Vertriebsleitung</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
