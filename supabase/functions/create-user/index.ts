@@ -11,6 +11,7 @@ const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const roleLabels: Record<string, string> = {
   admin: "Administrator",
   sales_partner: "Vertriebspartner",
+  sales_lead: "Vertriebsleitung",
   user: "Benutzer",
 };
 
@@ -65,7 +66,15 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const { email, fullName, role = "user", sendEmail = true } = await req.json();
+    const { 
+      email, 
+      fullName, 
+      role = "user", 
+      sendEmail = true, 
+      checkOnly = false,
+      confirmReset = false,
+      notifyBeforeReset = false,
+    } = await req.json();
 
     if (!email || !fullName) {
       return new Response(
@@ -74,12 +83,36 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generate secure password
-    const password = generatePassword();
-
     // Check if user already exists
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
     const existingUser = existingUsers?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+
+    // If checkOnly mode, just return whether user exists
+    if (checkOnly) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          userExists: !!existingUser,
+          existingUserName: existingUser?.user_metadata?.full_name || null,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // If user exists but confirmReset is false, return error
+    if (existingUser && !confirmReset) {
+      return new Response(
+        JSON.stringify({ 
+          error: "User already exists", 
+          userExists: true,
+          existingUserName: existingUser?.user_metadata?.full_name,
+        }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Generate secure password
+    const password = generatePassword();
 
     let userId: string;
     let isExistingUser = false;
@@ -89,6 +122,66 @@ Deno.serve(async (req) => {
       console.log("User exists, updating password for:", email);
       isExistingUser = true;
       userId = existingUser.id;
+
+      // Send notification email before reset if requested
+      if (notifyBeforeReset) {
+        try {
+          const portalUrl = "https://praxisflow-buddy.lovable.app";
+          await resend.emails.send({
+            from: "HFX Sales Portal <onboarding@resend.dev>",
+            to: [email],
+            subject: "Ihr Passwort wurde zurückgesetzt - HFX Sales Portal",
+            html: `
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <style>
+                  body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+                  .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                  .header { background: linear-gradient(135deg, #f97316, #ea580c); color: white; padding: 30px 20px; border-radius: 8px 8px 0 0; text-align: center; }
+                  .content { background: #f9fafb; padding: 30px 20px; border: 1px solid #e5e7eb; border-top: none; }
+                  .info-box { background: #fef3c7; border: 1px solid #f59e0b; padding: 16px; border-radius: 8px; margin: 20px 0; }
+                  .button { display: inline-block; background: #f97316; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 10px; }
+                  .footer { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; font-size: 14px; color: #6b7280; }
+                </style>
+              </head>
+              <body>
+                <div class="container">
+                  <div class="header">
+                    <h1 style="margin: 0; font-size: 28px;">🔐 Passwort zurückgesetzt</h1>
+                    <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">HFX Sales Portal</p>
+                  </div>
+                  <div class="content">
+                    <p style="font-size: 16px;">Hallo <strong>${existingUser?.user_metadata?.full_name || fullName}</strong>,</p>
+                    <p>Ihr Passwort für das HFX Sales Portal wurde von einem Administrator zurückgesetzt.</p>
+                    
+                    <div class="info-box">
+                      <p style="margin: 0; color: #92400e;">
+                        <strong>⚠️ Wichtig:</strong> Sie erhalten in Kürze eine weitere E-Mail mit Ihren neuen Zugangsdaten.
+                      </p>
+                    </div>
+                    
+                    <p>Falls Sie diese Änderung nicht angefordert haben, kontaktieren Sie bitte umgehend Ihren Administrator.</p>
+                    
+                    <div style="text-align: center; margin: 25px 0;">
+                      <a href="${portalUrl}" class="button" style="color: white;">Zum Portal</a>
+                    </div>
+                  </div>
+                  <div class="footer">
+                    <p style="margin: 0;">Bei Fragen wenden Sie sich bitte an Ihren Administrator.</p>
+                    <p style="margin: 10px 0 0 0; font-size: 12px;">© Honorarfuchs - HFX Sales Portal</p>
+                  </div>
+                </div>
+              </body>
+              </html>
+            `,
+          });
+          console.log("Password reset notification sent to:", email);
+        } catch (notifyError) {
+          console.error("Failed to send reset notification:", notifyError);
+          // Continue anyway
+        }
+      }
 
       const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
         password,
