@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.salesforce-callback]
 verify_jwt = false
+
+[functions.salesforce-sync-price]
+verify_jwt = false
