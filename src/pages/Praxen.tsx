@@ -17,13 +17,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Download, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Download, MoreHorizontal, Pencil, Trash2, RefreshCw, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useSalesforceConnection } from "@/hooks/useSalesforceConnection";
 
 interface Praxis {
   id: string;
@@ -114,6 +117,35 @@ export default function Praxen() {
   const [praxen, setPraxen] = useState<Praxis[]>(initialPraxen);
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const { connection: sfConnection } = useSalesforceConnection();
+
+  const syncToSalesforce = async (praxis: Praxis) => {
+    if (!sfConnection.isConnected) {
+      toast.error("Salesforce ist nicht verbunden. Bitte zuerst unter Einstellungen verbinden.");
+      return;
+    }
+
+    setSyncingId(praxis.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("salesforce-sync-price", {
+        body: { mpNr: praxis.mpNr, preis: praxis.preis },
+      });
+
+      if (error) throw error;
+
+      if (data?.error) {
+        toast.error(data.error);
+      } else {
+        toast.success(`Preis für ${praxis.name} erfolgreich synchronisiert`);
+      }
+    } catch (err) {
+      console.error("Sync error:", err);
+      toast.error("Fehler bei der Synchronisation");
+    } finally {
+      setSyncingId(null);
+    }
+  };
 
   const filteredPraxen = praxen.filter(
     (p) =>
@@ -354,6 +386,17 @@ export default function Praxen() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => syncToSalesforce(praxis)}
+                          disabled={syncingId === praxis.id || !sfConnection.isConnected}
+                        >
+                          {syncingId === praxis.id ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                          )}
+                          Zu Salesforce syncen
+                        </DropdownMenuItem>
                         <DropdownMenuItem>
                           <Pencil className="h-4 w-4 mr-2" />
                           Bearbeiten
