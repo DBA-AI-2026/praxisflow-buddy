@@ -223,6 +223,60 @@ export type Database = {
         }
         Relationships: []
       }
+      praxen: {
+        Row: {
+          adresse: string | null
+          buchungs_datum: string | null
+          created_at: string
+          email: string | null
+          id: string
+          module: string[] | null
+          mp_nr: string | null
+          name: string
+          ort: string | null
+          plz: string | null
+          preis: number | null
+          produkt: string | null
+          status: string | null
+          telefon: string | null
+          updated_at: string
+        }
+        Insert: {
+          adresse?: string | null
+          buchungs_datum?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          module?: string[] | null
+          mp_nr?: string | null
+          name: string
+          ort?: string | null
+          plz?: string | null
+          preis?: number | null
+          produkt?: string | null
+          status?: string | null
+          telefon?: string | null
+          updated_at?: string
+        }
+        Update: {
+          adresse?: string | null
+          buchungs_datum?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          module?: string[] | null
+          mp_nr?: string | null
+          name?: string
+          ort?: string | null
+          plz?: string | null
+          preis?: number | null
+          produkt?: string | null
+          status?: string | null
+          telefon?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       praxis_reservations: {
         Row: {
           arzt_namen: string
