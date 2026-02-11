@@ -331,6 +331,39 @@ export type Database = {
         }
         Relationships: []
       }
+      product_commissions: {
+        Row: {
+          commission_type: string
+          commission_value: number
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          product_name: string
+          updated_at: string
+        }
+        Insert: {
+          commission_type?: string
+          commission_value?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          product_name: string
+          updated_at?: string
+        }
+        Update: {
+          commission_type?: string
+          commission_value?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          product_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
