@@ -201,9 +201,9 @@ export default function AdminUsers() {
   return (
     <MainLayout title="Benutzerverwaltung" subtitle="Benutzer und Rollen verwalten">
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="stat-card">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-2">
             <div className="rounded-lg p-3 bg-primary/10">
               <Shield className="h-5 w-5 text-primary" />
             </div>
@@ -212,9 +212,12 @@ export default function AdminUsers() {
               <p className="text-2xl font-semibold text-foreground">{adminCount}</p>
             </div>
           </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Vollzugriff: Benutzerverwaltung, Einstellungen, Audit-Logs, Salesforce, Preise ändern, Reservierungsdaten anpassen.
+          </p>
         </div>
         <div className="stat-card">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-2">
             <div className="rounded-lg p-3 bg-purple-100">
               <Users className="h-5 w-5 text-purple-700" />
             </div>
@@ -223,9 +226,12 @@ export default function AdminUsers() {
               <p className="text-2xl font-semibold text-foreground">{salesLeadCount}</p>
             </div>
           </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Sieht alle Daten aller Vertriebspartner (Dashboard, Reservierungen, Praxen, Umsätze). Kein Zugriff auf Administration.
+          </p>
         </div>
         <div className="stat-card">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-2">
             <div className="rounded-lg p-3 bg-blue-100">
               <Users className="h-5 w-5 text-blue-700" />
             </div>
@@ -234,9 +240,12 @@ export default function AdminUsers() {
               <p className="text-2xl font-semibold text-foreground">{salesPartnerCount}</p>
             </div>
           </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Eigene Reservierungen erstellen & verwalten, Praxen & Tickets einsehen, eigene Umsätze & Lizenzen sehen.
+          </p>
         </div>
         <div className="stat-card">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-2">
             <div className="rounded-lg p-3 bg-secondary">
               <Users className="h-5 w-5 text-secondary-foreground" />
             </div>
@@ -245,6 +254,9 @@ export default function AdminUsers() {
               <p className="text-2xl font-semibold text-foreground">{userCount}</p>
             </div>
           </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Basiszugang: Dashboard, eigene Reservierungen, Praxen, Tickets, Lizenzen und Umsätze einsehen.
+          </p>
         </div>
       </div>
 
