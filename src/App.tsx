@@ -21,6 +21,7 @@ import AdminSettings from "./pages/admin/Settings";
 import AccessRequests from "./pages/admin/AccessRequests";
 import AuditLogs from "./pages/admin/AuditLogs";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/reservierungen" element={<ProtectedRoute><Reservierungen /></ProtectedRoute>} />
             <Route path="/praxen" element={<ProtectedRoute><Praxen /></ProtectedRoute>} />

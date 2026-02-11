@@ -51,6 +51,34 @@ export default function Auth() {
     }
   }, [user, authLoading, navigate]);
 
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setForgotLoading(true);
+
+    if (!forgotEmail || !z.string().email().safeParse(forgotEmail).success) {
+      setError("Bitte geben Sie eine gültige E-Mail-Adresse ein.");
+      setForgotLoading(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      setError(error.message);
+    } else {
+      setForgotSuccess(true);
+    }
+    setForgotLoading(false);
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -210,42 +238,98 @@ export default function Auth() {
             )}
             
             <TabsContent value="login" className="mt-4">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">E-Mail</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="ihre.email@example.com"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Passwort</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Wird angemeldet...
-                    </>
-                  ) : (
-                    "Anmelden"
-                  )}
-                </Button>
-              </form>
+              {showForgotPassword ? (
+                forgotSuccess ? (
+                  <div className="space-y-4">
+                    <Alert className="border-green-500 bg-green-50 text-green-700">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <AlertDescription>
+                        Falls ein Konto mit dieser E-Mail existiert, erhalten Sie in Kürze einen Link zum Zurücksetzen Ihres Passworts.
+                      </AlertDescription>
+                    </Alert>
+                    <Button variant="outline" className="w-full" onClick={() => { setShowForgotPassword(false); setForgotSuccess(false); setError(null); }}>
+                      Zurück zur Anmeldung
+                    </Button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link zum Zurücksetzen Ihres Passworts.
+                    </p>
+                    <div className="space-y-2">
+                      <Label htmlFor="forgot-email">E-Mail</Label>
+                      <Input
+                        id="forgot-email"
+                        type="email"
+                        placeholder="ihre.email@example.com"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        required
+                        disabled={forgotLoading}
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={forgotLoading}>
+                      {forgotLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Wird gesendet...
+                        </>
+                      ) : (
+                        "Link senden"
+                      )}
+                    </Button>
+                    <Button variant="ghost" className="w-full" type="button" onClick={() => { setShowForgotPassword(false); setError(null); }}>
+                      Zurück zur Anmeldung
+                    </Button>
+                  </form>
+                )
+              ) : (
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">E-Mail</Label>
+                    <Input
+                      id="login-email"
+                      type="email"
+                      placeholder="ihre.email@example.com"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="login-password">Passwort</Label>
+                      <button
+                        type="button"
+                        className="text-xs text-primary hover:underline"
+                        onClick={() => { setShowForgotPassword(true); setError(null); }}
+                      >
+                        Passwort vergessen?
+                      </button>
+                    </div>
+                    <Input
+                      id="login-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Wird angemeldet...
+                      </>
+                    ) : (
+                      "Anmelden"
+                    )}
+                  </Button>
+                </form>
+              )}
             </TabsContent>
             
             <TabsContent value="request" className="mt-4">
