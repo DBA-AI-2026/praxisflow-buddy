@@ -51,213 +51,204 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
 
-  const pageWidth = 595.28; // A4
-  const pageHeight = 841.89;
-  const margin = 50;
-  const contentWidth = pageWidth - 2 * margin;
+  const PAGE_W = 595.28; // A4
+  const PAGE_H = 841.89;
+  const M = 50; // margin
+  const CW = PAGE_W - 2 * M; // content width
+  const COL2_X = M + CW / 2 + 5; // second column start
+  const COL_W = CW / 2 - 5; // single column width
 
-  let page = doc.addPage([pageWidth, pageHeight]);
-  let y = pageHeight - margin;
+  const C_PRIMARY = rgb(0.044, 0.212, 0.498); // #0b367f
+  const C_TEXT = rgb(0.15, 0.15, 0.15);
+  const C_MUTED = rgb(0.45, 0.45, 0.45);
+  const C_LINE = rgb(0.82, 0.82, 0.82);
+  const C_BG = rgb(0.95, 0.96, 0.98);
 
-  const primaryColor = rgb(0.05, 0.15, 0.4); // dark blue
-  const textColor = rgb(0.15, 0.15, 0.15);
-  const mutedColor = rgb(0.45, 0.45, 0.45);
-  const lineColor = rgb(0.85, 0.85, 0.85);
-  const accentBg = rgb(0.95, 0.96, 0.98);
+  let page = doc.addPage([PAGE_W, PAGE_H]);
+  let y = PAGE_H - M;
 
-  // Helper: draw text
-  const drawText = (text: string, x: number, yPos: number, options?: { size?: number; font?: typeof font; color?: typeof textColor; maxWidth?: number }) => {
-    const size = options?.size ?? 9;
-    const f = options?.font ?? font;
-    const color = options?.color ?? textColor;
-    page.drawText(text || "", { x, y: yPos, size, font: f, color, maxWidth: options?.maxWidth });
+  // ---------- helpers ----------
+
+  const text = (t: string, x: number, yy: number, size: number, f = font, color = C_TEXT, maxW?: number) => {
+    page.drawText(t || "", { x, y: yy, size, font: f, color, maxWidth: maxW });
   };
 
-  // Helper: section header
-  const drawSectionHeader = (title: string) => {
-    y -= 8;
-    page.drawRectangle({ x: margin, y: y - 4, width: contentWidth, height: 18, color: accentBg });
-    drawText(title.toUpperCase(), margin + 8, y, { size: 8, font: fontBold, color: primaryColor });
-    y -= 22;
+  const sectionHeader = (title: string) => {
+    y -= 6;
+    page.drawRectangle({ x: M, y: y - 5, width: CW, height: 18, color: C_BG });
+    text(title.toUpperCase(), M + 8, y, 8, fontBold, C_PRIMARY);
+    y -= 24;
   };
 
-  // Helper: label-value row
-  const drawField = (label: string, value: string, xOffset = 0, width = contentWidth / 2 - 10) => {
-    drawText(label, margin + xOffset, y, { size: 7, color: mutedColor });
+  const fieldPair = (l1: string, v1: string, l2: string, v2: string) => {
+    text(l1, M, y, 7, font, C_MUTED);
+    if (l2) text(l2, COL2_X, y, 7, font, C_MUTED);
     y -= 11;
-    drawText(value || "–", margin + xOffset, y, { size: 9, maxWidth: width });
-    y -= 15;
+    text(v1 || "–", M, y, 9, font, C_TEXT, COL_W);
+    if (l2) text(v2 || "–", COL2_X, y, 9, font, C_TEXT, COL_W);
+    y -= 14;
   };
 
-  // Helper: two-column field
-  const drawFieldRow = (label1: string, value1: string, label2: string, value2: string) => {
-    const col2X = contentWidth / 2 + 10;
-    const savedY = y;
-
-    drawText(label1, margin, y, { size: 7, color: mutedColor });
-    drawText(label2, margin + col2X, y, { size: 7, color: mutedColor });
+  const fieldFull = (label: string, value: string) => {
+    text(label, M, y, 7, font, C_MUTED);
     y -= 11;
-    drawText(value1 || "–", margin, y, { size: 9, maxWidth: contentWidth / 2 - 20 });
-    drawText(value2 || "–", margin + col2X, y, { size: 9, maxWidth: contentWidth / 2 - 20 });
-    y -= 15;
+    text(value || "–", M, y, 9, font, C_TEXT, CW);
+    y -= 14;
   };
 
-  const drawLine = () => {
-    page.drawLine({ start: { x: margin, y }, end: { x: pageWidth - margin, y }, thickness: 0.5, color: lineColor });
-    y -= 8;
+  const line = () => {
+    page.drawLine({ start: { x: M, y }, end: { x: PAGE_W - M, y }, thickness: 0.5, color: C_LINE });
+    y -= 10;
   };
 
-  const checkNewPage = (needed = 80) => {
-    if (y < margin + needed) {
-      page = doc.addPage([pageWidth, pageHeight]);
-      y = pageHeight - margin;
+  const ensureSpace = (needed = 80) => {
+    if (y < M + needed) {
+      page = doc.addPage([PAGE_W, PAGE_H]);
+      y = PAGE_H - M;
     }
   };
 
   // ===== HEADER =====
-  const logoSize = 40;
-  let logoXOffset = 0;
+  const titleSize = 16;
+  const titleBaseline = y - titleSize + 4; // baseline for text at this size
+  let logoXEnd = M;
 
   if (logoBytes) {
     try {
       const logoImage = await doc.embedJpg(logoBytes);
-      const logoAspect = logoImage.width / logoImage.height;
-      const logoW = logoSize * logoAspect;
-      page.drawImage(logoImage, { x: margin, y: y - logoSize + 14, width: logoW, height: logoSize });
-      logoXOffset = logoW + 10;
+      const logoH = titleSize + 4; // match text height
+      const logoW = (logoImage.width / logoImage.height) * logoH;
+      page.drawImage(logoImage, { x: M, y: titleBaseline - 2, width: logoW, height: logoH });
+      logoXEnd = M + logoW + 8;
     } catch {
-      // If logo embedding fails, continue without it
+      // continue without logo
     }
   }
 
-  drawText("HONORARFUCHS", margin + logoXOffset, y, { size: 20, font: fontBold, color: primaryColor });
-  drawText("VERTRAGSÜBERSICHT", pageWidth - margin - 120, y, { size: 10, font: fontBold, color: mutedColor });
-  y -= 12;
+  text("HONORARFUCHS", logoXEnd, titleBaseline, titleSize, fontBold, C_PRIMARY);
+
+  // Status top-right
+  const statusLabels: Record<string, string> = {
+    entwurf: "ENTWURF", aktiv: "AKTIV", gekuendigt: "GEKÜNDIGT", beendet: "BEENDET",
+  };
+  const statusText = statusLabels[data.status || "entwurf"] || data.status?.toUpperCase() || "ENTWURF";
+  text(`Status: ${statusText}`, PAGE_W - M - 90, titleBaseline + 10, 8, fontBold, C_PRIMARY);
+
+  // Subtitle
+  text("VERTRAGSÜBERSICHT", PAGE_W - M - 120, titleBaseline, 9, fontBold, C_MUTED);
+
+  y = titleBaseline - 10;
 
   // HFX number + date
-  drawText(
+  text(
     `${data.hfx_customer_number || "Entwurf"} · Erstellt am ${formatDate(new Date().toISOString())}`,
-    margin + logoXOffset, y, { size: 8, color: mutedColor }
+    M, y, 8, font, C_MUTED,
   );
-  y -= 8;
-  drawLine();
-
-  // Status badge text
-  const statusLabels: Record<string, string> = {
-    entwurf: "ENTWURF",
-    aktiv: "AKTIV",
-    gekuendigt: "GEKÜNDIGT",
-    beendet: "BEENDET",
-  };
-  drawText(`Status: ${statusLabels[data.status || "entwurf"] || data.status?.toUpperCase() || "ENTWURF"}`, pageWidth - margin - 100, pageHeight - margin, {
-    size: 8, font: fontBold, color: primaryColor,
-  });
+  y -= 10;
+  line();
 
   // ===== VERTRAGSPARTEIEN =====
-  drawSectionHeader("Vertragsparteien");
-  drawField("Praxis", data.praxis || "–");
-  y += 26; // go back up for second column
-  drawText("Fachrichtung", margin + contentWidth / 2 + 10, y + 15, { size: 7, color: mutedColor });
-  drawText(data.fachrichtung || "–", margin + contentWidth / 2 + 10, y + 4, { size: 9 });
-
-  drawFieldRow("Vorname", data.vorname || "–", "Nachname", data.nachname || "–");
-  drawField("Adresse", data.adresse || "–", 0, contentWidth);
-  drawFieldRow("Telefon", data.telefon || "–", "E-Mail", data.email || "–");
-  drawFieldRow("MP-Nummer", data.mp_nr || "–", "Vertriebspartner", data.sales_partner_name || "–");
-
-  drawLine();
-  checkNewPage();
+  sectionHeader("Vertragsparteien");
+  fieldPair("Praxis", data.praxis || "–", "Fachrichtung", data.fachrichtung || "–");
+  fieldPair("Vorname", data.vorname || "–", "Nachname", data.nachname || "–");
+  fieldFull("Adresse", data.adresse || "–");
+  fieldPair("Telefon", data.telefon || "–", "E-Mail", data.email || "–");
+  fieldPair("MP-Nummer", data.mp_nr || "–", "Vertriebspartner", data.sales_partner_name || "–");
+  line();
+  ensureSpace();
 
   // ===== PRODUKTE =====
-  drawSectionHeader("Produkte");
+  sectionHeader("Produkte");
   const productList = data.modules?.length ? data.modules.join(", ") : data.product_name || "–";
-  drawField("Ausgewählte Produkte", productList, 0, contentWidth);
-  drawFieldRow("Lizenzen", String(data.license_count ?? 1), "", "");
-
-  drawLine();
-  checkNewPage();
+  fieldFull("Ausgewählte Produkte", productList);
+  fieldPair("Lizenzen", String(data.license_count ?? 1), "", "");
+  line();
+  ensureSpace();
 
   // ===== LAUFZEIT =====
-  drawSectionHeader("Laufzeit & Kündigung");
-  drawFieldRow("Vertragsbeginn", formatDate(data.start_date), "Vertragsende", formatDate(data.end_date));
-  drawFieldRow("Laufzeit", `${data.duration_months ?? 12} Monate`, "Kündigungsfrist", `${data.cancellation_period_months ?? 3} Monate`);
-  drawField("Automatische Verlängerung", data.auto_renewal ? "Ja" : "Nein");
-
-  drawLine();
-  checkNewPage();
+  sectionHeader("Laufzeit & Kündigung");
+  fieldPair("Vertragsbeginn", formatDate(data.start_date), "Vertragsende", formatDate(data.end_date));
+  fieldPair("Laufzeit", `${data.duration_months ?? 12} Monate`, "Kündigungsfrist", `${data.cancellation_period_months ?? 3} Monate`);
+  fieldPair("Automatische Verlängerung", data.auto_renewal ? "Ja" : "Nein", "", "");
+  line();
+  ensureSpace();
 
   // ===== PREISÜBERSICHT =====
-  drawSectionHeader("Preisübersicht");
-  // Price box
-  page.drawRectangle({ x: margin, y: y - 4, width: contentWidth, height: 50, color: accentBg, borderColor: lineColor, borderWidth: 0.5 });
-  drawText("Monatspreis", margin + 10, y + 28, { size: 7, color: mutedColor });
-  drawText(formatCurrency(data.monthly_price), margin + 10, y + 14, { size: 14, font: fontBold, color: primaryColor });
+  sectionHeader("Preisübersicht");
+
+  // Price box - draw background first, then content below
+  const boxH = 45;
+  const boxTop = y;
+  page.drawRectangle({ x: M, y: boxTop - boxH, width: CW, height: boxH, color: C_BG, borderColor: C_LINE, borderWidth: 0.5 });
+
+  // Labels inside box (top row)
+  const labelY = boxTop - 14;
+  const valueY = boxTop - 30;
+
+  text("Monatspreis", M + 12, labelY, 7, font, C_MUTED);
+  text(formatCurrency(data.monthly_price), M + 12, valueY, 13, fontBold, C_PRIMARY);
 
   if ((data.one_time_fee ?? 0) > 0) {
-    drawText("Einmalgebühr", margin + 200, y + 28, { size: 7, color: mutedColor });
-    drawText(formatCurrency(data.one_time_fee), margin + 200, y + 14, { size: 14, font: fontBold, color: primaryColor });
+    text("Einmalgebühr", M + 180, labelY, 7, font, C_MUTED);
+    text(formatCurrency(data.one_time_fee), M + 180, valueY, 13, fontBold, C_PRIMARY);
   }
 
   if ((data.discount_percent ?? 0) > 0) {
-    drawText("Rabatt", margin + 380, y + 28, { size: 7, color: mutedColor });
-    drawText(`${data.discount_percent}%`, margin + 380, y + 14, { size: 14, font: fontBold, color: rgb(0.1, 0.6, 0.3) });
+    text("Rabatt", M + 360, labelY, 7, font, C_MUTED);
+    text(`${data.discount_percent}%`, M + 360, valueY, 13, fontBold, rgb(0.1, 0.6, 0.3));
   }
-  y -= 60;
+
+  y = boxTop - boxH - 10;
 
   const intervalLabels: Record<string, string> = {
-    monatlich: "Monatlich",
-    quartalsweise: "Quartalsweise",
-    jaehrlich: "Jährlich",
+    monatlich: "Monatlich", quartalsweise: "Quartalsweise", jaehrlich: "Jährlich",
   };
-  drawField("Zahlungsintervall", intervalLabels[data.payment_interval || "monatlich"] || data.payment_interval || "Monatlich");
-
-  drawLine();
-  checkNewPage();
+  fieldPair("Zahlungsintervall", intervalLabels[data.payment_interval || "monatlich"] || data.payment_interval || "Monatlich", "", "");
+  line();
+  ensureSpace();
 
   // ===== SEPA =====
-  drawSectionHeader("SEPA-Lastschrifteinzug");
-  drawField("Kontoinhaber", data.kontoinhaber || "–", 0, contentWidth);
-  drawFieldRow("IBAN", data.iban || "–", "BIC", data.bic || "–");
-
-  drawLine();
-  checkNewPage(160);
+  sectionHeader("SEPA-Lastschrifteinzug");
+  fieldFull("Kontoinhaber", data.kontoinhaber || "–");
+  fieldPair("IBAN", data.iban || "–", "BIC", data.bic || "–");
+  line();
+  ensureSpace(140);
 
   // ===== UNTERSCHRIFT =====
-  drawSectionHeader("Unterschrift");
+  sectionHeader("Unterschrift");
   if (data.signature_data && data.signature_data.startsWith("data:image")) {
     try {
       const base64 = data.signature_data.split(",")[1];
       const imgBytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
       const pngImage = await doc.embedPng(imgBytes);
-      const sigWidth = 200;
-      const sigHeight = (pngImage.height / pngImage.width) * sigWidth;
-      page.drawImage(pngImage, { x: margin, y: y - sigHeight, width: sigWidth, height: sigHeight });
-      y -= sigHeight + 10;
+      const sigW = 200;
+      const sigH = (pngImage.height / pngImage.width) * sigW;
+      page.drawImage(pngImage, { x: M, y: y - sigH, width: sigW, height: sigH });
+      y -= sigH + 10;
     } catch {
-      drawText("(Unterschrift konnte nicht geladen werden)", margin, y, { size: 8, color: mutedColor });
+      text("(Unterschrift konnte nicht geladen werden)", M, y, 8, font, C_MUTED);
       y -= 15;
     }
   } else {
-    // Empty signature line
-    page.drawLine({ start: { x: margin, y }, end: { x: margin + 250, y }, thickness: 0.5, color: textColor });
-    y -= 5;
-    drawText("Datum, Unterschrift", margin, y, { size: 7, color: mutedColor });
+    page.drawLine({ start: { x: M, y }, end: { x: M + 250, y }, thickness: 0.5, color: C_TEXT });
+    y -= 6;
+    text("Datum, Unterschrift", M, y, 7, font, C_MUTED);
     y -= 15;
   }
 
   // ===== NOTIZEN =====
   if (data.notes) {
-    checkNewPage(60);
-    drawLine();
-    drawSectionHeader("Notizen");
-    drawText(data.notes, margin, y, { size: 9, maxWidth: contentWidth });
+    ensureSpace(60);
+    line();
+    sectionHeader("Notizen");
+    text(data.notes, M, y, 9, font, C_TEXT, CW);
     y -= 15;
   }
 
   // ===== FOOTER =====
-  const footerY = margin - 10;
-  page.drawLine({ start: { x: margin, y: footerY + 15 }, end: { x: pageWidth - margin, y: footerY + 15 }, thickness: 0.3, color: lineColor });
-  drawText("Honorarfuchs GmbH · Dieses Dokument dient der Vorschau und hat keine rechtliche Bindung.", margin, footerY, { size: 6, color: mutedColor });
+  const fY = M - 10;
+  page.drawLine({ start: { x: M, y: fY + 15 }, end: { x: PAGE_W - M, y: fY + 15 }, thickness: 0.3, color: C_LINE });
+  text("Honorarfuchs GmbH · Dieses Dokument dient der Vorschau und hat keine rechtliche Bindung.", M, fY, 6, font, C_MUTED);
 
   return doc.save();
 }
