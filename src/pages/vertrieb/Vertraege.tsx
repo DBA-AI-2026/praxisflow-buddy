@@ -26,7 +26,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { format, addMonths } from "date-fns";
 import { de } from "date-fns/locale";
-import { ContractSigningDialog } from "@/components/contracts/ContractSigningDialog";
+import { ContractSigningDialog, type ContractForSigning } from "@/components/contracts/ContractSigningDialog";
 
 const statusConfig: Record<string, { label: string; class: string }> = {
   entwurf: { label: "Entwurf", class: "bg-muted text-muted-foreground" },
@@ -84,7 +84,7 @@ export default function Vertraege() {
   const [form, setForm] = useState<ContractFormData>(emptyForm);
   const [file, setFile] = useState<File | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
-  const [signingContract, setSigningContract] = useState<any | null>(null);
+  const [signingContract, setSigningContract] = useState<ContractForSigning | null>(null);
   const { user, profile } = useAuth();
   const { isAdmin } = useUserRole();
   const { toast } = useToast();
