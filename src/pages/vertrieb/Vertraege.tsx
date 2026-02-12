@@ -279,10 +279,18 @@ export default function Vertraege() {
             className="pl-9"
           />
         </div>
-        <Button onClick={() => { setForm({ ...emptyForm, sales_partner_name: profile?.full_name || "" }); setDialogOpen(true); }}>
-          <Plus className="h-4 w-4 mr-2" />
-          Neuer Vertrag
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <a href="/templates/vertrag-honorarfuchs.pdf" download="Honorarfuchs-Vertrag.pdf">
+              <Download className="h-4 w-4 mr-2" />
+              Vertragsvorlage
+            </a>
+          </Button>
+          <Button onClick={() => { setForm({ ...emptyForm, sales_partner_name: profile?.full_name || "" }); setDialogOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Neuer Vertrag
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
