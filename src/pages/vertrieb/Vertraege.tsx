@@ -747,11 +747,10 @@ export default function Vertraege() {
                 <div className="sm:col-span-2">
                   <Label>IBAN</Label>
                   <Input
-                    value={form.iban}
+                    value={form.iban.replace(/(.{4})/g, "$1 ").trim()}
                     onChange={async (e) => {
                       const val = e.target.value.toUpperCase().replace(/\s/g, "");
                       set("iban", val);
-                      // Auto-lookup BIC when IBAN is valid
                       if (val && validateIban(val).valid && !form.bic) {
                         setBicLoading(true);
                         const bic = await lookupBicFromIban(val);
@@ -759,7 +758,7 @@ export default function Vertraege() {
                         setBicLoading(false);
                       }
                     }}
-                    placeholder="DE89370400440532013000"
+                    placeholder="DE89 3704 0044 0532 0130 00"
                     className={form.iban && !validateIban(form.iban).valid ? "border-destructive" : ""}
                   />
                   {form.iban && (() => {
