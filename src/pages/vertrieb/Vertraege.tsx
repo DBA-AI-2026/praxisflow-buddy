@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import {
-  Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Calendar, PenLine,
+  Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Calendar, PenLine, Eye,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -81,6 +81,7 @@ export default function Vertraege() {
   const [file, setFile] = useState<File | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [signingContract, setSigningContract] = useState<ContractForSigning | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { user, profile } = useAuth();
   const { isAdmin } = useUserRole();
   const { toast } = useToast();
@@ -381,6 +382,12 @@ export default function Vertraege() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          {c.document_url && (
+                            <DropdownMenuItem onClick={() => setPreviewUrl(c.document_url)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              Vorschau
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => setSigningContract(c)}>
                             <PenLine className="h-4 w-4 mr-2" />
                             Unterschreiben
@@ -617,6 +624,27 @@ export default function Vertraege() {
           contract={signingContract}
         />
       )}
+
+      {/* PDF Preview Dialog */}
+      <Dialog open={!!previewUrl} onOpenChange={(open) => { if (!open) setPreviewUrl(null); }}>
+        <DialogContent className="sm:max-w-[900px] h-[85vh] flex flex-col p-0">
+          <DialogHeader className="p-6 pb-2">
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-primary" />
+              PDF-Vorschau
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 px-6 pb-6">
+            {previewUrl && (
+              <iframe
+                src={previewUrl}
+                className="w-full h-full rounded-lg border"
+                title="Vertrags-PDF Vorschau"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
