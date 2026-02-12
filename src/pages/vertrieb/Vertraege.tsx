@@ -109,24 +109,38 @@ export default function Vertraege() {
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const signaturePadRef = useRef<SignaturePad | null>(null);
 
-  // Initialize signature pad when dialog opens
+  // Initialize signature pad when dialog opens - use timeout to ensure canvas is in DOM
   useEffect(() => {
-    if (dialogOpen && signatureCanvasRef.current && !signaturePadRef.current) {
+    if (!dialogOpen) {
+      signaturePadRef.current = null;
+      return;
+    }
+
+    const timer = setTimeout(() => {
       const canvas = signatureCanvasRef.current;
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
+      if (!canvas) return;
+
+      // Set canvas resolution to match display size
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+
       signaturePadRef.current = new SignaturePad(canvas, {
         backgroundColor: "rgb(255, 255, 255)",
         penColor: "rgb(0, 0, 0)",
       });
+
+      // Load existing signature if editing
       if (form.signature_data) {
-        signaturePadRef.current.fromDataURL(form.signature_data);
+        signaturePadRef.current.fromDataURL(form.signature_data, {
+          width: rect.width,
+          height: rect.height,
+        });
       }
-    }
-    if (!dialogOpen) {
-      signaturePadRef.current = null;
-    }
-  }, [dialogOpen]);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [dialogOpen, form.signature_data]);
 
   const clearSignature = useCallback(() => {
     signaturePadRef.current?.clear();
