@@ -31,10 +31,10 @@ const baseNavigation = [
   { name: "Tickets", href: "/tickets", icon: Ticket, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
   { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "admin"] as AppRole[] },
   { name: "Lizenzen", href: "/lizenzen", icon: Key, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
-  { name: "Umsätze", href: "/umsaetze", icon: Euro, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
 ];
 
 const vertriebNavigation = [
+  { name: "Umsätze", href: "/umsaetze", icon: Euro, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
   { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users, roles: ["sales_lead", "admin"] as AppRole[] },
   { name: "Provisionen", href: "/vertrieb/provisionen", icon: Euro, roles: ["sales_lead", "admin"] as AppRole[] },
 ];
