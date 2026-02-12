@@ -17,8 +17,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import {
-  Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2,
+  Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye,
 } from "lucide-react";
+import { generateContractPdf } from "@/lib/generateContractPdf";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
@@ -345,6 +346,23 @@ export default function Vertraege() {
   const set = (field: keyof ContractFormData, value: any) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
+  const handlePreviewPdf = async (contractData: Record<string, any>) => {
+    try {
+      // Capture signature from pad if available
+      let sigData = contractData.signature_data;
+      if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
+        sigData = signaturePadRef.current.toDataURL();
+      }
+      const pdfBytes = await generateContractPdf({ ...contractData, signature_data: sigData });
+      const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err: any) {
+      toast({ title: "PDF-Fehler", description: err.message, variant: "destructive" });
+    }
+  };
+
   return (
     <MainLayout title="Vertragserfassung" subtitle="Verträge anlegen und verwalten">
       {/* Toolbar */}
@@ -479,6 +497,10 @@ export default function Vertraege() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           
+                          <DropdownMenuItem onClick={() => handlePreviewPdf(c)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Vorschau PDF
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEdit(c)}>
                             <Pencil className="h-4 w-4 mr-2" />
                             Bearbeiten
@@ -754,12 +776,18 @@ export default function Vertraege() {
               <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={2} placeholder="Zusätzliche Informationen..." />
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={closeDialog}>Abbrechen</Button>
-              <Button type="submit" disabled={upsertMutation.isPending}>
-                {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                {editId ? "Speichern" : "Vertrag anlegen"}
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button type="button" variant="outline" onClick={() => handlePreviewPdf(form)} className="gap-2">
+                <Eye className="h-4 w-4" />
+                Vorschau PDF
               </Button>
+              <div className="flex gap-2 ml-auto">
+                <Button type="button" variant="outline" onClick={closeDialog}>Abbrechen</Button>
+                <Button type="submit" disabled={upsertMutation.isPending}>
+                  {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                  {editId ? "Speichern" : "Vertrag anlegen"}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </DialogContent>
