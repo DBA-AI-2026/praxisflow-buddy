@@ -28,6 +28,7 @@ export const routePermissions: RoutePermission[] = [
   
   // Vertrieb routes - Sales Lead and Admin only
   { path: "/vertrieb/vertriebler", allowedRoles: ["sales_lead", "admin"] },
+  { path: "/vertrieb/vertraege", allowedRoles: ["user", "sales_partner", "sales_lead", "admin"] },
   { path: "/vertrieb/provisionen", allowedRoles: ["sales_lead", "admin"] },
   
   // Admin routes - Admin only

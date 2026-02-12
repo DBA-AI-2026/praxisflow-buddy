@@ -15,6 +15,7 @@ import Integrationen from "./pages/Integrationen";
 import Umsaetze from "./pages/Umsaetze";
 import Reservierungen from "./pages/Reservierungen";
 import Provisionen from "./pages/vertrieb/Provisionen";
+import Vertraege from "./pages/vertrieb/Vertraege";
 import Vertriebler from "./pages/vertrieb/Vertriebler";
 import AdminUsers from "./pages/admin/Users";
 import AdminSettings from "./pages/admin/Settings";
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/export" element={<ProtectedRoute><Export /></ProtectedRoute>} />
             <Route path="/integrationen" element={<ProtectedRoute><Integrationen /></ProtectedRoute>} />
             <Route path="/vertrieb/vertriebler" element={<ProtectedRoute><Vertriebler /></ProtectedRoute>} />
+            <Route path="/vertrieb/vertraege" element={<ProtectedRoute><Vertraege /></ProtectedRoute>} />
             <Route path="/vertrieb/provisionen" element={<ProtectedRoute><Provisionen /></ProtectedRoute>} />
             <Route path="/admin/access-requests" element={<ProtectedRoute><AccessRequests /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />

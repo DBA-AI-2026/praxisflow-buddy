@@ -56,6 +56,95 @@ export type Database = {
         }
         Relationships: []
       }
+      contracts: {
+        Row: {
+          auto_renewal: boolean
+          cancellation_period_months: number
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          customer_name: string
+          discount_percent: number
+          document_name: string | null
+          document_url: string | null
+          duration_months: number
+          end_date: string
+          id: string
+          license_count: number
+          modules: string[] | null
+          monthly_price: number
+          notes: string | null
+          one_time_fee: number
+          payment_interval: string
+          product_name: string
+          sales_partner_id: string | null
+          sales_partner_name: string | null
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          auto_renewal?: boolean
+          cancellation_period_months?: number
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          customer_name: string
+          discount_percent?: number
+          document_name?: string | null
+          document_url?: string | null
+          duration_months?: number
+          end_date: string
+          id?: string
+          license_count?: number
+          modules?: string[] | null
+          monthly_price?: number
+          notes?: string | null
+          one_time_fee?: number
+          payment_interval?: string
+          product_name: string
+          sales_partner_id?: string | null
+          sales_partner_name?: string | null
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          auto_renewal?: boolean
+          cancellation_period_months?: number
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          customer_name?: string
+          discount_percent?: number
+          document_name?: string | null
+          document_url?: string | null
+          duration_months?: number
+          end_date?: string
+          id?: string
+          license_count?: number
+          modules?: string[] | null
+          monthly_price?: number
+          notes?: string | null
+          one_time_fee?: number
+          payment_interval?: string
+          product_name?: string
+          sales_partner_id?: string | null
+          sales_partner_name?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "praxen"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_revenues: {
         Row: {
           created_at: string
