@@ -44,6 +44,7 @@ const productOptions = [
 interface ContractFormData {
   customer_name: string;
   sales_partner_name: string;
+  mp_nr: string;
   product_name: string;
   modules: string;
   license_count: number;
@@ -62,6 +63,7 @@ interface ContractFormData {
 const emptyForm: ContractFormData = {
   customer_name: "",
   sales_partner_name: "",
+  mp_nr: "",
   product_name: "",
   modules: "",
   license_count: 1,
@@ -127,6 +129,7 @@ export default function Vertraege() {
         customer_name: data.customer_name,
         sales_partner_id: user?.id,
         sales_partner_name: data.sales_partner_name || profile?.full_name || "",
+        mp_nr: data.mp_nr || null,
         product_name: data.product_name,
         modules: data.modules ? data.modules.split(",").map((m) => m.trim()) : [],
         license_count: data.license_count,
@@ -214,6 +217,7 @@ export default function Vertraege() {
     setForm({
       customer_name: contract.customer_name,
       sales_partner_name: contract.sales_partner_name || "",
+      mp_nr: contract.mp_nr || "",
       product_name: contract.product_name,
       modules: (contract.modules || []).join(", "),
       license_count: contract.license_count,
@@ -294,21 +298,25 @@ export default function Vertraege() {
           ) : (
             <table className="data-table">
               <thead className="bg-muted/50">
-                <tr>
-                  <th>Kunde</th>
-                  <th>Produkt</th>
-                  <th>Vertriebspartner</th>
-                  <th>Laufzeit</th>
-                  <th>Monatspreis</th>
-                  <th>Status</th>
-                  <th>Dokument</th>
-                  <th className="w-12"></th>
-                </tr>
+                 <tr>
+                   <th>HFX-Nr.</th>
+                   <th>Kunde</th>
+                   <th>MP-Nr.</th>
+                   <th>Produkt</th>
+                   <th>Vertriebspartner</th>
+                   <th>Laufzeit</th>
+                   <th>Monatspreis</th>
+                   <th>Status</th>
+                   <th>Dokument</th>
+                   <th className="w-12"></th>
+                 </tr>
               </thead>
               <tbody>
-                {filtered.map((c: any) => (
-                  <tr key={c.id}>
-                    <td className="font-medium text-foreground">{c.customer_name}</td>
+                 {filtered.map((c: any) => (
+                   <tr key={c.id}>
+                     <td className="text-xs text-muted-foreground font-mono">{c.hfx_customer_number || "–"}</td>
+                     <td className="font-medium text-foreground">{c.customer_name}</td>
+                     <td className="text-muted-foreground text-sm">{c.mp_nr || "–"}</td>
                     <td>
                       <span className="text-foreground">{c.product_name}</span>
                       {c.modules?.length > 0 && (
@@ -430,14 +438,18 @@ export default function Vertraege() {
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Vertragsparteien</h4>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Kunde *</Label>
-                  <Input value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} required />
-                </div>
-                <div>
-                  <Label>Vertriebspartner</Label>
-                  <Input value={form.sales_partner_name} onChange={(e) => set("sales_partner_name", e.target.value)} />
-                </div>
+                 <div>
+                   <Label>Kunde *</Label>
+                   <Input value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} required />
+                 </div>
+                 <div>
+                   <Label>Vertriebspartner</Label>
+                   <Input value={form.sales_partner_name} onChange={(e) => set("sales_partner_name", e.target.value)} />
+                 </div>
+                 <div>
+                   <Label>MP-Nummer</Label>
+                   <Input value={form.mp_nr} onChange={(e) => set("mp_nr", e.target.value)} placeholder="z.B. MP-12345" />
+                 </div>
               </div>
             </div>
 
