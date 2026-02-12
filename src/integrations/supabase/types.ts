@@ -59,6 +59,7 @@ export type Database = {
       contracts: {
         Row: {
           auto_renewal: boolean
+          bic: string | null
           cancellation_period_months: number
           created_at: string
           created_by: string | null
@@ -70,7 +71,9 @@ export type Database = {
           duration_months: number
           end_date: string
           hfx_customer_number: string | null
+          iban: string | null
           id: string
+          kontoinhaber: string | null
           license_count: number
           modules: string[] | null
           monthly_price: number
@@ -87,6 +90,7 @@ export type Database = {
         }
         Insert: {
           auto_renewal?: boolean
+          bic?: string | null
           cancellation_period_months?: number
           created_at?: string
           created_by?: string | null
@@ -98,7 +102,9 @@ export type Database = {
           duration_months?: number
           end_date: string
           hfx_customer_number?: string | null
+          iban?: string | null
           id?: string
+          kontoinhaber?: string | null
           license_count?: number
           modules?: string[] | null
           monthly_price?: number
@@ -115,6 +121,7 @@ export type Database = {
         }
         Update: {
           auto_renewal?: boolean
+          bic?: string | null
           cancellation_period_months?: number
           created_at?: string
           created_by?: string | null
@@ -126,7 +133,9 @@ export type Database = {
           duration_months?: number
           end_date?: string
           hfx_customer_number?: string | null
+          iban?: string | null
           id?: string
+          kontoinhaber?: string | null
           license_count?: number
           modules?: string[] | null
           monthly_price?: number
