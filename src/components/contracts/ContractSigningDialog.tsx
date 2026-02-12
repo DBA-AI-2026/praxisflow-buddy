@@ -201,7 +201,10 @@ export function ContractSigningDialog({ open, onOpenChange, contract }: Contract
           document_url: urlData.publicUrl,
           document_name: signedFileName,
           status: "aktiv",
-        })
+          iban: iban || null,
+          bic: bic || null,
+          kontoinhaber: kontoinhaber || null,
+        } as any)
         .eq("id", contract.id);
       if (updateError) throw updateError;
 
