@@ -30,6 +30,7 @@ export interface ContractForSigning {
   duration_months?: number;
   modules?: string[] | null;
   sales_partner_name?: string | null;
+  mp_nr?: string | null;
   notes?: string | null;
 }
 

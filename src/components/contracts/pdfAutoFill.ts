@@ -14,6 +14,7 @@ export interface PdfFillData {
   bic?: string;
   arztName: string;
   email?: string;
+  mpNr?: string;
   
   // Product & pricing
   productName: string;
@@ -36,7 +37,12 @@ export interface PdfFillData {
 
 /**
  * Fill the Honorarfuchs PDF template with contract data.
- * Since the PDF is a static layout (not a fillable form), we overlay text at known coordinates.
+ * 
+ * The PDF is A4 (595 x 842 pt). We use drawText helper where y is measured
+ * from the TOP of the page (the helper converts to PDF-native bottom-origin).
+ * 
+ * Coordinates were calibrated against the template "vertrag-honorarfuchs.pdf" 
+ * (Stand 01/2026, 13 pages).
  */
 export async function fillPdfTemplate(
   pdfBytes: ArrayBuffer,
@@ -47,126 +53,181 @@ export async function fillPdfTemplate(
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const pages = pdfDoc.getPages();
 
-  const textColor = rgb(0.1, 0.1, 0.1);
-  const fillColor = rgb(0.0, 0.2, 0.5);
+  const fillColor = rgb(0.0, 0.15, 0.45);
 
-  // Helper to draw text
+  // Helper: draw text at (x, yFromTop) on given page index
   const drawText = (
     pageIdx: number,
     text: string,
     x: number,
-    y: number,
+    yFromTop: number,
     size = 9,
     useBold = false
   ) => {
-    if (pageIdx >= pages.length) return;
+    if (pageIdx >= pages.length || !text) return;
     const page = pages[pageIdx];
     const { height } = page.getSize();
     page.drawText(text, {
       x,
-      y: height - y,
+      y: height - yFromTop,
       size,
       font: useBold ? boldFont : font,
       color: fillColor,
     });
   };
 
+  const startFormatted = new Date(data.startDate).toLocaleDateString("de-DE");
+  const datumFormatted = data.datum
+    ? new Date(data.datum).toLocaleDateString("de-DE")
+    : "";
+
   // =============================================
   // PAGE 1 – Stammdaten & Produktauswahl
   // =============================================
-  // Praxisname (top header area)
-  drawText(0, data.praxisName, 130, 88, 11, true);
+  // MP-Nummer (top left, next to "MP-Nummer" label)
+  if (data.mpNr) {
+    drawText(0, data.mpNr, 95, 56, 9);
+  }
 
-  // Fachrichtung
+  // Praxisname (in STAMMDATEN box, right of "Praxisname" label)
+  drawText(0, data.praxisName, 95, 108, 10, true);
+
+  // Fachrichtung (right column, same row as Praxisname)
   if (data.fachrichtung) {
-    drawText(0, data.fachrichtung, 130, 108, 9);
+    drawText(0, data.fachrichtung, 370, 108, 9);
   }
 
   // Straße/Hausnummer
   if (data.strasseHausnummer) {
-    drawText(0, data.strasseHausnummer, 88, 153, 8);
+    drawText(0, data.strasseHausnummer, 95, 140, 9);
   }
 
   // PLZ/Ort
   if (data.plzOrt) {
-    drawText(0, data.plzOrt, 88, 168, 8);
+    drawText(0, data.plzOrt, 95, 172, 9);
   }
 
-  // Kontoinhaber
+  // Kontoinhaber (middle-right area of Stammdaten)
   if (data.kontoinhaber) {
-    drawText(0, data.kontoinhaber, 88, 183, 8);
-  }
-
-  // IBAN
-  if (data.iban) {
-    drawText(0, data.iban, 88, 198, 8);
-  }
-
-  // BIC
-  if (data.bic) {
-    drawText(0, data.bic, 88, 213, 8);
+    drawText(0, data.kontoinhaber, 370, 172, 9);
   }
 
   // Name des Arztes
-  drawText(0, data.arztName, 88, 240, 8);
+  drawText(0, data.arztName, 95, 203, 9);
 
-  // Allgemeine E-Mail-Adresse
+  // Allgemeine E-Mail-Adresse (right column)
   if (data.email) {
-    drawText(0, data.email, 88, 255, 8);
+    drawText(0, data.email, 370, 203, 9);
   }
 
-  // Monatliche Lizenzgebühren
-  drawText(0, `${data.monthlyPrice.toLocaleString("de-DE")} €`, 170, 720, 10, true);
+  // "Kostenpflichtig ab" (in the EBM product section)
+  drawText(0, startFormatted, 150, 420, 8);
 
-  // Kostenpflichtig ab (start date)
-  const startFormatted = new Date(data.startDate).toLocaleDateString("de-DE");
-  drawText(0, startFormatted, 108, 375, 8);
+  // Ihre monatlichen Lizenzgebühren (bottom of product section)
+  drawText(0, `${data.monthlyPrice.toLocaleString("de-DE")} €`, 380, 755, 11, true);
+
+  // Sondervereinbarungen – Gültigkeit vom/bis
+  drawText(0, startFormatted, 95, 800, 8);
+  if (data.endDate) {
+    const endFormatted = new Date(data.endDate).toLocaleDateString("de-DE");
+    drawText(0, endFormatted, 370, 800, 8);
+  }
 
   // =============================================
   // PAGE 2 – GOÄ & Unterschriften
   // =============================================
   if (pages.length > 1) {
-    // Kostenpflichtig ab
-    drawText(1, startFormatted, 108, 110, 8);
-
-    // Ort & Datum for signatures (bottom of page 2)
-    if (data.ort) {
-      drawText(1, data.ort, 50, 700, 9);
+    // MP-Nummer
+    if (data.mpNr) {
+      drawText(1, data.mpNr, 95, 56, 9);
     }
-    if (data.datum) {
-      const datumFormatted = new Date(data.datum).toLocaleDateString("de-DE");
-      drawText(1, datumFormatted, 50, 715, 9);
+
+    // Kostenpflichtig ab (GOÄ section)
+    drawText(1, startFormatted, 410, 135, 8);
+
+    // Ort (bottom signature area)
+    if (data.ort) {
+      drawText(1, data.ort, 42, 763, 9);
+    }
+    // Datum
+    if (datumFormatted) {
+      drawText(1, datumFormatted, 42, 782, 9);
     }
   }
 
   // =============================================
-  // PAGE 4 – Dienstleistungsvertrag mit Unterschriften
+  // PAGE 3 – SEPA Lastschrift (two copies on one page)
+  // =============================================
+  if (pages.length > 2) {
+    // MP-Nummer
+    if (data.mpNr) {
+      drawText(2, data.mpNr, 95, 56, 9);
+    }
+
+    // --- TOP COPY (Ausfertigung für CareCapital) ---
+    // Kontoinhaber
+    if (data.kontoinhaber) {
+      drawText(2, data.kontoinhaber, 42, 332, 8);
+    }
+    // IBAN (after the "D E" prefix boxes)
+    if (data.iban) {
+      drawText(2, data.iban, 80, 365, 9);
+    }
+    // Ort
+    if (data.ort) {
+      drawText(2, data.ort, 42, 400, 9);
+    }
+    // Datum
+    if (datumFormatted) {
+      drawText(2, datumFormatted, 42, 420, 9);
+    }
+
+    // --- BOTTOM COPY (Ausfertigung für die Bank) ---
+    if (data.kontoinhaber) {
+      drawText(2, data.kontoinhaber, 42, 620, 8);
+    }
+    if (data.iban) {
+      drawText(2, data.iban, 80, 655, 9);
+    }
+    if (data.ort) {
+      drawText(2, data.ort, 42, 690, 9);
+    }
+    if (datumFormatted) {
+      drawText(2, datumFormatted, 42, 710, 9);
+    }
+  }
+
+  // =============================================
+  // PAGE 4 – Dienstleistungsvertrag
   // =============================================
   if (pages.length > 3) {
-    // Praxis name on contract page
-    drawText(3, data.praxisName, 310, 115, 9, true);
-
-    // MP-Nummer area
-    if (data.fachrichtung) {
-      drawText(3, data.fachrichtung, 310, 145, 8);
+    // MP-Nummer top
+    if (data.mpNr) {
+      drawText(3, data.mpNr, 95, 56, 9);
     }
 
-    // Ort & Datum (MCC side)
+    // Praxis name (right column "und Praxis")
+    drawText(3, data.praxisName, 310, 130, 9, true);
+
+    // MP-Nummer in contract body
+    if (data.mpNr) {
+      drawText(3, data.mpNr, 370, 175, 8);
+    }
+
+    // Ort & Datum – MCC side (top signature block)
     if (data.ort) {
-      drawText(3, data.ort, 50, 670, 9);
+      drawText(3, data.ort, 42, 660, 9);
     }
-    if (data.datum) {
-      const datumFormatted = new Date(data.datum).toLocaleDateString("de-DE");
-      drawText(3, datumFormatted, 50, 685, 9);
+    if (datumFormatted) {
+      drawText(3, datumFormatted, 42, 680, 9);
     }
 
-    // Ort & Datum (customer side)
+    // Ort & Datum – Customer side (bottom signature block)
     if (data.ort) {
-      drawText(3, data.ort, 50, 710, 9);
+      drawText(3, data.ort, 42, 732, 9);
     }
-    if (data.datum) {
-      const datumFormatted = new Date(data.datum).toLocaleDateString("de-DE");
-      drawText(3, datumFormatted, 50, 725, 9);
+    if (datumFormatted) {
+      drawText(3, datumFormatted, 42, 752, 9);
     }
   }
 
