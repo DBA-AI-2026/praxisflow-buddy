@@ -19,6 +19,7 @@ import Vertraege from "./pages/vertrieb/Vertraege";
 import Vertriebler from "./pages/vertrieb/Vertriebler";
 import AdminUsers from "./pages/admin/Users";
 import AdminSettings from "./pages/admin/Settings";
+import AdminProducts from "./pages/admin/Products";
 import AccessRequests from "./pages/admin/AccessRequests";
 import AuditLogs from "./pages/admin/AuditLogs";
 import Auth from "./pages/Auth";
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
+            <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

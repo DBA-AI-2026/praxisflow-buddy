@@ -35,18 +35,13 @@ const statusConfig: Record<string, { label: string; class: string }> = {
   beendet: { label: "Beendet", class: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" },
 };
 
-const productOptions = [
-  "HFX GOÄ", "HFX EBM", "HFX Benchmark KZV", "HFX Doku",
-  "HFX Wingmann", "HFX GOÄ Live-Check", "HFX GOZ Live-Check",
-  "HFX Praxismanagement Zahnmedizin",
-];
+// Product options are now loaded from the database
 
 interface ContractFormData {
   customer_name: string;
   sales_partner_name: string;
   mp_nr: string;
-  product_name: string;
-  
+  selected_products: string[];
   license_count: number;
   start_date: string;
   duration_months: number;
@@ -64,8 +59,7 @@ const emptyForm: ContractFormData = {
   customer_name: "",
   sales_partner_name: "",
   mp_nr: "",
-  product_name: "",
-  
+  selected_products: [],
   license_count: 1,
   start_date: new Date().toISOString().split("T")[0],
   duration_months: 12,
@@ -104,6 +98,19 @@ export default function Vertraege() {
     },
   });
 
+  const { data: products = [] } = useQuery({
+    queryKey: ["products"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const upsertMutation = useMutation({
     mutationFn: async (data: ContractFormData) => {
       const endDate = addMonths(new Date(data.start_date), data.duration_months);
@@ -130,8 +137,8 @@ export default function Vertraege() {
         sales_partner_id: user?.id,
         sales_partner_name: data.sales_partner_name || profile?.full_name || "",
         mp_nr: data.mp_nr || null,
-        product_name: data.product_name,
-        
+        product_name: data.selected_products.join(", "),
+        modules: data.selected_products,
         license_count: data.license_count,
         start_date: data.start_date,
         duration_months: data.duration_months,
@@ -218,8 +225,7 @@ export default function Vertraege() {
       customer_name: contract.customer_name,
       sales_partner_name: contract.sales_partner_name || "",
       mp_nr: contract.mp_nr || "",
-      product_name: contract.product_name,
-      
+      selected_products: contract.modules?.length > 0 ? contract.modules : (contract.product_name ? [contract.product_name] : []),
       license_count: contract.license_count,
       start_date: contract.start_date,
       duration_months: contract.duration_months,
@@ -439,23 +445,63 @@ export default function Vertraege() {
               </div>
             </div>
 
-            {/* Produkte */}
+            {/* Produkte – Mehrfachauswahl */}
             <div className="space-y-3">
-              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Produkt</h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Produkt *</Label>
-                  <Select value={form.product_name} onValueChange={(v) => set("product_name", v)}>
-                    <SelectTrigger><SelectValue placeholder="Produkt wählen" /></SelectTrigger>
-                    <SelectContent>
-                      {productOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Produkte (Mehrfachauswahl)</h4>
+              <div className="grid grid-cols-2 gap-2">
+                {products.map((p: any) => {
+                  const isSelected = form.selected_products.includes(p.name);
+                  return (
+                    <label
+                      key={p.id}
+                      className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                        isSelected ? "border-primary bg-primary/5" : "border-input hover:bg-muted/50"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {
+                          const next = isSelected
+                            ? form.selected_products.filter((n) => n !== p.name)
+                            : [...form.selected_products, p.name];
+                          const totalMonthly = products
+                            .filter((pr: any) => next.includes(pr.name))
+                            .reduce((sum: number, pr: any) => sum + Number(pr.monthly_price), 0);
+                          const totalOneTime = products
+                            .filter((pr: any) => next.includes(pr.name))
+                            .reduce((sum: number, pr: any) => sum + Number(pr.one_time_fee), 0);
+                          setForm((prev) => ({
+                            ...prev,
+                            selected_products: next,
+                            monthly_price: totalMonthly,
+                            one_time_fee: totalOneTime,
+                          }));
+                        }}
+                        className="rounded border-input"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium">{p.name}</span>
+                        <span className="text-xs text-muted-foreground block">
+                          {Number(p.monthly_price).toLocaleString("de-DE")} €/Mon.
+                        </span>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+              {form.selected_products.length > 0 && (
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                  <p className="text-sm font-medium">
+                    Summe: {form.monthly_price.toLocaleString("de-DE")} €/Monat
+                    {form.one_time_fee > 0 && ` + ${form.one_time_fee.toLocaleString("de-DE")} € einmalig`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{form.selected_products.length} Produkt(e) ausgewählt</p>
                 </div>
-                <div>
-                  <Label>Lizenzen</Label>
-                  <Input type="number" min={1} value={form.license_count} onChange={(e) => set("license_count", Number(e.target.value))} />
-                </div>
+              )}
+              <div className="w-1/2">
+                <Label>Lizenzen</Label>
+                <Input type="number" min={1} value={form.license_count} onChange={(e) => set("license_count", Number(e.target.value))} />
               </div>
             </div>
 

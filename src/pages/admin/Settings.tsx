@@ -1,37 +1,15 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useSalesforceConnection } from "@/hooks/useSalesforceConnection";
-import { Save, Euro, Bell, Database, CheckCircle2, XCircle, Loader2, ExternalLink, Unplug } from "lucide-react";
+import { Save, Bell, Database, CheckCircle2, XCircle, Loader2, ExternalLink, Unplug } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-interface Pricing {
-  hfxGoae: number;
-  hfxEbm: number;
-  hfxBenchmarkKzv: number;
-  hfxDoku: number;
-  hfxWingmann: number;
-  hfxGoaeLiveCheck: number;
-  hfxGozLiveCheck: number;
-  hfxPraxismanagementZahn: number;
-}
-
 export default function AdminSettings() {
-  const [pricing, setPricing] = useState<Pricing>({
-    hfxGoae: 0,
-    hfxEbm: 0,
-    hfxBenchmarkKzv: 0,
-    hfxDoku: 0,
-    hfxWingmann: 0,
-    hfxGoaeLiveCheck: 0,
-    hfxGozLiveCheck: 0,
-    hfxPraxismanagementZahn: 0,
-  });
   const [notifications, setNotifications] = useState({
     newTicket: true,
     ticketAssigned: true,
@@ -48,13 +26,6 @@ export default function AdminSettings() {
     connect: connectSalesforce,
     disconnect: disconnectSalesforce,
   } = useSalesforceConnection();
-
-  const savePricing = () => {
-    toast({
-      title: "Preise gespeichert",
-      description: "Die Preisänderungen wurden erfolgreich übernommen.",
-    });
-  };
 
   const saveNotifications = () => {
     toast({
@@ -104,12 +75,8 @@ export default function AdminSettings() {
 
   return (
     <MainLayout title="Einstellungen" subtitle="System- und Integrationseinstellungen">
-      <Tabs defaultValue="preise" className="space-y-6">
+      <Tabs defaultValue="benachrichtigungen" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="preise" className="gap-2">
-            <Euro className="h-4 w-4" />
-            Preise
-          </TabsTrigger>
           <TabsTrigger value="benachrichtigungen" className="gap-2">
             <Bell className="h-4 w-4" />
             Benachrichtigungen
@@ -120,121 +87,6 @@ export default function AdminSettings() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="preise">
-          <div className="card-elevated p-6 max-w-xl">
-            <h2 className="text-lg font-semibold text-foreground mb-4">
-              Produktpreise
-            </h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              Ändern Sie hier die monatlichen Preise für die verschiedenen
-              Produktpakete.
-            </p>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="hfxGoae">HFX GOÄ (€/Monat)</Label>
-                <Input
-                  id="hfxGoae"
-                  type="number"
-                  value={pricing.hfxGoae}
-                  onChange={(e) =>
-                    setPricing({ ...pricing, hfxGoae: parseInt(e.target.value) || 0 })
-                  }
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="hfxEbm">HFX EBM (€/Monat)</Label>
-                <Input
-                  id="hfxEbm"
-                  type="number"
-                  value={pricing.hfxEbm}
-                  onChange={(e) =>
-                    setPricing({ ...pricing, hfxEbm: parseInt(e.target.value) || 0 })
-                  }
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="hfxBenchmarkKzv">HFX Benchmark KZV (€/Monat)</Label>
-                <Input
-                  id="hfxBenchmarkKzv"
-                  type="number"
-                  value={pricing.hfxBenchmarkKzv}
-                  onChange={(e) =>
-                    setPricing({ ...pricing, hfxBenchmarkKzv: parseInt(e.target.value) || 0 })
-                  }
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="hfxDoku">HFX Doku (€/Monat)</Label>
-                <Input
-                  id="hfxDoku"
-                  type="number"
-                  value={pricing.hfxDoku}
-                  onChange={(e) =>
-                    setPricing({ ...pricing, hfxDoku: parseInt(e.target.value) || 0 })
-                  }
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="hfxWingmann">HFX Wingmann (€/Monat)</Label>
-                <Input
-                  id="hfxWingmann"
-                  type="number"
-                  value={pricing.hfxWingmann}
-                  onChange={(e) =>
-                    setPricing({ ...pricing, hfxWingmann: parseInt(e.target.value) || 0 })
-                  }
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="hfxGoaeLiveCheck">HFX GOÄ Live-Check (€/Monat)</Label>
-                <Input
-                  id="hfxGoaeLiveCheck"
-                  type="number"
-                  value={pricing.hfxGoaeLiveCheck}
-                  onChange={(e) =>
-                    setPricing({ ...pricing, hfxGoaeLiveCheck: parseInt(e.target.value) || 0 })
-                  }
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="hfxGozLiveCheck">HFX GOZ Live-Check (€/Monat)</Label>
-                <Input
-                  id="hfxGozLiveCheck"
-                  type="number"
-                  value={pricing.hfxGozLiveCheck}
-                  onChange={(e) =>
-                    setPricing({ ...pricing, hfxGozLiveCheck: parseInt(e.target.value) || 0 })
-                  }
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="hfxPraxismanagementZahn">HFX Praxismanagement Zahnmedizin (€/Monat)</Label>
-                <Input
-                  id="hfxPraxismanagementZahn"
-                  type="number"
-                  value={pricing.hfxPraxismanagementZahn}
-                  onChange={(e) =>
-                    setPricing({ ...pricing, hfxPraxismanagementZahn: parseInt(e.target.value) || 0 })
-                  }
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            <Button onClick={savePricing} className="mt-6">
-              <Save className="h-4 w-4 mr-2" />
-              Preise speichern
-            </Button>
-          </div>
-        </TabsContent>
 
         <TabsContent value="benachrichtigungen">
           <div className="card-elevated p-6 max-w-xl">
