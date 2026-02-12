@@ -222,7 +222,7 @@ export default function Reservierungen() {
           <div>
             <h2 className="text-xl font-semibold text-foreground">Abrechnungsservices</h2>
             <p className="text-sm text-muted-foreground">
-              Reservieren Sie Praxen mit 6 Monaten Bestandsschutz. Automatische Duplikatprüfung bei der Erfassung.
+              Reservieren Sie Kunden mit 6 Monaten Bestandsschutz. Automatische Duplikatprüfung bei der Erfassung.
             </p>
           </div>
         </CardContent>
@@ -444,7 +444,7 @@ export default function Reservierungen() {
             Aktuelle Reservierungen
           </CardTitle>
           <CardDescription>
-            Übersicht aller reservierten Praxen. Das Enddatum (6 Monate Bestandsschutz) kann nur durch einen Admin geändert werden.
+            Übersicht aller reservierten Kunden. Das Enddatum (6 Monate Bestandsschutz) kann nur durch einen Admin geändert werden.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -455,7 +455,7 @@ export default function Reservierungen() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Praxis</TableHead>
+                    <TableHead>Kunde</TableHead>
                     <TableHead>Arzt/Ärzte</TableHead>
                     <TableHead>Adresse</TableHead>
                     <TableHead>Telefon</TableHead>

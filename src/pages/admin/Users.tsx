@@ -227,7 +227,7 @@ export default function AdminUsers() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Sieht alle Daten aller Vertriebspartner (Dashboard, Reservierungen, Praxen, Umsätze). Kein Zugriff auf Administration.
+            Sieht alle Daten aller Vertriebspartner (Dashboard, Reservierungen, Kunden, Umsätze). Kein Zugriff auf Administration.
           </p>
         </div>
         <div className="stat-card">
@@ -241,7 +241,7 @@ export default function AdminUsers() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Eigene Reservierungen erstellen & verwalten, Praxen & Tickets einsehen, eigene Umsätze & Lizenzen sehen.
+            Eigene Reservierungen erstellen & verwalten, Kunden & Tickets einsehen, eigene Umsätze & Lizenzen sehen.
           </p>
         </div>
         <div className="stat-card">
@@ -255,7 +255,7 @@ export default function AdminUsers() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Basiszugang: Dashboard, eigene Reservierungen, Praxen, Tickets, Lizenzen und Umsätze einsehen.
+            Basiszugang: Dashboard, eigene Reservierungen, Kunden, Tickets, Lizenzen und Umsätze einsehen.
           </p>
         </div>
       </div>

@@ -27,7 +27,7 @@ import { useUserRole, AppRole } from "@/hooks/useUserRole";
 const baseNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
   { name: "Reservierungen", href: "/reservierungen", icon: BookMarked, roles: ["sales_partner", "admin"] as AppRole[] },
-  { name: "Praxen", href: "/praxen", icon: Building2, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
+  { name: "Kunden", href: "/praxen", icon: Building2, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
   { name: "Tickets", href: "/tickets", icon: Ticket, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
   { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "admin"] as AppRole[] },
   { name: "Lizenzen", href: "/lizenzen", icon: Key, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
