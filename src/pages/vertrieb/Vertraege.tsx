@@ -22,6 +22,7 @@ import {
 import { generateContractPdf } from "@/lib/generateContractPdf";
 import { validateIban } from "@/lib/validateIban";
 import { validateBic } from "@/lib/validateBic";
+import { lookupBicFromIban } from "@/lib/lookupBic";
 import foxLogoUrl from "@/assets/fox-logo.jpeg";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -106,6 +107,7 @@ export default function Vertraege() {
   const [form, setForm] = useState<ContractFormData>(emptyForm);
   const [file, setFile] = useState<File | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [bicLoading, setBicLoading] = useState(false);
   const { user, profile } = useAuth();
   const { isAdmin } = useUserRole();
   const { toast } = useToast();
@@ -746,7 +748,17 @@ export default function Vertraege() {
                   <Label>IBAN</Label>
                   <Input
                     value={form.iban}
-                    onChange={(e) => set("iban", e.target.value.toUpperCase().replace(/\s/g, ""))}
+                    onChange={async (e) => {
+                      const val = e.target.value.toUpperCase().replace(/\s/g, "");
+                      set("iban", val);
+                      // Auto-lookup BIC when IBAN is valid
+                      if (val && validateIban(val).valid && !form.bic) {
+                        setBicLoading(true);
+                        const bic = await lookupBicFromIban(val);
+                        if (bic) set("bic", bic);
+                        setBicLoading(false);
+                      }
+                    }}
                     placeholder="DE89370400440532013000"
                     className={form.iban && !validateIban(form.iban).valid ? "border-destructive" : ""}
                   />
@@ -759,7 +771,7 @@ export default function Vertraege() {
                   })()}
                 </div>
                 <div>
-                  <Label>BIC</Label>
+                  <Label>BIC {bicLoading && <span className="text-xs text-muted-foreground ml-1">(wird ermittelt...)</span>}</Label>
                   <Input
                     value={form.bic}
                     onChange={(e) => set("bic", e.target.value.toUpperCase().replace(/\s/g, ""))}
