@@ -46,7 +46,7 @@ interface ContractFormData {
   sales_partner_name: string;
   mp_nr: string;
   product_name: string;
-  modules: string;
+  
   license_count: number;
   start_date: string;
   duration_months: number;
@@ -65,7 +65,7 @@ const emptyForm: ContractFormData = {
   sales_partner_name: "",
   mp_nr: "",
   product_name: "",
-  modules: "",
+  
   license_count: 1,
   start_date: new Date().toISOString().split("T")[0],
   duration_months: 12,
@@ -131,7 +131,7 @@ export default function Vertraege() {
         sales_partner_name: data.sales_partner_name || profile?.full_name || "",
         mp_nr: data.mp_nr || null,
         product_name: data.product_name,
-        modules: data.modules ? data.modules.split(",").map((m) => m.trim()) : [],
+        
         license_count: data.license_count,
         start_date: data.start_date,
         duration_months: data.duration_months,
@@ -219,7 +219,7 @@ export default function Vertraege() {
       sales_partner_name: contract.sales_partner_name || "",
       mp_nr: contract.mp_nr || "",
       product_name: contract.product_name,
-      modules: (contract.modules || []).join(", "),
+      
       license_count: contract.license_count,
       start_date: contract.start_date,
       duration_months: contract.duration_months,
@@ -317,21 +317,7 @@ export default function Vertraege() {
                      <td className="text-xs text-muted-foreground font-mono">{c.hfx_customer_number || "–"}</td>
                      <td className="font-medium text-foreground">{c.customer_name}</td>
                      <td className="text-muted-foreground text-sm">{c.mp_nr || "–"}</td>
-                    <td>
-                      <span className="text-foreground">{c.product_name}</span>
-                      {c.modules?.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {c.modules.slice(0, 2).map((m: string) => (
-                            <span key={m} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-secondary text-secondary-foreground">
-                              {m}
-                            </span>
-                          ))}
-                          {c.modules.length > 2 && (
-                            <span className="text-[10px] text-muted-foreground">+{c.modules.length - 2}</span>
-                          )}
-                        </div>
-                      )}
-                    </td>
+                    <td className="text-foreground">{c.product_name}</td>
                     <td className="text-muted-foreground">{c.sales_partner_name || "–"}</td>
                     <td className="text-muted-foreground">
                       {c.start_date && format(new Date(c.start_date), "dd.MM.yy", { locale: de })}
@@ -455,7 +441,7 @@ export default function Vertraege() {
 
             {/* Produkte */}
             <div className="space-y-3">
-              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Produkt & Module</h4>
+              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Produkt</h4>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Produkt *</Label>
@@ -470,10 +456,6 @@ export default function Vertraege() {
                   <Label>Lizenzen</Label>
                   <Input type="number" min={1} value={form.license_count} onChange={(e) => set("license_count", Number(e.target.value))} />
                 </div>
-              </div>
-              <div>
-                <Label>Module (kommagetrennt)</Label>
-                <Input value={form.modules} onChange={(e) => set("modules", e.target.value)} placeholder="z.B. GOÄ-Prüfung, Live-Check" />
               </div>
             </div>
 
