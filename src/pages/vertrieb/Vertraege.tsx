@@ -523,21 +523,23 @@ export default function Vertraege() {
               </div>
             </div>
 
-            {/* Preise */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Preiskonditionen</h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Monatspreis (€) *</Label>
-                  <Input type="number" min={0} step="0.01" value={form.monthly_price} onChange={(e) => set("monthly_price", Number(e.target.value))} required />
-                </div>
-                <div>
-                  <Label>Einmalgebühr (€)</Label>
-                  <Input type="number" min={0} step="0.01" value={form.one_time_fee} onChange={(e) => set("one_time_fee", Number(e.target.value))} />
-                </div>
-                <div>
-                  <Label>Rabatt (%)</Label>
-                  <Input type="number" min={0} max={100} value={form.discount_percent} onChange={(e) => set("discount_percent", Number(e.target.value))} />
+            {/* Preisübersicht (automatisch aus Produktauswahl) */}
+            {form.selected_products.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Preisübersicht</h4>
+                <div className="p-3 rounded-lg bg-muted/50 border">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Monatspreis</span>
+                      <p className="font-medium">{form.monthly_price.toLocaleString("de-DE")} €</p>
+                    </div>
+                    {form.one_time_fee > 0 && (
+                      <div>
+                        <span className="text-muted-foreground">Einmalgebühr</span>
+                        <p className="font-medium">{form.one_time_fee.toLocaleString("de-DE")} €</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <Label>Zahlungsintervall</Label>
@@ -551,7 +553,7 @@ export default function Vertraege() {
                   </Select>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Status */}
             {editId && (
