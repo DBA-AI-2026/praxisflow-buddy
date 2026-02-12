@@ -16,6 +16,7 @@ import {
   Link2,
   Lock,
   FileText,
+  Package,
 } from "lucide-react";
 import logo from "@/assets/fox-logo.jpeg";
 import { useState } from "react";
@@ -44,6 +45,7 @@ const vertriebNavigation = [
 const adminNavigation = [
   { name: "Zugangsanfragen", href: "/admin/access-requests", icon: UserPlus },
   { name: "Benutzerverwaltung", href: "/admin/users", icon: Users },
+  { name: "Produktverwaltung", href: "/admin/products", icon: Package },
   { name: "Datenexport", href: "/export", icon: FileDown },
   { name: "Integrationen", href: "/integrationen", icon: Link2 },
   { name: "Audit-Protokoll", href: "/admin/audit-logs", icon: Lock },
