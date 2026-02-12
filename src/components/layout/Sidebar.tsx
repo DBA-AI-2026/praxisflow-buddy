@@ -32,8 +32,6 @@ const baseNavigation = [
   { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "admin"] as AppRole[] },
   { name: "Lizenzen", href: "/lizenzen", icon: Key, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
   { name: "Umsätze", href: "/umsaetze", icon: Euro, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
-  { name: "Datenexport", href: "/export", icon: FileDown, roles: ["sales_lead", "admin"] as AppRole[] },
-  { name: "Integrationen", href: "/integrationen", icon: Link2, roles: ["sales_lead", "admin"] as AppRole[] },
 ];
 
 const vertriebNavigation = [
@@ -44,6 +42,8 @@ const vertriebNavigation = [
 const adminNavigation = [
   { name: "Zugangsanfragen", href: "/admin/access-requests", icon: UserPlus },
   { name: "Benutzerverwaltung", href: "/admin/users", icon: Users },
+  { name: "Datenexport", href: "/export", icon: FileDown },
+  { name: "Integrationen", href: "/integrationen", icon: Link2 },
   { name: "Audit-Protokoll", href: "/admin/audit-logs", icon: Lock },
   { name: "Einstellungen", href: "/admin/settings", icon: Settings },
 ];
