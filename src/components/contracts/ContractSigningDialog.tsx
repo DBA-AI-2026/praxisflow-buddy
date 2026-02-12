@@ -60,7 +60,21 @@ export function ContractSigningDialog({ open, onOpenChange, contract }: Contract
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const canSign = partnerSig && kundenSig && ort && datum && arztName && iban;
+  const isValidIban = (value: string): boolean => {
+    const cleaned = value.replace(/\s/g, "").toUpperCase();
+    if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(cleaned)) return false;
+    const rearranged = cleaned.slice(4) + cleaned.slice(0, 4);
+    const numeric = rearranged.replace(/[A-Z]/g, (ch) => (ch.charCodeAt(0) - 55).toString());
+    let remainder = numeric;
+    while (remainder.length > 2) {
+      const block = remainder.slice(0, 9);
+      remainder = (parseInt(block, 10) % 97).toString() + remainder.slice(block.length);
+    }
+    return parseInt(remainder, 10) % 97 === 1;
+  };
+
+  const ibanValid = isValidIban(iban);
+  const canSign = partnerSig && kundenSig && ort && datum && arztName && ibanValid;
 
   const embedSignaturesInPdf = async (pdfBytes: ArrayBuffer): Promise<Uint8Array> => {
     const pdfDoc = await PDFDocument.load(pdfBytes);
@@ -304,7 +318,11 @@ export function ContractSigningDialog({ open, onOpenChange, contract }: Contract
                   onChange={(e) => setIban(e.target.value.toUpperCase().replace(/\s/g, ""))}
                   placeholder="DE89 3704 0044 0532 0130 00"
                   required
+                  className={iban && !ibanValid ? "border-destructive" : ""}
                 />
+                {iban && !ibanValid && (
+                  <p className="text-xs text-destructive mt-1">Ungültiges IBAN-Format</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="bic">BIC</Label>
