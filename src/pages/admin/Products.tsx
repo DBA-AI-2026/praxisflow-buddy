@@ -22,6 +22,11 @@ interface ProductForm {
   name: string;
   monthly_price: number;
   one_time_fee: number;
+  price_per_unit: number | null;
+  price_per_unit_label: string;
+  promo_price: number | null;
+  promo_price_label: string;
+  promo_end_date: string;
   description: string;
   is_active: boolean;
 }
@@ -30,6 +35,11 @@ const emptyForm: ProductForm = {
   name: "",
   monthly_price: 0,
   one_time_fee: 0,
+  price_per_unit: null,
+  price_per_unit_label: "",
+  promo_price: null,
+  promo_price_label: "",
+  promo_end_date: "",
   description: "",
   is_active: true,
 };
@@ -55,11 +65,19 @@ export default function AdminProducts() {
 
   const upsertMutation = useMutation({
     mutationFn: async (data: ProductForm) => {
+      const payload = {
+        ...data,
+        price_per_unit: data.price_per_unit || null,
+        price_per_unit_label: data.price_per_unit_label || null,
+        promo_price: data.promo_price || null,
+        promo_price_label: data.promo_price_label || null,
+        promo_end_date: data.promo_end_date || null,
+      };
       if (editId) {
-        const { error } = await supabase.from("products").update(data).eq("id", editId);
+        const { error } = await supabase.from("products").update(payload).eq("id", editId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("products").insert(data);
+        const { error } = await supabase.from("products").insert(payload);
         if (error) throw error;
       }
     },
@@ -96,6 +114,11 @@ export default function AdminProducts() {
       name: product.name,
       monthly_price: product.monthly_price,
       one_time_fee: product.one_time_fee,
+      price_per_unit: product.price_per_unit ?? null,
+      price_per_unit_label: product.price_per_unit_label || "",
+      promo_price: product.promo_price ?? null,
+      promo_price_label: product.promo_price_label || "",
+      promo_end_date: product.promo_end_date || "",
       description: product.description || "",
       is_active: product.is_active,
     });
@@ -111,6 +134,9 @@ export default function AdminProducts() {
     setForm((prev) => ({ ...prev, [field]: value }));
 
   const activeCount = products.filter((p: any) => p.is_active).length;
+
+  const formatPrice = (val: number | null | undefined) =>
+    val != null ? `${Number(val).toLocaleString("de-DE")} €` : "–";
 
   return (
     <MainLayout title="Produktverwaltung" subtitle="Produkte und Preise verwalten">
@@ -144,24 +170,52 @@ export default function AdminProducts() {
                 <TableHead>Produkt</TableHead>
                 <TableHead>Monatspreis</TableHead>
                 <TableHead>Einmalgebühr</TableHead>
+                <TableHead>Stückpreis</TableHead>
+                <TableHead>Aktion</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Beschreibung</TableHead>
                 <TableHead className="w-24"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {products.map((p: any) => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{p.name}</TableCell>
-                  <TableCell>{Number(p.monthly_price).toLocaleString("de-DE")} €</TableCell>
-                  <TableCell>{Number(p.one_time_fee).toLocaleString("de-DE")} €</TableCell>
+                  <TableCell>
+                    <div>
+                      <span className="font-medium">{p.name}</span>
+                      {p.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5 max-w-[250px] truncate">{p.description}</p>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>{formatPrice(p.monthly_price)}</TableCell>
+                  <TableCell>{formatPrice(p.one_time_fee)}</TableCell>
+                  <TableCell>
+                    {p.price_per_unit != null ? (
+                      <div>
+                        <span>{formatPrice(p.price_per_unit)}</span>
+                        {p.price_per_unit_label && (
+                          <p className="text-xs text-muted-foreground">{p.price_per_unit_label}</p>
+                        )}
+                      </div>
+                    ) : "–"}
+                  </TableCell>
+                  <TableCell>
+                    {p.promo_price != null ? (
+                      <div>
+                        <span className="text-green-600 dark:text-green-400 font-medium">{formatPrice(p.promo_price)}</span>
+                        {p.promo_price_label && (
+                          <p className="text-xs text-muted-foreground max-w-[200px] truncate">{p.promo_price_label}</p>
+                        )}
+                        {p.promo_end_date && (
+                          <p className="text-xs text-muted-foreground">bis {new Date(p.promo_end_date).toLocaleDateString("de-DE")}</p>
+                        )}
+                      </div>
+                    ) : "–"}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={p.is_active ? "default" : "secondary"}>
                       {p.is_active ? "Aktiv" : "Inaktiv"}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
-                    {p.description || "–"}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
@@ -181,7 +235,7 @@ export default function AdminProducts() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) closeDialog(); else setDialogOpen(true); }}>
-        <DialogContent className="sm:max-w-[450px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>{editId ? "Produkt bearbeiten" : "Neues Produkt"}</DialogTitle>
           </DialogHeader>
@@ -192,14 +246,43 @@ export default function AdminProducts() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Monatspreis (€) *</Label>
-                <Input type="number" min={0} step="0.01" value={form.monthly_price} onChange={(e) => set("monthly_price", Number(e.target.value))} required />
+                <Label>Monatspreis (€)</Label>
+                <Input type="number" min={0} step="0.01" value={form.monthly_price} onChange={(e) => set("monthly_price", Number(e.target.value))} />
               </div>
               <div>
                 <Label>Einmalgebühr (€)</Label>
                 <Input type="number" min={0} step="0.01" value={form.one_time_fee} onChange={(e) => set("one_time_fee", Number(e.target.value))} />
               </div>
             </div>
+
+            {/* Stückpreis */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Stückpreis (€)</Label>
+                <Input type="number" min={0} step="0.01" value={form.price_per_unit ?? ""} onChange={(e) => set("price_per_unit", e.target.value ? Number(e.target.value) : null)} placeholder="z.B. 1,20" />
+              </div>
+              <div>
+                <Label>Stückpreis-Label</Label>
+                <Input value={form.price_per_unit_label} onChange={(e) => set("price_per_unit_label", e.target.value)} placeholder="z.B. pro geprüfter Rechnung" />
+              </div>
+            </div>
+
+            {/* Aktionspreis */}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label>Aktionspreis (€)</Label>
+                <Input type="number" min={0} step="0.01" value={form.promo_price ?? ""} onChange={(e) => set("promo_price", e.target.value ? Number(e.target.value) : null)} placeholder="z.B. 0,99" />
+              </div>
+              <div>
+                <Label>Aktions-Label</Label>
+                <Input value={form.promo_price_label} onChange={(e) => set("promo_price_label", e.target.value)} placeholder="z.B. bis 30.06.2026" />
+              </div>
+              <div>
+                <Label>Aktion gültig bis</Label>
+                <Input type="date" value={form.promo_end_date} onChange={(e) => set("promo_end_date", e.target.value)} />
+              </div>
+            </div>
+
             <div>
               <Label>Beschreibung</Label>
               <Textarea value={form.description} onChange={(e) => set("description", e.target.value)} rows={2} placeholder="Optionale Beschreibung..." />
