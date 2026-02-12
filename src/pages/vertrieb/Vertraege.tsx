@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import {
-  Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Calendar,
+  Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Calendar, PenLine,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -26,6 +26,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { format, addMonths } from "date-fns";
 import { de } from "date-fns/locale";
+import { ContractSigningDialog } from "@/components/contracts/ContractSigningDialog";
 
 const statusConfig: Record<string, { label: string; class: string }> = {
   entwurf: { label: "Entwurf", class: "bg-muted text-muted-foreground" },
@@ -83,6 +84,7 @@ export default function Vertraege() {
   const [form, setForm] = useState<ContractFormData>(emptyForm);
   const [file, setFile] = useState<File | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [signingContract, setSigningContract] = useState<any | null>(null);
   const { user, profile } = useAuth();
   const { isAdmin } = useUserRole();
   const { toast } = useToast();
@@ -379,6 +381,10 @@ export default function Vertraege() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setSigningContract(c)}>
+                            <PenLine className="h-4 w-4 mr-2" />
+                            Unterschreiben
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEdit(c)}>
                             <Pencil className="h-4 w-4 mr-2" />
                             Bearbeiten
@@ -562,6 +568,15 @@ export default function Vertraege() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Signing Dialog */}
+      {signingContract && (
+        <ContractSigningDialog
+          open={!!signingContract}
+          onOpenChange={(open) => { if (!open) setSigningContract(null); }}
+          contract={signingContract}
+        />
+      )}
     </MainLayout>
   );
 }
