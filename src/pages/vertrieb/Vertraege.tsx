@@ -50,6 +50,9 @@ interface ContractFormData {
   one_time_fee: number;
   discount_percent: number;
   payment_interval: string;
+  kontoinhaber: string;
+  iban: string;
+  bic: string;
   notes: string;
   status: string;
 }
@@ -68,6 +71,9 @@ const emptyForm: ContractFormData = {
   one_time_fee: 0,
   discount_percent: 0,
   payment_interval: "monatlich",
+  kontoinhaber: "",
+  iban: "",
+  bic: "",
   notes: "",
   status: "entwurf",
 };
@@ -148,6 +154,9 @@ export default function Vertraege() {
         discount_percent: data.discount_percent,
         payment_interval: data.payment_interval,
         notes: data.notes || null,
+        kontoinhaber: data.kontoinhaber || null,
+        iban: data.iban || null,
+        bic: data.bic || null,
         status: data.status,
         created_by: user?.id,
         ...(documentUrl ? { document_url: documentUrl, document_name: documentName } : {}),
@@ -234,6 +243,9 @@ export default function Vertraege() {
       discount_percent: contract.discount_percent,
       payment_interval: contract.payment_interval,
       notes: contract.notes || "",
+      kontoinhaber: contract.kontoinhaber || "",
+      iban: contract.iban || "",
+      bic: contract.bic || "",
       status: contract.status,
     });
     setDialogOpen(true);
@@ -570,6 +582,25 @@ export default function Vertraege() {
                 </Select>
               </div>
             )}
+
+            {/* SEPA-Lastschrifteinzug */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">SEPA-Lastschrifteinzug</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+                  <Label>Kontoinhaber</Label>
+                  <Input value={form.kontoinhaber} onChange={(e) => set("kontoinhaber", e.target.value)} placeholder="Vor- und Nachname des Kontoinhabers" />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label>IBAN</Label>
+                  <Input value={form.iban} onChange={(e) => set("iban", e.target.value.toUpperCase().replace(/\s/g, ""))} placeholder="DE89 3704 0044 0532 0130 00" />
+                </div>
+                <div>
+                  <Label>BIC</Label>
+                  <Input value={form.bic} onChange={(e) => set("bic", e.target.value.toUpperCase())} placeholder="COBADEFFXXX" />
+                </div>
+              </div>
+            </div>
 
             {/* Dokument */}
             <div className="space-y-3">
