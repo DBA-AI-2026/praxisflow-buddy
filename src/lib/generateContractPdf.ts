@@ -46,7 +46,7 @@ function formatCurrency(value?: number): string {
   return value.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 }
 
-export async function generateContractPdf(data: ContractPdfData): Promise<Uint8Array> {
+export async function generateContractPdf(data: ContractPdfData, logoBytes?: ArrayBuffer): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -115,14 +115,29 @@ export async function generateContractPdf(data: ContractPdfData): Promise<Uint8A
   };
 
   // ===== HEADER =====
-  drawText("HONORARFUCHS", margin, y, { size: 20, font: fontBold, color: primaryColor });
-  drawText("VERTRAGSÜBERSICHT", margin + 250, y, { size: 10, font: fontBold, color: mutedColor });
+  const logoSize = 40;
+  let logoXOffset = 0;
+
+  if (logoBytes) {
+    try {
+      const logoImage = await doc.embedJpg(logoBytes);
+      const logoAspect = logoImage.width / logoImage.height;
+      const logoW = logoSize * logoAspect;
+      page.drawImage(logoImage, { x: margin, y: y - logoSize + 14, width: logoW, height: logoSize });
+      logoXOffset = logoW + 10;
+    } catch {
+      // If logo embedding fails, continue without it
+    }
+  }
+
+  drawText("HONORARFUCHS", margin + logoXOffset, y, { size: 20, font: fontBold, color: primaryColor });
+  drawText("VERTRAGSÜBERSICHT", pageWidth - margin - 120, y, { size: 10, font: fontBold, color: mutedColor });
   y -= 12;
 
   // HFX number + date
   drawText(
     `${data.hfx_customer_number || "Entwurf"} · Erstellt am ${formatDate(new Date().toISOString())}`,
-    margin, y, { size: 8, color: mutedColor }
+    margin + logoXOffset, y, { size: 8, color: mutedColor }
   );
   y -= 8;
   drawLine();

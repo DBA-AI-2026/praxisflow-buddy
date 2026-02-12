@@ -20,6 +20,7 @@ import {
   Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye,
 } from "lucide-react";
 import { generateContractPdf } from "@/lib/generateContractPdf";
+import foxLogoUrl from "@/assets/fox-logo.jpeg";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
@@ -353,7 +354,15 @@ export default function Vertraege() {
       if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
         sigData = signaturePadRef.current.toDataURL();
       }
-      const pdfBytes = await generateContractPdf({ ...contractData, signature_data: sigData });
+      // Load logo
+      let logoBytes: ArrayBuffer | undefined;
+      try {
+        const res = await fetch(foxLogoUrl);
+        logoBytes = await res.arrayBuffer();
+      } catch {
+        // Continue without logo
+      }
+      const pdfBytes = await generateContractPdf({ ...contractData, signature_data: sigData }, logoBytes);
       const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
