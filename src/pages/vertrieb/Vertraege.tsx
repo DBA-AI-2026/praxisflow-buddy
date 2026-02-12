@@ -82,6 +82,7 @@ export default function Vertraege() {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<ContractFormData>(emptyForm);
   const [file, setFile] = useState<File | null>(null);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const { user, profile } = useAuth();
   const { isAdmin } = useUserRole();
   const { toast } = useToast();
@@ -170,6 +171,34 @@ export default function Vertraege() {
       toast({ title: "Vertrag gelöscht" });
     },
   });
+
+  const uploadDocument = async (contractId: string, uploadFile: File) => {
+    setUploadingId(contractId);
+    try {
+      const filePath = `${user?.id}/${crypto.randomUUID()}-${uploadFile.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("contracts")
+        .upload(filePath, uploadFile);
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("contracts")
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from("contracts")
+        .update({ document_url: urlData.publicUrl, document_name: uploadFile.name })
+        .eq("id", contractId);
+      if (updateError) throw updateError;
+
+      queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      toast({ title: "Dokument hochgeladen", description: uploadFile.name });
+    } catch (err: any) {
+      toast({ title: "Upload fehlgeschlagen", description: err.message, variant: "destructive" });
+    } finally {
+      setUploadingId(null);
+    }
+  };
 
   const closeDialog = () => {
     setDialogOpen(false);
@@ -315,10 +344,31 @@ export default function Vertraege() {
                       {c.document_url ? (
                         <a href={c.document_url} target="_blank" rel="noreferrer" className="text-primary hover:underline text-sm flex items-center gap-1">
                           <Download className="h-3 w-3" />
-                          {c.document_name || "PDF"}
+                          <span className="truncate max-w-[80px]">{c.document_name || "PDF"}</span>
                         </a>
                       ) : (
-                        <span className="text-xs text-muted-foreground">–</span>
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept=".pdf,application/pdf"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) uploadDocument(c.id, f);
+                              e.target.value = "";
+                            }}
+                          />
+                          {uploadingId === c.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          ) : (
+                            <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" asChild>
+                              <span>
+                                <Upload className="h-3 w-3" />
+                                PDF
+                              </span>
+                            </Button>
+                          )}
+                        </label>
                       )}
                     </td>
                     <td>
