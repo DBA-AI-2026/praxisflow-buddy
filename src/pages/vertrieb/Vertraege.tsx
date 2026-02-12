@@ -131,6 +131,7 @@ export default function Vertraege() {
   const clearSignature = useCallback(() => {
     signaturePadRef.current?.clear();
     set("signature_data", "");
+  }, []);
 
   const { data: contracts = [], isLoading } = useQuery({
     queryKey: ["contracts"],
