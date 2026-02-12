@@ -1,5 +1,16 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
+interface ProductPriceDetail {
+  name: string;
+  monthly_price: number;
+  price_per_unit?: number | null;
+  price_per_unit_label?: string | null;
+  promo_price?: number | null;
+  promo_price_label?: string | null;
+  promo_end_date?: string | null;
+  has_active_promo?: boolean;
+}
+
 interface ContractPdfData {
   hfx_customer_number?: string;
   praxis?: string;
@@ -29,6 +40,7 @@ interface ContractPdfData {
   notes?: string;
   signature_data?: string | null;
   status?: string;
+  product_price_details?: ProductPriceDetail[];
 }
 
 function formatDate(dateStr?: string): string {
@@ -221,6 +233,45 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
   text(discountVal, c3x + 10, cardY + 10, 14, fontBold, (data.discount_percent ?? 0) > 0 ? rgb(0.1, 0.6, 0.3) : C_MUTED);
 
   y = cardY - 12;
+
+  // Product price details (unit prices & promos)
+  if (data.product_price_details && data.product_price_details.length > 0) {
+    const detailProducts = data.product_price_details.filter(
+      (pp) => pp.price_per_unit != null || pp.has_active_promo
+    );
+    if (detailProducts.length > 0) {
+      y -= 4;
+      for (const pp of detailProducts) {
+        ensureSpace(50);
+        // Product name
+        text(pp.name, M + 4, y, 8, fontBold, C_TEXT);
+        y -= 14;
+        if (pp.has_active_promo && pp.promo_price != null) {
+          // Show promo pricing
+          const promoLabel = pp.promo_price_label || `${pp.promo_price.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/${pp.price_per_unit_label || "Stk."}`;
+          text("Aktionspreis: " + promoLabel, M + 4, y, 8, font, rgb(0.1, 0.6, 0.3));
+          y -= 12;
+          // Show regular price struck through (as reference)
+          const regParts: string[] = [];
+          if (pp.monthly_price > 0) regParts.push(`${pp.monthly_price.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/Mon.`);
+          if (pp.price_per_unit != null) regParts.push(`${pp.price_per_unit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/${pp.price_per_unit_label || "Stk."}`);
+          if (regParts.length > 0) {
+            text("Regulaer: " + regParts.join(" + "), M + 4, y, 7, font, C_MUTED);
+            y -= 12;
+          }
+          if (pp.promo_end_date) {
+            text("Gueltig bis " + formatDate(pp.promo_end_date), M + 4, y, 7, font, C_MUTED);
+            y -= 12;
+          }
+        } else if (pp.price_per_unit != null) {
+          // Show unit price without promo
+          text(`${pp.price_per_unit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/${pp.price_per_unit_label || "Stk."}`, M + 4, y, 8, font, C_TEXT);
+          y -= 12;
+        }
+        y -= 4;
+      }
+    }
+  }
 
   const intervalLabels: Record<string, string> = {
     monatlich: "Monatlich", quartalsweise: "Quartalsweise", jaehrlich: "Jährlich",
