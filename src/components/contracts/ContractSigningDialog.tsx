@@ -6,91 +6,121 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SignaturePad } from "./SignaturePad";
+import { fillPdfTemplate, type PdfFillData } from "./pdfAutoFill";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { PDFDocument } from "pdf-lib";
-import { FileText, Loader2, ExternalLink, Upload } from "lucide-react";
+import { FileText, Loader2, ExternalLink, Upload, CheckCircle2 } from "lucide-react";
+
+const TEMPLATE_PDF_PATH = "/templates/vertrag-honorarfuchs.pdf";
+
+export interface ContractForSigning {
+  id: string;
+  customer_name: string;
+  product_name: string;
+  document_url?: string | null;
+  document_name?: string | null;
+  // Additional fields for auto-fill
+  monthly_price?: number;
+  one_time_fee?: number;
+  start_date?: string;
+  end_date?: string;
+  duration_months?: number;
+  modules?: string[] | null;
+  sales_partner_name?: string | null;
+  notes?: string | null;
+}
 
 interface ContractSigningDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  contract: {
-    id: string;
-    customer_name: string;
-    product_name: string;
-    document_url?: string | null;
-    document_name?: string | null;
-  };
+  contract: ContractForSigning;
 }
 
 export function ContractSigningDialog({ open, onOpenChange, contract }: ContractSigningDialogProps) {
   const [ort, setOrt] = useState("");
   const [datum, setDatum] = useState(new Date().toISOString().split("T")[0]);
+  // Extra fields for PDF auto-fill
+  const [arztName, setArztName] = useState("");
+  const [strasseHausnummer, setStrasseHausnummer] = useState("");
+  const [plzOrt, setPlzOrt] = useState("");
+  const [email, setEmail] = useState("");
+  const [fachrichtung, setFachrichtung] = useState("");
+  
   const [partnerSig, setPartnerSig] = useState<string | null>(null);
   const [kundenSig, setKundenSig] = useState<string | null>(null);
-  const [templateFile, setTemplateFile] = useState<File | null>(null);
   const [isSigning, setIsSigning] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const hasTemplate = !!contract.document_url || !!templateFile;
-  const canSign = partnerSig && kundenSig && ort && datum && hasTemplate;
+  const canSign = partnerSig && kundenSig && ort && datum && arztName;
 
   const embedSignaturesInPdf = async (pdfBytes: ArrayBuffer): Promise<Uint8Array> => {
     const pdfDoc = await PDFDocument.load(pdfBytes);
     const pages = pdfDoc.getPages();
     const lastPage = pages[pages.length - 1];
-    const { width, height } = lastPage.getSize();
+    const { width } = lastPage.getSize();
 
-    // Embed partner signature
+    // Embed signatures on page 2 (index 1) if available, otherwise last page
+    const sigPage = pages.length > 1 ? pages[1] : lastPage;
+    const sigPageSize = sigPage.getSize();
+
     if (partnerSig) {
       const pngBytes = await fetch(partnerSig).then((r) => r.arrayBuffer());
       const pngImage = await pdfDoc.embedPng(pngBytes);
-      const sigDims = pngImage.scale(0.4);
-      lastPage.drawImage(pngImage, {
+      const sigDims = pngImage.scale(0.35);
+      sigPage.drawImage(pngImage, {
         x: 50,
-        y: 80,
-        width: Math.min(sigDims.width, width * 0.35),
-        height: Math.min(sigDims.height, 60),
+        y: 60,
+        width: Math.min(sigDims.width, sigPageSize.width * 0.3),
+        height: Math.min(sigDims.height, 50),
       });
     }
 
-    // Embed customer signature
     if (kundenSig) {
       const pngBytes = await fetch(kundenSig).then((r) => r.arrayBuffer());
       const pngImage = await pdfDoc.embedPng(pngBytes);
-      const sigDims = pngImage.scale(0.4);
-      lastPage.drawImage(pngImage, {
-        x: width / 2 + 20,
-        y: 80,
-        width: Math.min(sigDims.width, width * 0.35),
-        height: Math.min(sigDims.height, 60),
+      const sigDims = pngImage.scale(0.35);
+      sigPage.drawImage(pngImage, {
+        x: sigPageSize.width / 2 + 30,
+        y: 60,
+        width: Math.min(sigDims.width, sigPageSize.width * 0.3),
+        height: Math.min(sigDims.height, 50),
       });
     }
 
-    // Add location and date text
-    const font = await pdfDoc.embedFont("Helvetica" as any);
-    lastPage.drawText(`Ort: ${ort}    Datum: ${new Date(datum).toLocaleDateString("de-DE")}`, {
-      x: 50,
-      y: 150,
-      size: 10,
-      font,
-    });
-    lastPage.drawText("Vertriebspartner", {
-      x: 50,
-      y: 65,
-      size: 8,
-      font,
-    });
-    lastPage.drawText("Kunde", {
-      x: width / 2 + 20,
-      y: 65,
-      size: 8,
-      font,
-    });
+    // Also add signatures on page 4 (contract terms) if it exists
+    if (pages.length > 3) {
+      const contractPage = pages[3];
+      const cpSize = contractPage.getSize();
+      
+      if (partnerSig) {
+        const pngBytes = await fetch(partnerSig).then((r) => r.arrayBuffer());
+        const pngImage = await pdfDoc.embedPng(pngBytes);
+        const sigDims = pngImage.scale(0.3);
+        contractPage.drawImage(pngImage, {
+          x: 120,
+          y: 55,
+          width: Math.min(sigDims.width, cpSize.width * 0.25),
+          height: Math.min(sigDims.height, 45),
+        });
+      }
+
+      if (kundenSig) {
+        const pngBytes = await fetch(kundenSig).then((r) => r.arrayBuffer());
+        const pngImage = await pdfDoc.embedPng(pngBytes);
+        const sigDims = pngImage.scale(0.3);
+        contractPage.drawImage(pngImage, {
+          x: cpSize.width / 2 + 30,
+          y: 55,
+          width: Math.min(sigDims.width, cpSize.width * 0.25),
+          height: Math.min(sigDims.height, 45),
+        });
+      }
+    }
 
     return pdfDoc.save();
   };
@@ -100,27 +130,40 @@ export function ContractSigningDialog({ open, onOpenChange, contract }: Contract
     setIsSigning(true);
 
     try {
-      let pdfBytes: ArrayBuffer;
+      // 1. Load template PDF
+      const templateResponse = await fetch(TEMPLATE_PDF_PATH);
+      if (!templateResponse.ok) throw new Error("PDF-Vorlage konnte nicht geladen werden");
+      const templateBytes = await templateResponse.arrayBuffer();
 
-      if (templateFile) {
-        // Use newly uploaded template
-        pdfBytes = await templateFile.arrayBuffer();
-      } else if (contract.document_url) {
-        // Fetch existing template
-        const response = await fetch(contract.document_url);
-        if (!response.ok) throw new Error("PDF konnte nicht geladen werden");
-        pdfBytes = await response.arrayBuffer();
-      } else {
-        throw new Error("Keine PDF-Vorlage vorhanden");
-      }
+      // 2. Auto-fill contract data into PDF
+      const fillData: PdfFillData = {
+        praxisName: contract.customer_name,
+        fachrichtung: fachrichtung || undefined,
+        strasseHausnummer: strasseHausnummer || undefined,
+        plzOrt: plzOrt || undefined,
+        arztName,
+        email: email || undefined,
+        productName: contract.product_name,
+        modules: contract.modules || undefined,
+        monthlyPrice: contract.monthly_price || 0,
+        oneTimeFee: contract.one_time_fee || 0,
+        startDate: contract.start_date || new Date().toISOString(),
+        endDate: contract.end_date || new Date().toISOString(),
+        durationMonths: contract.duration_months || 12,
+        salesPartnerName: contract.sales_partner_name || undefined,
+        ort,
+        datum,
+      };
 
-      // Embed signatures
-      const signedPdfBytes = await embedSignaturesInPdf(pdfBytes);
+      const filledPdfBytes = await fillPdfTemplate(templateBytes, fillData);
 
-      // Upload signed PDF
+      // 3. Embed signatures into the filled PDF
+      const signedPdfBytes = await embedSignaturesInPdf(filledPdfBytes.buffer as ArrayBuffer);
+
+      // 4. Upload signed PDF
       const signedFileName = `vertrag_${contract.customer_name.replace(/\s+/g, "_")}_signed.pdf`;
       const filePath = `${user.id}/signed/${crypto.randomUUID()}-${signedFileName}`;
-      
+
       const { error: uploadError } = await supabase.storage
         .from("contracts")
         .upload(filePath, signedPdfBytes, { contentType: "application/pdf" });
@@ -130,23 +173,12 @@ export function ContractSigningDialog({ open, onOpenChange, contract }: Contract
         .from("contracts")
         .getPublicUrl(filePath);
 
-      // Also upload template if it was a new file
-      let templateUrl = contract.document_url;
-      let templateName = contract.document_name;
-      if (templateFile && !contract.document_url) {
-        const templatePath = `${user.id}/templates/${crypto.randomUUID()}-${templateFile.name}`;
-        await supabase.storage.from("contracts").upload(templatePath, templateFile);
-        const { data: tmplUrl } = supabase.storage.from("contracts").getPublicUrl(templatePath);
-        templateUrl = tmplUrl.publicUrl;
-        templateName = templateFile.name;
-      }
-
-      // Update contract with signed document
+      // 5. Update contract record
       const { error: updateError } = await supabase
         .from("contracts")
         .update({
-          document_url: templateUrl,
-          document_name: templateName,
+          document_url: urlData.publicUrl,
+          document_name: signedFileName,
           status: "aktiv",
         })
         .eq("id", contract.id);
@@ -155,7 +187,7 @@ export function ContractSigningDialog({ open, onOpenChange, contract }: Contract
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
       toast({
         title: "Vertrag unterschrieben",
-        description: "Das unterschriebene PDF wurde gespeichert und der Vertrag auf 'Aktiv' gesetzt.",
+        description: "Das PDF wurde mit allen Daten ausgefüllt, unterschrieben und gespeichert.",
       });
       onOpenChange(false);
     } catch (err: any) {
@@ -167,54 +199,118 @@ export function ContractSigningDialog({ open, onOpenChange, contract }: Contract
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[95vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[650px] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
-            Vertrag unterschreiben
+            Vertrag ausfüllen & unterschreiben
           </DialogTitle>
           <DialogDescription>
             {contract.customer_name} – {contract.product_name}
+            <br />
+            <span className="text-xs">Die eingegebenen Daten werden automatisch in die PDF-Vorlage übernommen.</span>
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5">
-          {/* PDF Template */}
+          {/* Template info */}
+          <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+            <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">Honorarfuchs Vertragsvorlage</p>
+              <p className="text-xs text-muted-foreground">PDF wird automatisch mit Ihren Angaben ausgefüllt</p>
+            </div>
+          </div>
+
+          {/* Praxis-Stammdaten */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Praxis-Stammdaten</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="arzt-name">Name des Arztes *</Label>
+                <Input
+                  id="arzt-name"
+                  value={arztName}
+                  onChange={(e) => setArztName(e.target.value)}
+                  placeholder="Dr. Max Mustermann"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="fachrichtung">Fachrichtung</Label>
+                <Input
+                  id="fachrichtung"
+                  value={fachrichtung}
+                  onChange={(e) => setFachrichtung(e.target.value)}
+                  placeholder="z.B. Allgemeinmedizin"
+                />
+              </div>
+              <div>
+                <Label htmlFor="strasse">Straße / Hausnummer</Label>
+                <Input
+                  id="strasse"
+                  value={strasseHausnummer}
+                  onChange={(e) => setStrasseHausnummer(e.target.value)}
+                  placeholder="Musterstr. 1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="plz-ort">PLZ / Ort</Label>
+                <Input
+                  id="plz-ort"
+                  value={plzOrt}
+                  onChange={(e) => setPlzOrt(e.target.value)}
+                  placeholder="12345 Musterstadt"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="praxis-email">E-Mail-Adresse</Label>
+                <Input
+                  id="praxis-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="praxis@beispiel.de"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Vertragsdaten (read-only, from contract) */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Vertragsvorlage (PDF)</Label>
-            {contract.document_url ? (
-              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                <FileText className="h-5 w-5 text-primary flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{contract.document_name || "Vertrag.pdf"}</p>
-                  <p className="text-xs text-muted-foreground">PDF-Vorlage hinterlegt</p>
+            <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Vertragsdaten (aus Erfassung)</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-muted/50 rounded-lg text-sm">
+              <div>
+                <span className="text-muted-foreground text-xs">Produkt</span>
+                <p className="font-medium">{contract.product_name}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-xs">Monatspreis</span>
+                <p className="font-medium">{(contract.monthly_price || 0).toLocaleString("de-DE")} €</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-xs">Laufzeit</span>
+                <p className="font-medium">{contract.duration_months || 12} Monate</p>
+              </div>
+              {contract.start_date && (
+                <div>
+                  <span className="text-muted-foreground text-xs">Beginn</span>
+                  <p className="font-medium">{new Date(contract.start_date).toLocaleDateString("de-DE")}</p>
                 </div>
-                <a href={contract.document_url} target="_blank" rel="noreferrer">
-                  <Button variant="outline" size="sm" className="gap-1">
-                    <ExternalLink className="h-3 w-3" />
-                    Öffnen
-                  </Button>
-                </a>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <label className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                  <Upload className="h-8 w-8 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    {templateFile ? templateFile.name : "PDF-Vorlage hochladen"}
-                  </span>
-                  <input
-                    type="file"
-                    accept=".pdf,application/pdf"
-                    className="hidden"
-                    onChange={(e) => setTemplateFile(e.target.files?.[0] || null)}
-                  />
-                </label>
-                {templateFile && (
-                  <p className="text-xs text-green-600">✓ {templateFile.name} ausgewählt</p>
-                )}
-              </div>
-            )}
+              )}
+              {contract.sales_partner_name && (
+                <div>
+                  <span className="text-muted-foreground text-xs">Vertriebspartner</span>
+                  <p className="font-medium">{contract.sales_partner_name}</p>
+                </div>
+              )}
+              {contract.modules && contract.modules.length > 0 && (
+                <div>
+                  <span className="text-muted-foreground text-xs">Module</span>
+                  <p className="font-medium">{contract.modules.join(", ")}</p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Ort & Datum */}
@@ -271,10 +367,10 @@ export function ContractSigningDialog({ open, onOpenChange, contract }: Contract
             {isSigning ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Wird unterschrieben...
+                Wird erstellt...
               </>
             ) : (
-              "Vertrag unterschreiben"
+              "PDF ausfüllen & unterschreiben"
             )}
           </Button>
         </DialogFooter>
