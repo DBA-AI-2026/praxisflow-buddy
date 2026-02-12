@@ -365,6 +365,24 @@ export default function Vertraege() {
       if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
         sigData = signaturePadRef.current.toDataURL();
       }
+      // Build product price details from selected products
+      const now = new Date();
+      const selectedNames = contractData.modules?.length ? contractData.modules : (contractData.selected_products || []);
+      const product_price_details = products
+        .filter((p: any) => selectedNames.includes(p.name))
+        .map((p: any) => {
+          const hasPromo = p.promo_price != null && p.promo_end_date && new Date(p.promo_end_date) >= now;
+          return {
+            name: p.name,
+            monthly_price: Number(p.monthly_price),
+            price_per_unit: p.price_per_unit != null ? Number(p.price_per_unit) : null,
+            price_per_unit_label: p.price_per_unit_label || null,
+            promo_price: p.promo_price != null ? Number(p.promo_price) : null,
+            promo_price_label: p.promo_price_label || null,
+            promo_end_date: p.promo_end_date || null,
+            has_active_promo: hasPromo,
+          };
+        });
       // Load logo
       let logoBytes: ArrayBuffer | undefined;
       try {
@@ -373,7 +391,7 @@ export default function Vertraege() {
       } catch {
         // Continue without logo
       }
-      const pdfBytes = await generateContractPdf({ ...contractData, signature_data: sigData }, logoBytes);
+      const pdfBytes = await generateContractPdf({ ...contractData, signature_data: sigData, product_price_details }, logoBytes);
       const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
