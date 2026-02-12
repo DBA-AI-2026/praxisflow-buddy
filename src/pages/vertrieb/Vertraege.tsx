@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, addMonths } from "date-fns";
 import { de } from "date-fns/locale";
 import { ContractSigningDialog, type ContractForSigning } from "@/components/contracts/ContractSigningDialog";
+import { fillPdfTemplate, type PdfFillData } from "@/components/contracts/pdfAutoFill";
 
 const statusConfig: Record<string, { label: string; class: string }> = {
   entwurf: { label: "Entwurf", class: "bg-muted text-muted-foreground" },
@@ -81,11 +82,57 @@ export default function Vertraege() {
   const [file, setFile] = useState<File | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [signingContract, setSigningContract] = useState<ContractForSigning | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewContract, setPreviewContract] = useState<any | null>(null);
+  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const { user, profile } = useAuth();
   const { isAdmin } = useUserRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Generate filled PDF preview when a contract is selected
+  useEffect(() => {
+    if (!previewContract) return;
+    let cancelled = false;
+    const generatePreview = async () => {
+      setPreviewLoading(true);
+      try {
+        const templateResponse = await fetch("/templates/vertrag-honorarfuchs.pdf");
+        if (!templateResponse.ok) throw new Error("PDF-Vorlage nicht gefunden");
+        const templateBytes = await templateResponse.arrayBuffer();
+
+        const fillData: PdfFillData = {
+          praxisName: previewContract.customer_name,
+          arztName: previewContract.customer_name,
+          productName: previewContract.product_name,
+          modules: previewContract.modules || undefined,
+          monthlyPrice: previewContract.monthly_price || 0,
+          oneTimeFee: previewContract.one_time_fee || 0,
+          startDate: previewContract.start_date || new Date().toISOString(),
+          endDate: previewContract.end_date || new Date().toISOString(),
+          durationMonths: previewContract.duration_months || 12,
+          salesPartnerName: previewContract.sales_partner_name || undefined,
+          iban: (previewContract as any).iban || undefined,
+          bic: (previewContract as any).bic || undefined,
+          kontoinhaber: (previewContract as any).kontoinhaber || undefined,
+          ort: "",
+          datum: new Date().toISOString().split("T")[0],
+        };
+
+        const filledPdf = await fillPdfTemplate(templateBytes, fillData);
+        if (cancelled) return;
+        const blob = new Blob([filledPdf.buffer as ArrayBuffer], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        setPreviewBlobUrl(url);
+      } catch (err: any) {
+        if (!cancelled) toast({ title: "Vorschau-Fehler", description: err.message, variant: "destructive" });
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    };
+    generatePreview();
+    return () => { cancelled = true; };
+  }, [previewContract]);
 
   const { data: contracts = [], isLoading } = useQuery({
     queryKey: ["contracts"],
@@ -382,12 +429,10 @@ export default function Vertraege() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {c.document_url && (
-                            <DropdownMenuItem onClick={() => setPreviewUrl(c.document_url)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              Vorschau
-                            </DropdownMenuItem>
-                          )}
+                          <DropdownMenuItem onClick={() => setPreviewContract(c)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Vorschau
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setSigningContract(c)}>
                             <PenLine className="h-4 w-4 mr-2" />
                             Unterschreiben
@@ -626,22 +671,32 @@ export default function Vertraege() {
       )}
 
       {/* PDF Preview Dialog */}
-      <Dialog open={!!previewUrl} onOpenChange={(open) => { if (!open) setPreviewUrl(null); }}>
+      <Dialog open={!!previewContract} onOpenChange={(open) => { 
+        if (!open) { 
+          setPreviewContract(null); 
+          if (previewBlobUrl) { URL.revokeObjectURL(previewBlobUrl); setPreviewBlobUrl(null); }
+        } 
+      }}>
         <DialogContent className="sm:max-w-[900px] h-[85vh] flex flex-col p-0">
           <DialogHeader className="p-6 pb-2">
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5 text-primary" />
-              PDF-Vorschau
+              PDF-Vorschau – {previewContract?.customer_name}
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 min-h-0 px-6 pb-6">
-            {previewUrl && (
+          <div className="flex-1 min-h-0 px-6 pb-6 flex items-center justify-center">
+            {previewLoading ? (
+              <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <p className="text-sm">PDF wird generiert...</p>
+              </div>
+            ) : previewBlobUrl ? (
               <iframe
-                src={previewUrl}
+                src={previewBlobUrl}
                 className="w-full h-full rounded-lg border"
                 title="Vertrags-PDF Vorschau"
               />
-            )}
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>
