@@ -53,99 +53,120 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
 
   const PAGE_W = 595.28; // A4
   const PAGE_H = 841.89;
-  const M = 50; // margin
-  const CW = PAGE_W - 2 * M; // content width
-  const COL2_X = M + CW / 2 + 5; // second column start
-  const COL_W = CW / 2 - 5; // single column width
+  const M = 48; // margin
+  const CW = PAGE_W - 2 * M;
+  const COL2_X = M + CW / 2 + 10;
+  const COL_W = CW / 2 - 10;
 
-  const C_PRIMARY = rgb(0.044, 0.212, 0.498); // #0b367f
-  const C_TEXT = rgb(0.15, 0.15, 0.15);
-  const C_MUTED = rgb(0.45, 0.45, 0.45);
-  const C_LINE = rgb(0.82, 0.82, 0.82);
-  const C_BG = rgb(0.95, 0.96, 0.98);
+  // Brand colors matching the page theme
+  const C_NAVY = rgb(0.044, 0.212, 0.498);    // #0b367f - sidebar/accent
+  const C_RED = rgb(0.714, 0.098, 0.239);      // #b6193d - primary
+  const C_TEXT = rgb(0.12, 0.12, 0.12);
+  const C_MUTED = rgb(0.4, 0.42, 0.48);
+  const C_LINE = rgb(0.82, 0.84, 0.88);
+  const C_BG_LIGHT = rgb(0.95, 0.96, 0.98);    // matches --background
+  const C_WHITE = rgb(1, 1, 1);
 
   let page = doc.addPage([PAGE_W, PAGE_H]);
-  let y = PAGE_H - M;
+  let y = PAGE_H;
 
   // ---------- helpers ----------
-
   const text = (t: string, x: number, yy: number, size: number, f = font, color = C_TEXT, maxW?: number) => {
     page.drawText(t || "", { x, y: yy, size, font: f, color, maxWidth: maxW });
   };
 
-  const sectionHeader = (title: string) => {
-    y -= 6;
-    page.drawRectangle({ x: M, y: y - 5, width: CW, height: 18, color: C_BG });
-    text(title.toUpperCase(), M + 8, y, 8, fontBold, C_PRIMARY);
-    y -= 24;
-  };
-
-  const fieldPair = (l1: string, v1: string, l2: string, v2: string) => {
-    text(l1, M, y, 7, font, C_MUTED);
-    if (l2) text(l2, COL2_X, y, 7, font, C_MUTED);
-    y -= 11;
-    text(v1 || "–", M, y, 9, font, C_TEXT, COL_W);
-    if (l2) text(v2 || "–", COL2_X, y, 9, font, C_TEXT, COL_W);
-    y -= 14;
-  };
-
-  const fieldFull = (label: string, value: string) => {
-    text(label, M, y, 7, font, C_MUTED);
-    y -= 11;
-    text(value || "–", M, y, 9, font, C_TEXT, CW);
-    y -= 14;
-  };
-
-  const line = () => {
-    page.drawLine({ start: { x: M, y }, end: { x: PAGE_W - M, y }, thickness: 0.5, color: C_LINE });
-    y -= 10;
-  };
-
   const ensureSpace = (needed = 80) => {
     if (y < M + needed) {
+      // Footer on current page
+      drawFooter();
       page = doc.addPage([PAGE_W, PAGE_H]);
       y = PAGE_H - M;
     }
   };
 
-  // ===== HEADER =====
-  const titleSize = 16;
-  const titleBaseline = y - titleSize + 4; // baseline for text at this size
-  let logoXEnd = M;
+  const drawFooter = () => {
+    const fY = 30;
+    page.drawLine({ start: { x: M, y: fY + 12 }, end: { x: PAGE_W - M, y: fY + 12 }, thickness: 0.4, color: C_LINE });
+    text("HFX Honorarfuchs GmbH · Dieses Dokument dient der Vorschau und hat keine rechtliche Bindung.", M, fY, 6, font, C_MUTED);
+  };
 
+  const sectionHeader = (title: string) => {
+    y -= 8;
+    // Navy bar on left, light bg
+    page.drawRectangle({ x: M, y: y - 4, width: CW, height: 20, color: C_BG_LIGHT });
+    page.drawRectangle({ x: M, y: y - 4, width: 3, height: 20, color: C_NAVY });
+    text(title.toUpperCase(), M + 12, y + 1, 8, fontBold, C_NAVY);
+    y -= 26;
+  };
+
+  const fieldPair = (l1: string, v1: string, l2: string, v2: string) => {
+    text(l1, M + 4, y, 7, font, C_MUTED);
+    if (l2) text(l2, COL2_X, y, 7, font, C_MUTED);
+    y -= 12;
+    text(v1 || "–", M + 4, y, 9.5, font, C_TEXT, COL_W - 8);
+    if (l2) text(v2 || "–", COL2_X, y, 9.5, font, C_TEXT, COL_W - 8);
+    y -= 16;
+  };
+
+  const fieldFull = (label: string, value: string) => {
+    text(label, M + 4, y, 7, font, C_MUTED);
+    y -= 12;
+    text(value || "–", M + 4, y, 9.5, font, C_TEXT, CW - 8);
+    y -= 16;
+  };
+
+  const divider = () => {
+    page.drawLine({ start: { x: M, y }, end: { x: PAGE_W - M, y }, thickness: 0.4, color: C_LINE });
+    y -= 12;
+  };
+
+  // ===== TOP BAR (Navy header strip) =====
+  const headerH = 56;
+  page.drawRectangle({ x: 0, y: PAGE_H - headerH, width: PAGE_W, height: headerH, color: C_NAVY });
+
+  // Logo in header
+  let logoXEnd = M + 4;
   if (logoBytes) {
     try {
       const logoImage = await doc.embedJpg(logoBytes);
-      const logoH = titleSize + 4; // match text height
+      const logoH = 30;
       const logoW = (logoImage.width / logoImage.height) * logoH;
-      page.drawImage(logoImage, { x: M, y: titleBaseline - 2, width: logoW, height: logoH });
-      logoXEnd = M + logoW + 8;
+      page.drawImage(logoImage, { x: M, y: PAGE_H - headerH + 13, width: logoW, height: logoH });
+      logoXEnd = M + logoW + 10;
     } catch {
       // continue without logo
     }
   }
 
-  text("HONORARFUCHS", logoXEnd, titleBaseline, titleSize, fontBold, C_PRIMARY);
+  // Title in header bar
+  text("HFX Honorarfuchs", logoXEnd, PAGE_H - headerH + 24, 16, fontBold, C_WHITE);
+  text("Vertragsübersicht", logoXEnd, PAGE_H - headerH + 10, 9, font, rgb(0.75, 0.8, 0.9));
 
-  // Status top-right
+  // Status badge top-right
   const statusLabels: Record<string, string> = {
     entwurf: "ENTWURF", aktiv: "AKTIV", gekuendigt: "GEKÜNDIGT", beendet: "BEENDET",
   };
-  const statusText = statusLabels[data.status || "entwurf"] || data.status?.toUpperCase() || "ENTWURF";
-  text(`Status: ${statusText}`, PAGE_W - M - 90, titleBaseline + 10, 8, fontBold, C_PRIMARY);
+  const statusColors: Record<string, { bg: ReturnType<typeof rgb>; fg: ReturnType<typeof rgb> }> = {
+    entwurf: { bg: rgb(0.85, 0.86, 0.9), fg: C_NAVY },
+    aktiv: { bg: rgb(0.2, 0.7, 0.35), fg: C_WHITE },
+    gekuendigt: { bg: rgb(0.9, 0.7, 0.15), fg: rgb(0.35, 0.3, 0.05) },
+    beendet: { bg: C_RED, fg: C_WHITE },
+  };
+  const st = data.status || "entwurf";
+  const stLabel = statusLabels[st] || st.toUpperCase();
+  const stColor = statusColors[st] || statusColors.entwurf;
+  const badgeW = font.widthOfTextAtSize(stLabel, 8) + 16;
+  const badgeX = PAGE_W - M - badgeW;
+  page.drawRectangle({ x: badgeX, y: PAGE_H - headerH + 20, width: badgeW, height: 18, color: stColor.bg, borderColor: stColor.bg, borderWidth: 0 });
+  text(stLabel, badgeX + 8, PAGE_H - headerH + 24, 8, fontBold, stColor.fg);
 
-  // Subtitle
-  text("VERTRAGSÜBERSICHT", PAGE_W - M - 120, titleBaseline, 9, fontBold, C_MUTED);
+  y = PAGE_H - headerH - 14;
 
-  y = titleBaseline - 10;
-
-  // HFX number + date
-  text(
-    `${data.hfx_customer_number || "Entwurf"} · Erstellt am ${formatDate(new Date().toISOString())}`,
-    M, y, 8, font, C_MUTED,
-  );
-  y -= 10;
-  line();
+  // HFX number + date line
+  const hfxLine = `${data.hfx_customer_number || "Entwurf"}  ·  Erstellt am ${formatDate(new Date().toISOString())}`;
+  text(hfxLine, M, y, 8, font, C_MUTED);
+  y -= 18;
+  divider();
 
   // ===== VERTRAGSPARTEIEN =====
   sectionHeader("Vertragsparteien");
@@ -154,15 +175,15 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
   fieldFull("Adresse", data.adresse || "–");
   fieldPair("Telefon", data.telefon || "–", "E-Mail", data.email || "–");
   fieldPair("MP-Nummer", data.mp_nr || "–", "Vertriebspartner", data.sales_partner_name || "–");
-  line();
+  divider();
   ensureSpace();
 
   // ===== PRODUKTE =====
-  sectionHeader("Produkte");
+  sectionHeader("Produkte & Lizenzen");
   const productList = data.modules?.length ? data.modules.join(", ") : data.product_name || "–";
   fieldFull("Ausgewählte Produkte", productList);
-  fieldPair("Lizenzen", String(data.license_count ?? 1), "", "");
-  line();
+  fieldPair("Anzahl Lizenzen", String(data.license_count ?? 1), "", "");
+  divider();
   ensureSpace();
 
   // ===== LAUFZEIT =====
@@ -170,48 +191,49 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
   fieldPair("Vertragsbeginn", formatDate(data.start_date), "Vertragsende", formatDate(data.end_date));
   fieldPair("Laufzeit", `${data.duration_months ?? 12} Monate`, "Kündigungsfrist", `${data.cancellation_period_months ?? 3} Monate`);
   fieldPair("Automatische Verlängerung", data.auto_renewal ? "Ja" : "Nein", "", "");
-  line();
+  divider();
   ensureSpace();
 
   // ===== PREISÜBERSICHT =====
   sectionHeader("Preisübersicht");
 
-  // Price box - draw background first, then content below
-  const boxH = 45;
-  const boxTop = y;
-  page.drawRectangle({ x: M, y: boxTop - boxH, width: CW, height: boxH, color: C_BG, borderColor: C_LINE, borderWidth: 0.5 });
+  // Price cards row
+  const cardW = (CW - 20) / 3;
+  const cardH = 50;
+  const cardY = y - cardH;
 
-  // Labels inside box (top row)
-  const labelY = boxTop - 14;
-  const valueY = boxTop - 30;
+  // Card 1: Monatspreis
+  page.drawRectangle({ x: M, y: cardY, width: cardW, height: cardH, color: C_BG_LIGHT, borderColor: C_LINE, borderWidth: 0.5 });
+  text("Monatspreis", M + 10, cardY + cardH - 14, 7, font, C_MUTED);
+  text(formatCurrency(data.monthly_price), M + 10, cardY + 10, 14, fontBold, C_NAVY);
 
-  text("Monatspreis", M + 12, labelY, 7, font, C_MUTED);
-  text(formatCurrency(data.monthly_price), M + 12, valueY, 13, fontBold, C_PRIMARY);
+  // Card 2: Einmalgebühr
+  const c2x = M + cardW + 10;
+  page.drawRectangle({ x: c2x, y: cardY, width: cardW, height: cardH, color: C_BG_LIGHT, borderColor: C_LINE, borderWidth: 0.5 });
+  text("Einmalgebühr", c2x + 10, cardY + cardH - 14, 7, font, C_MUTED);
+  text(formatCurrency(data.one_time_fee), c2x + 10, cardY + 10, 14, fontBold, C_NAVY);
 
-  if ((data.one_time_fee ?? 0) > 0) {
-    text("Einmalgebühr", M + 180, labelY, 7, font, C_MUTED);
-    text(formatCurrency(data.one_time_fee), M + 180, valueY, 13, fontBold, C_PRIMARY);
-  }
+  // Card 3: Rabatt
+  const c3x = M + 2 * (cardW + 10);
+  page.drawRectangle({ x: c3x, y: cardY, width: cardW, height: cardH, color: C_BG_LIGHT, borderColor: C_LINE, borderWidth: 0.5 });
+  text("Rabatt", c3x + 10, cardY + cardH - 14, 7, font, C_MUTED);
+  const discountVal = (data.discount_percent ?? 0) > 0 ? `${data.discount_percent}%` : "–";
+  text(discountVal, c3x + 10, cardY + 10, 14, fontBold, (data.discount_percent ?? 0) > 0 ? rgb(0.1, 0.6, 0.3) : C_MUTED);
 
-  if ((data.discount_percent ?? 0) > 0) {
-    text("Rabatt", M + 360, labelY, 7, font, C_MUTED);
-    text(`${data.discount_percent}%`, M + 360, valueY, 13, fontBold, rgb(0.1, 0.6, 0.3));
-  }
-
-  y = boxTop - boxH - 10;
+  y = cardY - 12;
 
   const intervalLabels: Record<string, string> = {
     monatlich: "Monatlich", quartalsweise: "Quartalsweise", jaehrlich: "Jährlich",
   };
   fieldPair("Zahlungsintervall", intervalLabels[data.payment_interval || "monatlich"] || data.payment_interval || "Monatlich", "", "");
-  line();
+  divider();
   ensureSpace();
 
   // ===== SEPA =====
   sectionHeader("SEPA-Lastschrifteinzug");
   fieldFull("Kontoinhaber", data.kontoinhaber || "–");
   fieldPair("IBAN", data.iban || "–", "BIC", data.bic || "–");
-  line();
+  divider();
   ensureSpace(140);
 
   // ===== UNTERSCHRIFT =====
@@ -223,32 +245,30 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
       const pngImage = await doc.embedPng(imgBytes);
       const sigW = 200;
       const sigH = (pngImage.height / pngImage.width) * sigW;
-      page.drawImage(pngImage, { x: M, y: y - sigH, width: sigW, height: sigH });
+      page.drawImage(pngImage, { x: M + 4, y: y - sigH, width: sigW, height: sigH });
       y -= sigH + 10;
     } catch {
-      text("(Unterschrift konnte nicht geladen werden)", M, y, 8, font, C_MUTED);
+      text("(Unterschrift konnte nicht geladen werden)", M + 4, y, 8, font, C_MUTED);
       y -= 15;
     }
   } else {
-    page.drawLine({ start: { x: M, y }, end: { x: M + 250, y }, thickness: 0.5, color: C_TEXT });
-    y -= 6;
-    text("Datum, Unterschrift", M, y, 7, font, C_MUTED);
+    page.drawLine({ start: { x: M + 4, y }, end: { x: M + 250, y }, thickness: 0.5, color: C_TEXT });
+    y -= 8;
+    text("Datum, Unterschrift", M + 4, y, 7, font, C_MUTED);
     y -= 15;
   }
 
   // ===== NOTIZEN =====
   if (data.notes) {
     ensureSpace(60);
-    line();
+    divider();
     sectionHeader("Notizen");
-    text(data.notes, M, y, 9, font, C_TEXT, CW);
+    text(data.notes, M + 4, y, 9, font, C_TEXT, CW - 8);
     y -= 15;
   }
 
   // ===== FOOTER =====
-  const fY = M - 10;
-  page.drawLine({ start: { x: M, y: fY + 15 }, end: { x: PAGE_W - M, y: fY + 15 }, thickness: 0.3, color: C_LINE });
-  text("Honorarfuchs GmbH · Dieses Dokument dient der Vorschau und hat keine rechtliche Bindung.", M, fY, 6, font, C_MUTED);
+  drawFooter();
 
   return doc.save();
 }
