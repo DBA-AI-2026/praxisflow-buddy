@@ -104,6 +104,7 @@ export default function Vertraege() {
         const fillData: PdfFillData = {
           praxisName: previewContract.customer_name,
           arztName: previewContract.customer_name,
+          mpNr: previewContract.mp_nr || undefined,
           productName: previewContract.product_name,
           modules: previewContract.modules || undefined,
           monthlyPrice: previewContract.monthly_price || 0,
