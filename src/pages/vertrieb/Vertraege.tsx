@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { generateContractPdf } from "@/lib/generateContractPdf";
 import { validateIban } from "@/lib/validateIban";
+import { validateBic } from "@/lib/validateBic";
 import foxLogoUrl from "@/assets/fox-logo.jpeg";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -346,7 +347,10 @@ export default function Vertraege() {
       toast({ title: "Ungültige IBAN", description: validateIban(form.iban).message, variant: "destructive" });
       return;
     }
-    upsertMutation.mutate(form);
+    if (form.bic && !validateBic(form.bic).valid) {
+      toast({ title: "Ungültige BIC", description: validateBic(form.bic).message, variant: "destructive" });
+      return;
+    }
   };
 
   const set = (field: keyof ContractFormData, value: any) =>
@@ -756,7 +760,19 @@ export default function Vertraege() {
                 </div>
                 <div>
                   <Label>BIC</Label>
-                  <Input value={form.bic} onChange={(e) => set("bic", e.target.value.toUpperCase())} placeholder="COBADEFFXXX" />
+                  <Input
+                    value={form.bic}
+                    onChange={(e) => set("bic", e.target.value.toUpperCase().replace(/\s/g, ""))}
+                    placeholder="COBADEFFXXX"
+                    className={form.bic && !validateBic(form.bic).valid ? "border-destructive" : ""}
+                  />
+                  {form.bic && (() => {
+                    const result = validateBic(form.bic);
+                    if (!result.valid) {
+                      return <p className="text-xs text-destructive mt-1">{result.message}</p>;
+                    }
+                    return <p className="text-xs text-green-600 mt-1">✓ BIC gültig</p>;
+                  })()}
                 </div>
               </div>
             </div>
