@@ -32,7 +32,7 @@ export function RecentPraxen() {
   return (
     <div className="card-elevated">
       <div className="flex items-center justify-between p-4 border-b border-border">
-        <h3 className="font-semibold text-foreground">Neue Praxen</h3>
+        <h3 className="font-semibold text-foreground">Neue Kunden</h3>
         <Link
           to="/praxen"
           className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
@@ -45,7 +45,7 @@ export function RecentPraxen() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>Praxis</th>
+              <th>Kunde</th>
               <th>MP-Nr</th>
               <th>Produkt</th>
               <th>Preis/Monat</th>

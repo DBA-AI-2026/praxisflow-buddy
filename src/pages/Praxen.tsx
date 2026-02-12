@@ -191,12 +191,12 @@ export default function Praxen() {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `praxen_export_${new Date().toISOString().split("T")[0]}.csv`;
+    link.download = `kunden_export_${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
   };
 
   return (
-    <MainLayout title="Praxen" subtitle="Verwaltung aller registrierten Praxen">
+    <MainLayout title="Kunden" subtitle="Verwaltung aller registrierten Kunden">
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
         <div className="relative w-full sm:w-80">
@@ -217,12 +217,12 @@ export default function Praxen() {
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Neue Praxis
+                Neuer Kunde
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
-                <DialogTitle>Neue Praxis anlegen</DialogTitle>
+                <DialogTitle>Neuen Kunden anlegen</DialogTitle>
               </DialogHeader>
               <form
                 onSubmit={(e) => {
@@ -250,7 +250,7 @@ export default function Praxen() {
               >
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
-                    <Label htmlFor="name">Praxisname</Label>
+                    <Label htmlFor="name">Kundenname</Label>
                     <Input id="name" name="name" required className="mt-1" />
                   </div>
                   <div className="col-span-2">
@@ -306,7 +306,7 @@ export default function Praxen() {
                   >
                     Abbrechen
                   </Button>
-                  <Button type="submit">Praxis anlegen</Button>
+                  <Button type="submit">Kunde anlegen</Button>
                 </div>
               </form>
             </DialogContent>
@@ -320,7 +320,7 @@ export default function Praxen() {
           <table className="data-table">
             <thead className="bg-muted/50">
               <tr>
-                <th>Praxis</th>
+                <th>Kunde</th>
                 <th>MP-Nr</th>
                 <th>Ort</th>
                 <th>Produkt</th>
