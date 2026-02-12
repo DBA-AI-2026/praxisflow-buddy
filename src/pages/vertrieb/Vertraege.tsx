@@ -611,6 +611,10 @@ export default function Vertraege() {
               <div className="grid grid-cols-2 gap-2">
                 {products.map((p: any) => {
                   const isSelected = form.selected_products.includes(p.name);
+                  const today = new Date();
+                  const hasPromo = p.promo_price != null && p.promo_end_date && new Date(p.promo_end_date) >= today;
+                  const displayMonthly = hasPromo && p.monthly_price > 0 ? 0 : Number(p.monthly_price);
+                  const displayPerUnit = hasPromo ? Number(p.promo_price) : (p.price_per_unit != null ? Number(p.price_per_unit) : null);
                   return (
                     <label
                       key={p.id}
@@ -625,9 +629,14 @@ export default function Vertraege() {
                           const next = isSelected
                             ? form.selected_products.filter((n) => n !== p.name)
                             : [...form.selected_products, p.name];
+                          const now = new Date();
                           const totalMonthly = products
                             .filter((pr: any) => next.includes(pr.name))
-                            .reduce((sum: number, pr: any) => sum + Number(pr.monthly_price), 0);
+                            .reduce((sum: number, pr: any) => {
+                              const promoActive = pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now;
+                              // If promo is active and it waives the base fee, use 0
+                              return sum + (promoActive && pr.monthly_price > 0 ? 0 : Number(pr.monthly_price));
+                            }, 0);
                           const totalOneTime = products
                             .filter((pr: any) => next.includes(pr.name))
                             .reduce((sum: number, pr: any) => sum + Number(pr.one_time_fee), 0);
@@ -642,9 +651,24 @@ export default function Vertraege() {
                       />
                       <div className="flex-1 min-w-0">
                         <span className="text-sm font-medium">{p.name}</span>
-                        <span className="text-xs text-muted-foreground block">
-                          {Number(p.monthly_price).toLocaleString("de-DE")} €/Mon.
-                        </span>
+                        {hasPromo ? (
+                          <>
+                            <span className="text-xs text-green-600 dark:text-green-400 font-medium block">
+                              🎉 Aktion: {displayPerUnit != null ? `${displayPerUnit.toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."}` : `${displayMonthly.toLocaleString("de-DE")} €/Mon.`}
+                            </span>
+                            <span className="text-xs text-muted-foreground block line-through">
+                              Regulär: {Number(p.monthly_price).toLocaleString("de-DE")} €/Mon.{p.price_per_unit != null ? ` + ${Number(p.price_per_unit).toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."}` : ""}
+                            </span>
+                            <span className="text-xs text-muted-foreground block">
+                              Gültig bis {new Date(p.promo_end_date).toLocaleDateString("de-DE")}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground block">
+                            {Number(p.monthly_price).toLocaleString("de-DE")} €/Mon.
+                            {p.price_per_unit != null && ` + ${Number(p.price_per_unit).toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."}`}
+                          </span>
+                        )}
                       </div>
                     </label>
                   );
@@ -656,6 +680,18 @@ export default function Vertraege() {
                     Summe: {form.monthly_price.toLocaleString("de-DE")} €/Monat
                     {form.one_time_fee > 0 && ` + ${form.one_time_fee.toLocaleString("de-DE")} € einmalig`}
                   </p>
+                  {(() => {
+                    const now = new Date();
+                    const promoProducts = products.filter((pr: any) => form.selected_products.includes(pr.name) && pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now);
+                    if (promoProducts.length > 0) {
+                      return (
+                        <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                          🎉 Aktionspreis aktiv für: {promoProducts.map((pr: any) => pr.name).join(", ")}
+                        </p>
+                      );
+                    }
+                    return null;
+                  })()}
                   <p className="text-xs text-muted-foreground">{form.selected_products.length} Produkt(e) ausgewählt</p>
                 </div>
               )}
