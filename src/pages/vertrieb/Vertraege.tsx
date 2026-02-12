@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { format, addMonths } from "date-fns";
 import { de } from "date-fns/locale";
+import SignaturePad from "signature_pad";
 
 const statusConfig: Record<string, { label: string; class: string }> = {
   entwurf: { label: "Entwurf", class: "bg-muted text-muted-foreground" },
@@ -40,6 +41,13 @@ interface ContractFormData {
   customer_name: string;
   sales_partner_name: string;
   mp_nr: string;
+  praxis: string;
+  fachrichtung: string;
+  vorname: string;
+  nachname: string;
+  adresse: string;
+  telefon: string;
+  email: string;
   selected_products: string[];
   license_count: number;
   start_date: string;
@@ -55,12 +63,20 @@ interface ContractFormData {
   bic: string;
   notes: string;
   status: string;
+  signature_data: string;
 }
 
 const emptyForm: ContractFormData = {
   customer_name: "",
   sales_partner_name: "",
   mp_nr: "",
+  praxis: "",
+  fachrichtung: "",
+  vorname: "",
+  nachname: "",
+  adresse: "",
+  telefon: "",
+  email: "",
   selected_products: [],
   license_count: 1,
   start_date: new Date().toISOString().split("T")[0],
@@ -76,6 +92,7 @@ const emptyForm: ContractFormData = {
   bic: "",
   notes: "",
   status: "entwurf",
+  signature_data: "",
 };
 
 export default function Vertraege() {
@@ -89,6 +106,31 @@ export default function Vertraege() {
   const { isAdmin } = useUserRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
+  const signaturePadRef = useRef<SignaturePad | null>(null);
+
+  // Initialize signature pad when dialog opens
+  useEffect(() => {
+    if (dialogOpen && signatureCanvasRef.current && !signaturePadRef.current) {
+      const canvas = signatureCanvasRef.current;
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      signaturePadRef.current = new SignaturePad(canvas, {
+        backgroundColor: "rgb(255, 255, 255)",
+        penColor: "rgb(0, 0, 0)",
+      });
+      if (form.signature_data) {
+        signaturePadRef.current.fromDataURL(form.signature_data);
+      }
+    }
+    if (!dialogOpen) {
+      signaturePadRef.current = null;
+    }
+  }, [dialogOpen]);
+
+  const clearSignature = useCallback(() => {
+    signaturePadRef.current?.clear();
+    set("signature_data", "");
 
   const { data: contracts = [], isLoading } = useQuery({
     queryKey: ["contracts"],
@@ -136,11 +178,25 @@ export default function Vertraege() {
         documentName = file.name;
       }
 
+      // Get signature data from pad
+      let sigData = data.signature_data;
+      if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
+        sigData = signaturePadRef.current.toDataURL();
+      }
+
       const record = {
-        customer_name: data.customer_name,
+        customer_name: `${data.vorname} ${data.nachname}`.trim() || data.customer_name,
         sales_partner_id: user?.id,
         sales_partner_name: data.sales_partner_name || profile?.full_name || "",
         mp_nr: data.mp_nr || null,
+        praxis: data.praxis || null,
+        fachrichtung: data.fachrichtung || null,
+        vorname: data.vorname || null,
+        nachname: data.nachname || null,
+        adresse: data.adresse || null,
+        telefon: data.telefon || null,
+        email: data.email || null,
+        signature_data: sigData || null,
         product_name: data.selected_products.join(", "),
         modules: data.selected_products,
         license_count: data.license_count,
@@ -232,6 +288,13 @@ export default function Vertraege() {
       customer_name: contract.customer_name,
       sales_partner_name: contract.sales_partner_name || "",
       mp_nr: contract.mp_nr || "",
+      praxis: contract.praxis || "",
+      fachrichtung: contract.fachrichtung || "",
+      vorname: contract.vorname || "",
+      nachname: contract.nachname || "",
+      adresse: contract.adresse || "",
+      telefon: contract.telefon || "",
+      email: contract.email || "",
       selected_products: contract.modules?.length > 0 ? contract.modules : (contract.product_name ? [contract.product_name] : []),
       license_count: contract.license_count,
       start_date: contract.start_date,
@@ -247,6 +310,7 @@ export default function Vertraege() {
       iban: contract.iban || "",
       bic: contract.bic || "",
       status: contract.status,
+      signature_data: contract.signature_data || "",
     });
     setDialogOpen(true);
   };
@@ -441,22 +505,46 @@ export default function Vertraege() {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Parteien */}
+            {/* Vertragsparteien */}
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Vertragsparteien</h4>
               <div className="grid grid-cols-2 gap-3">
-                 <div>
-                   <Label>Kunde *</Label>
-                   <Input value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} required />
-                 </div>
-                 <div>
-                   <Label>Vertriebspartner</Label>
-                   <Input value={form.sales_partner_name} onChange={(e) => set("sales_partner_name", e.target.value)} />
-                 </div>
-                 <div>
-                   <Label>MP-Nummer</Label>
-                   <Input value={form.mp_nr} onChange={(e) => set("mp_nr", e.target.value)} placeholder="z.B. MP-12345" />
-                 </div>
+                <div className="col-span-2">
+                  <Label>Praxis *</Label>
+                  <Input value={form.praxis} onChange={(e) => set("praxis", e.target.value)} placeholder="Name der Praxis" required />
+                </div>
+                <div className="col-span-2">
+                  <Label>Fachrichtung</Label>
+                  <Input value={form.fachrichtung} onChange={(e) => set("fachrichtung", e.target.value)} placeholder="z.B. Allgemeinmedizin, Orthopädie..." />
+                </div>
+                <div>
+                  <Label>Vorname *</Label>
+                  <Input value={form.vorname} onChange={(e) => set("vorname", e.target.value)} required />
+                </div>
+                <div>
+                  <Label>Nachname *</Label>
+                  <Input value={form.nachname} onChange={(e) => set("nachname", e.target.value)} required />
+                </div>
+                <div className="col-span-2">
+                  <Label>Adresse</Label>
+                  <Input value={form.adresse} onChange={(e) => set("adresse", e.target.value)} placeholder="Straße, Hausnummer, PLZ, Ort" />
+                </div>
+                <div>
+                  <Label>Telefonnummer</Label>
+                  <Input value={form.telefon} onChange={(e) => set("telefon", e.target.value)} placeholder="+49..." type="tel" />
+                </div>
+                <div>
+                  <Label>E-Mail-Adresse</Label>
+                  <Input value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="praxis@example.de" type="email" />
+                </div>
+                <div>
+                  <Label>MP-Nummer</Label>
+                  <Input value={form.mp_nr} onChange={(e) => set("mp_nr", e.target.value)} placeholder="z.B. MP-12345" />
+                </div>
+                <div>
+                  <Label>Vertriebspartner</Label>
+                  <Input value={form.sales_partner_name} onChange={(e) => set("sales_partner_name", e.target.value)} />
+                </div>
               </div>
             </div>
 
@@ -625,6 +713,23 @@ export default function Vertraege() {
                   className="hidden"
                   onChange={(e) => setFile(e.target.files?.[0] || null)}
                 />
+              </div>
+            </div>
+
+            {/* Unterschrift */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Unterschrift</h4>
+              <div className="border rounded-lg p-2 bg-background">
+                <canvas
+                  ref={signatureCanvasRef}
+                  className="w-full h-32 cursor-crosshair rounded"
+                  style={{ touchAction: "none" }}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={clearSignature}>
+                  Unterschrift löschen
+                </Button>
               </div>
             </div>
 

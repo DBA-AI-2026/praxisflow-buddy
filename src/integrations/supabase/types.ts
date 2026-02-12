@@ -58,6 +58,7 @@ export type Database = {
       }
       contracts: {
         Row: {
+          adresse: string | null
           auto_renewal: boolean
           bic: string | null
           cancellation_period_months: number
@@ -69,7 +70,9 @@ export type Database = {
           document_name: string | null
           document_url: string | null
           duration_months: number
+          email: string | null
           end_date: string
+          fachrichtung: string | null
           hfx_customer_number: string | null
           iban: string | null
           id: string
@@ -78,17 +81,23 @@ export type Database = {
           modules: string[] | null
           monthly_price: number
           mp_nr: string | null
+          nachname: string | null
           notes: string | null
           one_time_fee: number
           payment_interval: string
+          praxis: string | null
           product_name: string
           sales_partner_id: string | null
           sales_partner_name: string | null
+          signature_data: string | null
           start_date: string
           status: string
+          telefon: string | null
           updated_at: string
+          vorname: string | null
         }
         Insert: {
+          adresse?: string | null
           auto_renewal?: boolean
           bic?: string | null
           cancellation_period_months?: number
@@ -100,7 +109,9 @@ export type Database = {
           document_name?: string | null
           document_url?: string | null
           duration_months?: number
+          email?: string | null
           end_date: string
+          fachrichtung?: string | null
           hfx_customer_number?: string | null
           iban?: string | null
           id?: string
@@ -109,17 +120,23 @@ export type Database = {
           modules?: string[] | null
           monthly_price?: number
           mp_nr?: string | null
+          nachname?: string | null
           notes?: string | null
           one_time_fee?: number
           payment_interval?: string
+          praxis?: string | null
           product_name: string
           sales_partner_id?: string | null
           sales_partner_name?: string | null
+          signature_data?: string | null
           start_date: string
           status?: string
+          telefon?: string | null
           updated_at?: string
+          vorname?: string | null
         }
         Update: {
+          adresse?: string | null
           auto_renewal?: boolean
           bic?: string | null
           cancellation_period_months?: number
@@ -131,7 +148,9 @@ export type Database = {
           document_name?: string | null
           document_url?: string | null
           duration_months?: number
+          email?: string | null
           end_date?: string
+          fachrichtung?: string | null
           hfx_customer_number?: string | null
           iban?: string | null
           id?: string
@@ -140,15 +159,20 @@ export type Database = {
           modules?: string[] | null
           monthly_price?: number
           mp_nr?: string | null
+          nachname?: string | null
           notes?: string | null
           one_time_fee?: number
           payment_interval?: string
+          praxis?: string | null
           product_name?: string
           sales_partner_id?: string | null
           sales_partner_name?: string | null
+          signature_data?: string | null
           start_date?: string
           status?: string
+          telefon?: string | null
           updated_at?: string
+          vorname?: string | null
         }
         Relationships: [
           {
