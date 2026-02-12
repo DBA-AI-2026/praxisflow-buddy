@@ -467,35 +467,23 @@ export default function Vertraege() {
                       </Badge>
                     </td>
                     <td>
-                      {c.document_url ? (
-                        <a href={c.document_url} target="_blank" rel="noreferrer" className="text-primary hover:underline text-sm flex items-center gap-1">
-                          <Download className="h-3 w-3" />
-                          <span className="truncate max-w-[80px]">{c.document_name || "PDF"}</span>
-                        </a>
-                      ) : (
-                        <label className="cursor-pointer">
-                          <input
-                            type="file"
-                            accept=".pdf,application/pdf"
-                            className="hidden"
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) uploadDocument(c.id, f);
-                              e.target.value = "";
-                            }}
-                          />
-                          {uploadingId === c.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                          ) : (
-                            <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" asChild>
-                              <span>
-                                <Upload className="h-3 w-3" />
-                                PDF
-                              </span>
-                            </Button>
-                          )}
-                        </label>
-                      )}
+                      <div className="flex flex-col gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1 text-xs"
+                          onClick={() => handlePreviewPdf(c)}
+                        >
+                          <Eye className="h-3 w-3" />
+                          Vorschau
+                        </Button>
+                        {c.document_url && (
+                          <a href={c.document_url} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs flex items-center gap-1">
+                            <Download className="h-3 w-3" />
+                            <span className="truncate max-w-[80px]">{c.document_name || "PDF"}</span>
+                          </a>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <DropdownMenu>
@@ -506,9 +494,21 @@ export default function Vertraege() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           
-                          <DropdownMenuItem onClick={() => handlePreviewPdf(c)}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            Vorschau PDF
+                          <DropdownMenuItem asChild>
+                            <label className="cursor-pointer flex items-center">
+                              <Upload className="h-4 w-4 mr-2" />
+                              {uploadingId === c.id ? "Lädt..." : "PDF hochladen"}
+                              <input
+                                type="file"
+                                accept=".pdf,application/pdf"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) uploadDocument(c.id, f);
+                                  e.target.value = "";
+                                }}
+                              />
+                            </label>
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEdit(c)}>
                             <Pencil className="h-4 w-4 mr-2" />
