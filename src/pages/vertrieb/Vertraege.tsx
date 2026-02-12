@@ -20,6 +20,7 @@ import {
   Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye,
 } from "lucide-react";
 import { generateContractPdf } from "@/lib/generateContractPdf";
+import { validateIban } from "@/lib/validateIban";
 import foxLogoUrl from "@/assets/fox-logo.jpeg";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -341,6 +342,10 @@ export default function Vertraege() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (form.iban && !validateIban(form.iban).valid) {
+      toast({ title: "Ungültige IBAN", description: validateIban(form.iban).message, variant: "destructive" });
+      return;
+    }
     upsertMutation.mutate(form);
   };
 
@@ -735,7 +740,19 @@ export default function Vertraege() {
                 </div>
                 <div className="sm:col-span-2">
                   <Label>IBAN</Label>
-                  <Input value={form.iban} onChange={(e) => set("iban", e.target.value.toUpperCase().replace(/\s/g, ""))} placeholder="DE89 3704 0044 0532 0130 00" />
+                  <Input
+                    value={form.iban}
+                    onChange={(e) => set("iban", e.target.value.toUpperCase().replace(/\s/g, ""))}
+                    placeholder="DE89370400440532013000"
+                    className={form.iban && !validateIban(form.iban).valid ? "border-destructive" : ""}
+                  />
+                  {form.iban && (() => {
+                    const result = validateIban(form.iban);
+                    if (!result.valid) {
+                      return <p className="text-xs text-destructive mt-1">{result.message}</p>;
+                    }
+                    return <p className="text-xs text-green-600 mt-1">✓ IBAN gültig</p>;
+                  })()}
                 </div>
                 <div>
                   <Label>BIC</Label>
