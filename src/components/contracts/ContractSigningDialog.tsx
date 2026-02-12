@@ -48,6 +48,10 @@ export function ContractSigningDialog({ open, onOpenChange, contract }: Contract
   const [plzOrt, setPlzOrt] = useState("");
   const [email, setEmail] = useState("");
   const [fachrichtung, setFachrichtung] = useState("");
+  // SEPA Lastschrift
+  const [kontoinhaber, setKontoinhaber] = useState("");
+  const [iban, setIban] = useState("");
+  const [bic, setBic] = useState("");
   
   const [partnerSig, setPartnerSig] = useState<string | null>(null);
   const [kundenSig, setKundenSig] = useState<string | null>(null);
@@ -56,7 +60,7 @@ export function ContractSigningDialog({ open, onOpenChange, contract }: Contract
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const canSign = partnerSig && kundenSig && ort && datum && arztName;
+  const canSign = partnerSig && kundenSig && ort && datum && arztName && iban;
 
   const embedSignaturesInPdf = async (pdfBytes: ArrayBuffer): Promise<Uint8Array> => {
     const pdfDoc = await PDFDocument.load(pdfBytes);
@@ -139,6 +143,9 @@ export function ContractSigningDialog({ open, onOpenChange, contract }: Contract
       const fillData: PdfFillData = {
         praxisName: contract.customer_name,
         fachrichtung: fachrichtung || undefined,
+        kontoinhaber: kontoinhaber || undefined,
+        iban: iban || undefined,
+        bic: bic || undefined,
         strasseHausnummer: strasseHausnummer || undefined,
         plzOrt: plzOrt || undefined,
         arztName,
@@ -271,6 +278,41 @@ export function ContractSigningDialog({ open, onOpenChange, contract }: Contract
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="praxis@beispiel.de"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* SEPA Lastschrifteinzug */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">SEPA-Lastschrifteinzug</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2">
+                <Label htmlFor="kontoinhaber">Kontoinhaber</Label>
+                <Input
+                  id="kontoinhaber"
+                  value={kontoinhaber}
+                  onChange={(e) => setKontoinhaber(e.target.value)}
+                  placeholder="Vor- und Nachname des Kontoinhabers"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="iban">IBAN *</Label>
+                <Input
+                  id="iban"
+                  value={iban}
+                  onChange={(e) => setIban(e.target.value.toUpperCase().replace(/\s/g, ""))}
+                  placeholder="DE89 3704 0044 0532 0130 00"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="bic">BIC</Label>
+                <Input
+                  id="bic"
+                  value={bic}
+                  onChange={(e) => setBic(e.target.value.toUpperCase())}
+                  placeholder="COBADEFFXXX"
                 />
               </div>
             </div>

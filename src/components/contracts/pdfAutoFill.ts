@@ -10,6 +10,8 @@ export interface PdfFillData {
   strasseHausnummer?: string;
   plzOrt?: string;
   kontoinhaber?: string;
+  iban?: string;
+  bic?: string;
   arztName: string;
   email?: string;
   
@@ -95,12 +97,22 @@ export async function fillPdfTemplate(
     drawText(0, data.kontoinhaber, 88, 183, 8);
   }
 
+  // IBAN
+  if (data.iban) {
+    drawText(0, data.iban, 88, 198, 8);
+  }
+
+  // BIC
+  if (data.bic) {
+    drawText(0, data.bic, 88, 213, 8);
+  }
+
   // Name des Arztes
-  drawText(0, data.arztName, 88, 225, 8);
+  drawText(0, data.arztName, 88, 240, 8);
 
   // Allgemeine E-Mail-Adresse
   if (data.email) {
-    drawText(0, data.email, 88, 240, 8);
+    drawText(0, data.email, 88, 255, 8);
   }
 
   // Monatliche Lizenzgebühren
