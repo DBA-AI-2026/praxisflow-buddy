@@ -15,6 +15,7 @@ import {
   Euro,
   Link2,
   Lock,
+  FileText,
 } from "lucide-react";
 import logo from "@/assets/fox-logo.jpeg";
 import { useState } from "react";
@@ -35,6 +36,7 @@ const baseNavigation = [
 
 const vertriebNavigation = [
   { name: "Umsätze", href: "/umsaetze", icon: Euro, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
+  { name: "Verträge", href: "/vertrieb/vertraege", icon: FileText, roles: ["user", "sales_partner", "sales_lead", "admin"] as AppRole[] },
   { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users, roles: ["sales_lead", "admin"] as AppRole[] },
   { name: "Provisionen", href: "/vertrieb/provisionen", icon: Euro, roles: ["sales_lead", "admin"] as AppRole[] },
 ];
