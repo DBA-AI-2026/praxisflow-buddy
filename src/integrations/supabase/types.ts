@@ -101,6 +101,7 @@ export type Database = {
           status: string
           telefon: string | null
           updated_at: string
+          vertrieb_signature_data: string | null
           vorname: string | null
           weitere_bsnr: string | null
           weitere_lanr: string | null
@@ -149,6 +150,7 @@ export type Database = {
           status?: string
           telefon?: string | null
           updated_at?: string
+          vertrieb_signature_data?: string | null
           vorname?: string | null
           weitere_bsnr?: string | null
           weitere_lanr?: string | null
@@ -197,6 +199,7 @@ export type Database = {
           status?: string
           telefon?: string | null
           updated_at?: string
+          vertrieb_signature_data?: string | null
           vorname?: string | null
           weitere_bsnr?: string | null
           weitere_lanr?: string | null

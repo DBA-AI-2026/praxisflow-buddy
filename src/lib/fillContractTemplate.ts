@@ -27,6 +27,7 @@ interface TemplateFillData {
   modules?: string[];
   notes?: string;
   signature_data?: string | null;
+  vertrieb_signature_data?: string | null;
   duration_months?: number;
 }
 
@@ -110,11 +111,13 @@ export async function fillContractTemplate(
   };
 
   const drawSignature = async (
-    pageIdx: number, x: number, y: number, maxW: number, maxH: number
+    pageIdx: number, x: number, y: number, maxW: number, maxH: number,
+    sigType: "customer" | "vertrieb" = "customer"
   ) => {
-    if (!data.signature_data || !data.signature_data.startsWith("data:image")) return;
+    const sigSource = sigType === "vertrieb" ? data.vertrieb_signature_data : data.signature_data;
+    if (!sigSource || !sigSource.startsWith("data:image")) return;
     try {
-      const base64 = data.signature_data.split(",")[1];
+      const base64 = sigSource.split(",")[1];
       const imgBytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
       const pngImage = await doc.embedPng(imgBytes);
       let w = maxW;
@@ -224,7 +227,7 @@ export async function fillContractTemplate(
     // Ort + Datum + Unterschrift
     write(1, ortText, 61, 105);
     write(1, today, 68, 56);
-    await drawSignature(1, 190, 64, 100, 30);
+    await drawSignature(1, 190, 64, 100, 30, "customer");
   }
 
   // ============================================================
@@ -243,7 +246,7 @@ export async function fillContractTemplate(
     writeChars(2, ibanClean, IBAN_X_TOP, IBAN_Y_TOP);
     write(2, ortText, 69, 500);
     write(2, today, 67, 471);
-    await drawSignature(2, 208, 491, 100, 28);
+    await drawSignature(2, 208, 491, 100, 28, "customer");
 
     // --- BOTTOM: Ausfertigung Bank ---
     writeChars(2, mpClean, MP_X_BOTTOM, MP_Y_BOTTOM);
@@ -254,7 +257,7 @@ export async function fillContractTemplate(
     writeChars(2, ibanClean, IBAN_X_BOTTOM, IBAN_Y_BOTTOM);
     write(2, ortText, 72, 187);
     write(2, today, 80, 159);
-    await drawSignature(2, 207, 180, 100, 28);
+    await drawSignature(2, 207, 180, 100, 28, "customer");
   }
 
   // ============================================================
@@ -286,10 +289,10 @@ export async function fillContractTemplate(
 
     write(3, ortText, 67, 185);
     write(3, today, 68, 161);
-    await drawSignature(3, 202, 167, 100, 28); // Vertrieb
+    await drawSignature(3, 202, 167, 100, 28, "vertrieb");
     write(3, ortText, 69, 81);
     write(3, today, 69, 55);
-    await drawSignature(3, 205, 61, 100, 28);
+    await drawSignature(3, 205, 61, 100, 28, "customer");
   }
 
   // ============================================================
@@ -307,10 +310,10 @@ export async function fillContractTemplate(
     write(5, data.mp_nr || "", 103, 784);
     write(5, ortText, 67, 185);
     write(5, today, 69, 161);
-    await drawSignature(5, 201, 166, 100, 28); // Vertrieb
+    await drawSignature(5, 201, 166, 100, 28, "vertrieb");
     write(5, ortText, 67, 80);
     write(5, today, 69, 57);
-    await drawSignature(5, 204, 61, 100, 28);
+    await drawSignature(5, 204, 61, 100, 28, "customer");
   }
 
   // ============================================================
@@ -335,10 +338,10 @@ export async function fillContractTemplate(
     write(8, data.mp_nr || "", 99, 785);
     write(8, ortText, 65, 190);
     write(8, today, 64, 165);
-    await drawSignature(8, 199, 167, 100, 28); // Vertrieb
+    await drawSignature(8, 199, 167, 100, 28, "vertrieb");
     write(8, ortText, 65, 81);
     write(8, today, 67, 56);
-    await drawSignature(8, 200, 57, 100, 28);
+    await drawSignature(8, 200, 57, 100, 28, "customer");
   }
 
   // ============================================================
@@ -370,10 +373,10 @@ export async function fillContractTemplate(
     write(12, data.mp_nr || "", 101, 785);
     write(12, ortText, 67, 191);
     write(12, today, 67, 167);
-    await drawSignature(12, 201, 167, 100, 28); // Vertrieb
+    await drawSignature(12, 201, 167, 100, 28, "vertrieb");
     write(12, ortText, 63, 81);
     write(12, today, 65, 55);
-    await drawSignature(12, 201, 58, 100, 28);
+    await drawSignature(12, 201, 58, 100, 28, "customer");
   }
 
   return doc.save();
