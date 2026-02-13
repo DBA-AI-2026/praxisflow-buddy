@@ -54,6 +54,7 @@ interface ContractFormData {
   vorname: string;
   nachname: string;
   adresse: string;
+  plz: string;
   telefon: string;
   email: string;
   selected_products: string[];
@@ -93,6 +94,7 @@ const emptyForm: ContractFormData = {
   vorname: "",
   nachname: "",
   adresse: "",
+  plz: "",
   telefon: "",
   email: "",
   selected_products: [],
@@ -308,8 +310,12 @@ export default function Vertraege() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
-      closeDialog();
       toast({ title: editId ? "Vertrag aktualisiert" : "Vertrag erstellt" });
+      // Auto-open template PDF after creating a new contract
+      if (!editId) {
+        handleTemplatePdf(form);
+      }
+      closeDialog();
     },
     onError: (err: Error) => {
       toast({ title: "Fehler", description: err.message, variant: "destructive" });
@@ -374,6 +380,7 @@ export default function Vertraege() {
       vorname: contract.vorname || "",
       nachname: contract.nachname || "",
       adresse: contract.adresse || "",
+      plz: "",
       telefon: contract.telefon || "",
       email: contract.email || "",
       selected_products: contract.modules?.length > 0 ? contract.modules : (contract.product_name ? [contract.product_name] : []),
@@ -422,6 +429,7 @@ export default function Vertraege() {
       toast({ title: "Ungültige BIC", description: validateBic(form.bic).message, variant: "destructive" });
       return;
     }
+    upsertMutation.mutate(form);
   };
 
   const set = (field: keyof ContractFormData, value: any) =>
@@ -739,11 +747,15 @@ export default function Vertraege() {
                   <Input value={form.nachname} onChange={(e) => set("nachname", e.target.value)} required />
                 </div>
                 <div className="col-span-2">
-                  <Label>Adresse</Label>
-                  <Input value={form.adresse} onChange={(e) => set("adresse", e.target.value)} placeholder="Straße, Hausnummer, PLZ, Ort" />
+                  <Label>Adresse (Straße, Hausnummer)</Label>
+                  <Input value={form.adresse} onChange={(e) => set("adresse", e.target.value)} placeholder="Straße, Hausnummer" />
                 </div>
                 <div>
-                  <Label>Ort (Unterschrift)</Label>
+                  <Label>PLZ</Label>
+                  <Input value={form.plz} onChange={(e) => set("plz", e.target.value)} placeholder="z.B. 10115" />
+                </div>
+                <div>
+                  <Label>Ort</Label>
                   <Input value={form.ort} onChange={(e) => set("ort", e.target.value)} placeholder="z.B. Berlin" />
                 </div>
                 <div>
@@ -765,7 +777,8 @@ export default function Vertraege() {
               </div>
             </div>
 
-            {/* EBM-Daten */}
+            {/* EBM-Daten – nur bei HFX EBM oder HFX Doku */}
+            {(form.selected_products.includes("HFX EBM") || form.selected_products.includes("HFX Doku")) && (
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">EBM-Daten</h4>
               <div className="grid grid-cols-2 gap-3">
@@ -787,6 +800,7 @@ export default function Vertraege() {
                 </div>
               </div>
             </div>
+            )}
 
             {/* Produkte – Mehrfachauswahl */}
             <div className="space-y-3">
@@ -1048,11 +1062,11 @@ export default function Vertraege() {
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Unterschriften</h4>
               
-              {/* Ort & Datum (read-only, auto-filled) */}
+              {/* Ort & Datum (auto-filled from Vertragsparteien) */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Ort</Label>
-                  <Input value={form.ort} onChange={(e) => set("ort", e.target.value)} placeholder="z.B. Berlin" />
+                  <Input value={form.ort} disabled className="bg-muted" />
                 </div>
                 <div>
                   <Label>Datum</Label>
