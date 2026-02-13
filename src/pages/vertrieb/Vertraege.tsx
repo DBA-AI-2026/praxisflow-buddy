@@ -44,13 +44,6 @@ const statusConfig: Record<string, { label: string; class: string }> = {
 
 // Product options are now loaded from the database
 
-// Duration-based pricing for specific products (prices from PDF template)
-const DURATION_PRICING: Record<string, Record<number, number>> = {
-  "HFX Wingmann": { 3: 299, 6: 249, 12: 199 },
-  "HFX GOÄ": { 3: 299, 6: 249, 12: 199 },
-  "HFX Praxismanagement Zahnmedizin": { 3: 299, 6: 249, 12: 199 },
-};
-
 interface ContractFormData {
   customer_name: string;
   sales_partner_name: string;
@@ -66,7 +59,7 @@ interface ContractFormData {
   telefon: string;
   email: string;
   selected_products: string[];
-  product_durations: Record<string, number>;
+  
   license_count: number;
   start_date: string;
   duration_months: number;
@@ -112,7 +105,6 @@ const emptyForm: ContractFormData = {
   telefon: "",
   email: "",
   selected_products: [],
-  product_durations: {},
   license_count: 1,
   start_date: new Date().toISOString().split("T")[0],
   duration_months: 12,
@@ -450,7 +442,7 @@ export default function Vertraege() {
       telefon: contract.telefon || "",
       email: contract.email || "",
       selected_products: contract.modules?.length > 0 ? contract.modules : (contract.product_name ? [contract.product_name] : []),
-      product_durations: {},
+      
       license_count: contract.license_count,
       start_date: contract.start_date,
       duration_months: contract.duration_months,
@@ -877,21 +869,14 @@ export default function Vertraege() {
                   const today = new Date();
                   const hasPromo = p.promo_price != null && p.promo_end_date && new Date(p.promo_end_date) >= today;
                   const baseFeeWaived = hasPromo && p.promo_base_fee_end_date && new Date(p.promo_base_fee_end_date) >= today;
-                  const hasDurationPricing = !!DURATION_PRICING[p.name];
-                  const selectedDuration = (form.product_durations || {})[p.name] || 12;
-                  const durationPrice = hasDurationPricing ? DURATION_PRICING[p.name][selectedDuration] : null;
-                  const displayMonthly = hasDurationPricing ? (durationPrice || 0) : (baseFeeWaived ? 0 : Number(p.monthly_price));
+                  const displayMonthly = baseFeeWaived ? 0 : Number(p.monthly_price);
                   const displayPerUnit = hasPromo ? Number(p.promo_price) : (p.price_per_unit != null ? Number(p.price_per_unit) : null);
 
-                  const recalcPrices = (nextProducts: string[], nextDurations: Record<string, number>) => {
+                  const recalcPrices = (nextProducts: string[]) => {
                     const now = new Date();
                     const totalMonthly = products
                       .filter((pr: any) => nextProducts.includes(pr.name))
                       .reduce((sum: number, pr: any) => {
-                        if (DURATION_PRICING[pr.name]) {
-                          const dur = nextDurations[pr.name] || 12;
-                          return sum + (DURATION_PRICING[pr.name][dur] || 0);
-                        }
                         const promoActive = pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now;
                         const bfWaived = promoActive && pr.promo_base_fee_end_date && new Date(pr.promo_base_fee_end_date) >= now;
                         return sum + (bfWaived ? 0 : Number(pr.monthly_price));
@@ -916,14 +901,10 @@ export default function Vertraege() {
                             const next = isSelected
                               ? form.selected_products.filter((n) => n !== p.name)
                               : [...form.selected_products, p.name];
-                            const nextDurations = { ...form.product_durations };
-                            if (isSelected) delete nextDurations[p.name];
-                            else if (hasDurationPricing) nextDurations[p.name] = 12;
-                            const { totalMonthly, totalOneTime } = recalcPrices(next, nextDurations);
+                            const { totalMonthly, totalOneTime } = recalcPrices(next);
                             setForm((prev) => ({
                               ...prev,
                               selected_products: next,
-                              product_durations: nextDurations,
                               monthly_price: totalMonthly,
                               one_time_fee: totalOneTime,
                             }));
@@ -932,11 +913,7 @@ export default function Vertraege() {
                         />
                         <div className="flex-1 min-w-0">
                           <span className="text-sm font-medium">{p.name}</span>
-                          {hasDurationPricing ? (
-                            <span className="text-xs text-muted-foreground block">
-                              ab {DURATION_PRICING[p.name][12].toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.
-                            </span>
-                          ) : hasPromo ? (
+                          {hasPromo ? (
                             <>
                               <span className="text-xs text-green-600 dark:text-green-400 font-medium block">
                                 🎉 Aktion: {displayPerUnit != null ? `${displayPerUnit.toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."} dauerhaft` : `${displayMonthly.toLocaleString("de-DE")} €/Mon.`}
@@ -961,37 +938,6 @@ export default function Vertraege() {
                           )}
                         </div>
                       </label>
-                      {/* Duration options for eligible products */}
-                      {isSelected && hasDurationPricing && (
-                        <div className="ml-6 flex gap-2">
-                          {([3, 6, 12] as const).map((dur) => {
-                            const price = DURATION_PRICING[p.name][dur];
-                            const isActive = selectedDuration === dur;
-                            return (
-                              <button
-                                key={dur}
-                                type="button"
-                                onClick={() => {
-                                  const nextDurations = { ...form.product_durations, [p.name]: dur };
-                                  const { totalMonthly, totalOneTime } = recalcPrices(form.selected_products, nextDurations);
-                                  setForm((prev) => ({
-                                    ...prev,
-                                    product_durations: nextDurations,
-                                    monthly_price: totalMonthly,
-                                    one_time_fee: totalOneTime,
-                                  }));
-                                }}
-                                className={`flex-1 text-center p-2 rounded-md border text-xs transition-colors ${
-                                  isActive ? "border-primary bg-primary/10 font-semibold" : "border-input hover:bg-muted/50"
-                                }`}
-                              >
-                                <span className="block font-medium">{dur} Mon.</span>
-                                <span className="block">{price.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
                     </div>
                   );
                 })}
