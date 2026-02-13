@@ -30,6 +30,9 @@ interface TemplateFillData {
   duration_months?: number;
 }
 
+// ~2mm offset in PDF points (1mm ≈ 2.835pt → 2mm ≈ 5.67pt → round to 6)
+const DY = -6;
+
 function formatDate(dateStr?: string): string {
   if (!dateStr) return "";
   try {
@@ -86,7 +89,7 @@ export async function fillContractTemplate(
     pageIdx: number, t: string, x: number, y: number, size = FONT_SIZE, f = font, color = C_TEXT
   ) => {
     if (pageIdx < pages.length && t) {
-      pages[pageIdx].drawText(t, { x, y, size, font: f, color });
+      pages[pageIdx].drawText(t, { x, y: y + DY, size, font: f, color });
     }
   };
 
@@ -116,7 +119,7 @@ export async function fillContractTemplate(
       let h = (pngImage.height / pngImage.width) * w;
       if (h > maxH) { h = maxH; w = (pngImage.width / pngImage.height) * h; }
       if (pageIdx < pages.length) {
-        pages[pageIdx].drawImage(pngImage, { x, y: y - h, width: w, height: h });
+        pages[pageIdx].drawImage(pngImage, { x, y: y + DY - h, width: w, height: h });
       }
     } catch { /* skip */ }
   };
