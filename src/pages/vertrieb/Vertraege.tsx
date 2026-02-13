@@ -44,6 +44,13 @@ const statusConfig: Record<string, { label: string; class: string }> = {
 
 // Product options are now loaded from the database
 
+// Duration-based pricing for specific products (prices from PDF template)
+const DURATION_PRICING: Record<string, Record<number, number>> = {
+  "HFX Wingmann": { 3: 299, 6: 249, 12: 199 },
+  "HFX GOÄ": { 3: 299, 6: 249, 12: 199 },
+  "HFX Praxismanagement Zahnmedizin": { 3: 299, 6: 249, 12: 199 },
+};
+
 interface ContractFormData {
   customer_name: string;
   sales_partner_name: string;
@@ -53,11 +60,13 @@ interface ContractFormData {
   rechtsform: string;
   vorname: string;
   nachname: string;
+  praxisanschrift: string;
   adresse: string;
   plz: string;
   telefon: string;
   email: string;
   selected_products: string[];
+  product_durations: Record<string, number>;
   license_count: number;
   start_date: string;
   duration_months: number;
@@ -97,11 +106,13 @@ const emptyForm: ContractFormData = {
   rechtsform: "",
   vorname: "",
   nachname: "",
+  praxisanschrift: "",
   adresse: "",
   plz: "",
   telefon: "",
   email: "",
   selected_products: [],
+  product_durations: {},
   license_count: 1,
   start_date: new Date().toISOString().split("T")[0],
   duration_months: 12,
@@ -273,6 +284,7 @@ export default function Vertraege() {
         fachrichtung: data.fachrichtung || null,
         vorname: data.vorname || null,
         nachname: data.nachname || null,
+        praxisanschrift: data.praxisanschrift || null,
         adresse: data.adresse || null,
         telefon: data.telefon || null,
         email: data.email || null,
@@ -316,12 +328,57 @@ export default function Vertraege() {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
       toast({ title: editId ? "Vertrag aktualisiert" : "Vertrag erstellt" });
       // Auto-open template PDF after creating a new contract
       if (!editId) {
         handleTemplatePdf(form);
+        // Send confirmation email if email is provided
+        if (form.email) {
+          try {
+            const templateRes = await fetch("/templates/vertrag-honorarfuchs.pdf");
+            const templateBytes = await templateRes.arrayBuffer();
+            let sigData = form.signature_data;
+            if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
+              sigData = signaturePadRef.current.toDataURL();
+            }
+            let vertriebSigData = form.vertrieb_signature_data;
+            if (vertriebSignaturePadRef.current && !vertriebSignaturePadRef.current.isEmpty()) {
+              vertriebSigData = vertriebSignaturePadRef.current.toDataURL();
+            }
+            const pdfBytes = await fillContractTemplate(templateBytes, {
+              mp_nr: form.mp_nr, praxis: form.praxis, fachrichtung: form.fachrichtung,
+              rechtsform: form.rechtsform, vorname: form.vorname, nachname: form.nachname,
+              adresse: form.adresse, telefon: form.telefon, email: form.email,
+              kontoinhaber: form.kontoinhaber, kontoinhaber_strasse: form.kontoinhaber_strasse,
+              kontoinhaber_plz_ort: form.kontoinhaber_plz_ort, bank_name: form.bank_name,
+              iban: form.iban, bic: form.bic, bsnr: form.bsnr,
+              lanr: [form.lanr, form.lanr_2, form.lanr_3].filter(Boolean).join(", "),
+              weitere_bsnr: [form.weitere_bsnr_1, form.weitere_bsnr_2, form.weitere_bsnr_3].filter(Boolean).join(", "),
+              weitere_lanr: form.weitere_lanr, ort: form.ort,
+              monthly_price: form.monthly_price, start_date: form.start_date,
+              end_date: addMonths(new Date(form.start_date), form.duration_months).toISOString().split("T")[0],
+              modules: form.selected_products, duration_months: form.duration_months,
+              notes: form.notes, signature_data: sigData, vertrieb_signature_data: vertriebSigData,
+            });
+            const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBytes)));
+            const customerName = [form.vorname, form.nachname].filter(Boolean).join(" ");
+            await supabase.functions.invoke("send-contract-email", {
+              body: {
+                email: form.email,
+                customerName,
+                pdfBase64,
+                products: form.selected_products.join(", "),
+                startDate: form.start_date,
+              },
+            });
+            toast({ title: "Bestätigungs-E-Mail gesendet", description: `An ${form.email}` });
+          } catch (emailErr: any) {
+            console.error("Email send error:", emailErr);
+            toast({ title: "E-Mail konnte nicht gesendet werden", description: emailErr.message, variant: "destructive" });
+          }
+        }
       }
       closeDialog();
     },
@@ -387,11 +444,13 @@ export default function Vertraege() {
       rechtsform: contract.rechtsform || "",
       vorname: contract.vorname || "",
       nachname: contract.nachname || "",
+      praxisanschrift: contract.praxisanschrift || "",
       adresse: contract.adresse || "",
       plz: "",
       telefon: contract.telefon || "",
       email: contract.email || "",
       selected_products: contract.modules?.length > 0 ? contract.modules : (contract.product_name ? [contract.product_name] : []),
+      product_durations: {},
       license_count: contract.license_count,
       start_date: contract.start_date,
       duration_months: contract.duration_months,
@@ -759,6 +818,10 @@ export default function Vertraege() {
                   <Input value={form.nachname} onChange={(e) => set("nachname", e.target.value)} required />
                 </div>
                 <div className="col-span-2">
+                  <Label>Praxisanschrift (Straße, Hausnummer)</Label>
+                  <Input value={form.praxisanschrift} onChange={(e) => set("praxisanschrift", e.target.value)} placeholder="Straße und Hausnummer der Praxis" />
+                </div>
+                <div className="col-span-2">
                   <Label>Adresse (Straße, Hausnummer)</Label>
                   <Input value={form.adresse} onChange={(e) => set("adresse", e.target.value)} placeholder="Straße, Hausnummer" />
                 </div>
@@ -796,72 +859,124 @@ export default function Vertraege() {
                 {products.map((p: any) => {
                   const isSelected = form.selected_products.includes(p.name);
                   const today = new Date();
-                  // promo_end_date = sign-up deadline, promo_base_fee_end_date = base fee waiver end
                   const hasPromo = p.promo_price != null && p.promo_end_date && new Date(p.promo_end_date) >= today;
                   const baseFeeWaived = hasPromo && p.promo_base_fee_end_date && new Date(p.promo_base_fee_end_date) >= today;
-                  const displayMonthly = baseFeeWaived ? 0 : Number(p.monthly_price);
+                  const hasDurationPricing = !!DURATION_PRICING[p.name];
+                  const selectedDuration = form.product_durations[p.name] || 12;
+                  const durationPrice = hasDurationPricing ? DURATION_PRICING[p.name][selectedDuration] : null;
+                  const displayMonthly = hasDurationPricing ? (durationPrice || 0) : (baseFeeWaived ? 0 : Number(p.monthly_price));
                   const displayPerUnit = hasPromo ? Number(p.promo_price) : (p.price_per_unit != null ? Number(p.price_per_unit) : null);
+
+                  const recalcPrices = (nextProducts: string[], nextDurations: Record<string, number>) => {
+                    const now = new Date();
+                    const totalMonthly = products
+                      .filter((pr: any) => nextProducts.includes(pr.name))
+                      .reduce((sum: number, pr: any) => {
+                        if (DURATION_PRICING[pr.name]) {
+                          const dur = nextDurations[pr.name] || 12;
+                          return sum + (DURATION_PRICING[pr.name][dur] || 0);
+                        }
+                        const promoActive = pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now;
+                        const bfWaived = promoActive && pr.promo_base_fee_end_date && new Date(pr.promo_base_fee_end_date) >= now;
+                        return sum + (bfWaived ? 0 : Number(pr.monthly_price));
+                      }, 0);
+                    const totalOneTime = products
+                      .filter((pr: any) => nextProducts.includes(pr.name))
+                      .reduce((sum: number, pr: any) => sum + Number(pr.one_time_fee), 0);
+                    return { totalMonthly, totalOneTime };
+                  };
+
                   return (
-                    <label
-                      key={p.id}
-                      className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${
-                        isSelected ? "border-primary bg-primary/5" : "border-input hover:bg-muted/50"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => {
-                          const next = isSelected
-                            ? form.selected_products.filter((n) => n !== p.name)
-                            : [...form.selected_products, p.name];
-                          const now = new Date();
-                          const totalMonthly = products
-                            .filter((pr: any) => next.includes(pr.name))
-                            .reduce((sum: number, pr: any) => {
-                              const promoActive = pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now;
-                              const bfWaived = promoActive && pr.promo_base_fee_end_date && new Date(pr.promo_base_fee_end_date) >= now;
-                              return sum + (bfWaived ? 0 : Number(pr.monthly_price));
-                            }, 0);
-                          const totalOneTime = products
-                            .filter((pr: any) => next.includes(pr.name))
-                            .reduce((sum: number, pr: any) => sum + Number(pr.one_time_fee), 0);
-                          setForm((prev) => ({
-                            ...prev,
-                            selected_products: next,
-                            monthly_price: totalMonthly,
-                            one_time_fee: totalOneTime,
-                          }));
-                        }}
-                        className="rounded border-input"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <span className="text-sm font-medium">{p.name}</span>
-                        {hasPromo ? (
-                          <>
-                            <span className="text-xs text-green-600 dark:text-green-400 font-medium block">
-                              🎉 Aktion: {displayPerUnit != null ? `${displayPerUnit.toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."} dauerhaft` : `${displayMonthly.toLocaleString("de-DE")} €/Mon.`}
-                            </span>
-                            {baseFeeWaived && (
-                              <span className="text-xs text-green-600 dark:text-green-400 block">
-                                Keine Grundgebühr bis {new Date(p.promo_base_fee_end_date).toLocaleDateString("de-DE")}
-                              </span>
-                            )}
-                            <span className="text-xs text-muted-foreground block line-through">
-                              Regulär: {Number(p.monthly_price).toLocaleString("de-DE")} €/Mon.{p.price_per_unit != null ? ` + ${Number(p.price_per_unit).toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."}` : ""}
-                            </span>
+                    <div key={p.id} className="space-y-1">
+                      <label
+                        className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                          isSelected ? "border-primary bg-primary/5" : "border-input hover:bg-muted/50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            const next = isSelected
+                              ? form.selected_products.filter((n) => n !== p.name)
+                              : [...form.selected_products, p.name];
+                            const nextDurations = { ...form.product_durations };
+                            if (isSelected) delete nextDurations[p.name];
+                            else if (hasDurationPricing) nextDurations[p.name] = 12;
+                            const { totalMonthly, totalOneTime } = recalcPrices(next, nextDurations);
+                            setForm((prev) => ({
+                              ...prev,
+                              selected_products: next,
+                              product_durations: nextDurations,
+                              monthly_price: totalMonthly,
+                              one_time_fee: totalOneTime,
+                            }));
+                          }}
+                          className="rounded border-input"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium">{p.name}</span>
+                          {hasDurationPricing ? (
                             <span className="text-xs text-muted-foreground block">
-                              Bei Abschluss bis {new Date(p.promo_end_date).toLocaleDateString("de-DE")}
+                              ab {DURATION_PRICING[p.name][12].toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.
                             </span>
-                          </>
-                        ) : (
-                          <span className="text-xs text-muted-foreground block">
-                            {Number(p.monthly_price).toLocaleString("de-DE")} €/Mon.
-                            {p.price_per_unit != null && ` + ${Number(p.price_per_unit).toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."}`}
-                          </span>
-                        )}
-                      </div>
-                    </label>
+                          ) : hasPromo ? (
+                            <>
+                              <span className="text-xs text-green-600 dark:text-green-400 font-medium block">
+                                🎉 Aktion: {displayPerUnit != null ? `${displayPerUnit.toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."} dauerhaft` : `${displayMonthly.toLocaleString("de-DE")} €/Mon.`}
+                              </span>
+                              {baseFeeWaived && (
+                                <span className="text-xs text-green-600 dark:text-green-400 block">
+                                  Keine Grundgebühr bis {new Date(p.promo_base_fee_end_date).toLocaleDateString("de-DE")}
+                                </span>
+                              )}
+                              <span className="text-xs text-muted-foreground block line-through">
+                                Regulär: {Number(p.monthly_price).toLocaleString("de-DE")} €/Mon.{p.price_per_unit != null ? ` + ${Number(p.price_per_unit).toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."}` : ""}
+                              </span>
+                              <span className="text-xs text-muted-foreground block">
+                                Bei Abschluss bis {new Date(p.promo_end_date).toLocaleDateString("de-DE")}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-xs text-muted-foreground block">
+                              {Number(p.monthly_price).toLocaleString("de-DE")} €/Mon.
+                              {p.price_per_unit != null && ` + ${Number(p.price_per_unit).toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."}`}
+                            </span>
+                          )}
+                        </div>
+                      </label>
+                      {/* Duration options for eligible products */}
+                      {isSelected && hasDurationPricing && (
+                        <div className="ml-6 flex gap-2">
+                          {([3, 6, 12] as const).map((dur) => {
+                            const price = DURATION_PRICING[p.name][dur];
+                            const isActive = selectedDuration === dur;
+                            return (
+                              <button
+                                key={dur}
+                                type="button"
+                                onClick={() => {
+                                  const nextDurations = { ...form.product_durations, [p.name]: dur };
+                                  const { totalMonthly, totalOneTime } = recalcPrices(form.selected_products, nextDurations);
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    product_durations: nextDurations,
+                                    monthly_price: totalMonthly,
+                                    one_time_fee: totalOneTime,
+                                  }));
+                                }}
+                                className={`flex-1 text-center p-2 rounded-md border text-xs transition-colors ${
+                                  isActive ? "border-primary bg-primary/10 font-semibold" : "border-input hover:bg-muted/50"
+                                }`}
+                              >
+                                <span className="block font-medium">{dur} Mon.</span>
+                                <span className="block">{price.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>

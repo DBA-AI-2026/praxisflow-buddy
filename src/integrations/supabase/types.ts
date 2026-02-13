@@ -92,6 +92,7 @@ export type Database = {
           ort: string | null
           payment_interval: string
           praxis: string | null
+          praxisanschrift: string | null
           product_name: string
           rechtsform: string | null
           sales_partner_id: string | null
@@ -141,6 +142,7 @@ export type Database = {
           ort?: string | null
           payment_interval?: string
           praxis?: string | null
+          praxisanschrift?: string | null
           product_name: string
           rechtsform?: string | null
           sales_partner_id?: string | null
@@ -190,6 +192,7 @@ export type Database = {
           ort?: string | null
           payment_interval?: string
           praxis?: string | null
+          praxisanschrift?: string | null
           product_name?: string
           rechtsform?: string | null
           sales_partner_id?: string | null
