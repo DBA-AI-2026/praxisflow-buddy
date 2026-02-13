@@ -20,6 +20,7 @@ import {
   Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye,
 } from "lucide-react";
 import { generateContractPdf } from "@/lib/generateContractPdf";
+import { fillContractTemplate } from "@/lib/fillContractTemplate";
 import { validateIban } from "@/lib/validateIban";
 import { validateBic } from "@/lib/validateBic";
 import { lookupBicFromIban } from "@/lib/lookupBic";
@@ -402,6 +403,45 @@ export default function Vertraege() {
     }
   };
 
+  const handleTemplatePdf = async (contractData: Record<string, any>) => {
+    try {
+      // Capture signature from pad if available
+      let sigData = contractData.signature_data;
+      if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
+        sigData = signaturePadRef.current.toDataURL();
+      }
+      // Load the template PDF
+      const templateRes = await fetch("/templates/vertrag-honorarfuchs.pdf");
+      const templateBytes = await templateRes.arrayBuffer();
+
+      const pdfBytes = await fillContractTemplate(templateBytes, {
+        mp_nr: contractData.mp_nr,
+        praxis: contractData.praxis,
+        fachrichtung: contractData.fachrichtung,
+        vorname: contractData.vorname,
+        nachname: contractData.nachname,
+        adresse: contractData.adresse,
+        telefon: contractData.telefon,
+        email: contractData.email,
+        kontoinhaber: contractData.kontoinhaber,
+        iban: contractData.iban,
+        bic: contractData.bic,
+        monthly_price: contractData.monthly_price,
+        start_date: contractData.start_date,
+        modules: contractData.modules?.length ? contractData.modules : contractData.selected_products,
+        notes: contractData.notes,
+        signature_data: sigData,
+      });
+
+      const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err: any) {
+      toast({ title: "PDF-Fehler", description: err.message, variant: "destructive" });
+    }
+  };
+
   return (
     <MainLayout title="Vertragserfassung" subtitle="Verträge anlegen und verwalten">
       {/* Toolbar */}
@@ -496,25 +536,34 @@ export default function Vertraege() {
                         {statusConfig[c.status]?.label || c.status}
                       </Badge>
                     </td>
-                    <td>
-                      <div className="flex flex-col gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 gap-1 text-xs"
-                          onClick={() => handlePreviewPdf(c)}
-                        >
-                          <Eye className="h-3 w-3" />
-                          Vorschau
-                        </Button>
-                        {c.document_url && (
-                          <a href={c.document_url} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs flex items-center gap-1">
-                            <Download className="h-3 w-3" />
-                            <span className="truncate max-w-[80px]">{c.document_name || "PDF"}</span>
-                          </a>
-                        )}
-                      </div>
-                    </td>
+                     <td>
+                       <div className="flex flex-col gap-1">
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           className="h-7 gap-1 text-xs"
+                           onClick={() => handlePreviewPdf(c)}
+                         >
+                           <Eye className="h-3 w-3" />
+                           Vorschau
+                         </Button>
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           className="h-7 gap-1 text-xs"
+                           onClick={() => handleTemplatePdf(c)}
+                         >
+                           <FileText className="h-3 w-3" />
+                           Vertragsdokument
+                         </Button>
+                         {c.document_url && (
+                           <a href={c.document_url} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs flex items-center gap-1">
+                             <Download className="h-3 w-3" />
+                             <span className="truncate max-w-[80px]">{c.document_name || "PDF"}</span>
+                           </a>
+                         )}
+                       </div>
+                     </td>
                     <td>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -895,6 +944,10 @@ export default function Vertraege() {
               <Button type="button" variant="outline" onClick={() => handlePreviewPdf(form)} className="gap-2">
                 <Eye className="h-4 w-4" />
                 Vorschau PDF
+              </Button>
+              <Button type="button" variant="outline" onClick={() => handleTemplatePdf(form)} className="gap-2">
+                <FileText className="h-4 w-4" />
+                Vertragsdokument
               </Button>
               <div className="flex gap-2 ml-auto">
                 <Button type="button" variant="outline" onClick={closeDialog}>Abbrechen</Button>
