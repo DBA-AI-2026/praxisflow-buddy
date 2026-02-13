@@ -7,7 +7,7 @@ interface TemplateFillData {
   rechtsform?: string;
   vorname?: string;
   nachname?: string;
-  adresse?: string; // "Straße Hausnr, PLZ Ort"
+  adresse?: string;
   telefon?: string;
   email?: string;
   kontoinhaber?: string;
@@ -27,6 +27,7 @@ interface TemplateFillData {
   modules?: string[];
   notes?: string;
   signature_data?: string | null;
+  duration_months?: number;
 }
 
 function formatDate(dateStr?: string): string {
@@ -89,6 +90,11 @@ export async function fillContractTemplate(
     }
   };
 
+  const mods = (data.modules || []).map((m) => m.toLowerCase());
+  const has = (name: string) => mods.some((m) => m.includes(name));
+  const dur = data.duration_months || 12;
+  const CHECK = "X";
+
   // Write individual characters at specific x positions (for IBAN/MP-Nr boxes)
   const writeChars = (
     pageIdx: number, text: string, positions: number[], y: number, size = FONT_SIZE
@@ -147,6 +153,20 @@ export async function fillContractTemplate(
   write(0, data.weitere_bsnr || "", 337, 506);
   write(0, data.weitere_lanr || "", 337, 461);
 
+  // PAGE 1 – Checkboxes (EBM)
+  if (has("ebm")) {
+    write(0, CHECK, 63, 538);  // EBM kostenpflichtig
+    write(0, CHECK, 64, 523);  // EBM Schnittstelle
+    write(0, CHECK, 65, 476);  // EBM Datenbank
+    write(0, CHECK, 64, 436);  // EBM TSVG
+    write(0, CHECK, 63, 397);  // EBM Bericht
+    write(0, CHECK, 64, 374);  // EBM Nephro
+  }
+  if (data.bsnr) write(0, CHECK, 321, 592);       // Lizenz BSNR
+  if (data.weitere_bsnr) write(0, CHECK, 321, 525); // weitere BSNR
+  if (data.weitere_lanr) write(0, CHECK, 321, 483); // jede weitere LANR
+  if (data.notes) write(0, CHECK, 440, 217);        // Zusatzblatt vorhanden
+
   // Monatliche Lizenzgebühren
   if (data.monthly_price != null) {
     write(0, formatCurrency(data.monthly_price), 267, 287, 10, fontBold);
@@ -165,7 +185,37 @@ export async function fillContractTemplate(
   if (pages.length > 1) {
     write(1, data.mp_nr || "", 101, 785);
     // kostenpflichtig ab Datum
+    if (has("goä") || has("goz")) write(1, CHECK, 367, 709); // kostenpflichtig haken
     write(1, startDateFormatted, 450, 709);
+
+    // PAGE 2 – Checkboxes
+    const hasLiveCheck = has("live-check") || has("live check");
+    if (hasLiveCheck) {
+      write(1, CHECK, 64, 503); // GOÄ/GOZ LiveCheck
+      if (dur === 3) write(1, CHECK, 416, 464);
+      if (dur === 6) write(1, CHECK, 415, 453);
+      if (dur === 12) write(1, CHECK, 414, 442);
+    }
+    if (has("wingmann")) {
+      write(1, CHECK, 63, 431); // GOÄ/GOZ Wingman
+      if (dur === 3) write(1, CHECK, 416, 464);
+      if (dur === 6) write(1, CHECK, 415, 453);
+      if (dur === 12) write(1, CHECK, 414, 442);
+    }
+    if (has("goä") || has("goz")) {
+      write(1, CHECK, 65, 368); // GOÄ/GOZ permanent Check
+      if (dur === 3) write(1, CHECK, 415, 401);
+      if (dur === 6) write(1, CHECK, 416, 391);
+      if (dur === 12) write(1, CHECK, 415, 379);
+    }
+    if (has("doku")) write(1, CHECK, 64, 305);  // THOKX / Doku
+    if (has("praxismanagement")) {
+      write(1, CHECK, 65, 238); // Praxismanagement
+      if (dur === 3) write(1, CHECK, 415, 173);
+      if (dur === 6) write(1, CHECK, 415, 162);
+      if (dur === 12) write(1, CHECK, 415, 151);
+    }
+
     // Ort + Datum + Unterschrift
     write(1, ortText, 61, 105);
     write(1, today, 68, 56);
@@ -208,6 +258,27 @@ export async function fillContractTemplate(
   if (pages.length > 3) {
     write(3, data.mp_nr || "", 101, 784);
     write(3, data.mp_nr || "", 271, 669);
+
+    // PAGE 4 – Checkboxes
+    if (has("goä")) write(3, CHECK, 77, 587);  // GG 1
+    if (has("goz")) write(3, CHECK, 77, 575);  // GG 2
+    const hasLC = has("live-check") || has("live check");
+    if (hasLC) {
+      write(3, CHECK, 77, 543);  // Live Check
+      if (dur === 3) write(3, CHECK, 167, 543);
+      if (dur === 6) write(3, CHECK, 167, 531);
+      if (dur === 12) write(3, CHECK, 169, 520);
+    }
+    if (has("wingmann")) write(3, CHECK, 77, 500);       // Wingman
+    if (has("goä") || has("goz")) write(3, CHECK, 77, 487); // Permanent Check
+    if (has("doku")) write(3, CHECK, 77, 476);            // THOKX
+    if (has("praxismanagement")) {
+      write(3, CHECK, 76, 456);  // Praxismanagement
+      if (dur === 3) write(3, CHECK, 168, 445);
+      if (dur === 6) write(3, CHECK, 167, 434);
+      if (dur === 12) write(3, CHECK, 167, 422);
+    }
+
     write(3, ortText, 67, 185);
     write(3, today, 68, 161);
     await drawSignature(3, 202, 167, 100, 28); // Vertrieb

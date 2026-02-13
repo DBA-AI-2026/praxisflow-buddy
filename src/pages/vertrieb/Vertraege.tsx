@@ -475,6 +475,7 @@ export default function Vertraege() {
         start_date: contractData.start_date,
         end_date: contractData.end_date,
         modules: contractData.modules?.length ? contractData.modules : contractData.selected_products,
+        duration_months: contractData.duration_months,
         notes: contractData.notes,
         signature_data: sigData,
       });
