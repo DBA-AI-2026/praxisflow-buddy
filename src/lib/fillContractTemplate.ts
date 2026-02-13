@@ -32,6 +32,8 @@ interface TemplateFillData {
 
 // ~2mm offset in PDF points (1mm ≈ 2.835pt → 2mm ≈ 5.67pt → round to 6)
 const DY = -6;
+// Additional signature-only offset: 5mm higher (1mm ≈ 2.835pt → 5mm ≈ 14pt)
+const SIG_DY = 14;
 
 function formatDate(dateStr?: string): string {
   if (!dateStr) return "";
@@ -119,7 +121,7 @@ export async function fillContractTemplate(
       let h = (pngImage.height / pngImage.width) * w;
       if (h > maxH) { h = maxH; w = (pngImage.width / pngImage.height) * h; }
       if (pageIdx < pages.length) {
-        pages[pageIdx].drawImage(pngImage, { x, y: y + DY - h, width: w, height: h });
+        pages[pageIdx].drawImage(pngImage, { x, y: y + DY + SIG_DY - h, width: w, height: h });
       }
     } catch { /* skip */ }
   };
