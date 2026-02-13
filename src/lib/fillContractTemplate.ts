@@ -123,7 +123,7 @@ export async function fillContractTemplate(
   // ============================================================
   // PAGE 1 – Stammdaten & HFX EBM
   // ============================================================
-  write(0, data.mp_nr || "", 115, 790, FONT_SIZE);
+  write(0, data.mp_nr || "", 115, 780, FONT_SIZE);
 
   // STAMMDATEN
   write(0, data.praxis || "", 78, 725, FONT_SIZE);
@@ -158,7 +158,7 @@ export async function fillContractTemplate(
   // PAGE 2 – HFX GOÄ & Services
   // ============================================================
   if (pages.length > 1) {
-    write(1, data.mp_nr || "", 115, 770, FONT_SIZE);
+    write(1, data.mp_nr || "", 115, 785, FONT_SIZE);
 
     if (data.start_date) {
       write(1, startDateFormatted, 438, 700, FONT_SIZE);
