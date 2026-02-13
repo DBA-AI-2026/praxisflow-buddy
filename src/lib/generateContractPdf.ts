@@ -8,6 +8,7 @@ interface ProductPriceDetail {
   promo_price?: number | null;
   promo_price_label?: string | null;
   promo_end_date?: string | null;
+  promo_base_fee_end_date?: string | null;
   has_active_promo?: boolean;
 }
 
@@ -277,36 +278,50 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
   if (data.product_price_details && data.product_price_details.length > 0) {
     const promoProducts = data.product_price_details.filter((pp) => pp.has_active_promo);
     if (promoProducts.length > 0) {
-      ensureSpace(70);
+      ensureSpace(80);
       y -= 4;
-      const boxH = 48;
+      const boxH = 58;
       const boxY = y - boxH;
       page.drawRectangle({ x: M, y: boxY, width: CW, height: boxH, color: rgb(1, 0.97, 0.92), borderColor: rgb(0.9, 0.75, 0.4), borderWidth: 0.8 });
       page.drawRectangle({ x: M, y: boxY, width: 3, height: boxH, color: rgb(0.9, 0.65, 0.1) });
 
       text("Info: Preis nach Ablauf der Aktion", M + 12, boxY + boxH - 14, 8, fontBold, rgb(0.5, 0.35, 0.05));
 
+      // Total monthly after base fee waiver ends
       let totalAfterPromo = 0;
       for (const pp of data.product_price_details) {
         totalAfterPromo += pp.monthly_price;
       }
-      const perUnitHints: string[] = [];
-      for (const pp of promoProducts) {
-        if (pp.price_per_unit != null) {
-          perUnitHints.push(`${pp.name}: ${pp.price_per_unit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/${pp.price_per_unit_label || "Stk."}`);
+      // Unit prices: promo unit price is permanent, regular unit price only for non-promo products
+      const unitHints: string[] = [];
+      for (const pp of data.product_price_details) {
+        if (pp.has_active_promo && pp.promo_price != null) {
+          unitHints.push(`${pp.name}: ${pp.promo_price.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/${pp.price_per_unit_label || "Stk."} (dauerhaft)`);
+        } else if (pp.price_per_unit != null) {
+          unitHints.push(`${pp.name}: ${pp.price_per_unit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/${pp.price_per_unit_label || "Stk."}`);
         }
       }
 
-      let afterLine = `Monatspreis: ${totalAfterPromo.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/Mon.`;
-      if (perUnitHints.length > 0) afterLine += "  +  " + perUnitHints.join(", ");
-      text(afterLine, M + 12, boxY + boxH - 28, 8, font, rgb(0.25, 0.2, 0.05), CW - 24);
+      let afterLine = `Grundgebuehr: ${totalAfterPromo.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/Mon.`;
+      if (unitHints.length > 0) afterLine += "  +  " + unitHints.join(", ");
+      text(afterLine, M + 12, boxY + boxH - 28, 7.5, font, rgb(0.25, 0.2, 0.05), CW - 24);
 
-      const earliestEnd = promoProducts
+      // Show when base fee waiver ends (use promo_base_fee_end_date if available)
+      const baseFeeEndDates = promoProducts
+        .filter((pp) => pp.promo_base_fee_end_date)
+        .map((pp) => pp.promo_base_fee_end_date!);
+      const promoEndDates = promoProducts
         .filter((pp) => pp.promo_end_date)
-        .map((pp) => pp.promo_end_date!)
-        .sort()[0];
-      if (earliestEnd) {
-        text("Regulaere Preise gelten ab " + formatDate(earliestEnd), M + 12, boxY + boxH - 40, 7, font, C_MUTED);
+        .map((pp) => pp.promo_end_date!);
+
+      const baseFeeEnd = baseFeeEndDates.sort()[0];
+      if (baseFeeEnd) {
+        text("Grundgebuehr regulaer ab " + formatDate(baseFeeEnd) + "  |  Stueckpreis dauerhaft reduziert", M + 12, boxY + boxH - 40, 7, font, C_MUTED, CW - 24);
+      } else {
+        const promoEnd = promoEndDates.sort()[0];
+        if (promoEnd) {
+          text("Regulaere Preise gelten ab " + formatDate(promoEnd), M + 12, boxY + boxH - 40, 7, font, C_MUTED);
+        }
       }
 
       y = boxY - 8;

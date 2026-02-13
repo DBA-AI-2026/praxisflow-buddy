@@ -27,6 +27,7 @@ interface ProductForm {
   promo_price: number | null;
   promo_price_label: string;
   promo_end_date: string;
+  promo_base_fee_end_date: string;
   description: string;
   is_active: boolean;
 }
@@ -40,6 +41,7 @@ const emptyForm: ProductForm = {
   promo_price: null,
   promo_price_label: "",
   promo_end_date: "",
+  promo_base_fee_end_date: "",
   description: "",
   is_active: true,
 };
@@ -72,6 +74,7 @@ export default function AdminProducts() {
         promo_price: data.promo_price || null,
         promo_price_label: data.promo_price_label || null,
         promo_end_date: data.promo_end_date || null,
+        promo_base_fee_end_date: data.promo_base_fee_end_date || null,
       };
       if (editId) {
         const { error } = await supabase.from("products").update(payload).eq("id", editId);
@@ -119,6 +122,7 @@ export default function AdminProducts() {
       promo_price: product.promo_price ?? null,
       promo_price_label: product.promo_price_label || "",
       promo_end_date: product.promo_end_date || "",
+      promo_base_fee_end_date: product.promo_base_fee_end_date || "",
       description: product.description || "",
       is_active: product.is_active,
     });
@@ -207,7 +211,10 @@ export default function AdminProducts() {
                           <p className="text-xs text-muted-foreground max-w-[200px] truncate">{p.promo_price_label}</p>
                         )}
                         {p.promo_end_date && (
-                          <p className="text-xs text-muted-foreground">bis {new Date(p.promo_end_date).toLocaleDateString("de-DE")}</p>
+                          <p className="text-xs text-muted-foreground">Abschluss bis {new Date(p.promo_end_date).toLocaleDateString("de-DE")}</p>
+                        )}
+                        {p.promo_base_fee_end_date && (
+                          <p className="text-xs text-muted-foreground">Grundgebühr frei bis {new Date(p.promo_base_fee_end_date).toLocaleDateString("de-DE")}</p>
                         )}
                       </div>
                     ) : "–"}
@@ -268,18 +275,22 @@ export default function AdminProducts() {
             </div>
 
             {/* Aktionspreis */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Aktionspreis (€)</Label>
                 <Input type="number" min={0} step="0.01" value={form.promo_price ?? ""} onChange={(e) => set("promo_price", e.target.value ? Number(e.target.value) : null)} placeholder="z.B. 0,99" />
               </div>
               <div>
                 <Label>Aktions-Label</Label>
-                <Input value={form.promo_price_label} onChange={(e) => set("promo_price_label", e.target.value)} placeholder="z.B. bis 30.06.2026" />
+                <Input value={form.promo_price_label} onChange={(e) => set("promo_price_label", e.target.value)} placeholder="z.B. Beschreibung der Aktion" />
               </div>
               <div>
-                <Label>Aktion gültig bis</Label>
+                <Label>Abschluss-Deadline</Label>
                 <Input type="date" value={form.promo_end_date} onChange={(e) => set("promo_end_date", e.target.value)} />
+              </div>
+              <div>
+                <Label>Grundgebühr-Befreiung bis</Label>
+                <Input type="date" value={form.promo_base_fee_end_date} onChange={(e) => set("promo_base_fee_end_date", e.target.value)} />
               </div>
             </div>
 
