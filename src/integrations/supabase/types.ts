@@ -60,7 +60,9 @@ export type Database = {
         Row: {
           adresse: string | null
           auto_renewal: boolean
+          bank_name: string | null
           bic: string | null
+          bsnr: string | null
           cancellation_period_months: number
           created_at: string
           created_by: string | null
@@ -77,6 +79,9 @@ export type Database = {
           iban: string | null
           id: string
           kontoinhaber: string | null
+          kontoinhaber_plz_ort: string | null
+          kontoinhaber_strasse: string | null
+          lanr: string | null
           license_count: number
           modules: string[] | null
           monthly_price: number
@@ -84,9 +89,11 @@ export type Database = {
           nachname: string | null
           notes: string | null
           one_time_fee: number
+          ort: string | null
           payment_interval: string
           praxis: string | null
           product_name: string
+          rechtsform: string | null
           sales_partner_id: string | null
           sales_partner_name: string | null
           signature_data: string | null
@@ -95,11 +102,15 @@ export type Database = {
           telefon: string | null
           updated_at: string
           vorname: string | null
+          weitere_bsnr: string | null
+          weitere_lanr: string | null
         }
         Insert: {
           adresse?: string | null
           auto_renewal?: boolean
+          bank_name?: string | null
           bic?: string | null
+          bsnr?: string | null
           cancellation_period_months?: number
           created_at?: string
           created_by?: string | null
@@ -116,6 +127,9 @@ export type Database = {
           iban?: string | null
           id?: string
           kontoinhaber?: string | null
+          kontoinhaber_plz_ort?: string | null
+          kontoinhaber_strasse?: string | null
+          lanr?: string | null
           license_count?: number
           modules?: string[] | null
           monthly_price?: number
@@ -123,9 +137,11 @@ export type Database = {
           nachname?: string | null
           notes?: string | null
           one_time_fee?: number
+          ort?: string | null
           payment_interval?: string
           praxis?: string | null
           product_name: string
+          rechtsform?: string | null
           sales_partner_id?: string | null
           sales_partner_name?: string | null
           signature_data?: string | null
@@ -134,11 +150,15 @@ export type Database = {
           telefon?: string | null
           updated_at?: string
           vorname?: string | null
+          weitere_bsnr?: string | null
+          weitere_lanr?: string | null
         }
         Update: {
           adresse?: string | null
           auto_renewal?: boolean
+          bank_name?: string | null
           bic?: string | null
+          bsnr?: string | null
           cancellation_period_months?: number
           created_at?: string
           created_by?: string | null
@@ -155,6 +175,9 @@ export type Database = {
           iban?: string | null
           id?: string
           kontoinhaber?: string | null
+          kontoinhaber_plz_ort?: string | null
+          kontoinhaber_strasse?: string | null
+          lanr?: string | null
           license_count?: number
           modules?: string[] | null
           monthly_price?: number
@@ -162,9 +185,11 @@ export type Database = {
           nachname?: string | null
           notes?: string | null
           one_time_fee?: number
+          ort?: string | null
           payment_interval?: string
           praxis?: string | null
           product_name?: string
+          rechtsform?: string | null
           sales_partner_id?: string | null
           sales_partner_name?: string | null
           signature_data?: string | null
@@ -173,6 +198,8 @@ export type Database = {
           telefon?: string | null
           updated_at?: string
           vorname?: string | null
+          weitere_bsnr?: string | null
+          weitere_lanr?: string | null
         }
         Relationships: [
           {
