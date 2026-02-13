@@ -49,6 +49,7 @@ interface ContractFormData {
   mp_nr: string;
   praxis: string;
   fachrichtung: string;
+  rechtsform: string;
   vorname: string;
   nachname: string;
   adresse: string;
@@ -65,8 +66,16 @@ interface ContractFormData {
   discount_percent: number;
   payment_interval: string;
   kontoinhaber: string;
+  kontoinhaber_strasse: string;
+  kontoinhaber_plz_ort: string;
+  bank_name: string;
   iban: string;
   bic: string;
+  bsnr: string;
+  lanr: string;
+  weitere_bsnr: string;
+  weitere_lanr: string;
+  ort: string;
   notes: string;
   status: string;
   signature_data: string;
@@ -78,6 +87,7 @@ const emptyForm: ContractFormData = {
   mp_nr: "",
   praxis: "",
   fachrichtung: "",
+  rechtsform: "",
   vorname: "",
   nachname: "",
   adresse: "",
@@ -94,8 +104,16 @@ const emptyForm: ContractFormData = {
   discount_percent: 0,
   payment_interval: "monatlich",
   kontoinhaber: "",
+  kontoinhaber_strasse: "",
+  kontoinhaber_plz_ort: "",
+  bank_name: "",
   iban: "",
   bic: "",
+  bsnr: "",
+  lanr: "",
+  weitere_bsnr: "",
+  weitere_lanr: "",
+  ort: "",
   notes: "",
   status: "entwurf",
   signature_data: "",
@@ -233,8 +251,17 @@ export default function Vertraege() {
         payment_interval: data.payment_interval,
         notes: data.notes || null,
         kontoinhaber: data.kontoinhaber || null,
+        kontoinhaber_strasse: data.kontoinhaber_strasse || null,
+        kontoinhaber_plz_ort: data.kontoinhaber_plz_ort || null,
+        bank_name: data.bank_name || null,
         iban: data.iban || null,
         bic: data.bic || null,
+        bsnr: data.bsnr || null,
+        lanr: data.lanr || null,
+        weitere_bsnr: data.weitere_bsnr || null,
+        weitere_lanr: data.weitere_lanr || null,
+        rechtsform: data.rechtsform || null,
+        ort: data.ort || null,
         status: data.status,
         created_by: user?.id,
         ...(documentUrl ? { document_url: documentUrl, document_name: documentName } : {}),
@@ -312,6 +339,7 @@ export default function Vertraege() {
       mp_nr: contract.mp_nr || "",
       praxis: contract.praxis || "",
       fachrichtung: contract.fachrichtung || "",
+      rechtsform: contract.rechtsform || "",
       vorname: contract.vorname || "",
       nachname: contract.nachname || "",
       adresse: contract.adresse || "",
@@ -329,8 +357,16 @@ export default function Vertraege() {
       payment_interval: contract.payment_interval,
       notes: contract.notes || "",
       kontoinhaber: contract.kontoinhaber || "",
+      kontoinhaber_strasse: contract.kontoinhaber_strasse || "",
+      kontoinhaber_plz_ort: contract.kontoinhaber_plz_ort || "",
+      bank_name: contract.bank_name || "",
       iban: contract.iban || "",
       bic: contract.bic || "",
+      bsnr: contract.bsnr || "",
+      lanr: contract.lanr || "",
+      weitere_bsnr: contract.weitere_bsnr || "",
+      weitere_lanr: contract.weitere_lanr || "",
+      ort: contract.ort || "",
       status: contract.status,
       signature_data: contract.signature_data || "",
     });
@@ -418,16 +454,26 @@ export default function Vertraege() {
         mp_nr: contractData.mp_nr,
         praxis: contractData.praxis,
         fachrichtung: contractData.fachrichtung,
+        rechtsform: contractData.rechtsform,
         vorname: contractData.vorname,
         nachname: contractData.nachname,
         adresse: contractData.adresse,
         telefon: contractData.telefon,
         email: contractData.email,
         kontoinhaber: contractData.kontoinhaber,
+        kontoinhaber_strasse: contractData.kontoinhaber_strasse,
+        kontoinhaber_plz_ort: contractData.kontoinhaber_plz_ort,
+        bank_name: contractData.bank_name,
         iban: contractData.iban,
         bic: contractData.bic,
+        bsnr: contractData.bsnr,
+        lanr: contractData.lanr,
+        weitere_bsnr: contractData.weitere_bsnr,
+        weitere_lanr: contractData.weitere_lanr,
+        ort: contractData.ort,
         monthly_price: contractData.monthly_price,
         start_date: contractData.start_date,
+        end_date: contractData.end_date,
         modules: contractData.modules?.length ? contractData.modules : contractData.selected_products,
         notes: contractData.notes,
         signature_data: sigData,
@@ -638,9 +684,13 @@ export default function Vertraege() {
                   <Label>Praxis *</Label>
                   <Input value={form.praxis} onChange={(e) => set("praxis", e.target.value)} placeholder="Name der Praxis" required />
                 </div>
-                <div className="col-span-2">
+                <div>
                   <Label>Fachrichtung</Label>
                   <Input value={form.fachrichtung} onChange={(e) => set("fachrichtung", e.target.value)} placeholder="z.B. Allgemeinmedizin, Orthopädie..." />
+                </div>
+                <div>
+                  <Label>Rechtsform</Label>
+                  <Input value={form.rechtsform} onChange={(e) => set("rechtsform", e.target.value)} placeholder="z.B. Einzelpraxis, GbR, MVZ..." />
                 </div>
                 <div>
                   <Label>Vorname *</Label>
@@ -653,6 +703,10 @@ export default function Vertraege() {
                 <div className="col-span-2">
                   <Label>Adresse</Label>
                   <Input value={form.adresse} onChange={(e) => set("adresse", e.target.value)} placeholder="Straße, Hausnummer, PLZ, Ort" />
+                </div>
+                <div>
+                  <Label>Ort (Unterschrift)</Label>
+                  <Input value={form.ort} onChange={(e) => set("ort", e.target.value)} placeholder="z.B. Berlin" />
                 </div>
                 <div>
                   <Label>Telefonnummer</Label>
@@ -669,6 +723,29 @@ export default function Vertraege() {
                 <div>
                   <Label>Vertriebspartner</Label>
                   <Input value={form.sales_partner_name} onChange={(e) => set("sales_partner_name", e.target.value)} />
+                </div>
+              </div>
+            </div>
+
+            {/* EBM-Daten */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">EBM-Daten</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>BSNR</Label>
+                  <Input value={form.bsnr} onChange={(e) => set("bsnr", e.target.value)} placeholder="Betriebsstättennummer" />
+                </div>
+                <div>
+                  <Label>LANR</Label>
+                  <Input value={form.lanr} onChange={(e) => set("lanr", e.target.value)} placeholder="Lebenslange Arztnummer" />
+                </div>
+                <div>
+                  <Label>Weitere BSNR</Label>
+                  <Input value={form.weitere_bsnr} onChange={(e) => set("weitere_bsnr", e.target.value)} placeholder="Zusätzliche BSNR" />
+                </div>
+                <div>
+                  <Label>Weitere LANR</Label>
+                  <Input value={form.weitere_lanr} onChange={(e) => set("weitere_lanr", e.target.value)} placeholder="Zusätzliche LANR" />
                 </div>
               </div>
             </div>
@@ -854,6 +931,18 @@ export default function Vertraege() {
                 <div className="sm:col-span-2">
                   <Label>Kontoinhaber</Label>
                   <Input value={form.kontoinhaber} onChange={(e) => set("kontoinhaber", e.target.value)} placeholder="Vor- und Nachname des Kontoinhabers" />
+                </div>
+                <div>
+                  <Label>Straße/Hausnr. (Kontoinhaber)</Label>
+                  <Input value={form.kontoinhaber_strasse} onChange={(e) => set("kontoinhaber_strasse", e.target.value)} placeholder="Musterstraße 1" />
+                </div>
+                <div>
+                  <Label>PLZ/Ort (Kontoinhaber)</Label>
+                  <Input value={form.kontoinhaber_plz_ort} onChange={(e) => set("kontoinhaber_plz_ort", e.target.value)} placeholder="12345 Musterstadt" />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label>Name der Bank</Label>
+                  <Input value={form.bank_name} onChange={(e) => set("bank_name", e.target.value)} placeholder="z.B. Deutsche Bank" />
                 </div>
                 <div className="sm:col-span-2">
                   <Label>IBAN</Label>
