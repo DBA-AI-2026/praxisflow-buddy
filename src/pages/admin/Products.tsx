@@ -140,7 +140,7 @@ export default function AdminProducts() {
   const activeCount = products.filter((p: any) => p.is_active).length;
 
   const formatPrice = (val: number | null | undefined) =>
-    val != null ? `${Number(val).toLocaleString("de-DE")} €` : "–";
+    val != null ? `${Number(val).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : "–";
 
   return (
     <MainLayout title="Produktverwaltung" subtitle="Produkte und Preise verwalten">
