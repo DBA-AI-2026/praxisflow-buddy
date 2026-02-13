@@ -490,13 +490,29 @@ export default function Vertraege() {
       c.sales_partner_name?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const requiredFields: (keyof ContractFormData)[] = [
+    "praxis", "vorname", "nachname", "praxisanschrift", "adresse", "plz", "ort",
+    "telefon", "email", "fachrichtung", "rechtsform", "kontoinhaber",
+    "kontoinhaber_strasse", "kontoinhaber_plz_ort", "bank_name", "iban", "bic",
+    "start_date",
+  ];
+
+  const isFormComplete = requiredFields.every((f) => {
+    const v = form[f];
+    return typeof v === "string" ? v.trim() !== "" : !!v;
+  }) && form.selected_products.length > 0 && !!form.signature_data && !!form.vertrieb_signature_data;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.iban && !validateIban(form.iban).valid) {
+    if (!isFormComplete) {
+      toast({ title: "Unvollständig", description: "Bitte alle Pflichtfelder ausfüllen, Produkte wählen und beide Unterschriften leisten.", variant: "destructive" });
+      return;
+    }
+    if (!validateIban(form.iban).valid) {
       toast({ title: "Ungültige IBAN", description: validateIban(form.iban).message, variant: "destructive" });
       return;
     }
-    if (form.bic && !validateBic(form.bic).valid) {
+    if (!validateBic(form.bic).valid) {
       toast({ title: "Ungültige BIC", description: validateBic(form.bic).message, variant: "destructive" });
       return;
     }
@@ -1262,17 +1278,17 @@ export default function Vertraege() {
             </div>
 
             <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button type="button" variant="outline" onClick={() => handlePreviewPdf(form)} className="gap-2">
+              <Button type="button" variant="outline" onClick={() => handlePreviewPdf(form)} className="gap-2" disabled={!isFormComplete}>
                 <Eye className="h-4 w-4" />
                 Vorschau PDF
               </Button>
-              <Button type="button" variant="outline" onClick={() => handleTemplatePdf(form)} className="gap-2">
+              <Button type="button" variant="outline" onClick={() => handleTemplatePdf(form)} className="gap-2" disabled={!isFormComplete}>
                 <FileText className="h-4 w-4" />
                 Vertragsdokument
               </Button>
               <div className="flex gap-2 ml-auto">
                 <Button type="button" variant="outline" onClick={closeDialog}>Abbrechen</Button>
-                <Button type="submit" disabled={upsertMutation.isPending}>
+                <Button type="submit" disabled={upsertMutation.isPending || !isFormComplete}>
                   {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                   {editId ? "Speichern" : "Vertrag anlegen"}
                 </Button>
