@@ -789,50 +789,6 @@ export default function Vertraege() {
               </div>
             </div>
 
-            {/* EBM-Daten – nur bei HFX EBM oder HFX Doku */}
-            {(form.selected_products.includes("HFX EBM") || form.selected_products.includes("HFX Doku")) && (
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">BSNR &amp; LANR erfassen</h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>BSNR</Label>
-                  <Input value={form.bsnr} onChange={(e) => set("bsnr", e.target.value)} placeholder="Betriebsstättennummer" />
-                </div>
-                <div>
-                  <Label>LANR 1</Label>
-                  <Input value={form.lanr} onChange={(e) => set("lanr", e.target.value)} placeholder="Lebenslange Arztnummer" />
-                </div>
-                <div>
-                  <Label>LANR 2</Label>
-                  <Input value={form.lanr_2} onChange={(e) => set("lanr_2", e.target.value)} placeholder="Weitere LANR" />
-                </div>
-                <div>
-                  <Label>LANR 3</Label>
-                  <Input value={form.lanr_3} onChange={(e) => set("lanr_3", e.target.value)} placeholder="Weitere LANR" />
-                </div>
-                <div className="col-span-2">
-                  <Label className="text-xs text-muted-foreground mt-2 block">Weitere Betriebsstätten</Label>
-                </div>
-                <div>
-                  <Label>Weitere BSNR 1</Label>
-                  <Input value={form.weitere_bsnr_1} onChange={(e) => set("weitere_bsnr_1", e.target.value)} placeholder="Zusätzliche BSNR" />
-                </div>
-                <div>
-                  <Label>Weitere BSNR 2</Label>
-                  <Input value={form.weitere_bsnr_2} onChange={(e) => set("weitere_bsnr_2", e.target.value)} placeholder="Zusätzliche BSNR" />
-                </div>
-                <div>
-                  <Label>Weitere BSNR 3</Label>
-                  <Input value={form.weitere_bsnr_3} onChange={(e) => set("weitere_bsnr_3", e.target.value)} placeholder="Zusätzliche BSNR" />
-                </div>
-                <div>
-                  <Label>Weitere LANR</Label>
-                  <Input value={form.weitere_lanr} onChange={(e) => set("weitere_lanr", e.target.value)} placeholder="Zusätzliche LANR" />
-                </div>
-              </div>
-            </div>
-            )}
-
             {/* Produkte – Mehrfachauswahl */}
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Produkte (Mehrfachauswahl)</h4>
@@ -935,6 +891,50 @@ export default function Vertraege() {
                 <Input type="number" min={1} value={form.license_count} onChange={(e) => set("license_count", Number(e.target.value))} />
               </div>
             </div>
+
+            {/* BSNR & LANR – nur bei HFX EBM oder HFX Doku */}
+            {(form.selected_products.includes("HFX EBM") || form.selected_products.includes("HFX Doku")) && (
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">BSNR &amp; LANR erfassen</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>BSNR</Label>
+                  <Input value={form.bsnr} onChange={(e) => set("bsnr", e.target.value)} placeholder="Betriebsstättennummer" />
+                </div>
+                <div>
+                  <Label>LANR 1</Label>
+                  <Input value={form.lanr} onChange={(e) => set("lanr", e.target.value)} placeholder="Lebenslange Arztnummer" />
+                </div>
+                <div>
+                  <Label>LANR 2</Label>
+                  <Input value={form.lanr_2} onChange={(e) => set("lanr_2", e.target.value)} placeholder="Weitere LANR" />
+                </div>
+                <div>
+                  <Label>LANR 3</Label>
+                  <Input value={form.lanr_3} onChange={(e) => set("lanr_3", e.target.value)} placeholder="Weitere LANR" />
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-xs text-muted-foreground mt-2 block">Weitere Betriebsstätten</Label>
+                </div>
+                <div>
+                  <Label>Weitere BSNR 1</Label>
+                  <Input value={form.weitere_bsnr_1} onChange={(e) => set("weitere_bsnr_1", e.target.value)} placeholder="Zusätzliche BSNR" />
+                </div>
+                <div>
+                  <Label>Weitere BSNR 2</Label>
+                  <Input value={form.weitere_bsnr_2} onChange={(e) => set("weitere_bsnr_2", e.target.value)} placeholder="Zusätzliche BSNR" />
+                </div>
+                <div>
+                  <Label>Weitere BSNR 3</Label>
+                  <Input value={form.weitere_bsnr_3} onChange={(e) => set("weitere_bsnr_3", e.target.value)} placeholder="Zusätzliche BSNR" />
+                </div>
+                <div>
+                  <Label>Weitere LANR</Label>
+                  <Input value={form.weitere_lanr} onChange={(e) => set("weitere_lanr", e.target.value)} placeholder="Zusätzliche LANR" />
+                </div>
+              </div>
+            </div>
+            )}
 
             {/* Laufzeit */}
             <div className="space-y-3">
