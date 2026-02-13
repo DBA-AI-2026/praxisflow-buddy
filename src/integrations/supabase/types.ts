@@ -503,6 +503,7 @@ export type Database = {
           one_time_fee: number
           price_per_unit: number | null
           price_per_unit_label: string | null
+          promo_base_fee_end_date: string | null
           promo_end_date: string | null
           promo_price: number | null
           promo_price_label: string | null
@@ -518,6 +519,7 @@ export type Database = {
           one_time_fee?: number
           price_per_unit?: number | null
           price_per_unit_label?: string | null
+          promo_base_fee_end_date?: string | null
           promo_end_date?: string | null
           promo_price?: number | null
           promo_price_label?: string | null
@@ -533,6 +535,7 @@ export type Database = {
           one_time_fee?: number
           price_per_unit?: number | null
           price_per_unit_label?: string | null
+          promo_base_fee_end_date?: string | null
           promo_end_date?: string | null
           promo_price?: number | null
           promo_price_label?: string | null
