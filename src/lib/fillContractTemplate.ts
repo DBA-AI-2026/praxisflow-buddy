@@ -163,17 +163,17 @@ export async function fillContractTemplate(
 
   // PAGE 1 – Checkboxes (EBM)
   if (has("ebm")) {
-    write(0, CHECK, 63, 538);  // EBM kostenpflichtig
-    write(0, CHECK, 64, 523);  // EBM Schnittstelle
-    write(0, CHECK, 65, 476);  // EBM Datenbank
-    write(0, CHECK, 64, 436);  // EBM TSVG
-    write(0, CHECK, 63, 397);  // EBM Bericht
-    write(0, CHECK, 64, 374);  // EBM Nephro
+    write(0, CHECK, 60, 541);  // EBM kostenpflichtig
+    write(0, CHECK, 61, 526);  // EBM Schnittstelle
+    write(0, CHECK, 62, 479);  // EBM Datenbank
+    write(0, CHECK, 61, 439);  // EBM TSVG
+    write(0, CHECK, 60, 400);  // EBM Bericht
+    write(0, CHECK, 61, 377);  // EBM Nephro
   }
-  if (data.bsnr) write(0, CHECK, 321, 592);       // Lizenz BSNR
-  if (data.weitere_bsnr) write(0, CHECK, 321, 525); // weitere BSNR
-  if (data.weitere_lanr) write(0, CHECK, 321, 483); // jede weitere LANR
-  if (data.notes) write(0, CHECK, 440, 217);        // Zusatzblatt vorhanden
+  if (data.bsnr) write(0, CHECK, 318, 595);       // Lizenz BSNR
+  if (data.weitere_bsnr) write(0, CHECK, 318, 528); // weitere BSNR
+  if (data.weitere_lanr) write(0, CHECK, 318, 486); // jede weitere LANR
+  if (data.notes) write(0, CHECK, 437, 220);        // Zusatzblatt vorhanden
 
   // Monatliche Lizenzgebühren
   if (data.monthly_price != null) {
@@ -193,35 +193,35 @@ export async function fillContractTemplate(
   if (pages.length > 1) {
     write(1, data.mp_nr || "", 101, 785);
     // kostenpflichtig ab Datum
-    if (has("goä") || has("goz")) write(1, CHECK, 367, 709); // kostenpflichtig haken
+    if (has("goä") || has("goz")) write(1, CHECK, 364, 712); // kostenpflichtig haken
     write(1, startDateFormatted, 450, 709);
 
     // PAGE 2 – Checkboxes
     const hasLiveCheck = has("live-check") || has("live check");
     if (hasLiveCheck) {
-      write(1, CHECK, 64, 503); // GOÄ/GOZ LiveCheck
-      if (dur === 3) write(1, CHECK, 416, 464);
-      if (dur === 6) write(1, CHECK, 415, 453);
-      if (dur === 12) write(1, CHECK, 414, 442);
+      write(1, CHECK, 61, 506); // GOÄ/GOZ LiveCheck
+      if (dur === 3) write(1, CHECK, 413, 467);
+      if (dur === 6) write(1, CHECK, 412, 456);
+      if (dur === 12) write(1, CHECK, 411, 445);
     }
     if (has("wingmann")) {
-      write(1, CHECK, 63, 431); // GOÄ/GOZ Wingman
-      if (dur === 3) write(1, CHECK, 416, 464);
-      if (dur === 6) write(1, CHECK, 415, 453);
-      if (dur === 12) write(1, CHECK, 414, 442);
+      write(1, CHECK, 60, 434); // GOÄ/GOZ Wingman
+      if (dur === 3) write(1, CHECK, 413, 467);
+      if (dur === 6) write(1, CHECK, 412, 456);
+      if (dur === 12) write(1, CHECK, 411, 445);
     }
     if (has("goä") || has("goz")) {
-      write(1, CHECK, 65, 368); // GOÄ/GOZ permanent Check
-      if (dur === 3) write(1, CHECK, 415, 401);
-      if (dur === 6) write(1, CHECK, 416, 391);
-      if (dur === 12) write(1, CHECK, 415, 379);
+      write(1, CHECK, 62, 371); // GOÄ/GOZ permanent Check
+      if (dur === 3) write(1, CHECK, 412, 404);
+      if (dur === 6) write(1, CHECK, 413, 394);
+      if (dur === 12) write(1, CHECK, 412, 382);
     }
-    if (has("doku")) write(1, CHECK, 64, 305);  // THOKX / Doku
+    if (has("doku")) write(1, CHECK, 61, 308);  // THOKX / Doku
     if (has("praxismanagement")) {
-      write(1, CHECK, 65, 238); // Praxismanagement
-      if (dur === 3) write(1, CHECK, 415, 173);
-      if (dur === 6) write(1, CHECK, 415, 162);
-      if (dur === 12) write(1, CHECK, 415, 151);
+      write(1, CHECK, 62, 241); // Praxismanagement
+      if (dur === 3) write(1, CHECK, 412, 176);
+      if (dur === 6) write(1, CHECK, 412, 165);
+      if (dur === 12) write(1, CHECK, 412, 154);
     }
 
     // Ort + Datum + Unterschrift
@@ -234,6 +234,7 @@ export async function fillContractTemplate(
   // PAGE 3 – SEPA (2 Ausfertigungen: oben CC, unten Bank)
   // ============================================================
   if (pages.length > 2) {
+    write(2, data.mp_nr || "", 101, 784);
     // --- TOP: Ausfertigung CareCapital ---
     writeChars(2, mpClean, MP_X_TOP, MP_Y_TOP);
     write(2, data.bank_name || "", 69, 601);
@@ -268,23 +269,23 @@ export async function fillContractTemplate(
     write(3, data.mp_nr || "", 271, 669);
 
     // PAGE 4 – Checkboxes
-    if (has("goä")) write(3, CHECK, 77, 587);  // GG 1
-    if (has("goz")) write(3, CHECK, 77, 575);  // GG 2
+    if (has("goä")) write(3, CHECK, 74, 590);  // GG 1
+    if (has("goz")) write(3, CHECK, 74, 578);  // GG 2
     const hasLC = has("live-check") || has("live check");
     if (hasLC) {
-      write(3, CHECK, 77, 543);  // Live Check
-      if (dur === 3) write(3, CHECK, 167, 543);
-      if (dur === 6) write(3, CHECK, 167, 531);
-      if (dur === 12) write(3, CHECK, 169, 520);
+      write(3, CHECK, 74, 546);  // Live Check
+      if (dur === 3) write(3, CHECK, 164, 546);
+      if (dur === 6) write(3, CHECK, 164, 534);
+      if (dur === 12) write(3, CHECK, 166, 523);
     }
-    if (has("wingmann")) write(3, CHECK, 77, 500);       // Wingman
-    if (has("goä") || has("goz")) write(3, CHECK, 77, 487); // Permanent Check
-    if (has("doku")) write(3, CHECK, 77, 476);            // THOKX
+    if (has("wingmann")) write(3, CHECK, 74, 503);       // Wingman
+    if (has("goä") || has("goz")) write(3, CHECK, 74, 490); // Permanent Check
+    if (has("doku")) write(3, CHECK, 74, 479);            // THOKX
     if (has("praxismanagement")) {
-      write(3, CHECK, 76, 456);  // Praxismanagement
-      if (dur === 3) write(3, CHECK, 168, 445);
-      if (dur === 6) write(3, CHECK, 167, 434);
-      if (dur === 12) write(3, CHECK, 167, 422);
+      write(3, CHECK, 73, 459);  // Praxismanagement
+      if (dur === 3) write(3, CHECK, 165, 448);
+      if (dur === 6) write(3, CHECK, 164, 437);
+      if (dur === 12) write(3, CHECK, 164, 425);
     }
 
     write(3, ortText, 67, 185);
@@ -338,10 +339,10 @@ export async function fillContractTemplate(
     write(8, data.mp_nr || "", 99, 785);
     write(8, ortText, 65, 190);
     write(8, today, 64, 165);
-    await drawSignature(8, 199, 167, 100, 28, "vertrieb");
+    await drawSignature(8, 199, 181, 100, 28, "vertrieb");
     write(8, ortText, 65, 81);
     write(8, today, 67, 56);
-    await drawSignature(8, 200, 57, 100, 28, "customer");
+    await drawSignature(8, 200, 71, 100, 28, "customer");
   }
 
   // ============================================================
@@ -373,10 +374,10 @@ export async function fillContractTemplate(
     write(12, data.mp_nr || "", 101, 785);
     write(12, ortText, 67, 191);
     write(12, today, 67, 167);
-    await drawSignature(12, 201, 167, 100, 28, "vertrieb");
+    await drawSignature(12, 201, 181, 100, 28, "vertrieb");
     write(12, ortText, 63, 81);
     write(12, today, 65, 55);
-    await drawSignature(12, 201, 58, 100, 28, "customer");
+    await drawSignature(12, 201, 72, 100, 28, "customer");
   }
 
   return doc.save();
