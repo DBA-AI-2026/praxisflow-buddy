@@ -380,6 +380,7 @@ export default function Vertraege() {
             promo_price: p.promo_price != null ? Number(p.promo_price) : null,
             promo_price_label: p.promo_price_label || null,
             promo_end_date: p.promo_end_date || null,
+            promo_base_fee_end_date: p.promo_base_fee_end_date || null,
             has_active_promo: hasPromo,
           };
         });
@@ -630,8 +631,10 @@ export default function Vertraege() {
                 {products.map((p: any) => {
                   const isSelected = form.selected_products.includes(p.name);
                   const today = new Date();
+                  // promo_end_date = sign-up deadline, promo_base_fee_end_date = base fee waiver end
                   const hasPromo = p.promo_price != null && p.promo_end_date && new Date(p.promo_end_date) >= today;
-                  const displayMonthly = hasPromo && p.monthly_price > 0 ? 0 : Number(p.monthly_price);
+                  const baseFeeWaived = hasPromo && p.promo_base_fee_end_date && new Date(p.promo_base_fee_end_date) >= today;
+                  const displayMonthly = baseFeeWaived ? 0 : Number(p.monthly_price);
                   const displayPerUnit = hasPromo ? Number(p.promo_price) : (p.price_per_unit != null ? Number(p.price_per_unit) : null);
                   return (
                     <label
@@ -652,8 +655,8 @@ export default function Vertraege() {
                             .filter((pr: any) => next.includes(pr.name))
                             .reduce((sum: number, pr: any) => {
                               const promoActive = pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now;
-                              // If promo is active and it waives the base fee, use 0
-                              return sum + (promoActive && pr.monthly_price > 0 ? 0 : Number(pr.monthly_price));
+                              const bfWaived = promoActive && pr.promo_base_fee_end_date && new Date(pr.promo_base_fee_end_date) >= now;
+                              return sum + (bfWaived ? 0 : Number(pr.monthly_price));
                             }, 0);
                           const totalOneTime = products
                             .filter((pr: any) => next.includes(pr.name))
@@ -672,13 +675,18 @@ export default function Vertraege() {
                         {hasPromo ? (
                           <>
                             <span className="text-xs text-green-600 dark:text-green-400 font-medium block">
-                              🎉 Aktion: {displayPerUnit != null ? `${displayPerUnit.toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."}` : `${displayMonthly.toLocaleString("de-DE")} €/Mon.`}
+                              🎉 Aktion: {displayPerUnit != null ? `${displayPerUnit.toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."} dauerhaft` : `${displayMonthly.toLocaleString("de-DE")} €/Mon.`}
                             </span>
+                            {baseFeeWaived && (
+                              <span className="text-xs text-green-600 dark:text-green-400 block">
+                                Keine Grundgebühr bis {new Date(p.promo_base_fee_end_date).toLocaleDateString("de-DE")}
+                              </span>
+                            )}
                             <span className="text-xs text-muted-foreground block line-through">
                               Regulär: {Number(p.monthly_price).toLocaleString("de-DE")} €/Mon.{p.price_per_unit != null ? ` + ${Number(p.price_per_unit).toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."}` : ""}
                             </span>
                             <span className="text-xs text-muted-foreground block">
-                              Gültig bis {new Date(p.promo_end_date).toLocaleDateString("de-DE")}
+                              Bei Abschluss bis {new Date(p.promo_end_date).toLocaleDateString("de-DE")}
                             </span>
                           </>
                         ) : (
