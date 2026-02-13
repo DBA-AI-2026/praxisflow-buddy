@@ -25,6 +25,7 @@ import AuditLogs from "./pages/admin/AuditLogs";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import PdfCoordinateFinder from "./pages/tools/PdfCoordinateFinder";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,7 @@ const App = () => (
             <Route path="/admin/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
             <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
+            <Route path="/tools/pdf-coordinates" element={<ProtectedRoute><PdfCoordinateFinder /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
