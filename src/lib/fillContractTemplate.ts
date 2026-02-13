@@ -123,154 +123,104 @@ export async function fillContractTemplate(
   // ============================================================
   // PAGE 1 – Stammdaten & HFX EBM
   // ============================================================
-  // MP-Nummer (top-left, in the box)
   write(0, data.mp_nr || "", 115, 790, FONT_SIZE);
 
   // STAMMDATEN
   write(0, data.praxis || "", 78, 725, FONT_SIZE);
   write(0, data.fachrichtung || "", 348, 725, FONT_SIZE);
 
-  // Praxisadresse: Straße/Hausnummer
-  write(0, street, 78, 690, FONT_SIZE);
+  // Praxisadresse: Straße/Hausnummer (etwas höher)
+  write(0, street, 78, 695, FONT_SIZE);
 
   // Praxisadresse: PLZ/Ort
-  write(0, plzOrt, 78, 655, FONT_SIZE);
+  write(0, plzOrt, 78, 660, FONT_SIZE);
 
   // Kontoinhaber
-  write(0, data.kontoinhaber || "", 310, 655, FONT_SIZE);
+  write(0, data.kontoinhaber || "", 310, 660, FONT_SIZE);
 
-  // Name des Arztes
-  write(0, arztName, 78, 640, FONT_SIZE);
+  // Name des Arztes (getrennt von Email)
+  write(0, arztName, 78, 648, FONT_SIZE);
 
   // Allgemeine E-Mail-Adresse
-  write(0, data.email || "", 368, 640, FONT_SIZE);
+  write(0, data.email || "", 368, 632, FONT_SIZE);
 
-  // Monatliche Lizenzgebühren (total EUR value)
+  // Monatliche Lizenzgebühren (höher und mehr rechts)
   if (data.monthly_price != null) {
-    write(0, formatCurrency(data.monthly_price), 78, 248, 10, fontBold);
+    write(0, formatCurrency(data.monthly_price), 130, 280, 10, fontBold);
+  }
+
+  // Sondervereinbarungen / Notizen
+  if (data.notes) {
+    write(0, data.notes.substring(0, 120), 78, 197, SMALL);
   }
 
   // ============================================================
   // PAGE 2 – HFX GOÄ & Services
   // ============================================================
   if (pages.length > 1) {
-    // MP-Nummer
-    write(1, data.mp_nr || "", 115, 790, FONT_SIZE);
+    write(1, data.mp_nr || "", 115, 770, FONT_SIZE);
 
-    // Kostenpflichtig ab (GOÄ section) 
     if (data.start_date) {
       write(1, startDateFormatted, 438, 700, FONT_SIZE);
     }
 
-    // Ort
-    write(1, "", 70, 72, FONT_SIZE); // Leave empty - user fills at signing
-
-    // Datum
-    write(1, today, 70, 48, FONT_SIZE);
-
-    // Signature (3 signature areas at bottom)
-    await drawSignature(1, 160, 55, 100, 30);
+    write(1, today, 90, 55, FONT_SIZE);
+    await drawSignature(1, 200, 65, 100, 30);
   }
 
   // ============================================================
   // PAGE 3 – SEPA Mandate (2 copies: top + bottom)
   // ============================================================
   if (pages.length > 2) {
-    // MP-Nummer
     write(2, data.mp_nr || "", 115, 790, FONT_SIZE);
-
-    // Mandatsreferenz (SMP field) - usually the MP number
     write(2, data.mp_nr || "", 488, 710, SMALL);
 
-    // --- TOP SEPA COPY (Ausfertigung für CareCapital) ---
-    // Kontoinhaber
-    write(2, data.kontoinhaber || "", 48, 548, FONT_SIZE);
+    // --- TOP SEPA (Ausfertigung CareCapital) ---
+    write(2, data.kontoinhaber || "", 78, 590, FONT_SIZE);
+    write(2, formatIban(data.iban), 85, 555, FONT_SIZE);
+    write(2, data.bic || "", 85, 535, FONT_SIZE);
+    write(2, today, 76, 494, FONT_SIZE);
+    await drawSignature(2, 272, 520, 100, 28);
 
-    // IBAN
-    write(2, formatIban(data.iban), 85, 510, FONT_SIZE);
-
-    // Ort
-    // write(2, "", 48, 443, FONT_SIZE); // Leave blank
-
-    // Datum
-    write(2, today, 48, 423, FONT_SIZE);
-
-    // Signature on top SEPA
-    await drawSignature(2, 130, 435, 100, 28);
-
-    // --- BOTTOM SEPA COPY (Ausfertigung für die Bank) ---
-    // Mandatsreferenz
+    // --- BOTTOM SEPA (Ausfertigung Bank) ---
     write(2, data.mp_nr || "", 488, 378, SMALL);
-
-    // Kontoinhaber
-    write(2, data.kontoinhaber || "", 48, 218, FONT_SIZE);
-
-    // IBAN
-    write(2, formatIban(data.iban), 85, 180, FONT_SIZE);
-
-    // Datum
-    write(2, today, 48, 93, FONT_SIZE);
-
-    // Signature on bottom SEPA
-    await drawSignature(2, 130, 105, 100, 28);
+    write(2, data.kontoinhaber || "", 78, 260, FONT_SIZE);
+    write(2, formatIban(data.iban), 85, 225, FONT_SIZE);
+    write(2, data.bic || "", 85, 205, FONT_SIZE);
+    write(2, today, 76, 164, FONT_SIZE);
+    await drawSignature(2, 272, 190, 100, 28);
   }
 
   // ============================================================
-  // PAGE 4 – Dienstleistungsvertrag
+  // PAGE 4–13: Shared positions for MP-Nr, Datum, Unterschrift
   // ============================================================
+  const PG_MP_X = 48;
+  const PG_MP_Y = 735;
+  const PG_DAT_X = 76;
+  const PG_DAT_Y = 40;
+  const PG_SIG_X = 200;
+  const PG_SIG_Y = 50;
+
+  // Page 4 – Dienstleistungsvertrag
   if (pages.length > 3) {
-    // MP-Nummer (top)
-    write(3, data.mp_nr || "", 115, 790, FONT_SIZE);
-
-    // Praxis name (right side, "genaue MP-Bezeichnung")
+    write(3, data.mp_nr || "", PG_MP_X, PG_MP_Y, FONT_SIZE);
     write(3, data.praxis || "", 330, 718, FONT_SIZE);
-
-    // MP-Nummer (in body, "falls vorhanden")
     write(3, data.mp_nr || "", 385, 688, FONT_SIZE);
-
-    // Bottom signature area 1 (MCC) - left blank (MCC signs)
-    
-    // Bottom signature area 2 (Kunde)
-    // Ort
-    // write(3, "", 48, 128, FONT_SIZE);
-
-    // Datum
-    write(3, today, 48, 108, FONT_SIZE);
-
-    // Signature
-    await drawSignature(3, 130, 118, 100, 28);
+    write(3, today, PG_DAT_X, PG_DAT_Y, FONT_SIZE);
+    await drawSignature(3, PG_SIG_X, PG_SIG_Y, 100, 28);
   }
 
-  // ============================================================
-  // PAGE 5 – AGB page 1 (no variable fields, only page header)
-  // ============================================================
-
-  // ============================================================
-  // PAGE 6 – AGB page 2 with signature
-  // ============================================================
-  if (pages.length > 5) {
-    // Datum (bottom)
-    write(5, today, 48, 108, FONT_SIZE);
-
-    // Signature
-    await drawSignature(5, 130, 118, 100, 28);
+  // Pages 5+ – AGB & remaining pages: MP-Nr, Datum, Unterschrift
+  for (let i = 4; i < pages.length; i++) {
+    write(i, data.mp_nr || "", PG_MP_X, PG_MP_Y, FONT_SIZE);
+    write(i, today, PG_DAT_X, PG_DAT_Y, FONT_SIZE);
+    await drawSignature(i, PG_SIG_X, PG_SIG_Y, 100, 28);
   }
 
-  // ============================================================
-  // PAGE 7 – AGB Wartung/Lizenz with Praxis & MP-Nr
-  // ============================================================
+  // Page 7 (index 6) – zusätzlich Praxis & MP-Nr im Body
   if (pages.length > 6) {
-    // Praxis name
     write(6, data.praxis || "", 330, 718, FONT_SIZE);
-
-    // MP-Nummer
     write(6, data.mp_nr || "", 385, 688, FONT_SIZE);
-  }
-
-  // Sondervereinbarungen / Notizen on page 1 (if notes exist)
-  // The "Sondervereinbarungen" section at the bottom of page 1
-  if (data.notes) {
-    write(0, data.notes.substring(0, 120), 78, 197, SMALL);
   }
 
   return doc.save();
