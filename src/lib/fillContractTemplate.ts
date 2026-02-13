@@ -124,11 +124,11 @@ export async function fillContractTemplate(
   // PAGE 1 – Stammdaten & HFX EBM
   // ============================================================
   // MP-Nummer (top-left, in the box)
-  write(0, data.mp_nr || "", 115, 802, FONT_SIZE);
+  write(0, data.mp_nr || "", 115, 790, FONT_SIZE);
 
   // STAMMDATEN
   write(0, data.praxis || "", 78, 725, FONT_SIZE);
-  write(0, data.fachrichtung || "", 368, 725, FONT_SIZE);
+  write(0, data.fachrichtung || "", 348, 725, FONT_SIZE);
 
   // Praxisadresse: Straße/Hausnummer
   write(0, street, 78, 690, FONT_SIZE);
@@ -140,19 +140,14 @@ export async function fillContractTemplate(
   write(0, data.kontoinhaber || "", 310, 655, FONT_SIZE);
 
   // Name des Arztes
-  write(0, arztName, 78, 628, FONT_SIZE);
+  write(0, arztName, 78, 640, FONT_SIZE);
 
   // Allgemeine E-Mail-Adresse
-  write(0, data.email || "", 368, 628, FONT_SIZE);
+  write(0, data.email || "", 368, 640, FONT_SIZE);
 
   // Monatliche Lizenzgebühren (total EUR value)
   if (data.monthly_price != null) {
-    write(0, formatCurrency(data.monthly_price), 430, 248, 10, fontBold);
-  }
-
-  // Kostenpflichtig ab (HFX EBM section) - start date
-  if (data.start_date) {
-    write(0, startDateFormatted, 158, 467, SMALL);
+    write(0, formatCurrency(data.monthly_price), 78, 248, 10, fontBold);
   }
 
   // ============================================================
@@ -160,21 +155,21 @@ export async function fillContractTemplate(
   // ============================================================
   if (pages.length > 1) {
     // MP-Nummer
-    write(1, data.mp_nr || "", 115, 802, FONT_SIZE);
+    write(1, data.mp_nr || "", 115, 790, FONT_SIZE);
 
     // Kostenpflichtig ab (GOÄ section) 
     if (data.start_date) {
-      write(1, startDateFormatted, 438, 700, SMALL);
+      write(1, startDateFormatted, 438, 700, FONT_SIZE);
     }
 
     // Ort
-    write(1, "", 70, 82, FONT_SIZE); // Leave empty - user fills at signing
+    write(1, "", 70, 72, FONT_SIZE); // Leave empty - user fills at signing
 
     // Datum
-    write(1, today, 70, 58, FONT_SIZE);
+    write(1, today, 70, 48, FONT_SIZE);
 
     // Signature (3 signature areas at bottom)
-    await drawSignature(1, 130, 65, 100, 30);
+    await drawSignature(1, 160, 55, 100, 30);
   }
 
   // ============================================================
@@ -182,7 +177,7 @@ export async function fillContractTemplate(
   // ============================================================
   if (pages.length > 2) {
     // MP-Nummer
-    write(2, data.mp_nr || "", 115, 802, FONT_SIZE);
+    write(2, data.mp_nr || "", 115, 790, FONT_SIZE);
 
     // Mandatsreferenz (SMP field) - usually the MP number
     write(2, data.mp_nr || "", 488, 710, SMALL);
@@ -225,7 +220,7 @@ export async function fillContractTemplate(
   // ============================================================
   if (pages.length > 3) {
     // MP-Nummer (top)
-    write(3, data.mp_nr || "", 115, 802, FONT_SIZE);
+    write(3, data.mp_nr || "", 115, 790, FONT_SIZE);
 
     // Praxis name (right side, "genaue MP-Bezeichnung")
     write(3, data.praxis || "", 330, 718, FONT_SIZE);
