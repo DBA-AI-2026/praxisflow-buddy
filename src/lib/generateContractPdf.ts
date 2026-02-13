@@ -273,6 +273,46 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
     }
   }
 
+  // Info-Box: Gesamtpreis nach Ablauf der Aktion
+  if (data.product_price_details && data.product_price_details.length > 0) {
+    const promoProducts = data.product_price_details.filter((pp) => pp.has_active_promo);
+    if (promoProducts.length > 0) {
+      ensureSpace(70);
+      y -= 4;
+      const boxH = 48;
+      const boxY = y - boxH;
+      page.drawRectangle({ x: M, y: boxY, width: CW, height: boxH, color: rgb(1, 0.97, 0.92), borderColor: rgb(0.9, 0.75, 0.4), borderWidth: 0.8 });
+      page.drawRectangle({ x: M, y: boxY, width: 3, height: boxH, color: rgb(0.9, 0.65, 0.1) });
+
+      text("Info: Preis nach Ablauf der Aktion", M + 12, boxY + boxH - 14, 8, fontBold, rgb(0.5, 0.35, 0.05));
+
+      let totalAfterPromo = 0;
+      for (const pp of data.product_price_details) {
+        totalAfterPromo += pp.monthly_price;
+      }
+      const perUnitHints: string[] = [];
+      for (const pp of promoProducts) {
+        if (pp.price_per_unit != null) {
+          perUnitHints.push(`${pp.name}: ${pp.price_per_unit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/${pp.price_per_unit_label || "Stk."}`);
+        }
+      }
+
+      let afterLine = `Monatspreis: ${totalAfterPromo.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/Mon.`;
+      if (perUnitHints.length > 0) afterLine += "  +  " + perUnitHints.join(", ");
+      text(afterLine, M + 12, boxY + boxH - 28, 8, font, rgb(0.25, 0.2, 0.05), CW - 24);
+
+      const earliestEnd = promoProducts
+        .filter((pp) => pp.promo_end_date)
+        .map((pp) => pp.promo_end_date!)
+        .sort()[0];
+      if (earliestEnd) {
+        text("Regulaere Preise gelten ab " + formatDate(earliestEnd), M + 12, boxY + boxH - 40, 7, font, C_MUTED);
+      }
+
+      y = boxY - 8;
+    }
+  }
+
   const intervalLabels: Record<string, string> = {
     monatlich: "Monatlich", quartalsweise: "Quartalsweise", jaehrlich: "Jährlich",
   };
