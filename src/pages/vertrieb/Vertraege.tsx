@@ -75,7 +75,11 @@ interface ContractFormData {
   bic: string;
   bsnr: string;
   lanr: string;
-  weitere_bsnr: string;
+  lanr_2: string;
+  lanr_3: string;
+  weitere_bsnr_1: string;
+  weitere_bsnr_2: string;
+  weitere_bsnr_3: string;
   weitere_lanr: string;
   ort: string;
   notes: string;
@@ -115,7 +119,11 @@ const emptyForm: ContractFormData = {
   bic: "",
   bsnr: "",
   lanr: "",
-  weitere_bsnr: "",
+  lanr_2: "",
+  lanr_3: "",
+  weitere_bsnr_1: "",
+  weitere_bsnr_2: "",
+  weitere_bsnr_3: "",
   weitere_lanr: "",
   ort: "",
   notes: "",
@@ -290,8 +298,8 @@ export default function Vertraege() {
         iban: data.iban || null,
         bic: data.bic || null,
         bsnr: data.bsnr || null,
-        lanr: data.lanr || null,
-        weitere_bsnr: data.weitere_bsnr || null,
+        lanr: [data.lanr, data.lanr_2, data.lanr_3].filter(Boolean).join(", ") || null,
+        weitere_bsnr: [data.weitere_bsnr_1, data.weitere_bsnr_2, data.weitere_bsnr_3].filter(Boolean).join(", ") || null,
         weitere_lanr: data.weitere_lanr || null,
         rechtsform: data.rechtsform || null,
         ort: data.ort || null,
@@ -401,8 +409,12 @@ export default function Vertraege() {
       iban: contract.iban || "",
       bic: contract.bic || "",
       bsnr: contract.bsnr || "",
-      lanr: contract.lanr || "",
-      weitere_bsnr: contract.weitere_bsnr || "",
+      lanr: (contract.lanr || "").split(",").map((s: string) => s.trim())[0] || "",
+      lanr_2: (contract.lanr || "").split(",").map((s: string) => s.trim())[1] || "",
+      lanr_3: (contract.lanr || "").split(",").map((s: string) => s.trim())[2] || "",
+      weitere_bsnr_1: (contract.weitere_bsnr || "").split(",").map((s: string) => s.trim())[0] || "",
+      weitere_bsnr_2: (contract.weitere_bsnr || "").split(",").map((s: string) => s.trim())[1] || "",
+      weitere_bsnr_3: (contract.weitere_bsnr || "").split(",").map((s: string) => s.trim())[2] || "",
       weitere_lanr: contract.weitere_lanr || "",
       ort: contract.ort || "",
       status: contract.status,
@@ -780,19 +792,38 @@ export default function Vertraege() {
             {/* EBM-Daten – nur bei HFX EBM oder HFX Doku */}
             {(form.selected_products.includes("HFX EBM") || form.selected_products.includes("HFX Doku")) && (
             <div className="space-y-3">
-              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">EBM-Daten</h4>
+              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">BSNR &amp; LANR erfassen</h4>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>BSNR</Label>
                   <Input value={form.bsnr} onChange={(e) => set("bsnr", e.target.value)} placeholder="Betriebsstättennummer" />
                 </div>
                 <div>
-                  <Label>LANR</Label>
+                  <Label>LANR 1</Label>
                   <Input value={form.lanr} onChange={(e) => set("lanr", e.target.value)} placeholder="Lebenslange Arztnummer" />
                 </div>
                 <div>
-                  <Label>Weitere BSNR</Label>
-                  <Input value={form.weitere_bsnr} onChange={(e) => set("weitere_bsnr", e.target.value)} placeholder="Zusätzliche BSNR" />
+                  <Label>LANR 2</Label>
+                  <Input value={form.lanr_2} onChange={(e) => set("lanr_2", e.target.value)} placeholder="Weitere LANR" />
+                </div>
+                <div>
+                  <Label>LANR 3</Label>
+                  <Input value={form.lanr_3} onChange={(e) => set("lanr_3", e.target.value)} placeholder="Weitere LANR" />
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-xs text-muted-foreground mt-2 block">Weitere Betriebsstätten</Label>
+                </div>
+                <div>
+                  <Label>Weitere BSNR 1</Label>
+                  <Input value={form.weitere_bsnr_1} onChange={(e) => set("weitere_bsnr_1", e.target.value)} placeholder="Zusätzliche BSNR" />
+                </div>
+                <div>
+                  <Label>Weitere BSNR 2</Label>
+                  <Input value={form.weitere_bsnr_2} onChange={(e) => set("weitere_bsnr_2", e.target.value)} placeholder="Zusätzliche BSNR" />
+                </div>
+                <div>
+                  <Label>Weitere BSNR 3</Label>
+                  <Input value={form.weitere_bsnr_3} onChange={(e) => set("weitere_bsnr_3", e.target.value)} placeholder="Zusätzliche BSNR" />
                 </div>
                 <div>
                   <Label>Weitere LANR</Label>

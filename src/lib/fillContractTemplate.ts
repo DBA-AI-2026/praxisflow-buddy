@@ -157,8 +157,13 @@ export async function fillContractTemplate(
   // EBM
   write(0, startDateFormatted, 143, 541);
   write(0, data.bsnr || "", 337, 570);
-  write(0, data.lanr || "", 456, 571);
-  write(0, data.weitere_bsnr || "", 337, 506);
+  // LANR: may be comma-separated (LANR 1, 2, 3)
+  const lanrParts = (data.lanr || "").split(",").map(s => s.trim());
+  write(0, lanrParts[0] || "", 456, 571);
+  // Weitere BSNR: may be comma-separated (up to 3)
+  const weitereBsnrParts = (data.weitere_bsnr || "").split(",").map(s => s.trim());
+  write(0, weitereBsnrParts[0] || "", 337, 506);
+  // Weitere LANR
   write(0, data.weitere_lanr || "", 337, 461);
 
   // PAGE 1 – Checkboxes (EBM)
