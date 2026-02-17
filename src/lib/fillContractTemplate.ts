@@ -148,9 +148,10 @@ export async function fillContractTemplate(
   // ============================================================
   write(0, data.mp_nr || "", 103, 784);
   write(0, data.praxis || "", 87, 727);
-  write(0, data.fachrichtung || "", 351, 726);
-  write(0, street, 82, 700);
-  write(0, data.rechtsform || "", 352, 701);
+  write(0, data.fachrichtung || "", 353, 727);
+  write(0, street, 83, 701);
+  write(0, data.rechtsform || "", 352, 700);
+  write(0, plzOrt, 84, 673);
   write(0, arztName, 81, 647);
   write(0, data.email || "", 349, 649);
 
