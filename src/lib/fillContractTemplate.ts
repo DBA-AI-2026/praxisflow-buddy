@@ -203,9 +203,7 @@ export async function fillContractTemplate(
   // ============================================================
   if (pages.length > 1) {
     write(1, data.mp_nr || "", 101, 785);
-    // kostenpflichtig ab Datum
-    if (has("goä") || has("goz")) write(1, CHECK, 364, 712); // kostenpflichtig haken
-    write(1, startDateFormatted, 450, 709);
+    // kostenpflichtig Kreuz + Datum entfallen im neuen Formular
 
     // PAGE 2 – Checkboxes
     const hasLiveCheck = has("live-check") || has("live check");
