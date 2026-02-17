@@ -268,7 +268,7 @@ export default function Vertraege() {
       }
 
       const record = {
-        customer_name: `${data.vorname} ${data.nachname}`.trim() || data.customer_name,
+        customer_name: `${data.vorname} ${data.nachname}`.trim() || data.praxis || "Entwurf",
         sales_partner_id: user?.id,
         sales_partner_name: data.sales_partner_name || profile?.full_name || "",
         mp_nr: data.mp_nr || null,
@@ -282,7 +282,7 @@ export default function Vertraege() {
         email: data.email || null,
         signature_data: sigData || null,
         vertrieb_signature_data: vertriebSigData || null,
-        product_name: data.selected_products.join(", "),
+        product_name: data.selected_products.join(", ") || "Entwurf",
         modules: data.selected_products,
         license_count: data.license_count,
         start_date: data.start_date,
@@ -320,11 +320,11 @@ export default function Vertraege() {
         if (error) throw error;
       }
     },
-    onSuccess: async () => {
+    onSuccess: async (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
       toast({ title: editId ? "Vertrag aktualisiert" : "Vertrag erstellt" });
-      // Auto-open template PDF after creating a new contract
-      if (!editId) {
+      // Auto-open template PDF after creating a new contract (only if not a draft)
+      if (!editId && variables.status !== "entwurf") {
         handleTemplatePdf(form);
         // Send confirmation email if email is provided
         if (form.email) {
@@ -518,6 +518,18 @@ export default function Vertraege() {
   };
 
   const isFormComplete = getMissingFields().length === 0;
+
+  const handleSaveDraft = () => {
+    // Require at least a customer name or praxis for draft
+    const hasMinimum = form.praxis.trim() !== "" || form.vorname.trim() !== "" || form.nachname.trim() !== "";
+    if (!hasMinimum) {
+      toast({ title: "Mindestangabe fehlt", description: "Bitte mindestens Praxis oder einen Namen angeben.", variant: "destructive" });
+      return;
+    }
+    // Force status to Entwurf for draft saves
+    const draftForm = { ...form, status: "entwurf" };
+    upsertMutation.mutate(draftForm);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1259,6 +1271,10 @@ export default function Vertraege() {
               </Button>
               <div className="flex gap-2 ml-auto">
                 <Button type="button" variant="outline" onClick={closeDialog}>Abbrechen</Button>
+                <Button type="button" variant="secondary" onClick={handleSaveDraft} disabled={upsertMutation.isPending}>
+                  {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                  Als Entwurf speichern
+                </Button>
                 <Button type="submit" disabled={upsertMutation.isPending || !isFormComplete}>
                   {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                   {editId ? "Speichern" : "Vertrag anlegen"}
