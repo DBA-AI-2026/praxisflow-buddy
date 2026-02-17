@@ -234,7 +234,7 @@ export async function fillContractTemplate(
     }
 
     // Ort + Datum + Unterschrift
-    write(1, ortText, 61, 105);
+    write(1, ortText, 69, 81);
     write(1, today, 68, 56);
     await drawSignature(1, 190, 64, 100, 30, "customer");
   }
