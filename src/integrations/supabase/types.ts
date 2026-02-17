@@ -684,6 +684,59 @@ export type Database = {
         }
         Relationships: []
       }
+      signature_audit_logs: {
+        Row: {
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          document_hash: string | null
+          id: string
+          ip_address: string | null
+          signature_data_hash: string | null
+          signed_at: string
+          signer_email: string | null
+          signer_name: string
+          signer_type: string
+          user_agent: string | null
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          created_by?: string | null
+          document_hash?: string | null
+          id?: string
+          ip_address?: string | null
+          signature_data_hash?: string | null
+          signed_at?: string
+          signer_email?: string | null
+          signer_name: string
+          signer_type: string
+          user_agent?: string | null
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          created_by?: string | null
+          document_hash?: string | null
+          id?: string
+          ip_address?: string | null
+          signature_data_hash?: string | null
+          signed_at?: string
+          signer_email?: string | null
+          signer_name?: string
+          signer_type?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signature_audit_logs_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
