@@ -1,0 +1,1 @@
+ALTER TABLE public.contracts ADD COLUMN plz text;

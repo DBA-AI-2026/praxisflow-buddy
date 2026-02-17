@@ -91,6 +91,7 @@ export type Database = {
           one_time_fee: number
           ort: string | null
           payment_interval: string
+          plz: string | null
           praxis: string | null
           praxisanschrift: string | null
           product_name: string
@@ -141,6 +142,7 @@ export type Database = {
           one_time_fee?: number
           ort?: string | null
           payment_interval?: string
+          plz?: string | null
           praxis?: string | null
           praxisanschrift?: string | null
           product_name: string
@@ -191,6 +193,7 @@ export type Database = {
           one_time_fee?: number
           ort?: string | null
           payment_interval?: string
+          plz?: string | null
           praxis?: string | null
           praxisanschrift?: string | null
           product_name?: string
