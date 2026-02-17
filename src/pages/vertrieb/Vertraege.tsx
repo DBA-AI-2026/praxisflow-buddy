@@ -431,6 +431,7 @@ export default function Vertraege() {
               modules: form.selected_products, duration_months: form.duration_months,
               notes: form.notes, signature_data: sigData, vertrieb_signature_data: vertriebSigData,
               praxissystem: form.praxissystem, stundenaufwand_pro_woche: form.stundenaufwand_pro_woche,
+              selected_addon_modules: form.selected_modules,
             });
             const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBytes)));
             const customerName = [form.vorname, form.nachname].filter(Boolean).join(" ");
@@ -668,7 +669,19 @@ export default function Vertraege() {
       } catch {
         // Continue without logo
       }
-      const pdfBytes = await generateContractPdf({ ...contractData, signature_data: sigData, product_price_details }, logoBytes);
+      // Build addon module details
+      const addonNames = contractData.selected_addon_modules || contractData.selected_modules || [];
+      const addon_module_details = ebmModules
+        .filter((m: any) => addonNames.includes(m.name))
+        .map((m: any) => ({ name: m.name, monthly_price: Number(m.monthly_price) }));
+
+      const pdfBytes = await generateContractPdf({
+        ...contractData,
+        signature_data: sigData,
+        product_price_details,
+        selected_addon_modules: addonNames,
+        addon_module_details,
+      }, logoBytes);
       const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
@@ -726,6 +739,7 @@ export default function Vertraege() {
         vertrieb_signature_data: vertriebSigData,
         praxissystem: contractData.praxissystem,
         stundenaufwand_pro_woche: contractData.stundenaufwand_pro_woche,
+        selected_addon_modules: contractData.selected_addon_modules || contractData.selected_modules || [],
       });
 
       const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
