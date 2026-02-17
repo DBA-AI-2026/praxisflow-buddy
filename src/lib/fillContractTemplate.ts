@@ -8,6 +8,8 @@ interface TemplateFillData {
   vorname?: string;
   nachname?: string;
   adresse?: string;
+  praxisanschrift?: string;
+  plz?: string;
   telefon?: string;
   email?: string;
   kontoinhaber?: string;
@@ -77,6 +79,9 @@ export async function fillContractTemplate(
   const pages = doc.getPages();
 
   const { street, plzOrt } = splitAddress(data.adresse);
+  // Prefer structured fields from form over legacy splitAddress
+  const praxisStrasse = data.praxisanschrift || street;
+  const praxisPlzOrt = [data.plz, data.ort].filter(Boolean).join(" ") || plzOrt;
   const arztName = [data.vorname, data.nachname].filter(Boolean).join(" ");
   const today = todayFormatted();
   const ortText = data.ort || "";
@@ -149,9 +154,9 @@ export async function fillContractTemplate(
   write(0, data.mp_nr || "", 103, 784);
   write(0, data.praxis || "", 87, 727);
   write(0, data.fachrichtung || "", 353, 727);
-  write(0, street, 83, 701);
+  write(0, praxisStrasse, 83, 701);
   write(0, data.rechtsform || "", 352, 700);
-  write(0, plzOrt, 84, 673);
+  write(0, praxisPlzOrt, 84, 673);
   write(0, arztName, 81, 647);
   write(0, data.email || "", 349, 649);
 
