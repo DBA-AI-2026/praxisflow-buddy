@@ -375,7 +375,7 @@ export default function Vertraege() {
       if (!editId && variables.status !== "entwurf") {
         handleTemplatePdf(form);
         // Send confirmation email if email is provided
-        if (form.email) {
+        if (form.email || profile?.email) {
           try {
             const templateRes = await fetch("/templates/vertrag-honorarfuchs.pdf");
             const templateBytes = await templateRes.arrayBuffer();
@@ -407,14 +407,16 @@ export default function Vertraege() {
             const customerName = [form.vorname, form.nachname].filter(Boolean).join(" ");
             await supabase.functions.invoke("send-contract-email", {
               body: {
-                email: form.email,
+                email: form.email || null,
+                salesPartnerEmail: profile?.email || null,
                 customerName,
                 pdfBase64,
                 products: form.selected_products.join(", "),
                 startDate: form.start_date,
               },
             });
-            toast({ title: "Bestätigungs-E-Mail gesendet", description: `An ${form.email}` });
+            const sentTo = [form.email, profile?.email].filter(Boolean).join(", ");
+            toast({ title: "Bestätigungs-E-Mail gesendet", description: `An ${sentTo}` });
           } catch (emailErr: any) {
             console.error("Email send error:", emailErr);
             toast({ title: "E-Mail konnte nicht gesendet werden", description: emailErr.message, variant: "destructive" });
