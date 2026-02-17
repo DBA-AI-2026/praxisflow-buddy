@@ -31,6 +31,8 @@ interface TemplateFillData {
   signature_data?: string | null;
   vertrieb_signature_data?: string | null;
   duration_months?: number;
+  praxissystem?: string;
+  stundenaufwand_pro_woche?: string;
 }
 
 // ~2mm offset in PDF points (1mm ≈ 2.835pt → 2mm ≈ 5.67pt → round to 6)
@@ -237,6 +239,10 @@ export async function fillContractTemplate(
     write(1, ortText, 69, 81);
     write(1, today, 68, 56);
     await drawSignature(1, 190, 64, 100, 30, "customer");
+
+    // Praxissystem & Stundenaufwand (Praxismanagement)
+    write(1, data.praxissystem || "", 419, 120);
+    write(1, data.stundenaufwand_pro_woche || "", 419, 98);
   }
 
   // ============================================================
@@ -303,6 +309,10 @@ export async function fillContractTemplate(
     write(3, ortText, 69, 81);
     write(3, today, 69, 55);
     await drawSignature(3, 205, 61, 100, 28, "customer");
+
+    // Praxissystem & Stundenaufwand (Praxismanagement)
+    write(3, data.praxissystem || "", 172, 397);
+    write(3, data.stundenaufwand_pro_woche || "", 171, 375);
   }
 
   // ============================================================

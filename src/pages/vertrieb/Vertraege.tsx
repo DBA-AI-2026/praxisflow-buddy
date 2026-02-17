@@ -88,6 +88,8 @@ interface ContractFormData {
   status: string;
   signature_data: string;
   vertrieb_signature_data: string;
+  praxissystem: string;
+  stundenaufwand_pro_woche: string;
 }
 
 const emptyForm: ContractFormData = {
@@ -133,6 +135,8 @@ const emptyForm: ContractFormData = {
   status: "entwurf",
   signature_data: "",
   vertrieb_signature_data: "",
+  praxissystem: "",
+  stundenaufwand_pro_woche: "",
 };
 
 export default function Vertraege() {
@@ -310,6 +314,8 @@ export default function Vertraege() {
         plz: data.plz || null,
         status: data.status,
         created_by: user?.id,
+        praxissystem: data.praxissystem || null,
+        stundenaufwand_pro_woche: data.stundenaufwand_pro_woche || null,
         ...(documentUrl ? { document_url: documentUrl, document_name: documentName } : {}),
       };
 
@@ -402,6 +408,7 @@ export default function Vertraege() {
               end_date: addMonths(new Date(form.start_date), form.duration_months).toISOString().split("T")[0],
               modules: form.selected_products, duration_months: form.duration_months,
               notes: form.notes, signature_data: sigData, vertrieb_signature_data: vertriebSigData,
+              praxissystem: form.praxissystem, stundenaufwand_pro_woche: form.stundenaufwand_pro_woche,
             });
             const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBytes)));
             const customerName = [form.vorname, form.nachname].filter(Boolean).join(" ");
@@ -522,6 +529,8 @@ export default function Vertraege() {
       status: contract.status,
       signature_data: contract.signature_data || "",
       vertrieb_signature_data: contract.vertrieb_signature_data || "",
+      praxissystem: contract.praxissystem || "",
+      stundenaufwand_pro_woche: contract.stundenaufwand_pro_woche || "",
     });
     setDialogOpen(true);
   };
@@ -693,6 +702,8 @@ export default function Vertraege() {
         notes: contractData.notes,
         signature_data: sigData,
         vertrieb_signature_data: vertriebSigData,
+        praxissystem: contractData.praxissystem,
+        stundenaufwand_pro_woche: contractData.stundenaufwand_pro_woche,
       });
 
       const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
@@ -1103,6 +1114,22 @@ export default function Vertraege() {
             </div>
             )}
 
+            {/* Praxissystem & Stundenaufwand – nur bei HFX Praxismanagement Zahnmedizin */}
+            {form.selected_products.includes("HFX Praxismanagement Zahnmedizin") && (
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Praxismanagement Details</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Genutztes Praxissystem</Label>
+                  <Input value={form.praxissystem} onChange={(e) => set("praxissystem", e.target.value)} placeholder="z.B. Dampsoft, CGM Z1, Charly..." />
+                </div>
+                <div>
+                  <Label>Geschätzter Stundenaufwand / Woche</Label>
+                  <Input value={form.stundenaufwand_pro_woche} onChange={(e) => set("stundenaufwand_pro_woche", e.target.value)} placeholder="z.B. 5 Stunden" />
+                </div>
+              </div>
+            </div>
+            )}
             {/* Laufzeit */}
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Laufzeit & Kündigung</h4>
