@@ -313,12 +313,59 @@ export default function Vertraege() {
         ...(documentUrl ? { document_url: documentUrl, document_name: documentName } : {}),
       };
 
+      let contractId = editId;
       if (editId) {
         const { error } = await supabase.from("contracts").update(record).eq("id", editId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("contracts").insert(record);
+        const { data: inserted, error } = await supabase.from("contracts").insert(record).select("id").single();
         if (error) throw error;
+        contractId = inserted.id;
+      }
+
+      // Log signature audit trail for active contracts
+      if (data.status !== "entwurf" && contractId && (sigData || vertriebSigData)) {
+        const auditEntries = [];
+        const userAgent = navigator.userAgent;
+        const customerName = [data.vorname, data.nachname].filter(Boolean).join(" ") || data.praxis || "";
+        
+        // Create a simple hash of the signature data for integrity verification
+        const hashData = async (text: string) => {
+          const encoder = new TextEncoder();
+          const dataBuffer = encoder.encode(text);
+          const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
+          return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+        };
+
+        if (sigData) {
+          const sigHash = await hashData(sigData);
+          auditEntries.push({
+            contract_id: contractId,
+            signer_type: "customer" as const,
+            signer_name: customerName,
+            signer_email: data.email || null,
+            user_agent: userAgent,
+            signature_data_hash: sigHash,
+            created_by: user?.id,
+          });
+        }
+        if (vertriebSigData) {
+          const sigHash = await hashData(vertriebSigData);
+          auditEntries.push({
+            contract_id: contractId,
+            signer_type: "vertrieb" as const,
+            signer_name: data.sales_partner_name || profile?.full_name || "",
+            signer_email: profile?.email || null,
+            user_agent: userAgent,
+            signature_data_hash: sigHash,
+            created_by: user?.id,
+          });
+        }
+
+        if (auditEntries.length > 0) {
+          const { error: auditError } = await supabase.from("signature_audit_logs").insert(auditEntries);
+          if (auditError) console.error("Signature audit log error:", auditError);
+        }
       }
     },
     onSuccess: async (_, variables) => {
