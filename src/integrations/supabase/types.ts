@@ -534,12 +534,61 @@ export type Database = {
         }
         Relationships: []
       }
-      products: {
+      product_modules: {
         Row: {
           created_at: string
           description: string | null
           id: string
           is_active: boolean
+          monthly_price: number
+          name: string
+          product_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          monthly_price?: number
+          name: string
+          product_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          monthly_price?: number
+          name?: string
+          product_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_modules_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          base_license_includes: string | null
+          base_license_price: number | null
+          created_at: string
+          description: string | null
+          extra_unit_label: string | null
+          extra_unit_price: number | null
+          id: string
+          is_active: boolean
+          licensing_notes: string | null
           monthly_price: number
           name: string
           one_time_fee: number
@@ -555,10 +604,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          base_license_includes?: string | null
+          base_license_price?: number | null
           created_at?: string
           description?: string | null
+          extra_unit_label?: string | null
+          extra_unit_price?: number | null
           id?: string
           is_active?: boolean
+          licensing_notes?: string | null
           monthly_price?: number
           name: string
           one_time_fee?: number
@@ -574,10 +628,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          base_license_includes?: string | null
+          base_license_price?: number | null
           created_at?: string
           description?: string | null
+          extra_unit_label?: string | null
+          extra_unit_price?: number | null
           id?: string
           is_active?: boolean
+          licensing_notes?: string | null
           monthly_price?: number
           name?: string
           one_time_fee?: number
