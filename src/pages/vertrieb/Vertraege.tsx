@@ -337,6 +337,7 @@ export default function Vertraege() {
         created_by: user?.id,
         praxissystem: data.praxissystem || null,
         stundenaufwand_pro_woche: data.stundenaufwand_pro_woche || null,
+        selected_addon_modules: data.selected_modules.length > 0 ? data.selected_modules : [],
         ...(documentUrl ? { document_url: documentUrl, document_name: documentName } : {}),
       };
 
@@ -521,7 +522,7 @@ export default function Vertraege() {
       telefon: contract.telefon || "",
       email: contract.email || "",
       selected_products: contract.modules?.length > 0 ? contract.modules : (contract.product_name ? [contract.product_name] : []),
-      selected_modules: [],
+      selected_modules: contract.selected_addon_modules || [],
       license_count: contract.license_count,
       start_date: contract.start_date,
       duration_months: contract.duration_months,
@@ -811,7 +812,16 @@ export default function Vertraege() {
                      <td className="text-xs text-muted-foreground font-mono">{c.hfx_customer_number || "–"}</td>
                      <td className="font-medium text-foreground">{c.customer_name}</td>
                      <td className="text-muted-foreground text-sm">{c.mp_nr || "–"}</td>
-                    <td className="text-foreground">{c.product_name}</td>
+                    <td className="text-foreground">
+                      <div>
+                        {c.product_name}
+                        {c.selected_addon_modules?.length > 0 && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            + {c.selected_addon_modules.join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    </td>
                     <td className="text-muted-foreground">{c.sales_partner_name || "–"}</td>
                     <td className="text-muted-foreground">
                       {c.start_date && format(new Date(c.start_date), "dd.MM.yy", { locale: de })}

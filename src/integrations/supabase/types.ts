@@ -99,6 +99,7 @@ export type Database = {
           rechtsform: string | null
           sales_partner_id: string | null
           sales_partner_name: string | null
+          selected_addon_modules: string[] | null
           signature_data: string | null
           start_date: string
           status: string
@@ -152,6 +153,7 @@ export type Database = {
           rechtsform?: string | null
           sales_partner_id?: string | null
           sales_partner_name?: string | null
+          selected_addon_modules?: string[] | null
           signature_data?: string | null
           start_date: string
           status?: string
@@ -205,6 +207,7 @@ export type Database = {
           rechtsform?: string | null
           sales_partner_id?: string | null
           sales_partner_name?: string | null
+          selected_addon_modules?: string[] | null
           signature_data?: string | null
           start_date?: string
           status?: string
