@@ -1008,86 +1008,102 @@ export default function Vertraege() {
 
             {/* Produkte – Mehrfachauswahl */}
             <div className="space-y-3">
-              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Produkte (Mehrfachauswahl)</h4>
-              <div className="grid grid-cols-2 gap-2">
-                {products.map((p: any) => {
-                  const isSelected = form.selected_products.includes(p.name);
-                  const today = new Date();
-                  const hasPromo = p.promo_price != null && p.promo_end_date && new Date(p.promo_end_date) >= today;
-                  const baseFeeWaived = hasPromo && p.promo_base_fee_end_date && new Date(p.promo_base_fee_end_date) >= today;
-                  const displayMonthly = baseFeeWaived ? 0 : Number(p.monthly_price);
-                  const displayPerUnit = hasPromo ? Number(p.promo_price) : (p.price_per_unit != null ? Number(p.price_per_unit) : null);
+              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Produkte</h4>
+              {(() => {
+                // Sort products by relevance
+                const productOrder: Record<string, number> = {
+                  "HFX GOÄ - die KI für ihre Privatabrechnung": 1,
+                  "HFX EBM": 2, "HFX Doku": 3,
+                  "HFX Wingmann": 4, "HFX GOÄ/GOZ Permanent-Check": 5,
+                  "HFX GOÄ/GOZ Live-Check": 6, "HFX Praxismanagement Zahnmedizin": 7,
+                };
+                const sorted = [...products].sort((a: any, b: any) => (productOrder[a.name] ?? 99) - (productOrder[b.name] ?? 99));
 
-                  const recalcPrices = (nextProducts: string[]) => {
-                    const now = new Date();
-                    const totalMonthly = products
-                      .filter((pr: any) => nextProducts.includes(pr.name))
-                      .reduce((sum: number, pr: any) => {
-                        const promoActive = pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now;
-                        const bfWaived = promoActive && pr.promo_base_fee_end_date && new Date(pr.promo_base_fee_end_date) >= now;
-                        return sum + (bfWaived ? 0 : Number(pr.monthly_price));
-                      }, 0);
-                    const totalOneTime = products
-                      .filter((pr: any) => nextProducts.includes(pr.name))
-                      .reduce((sum: number, pr: any) => sum + Number(pr.one_time_fee), 0);
-                    return { totalMonthly, totalOneTime };
-                  };
+                const recalcPrices = (nextProducts: string[]) => {
+                  const now = new Date();
+                  const totalMonthly = products
+                    .filter((pr: any) => nextProducts.includes(pr.name))
+                    .reduce((sum: number, pr: any) => {
+                      const promoActive = pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now;
+                      const bfWaived = promoActive && pr.promo_base_fee_end_date && new Date(pr.promo_base_fee_end_date) >= now;
+                      return sum + (bfWaived ? 0 : Number(pr.monthly_price));
+                    }, 0);
+                  const totalOneTime = products
+                    .filter((pr: any) => nextProducts.includes(pr.name))
+                    .reduce((sum: number, pr: any) => sum + Number(pr.one_time_fee), 0);
+                  return { totalMonthly, totalOneTime };
+                };
 
-                  return (
-                    <div key={p.id} className="space-y-1">
-                      <label
-                        className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${
-                          isSelected ? "border-primary bg-primary/5" : "border-input hover:bg-muted/50"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => {
-                            const next = isSelected
-                              ? form.selected_products.filter((n) => n !== p.name)
-                              : [...form.selected_products, p.name];
-                            const { totalMonthly, totalOneTime } = recalcPrices(next);
-                            setForm((prev) => ({
-                              ...prev,
-                              selected_products: next,
-                              monthly_price: totalMonthly,
-                              one_time_fee: totalOneTime,
-                            }));
-                          }}
-                          className="rounded border-input"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium">{p.name}</span>
-                          {hasPromo ? (
-                            <>
-                              <span className="text-xs text-green-600 dark:text-green-400 font-medium block">
-                                🎉 Aktion: {displayPerUnit != null ? `${displayPerUnit.toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."} dauerhaft` : `${displayMonthly.toLocaleString("de-DE")} €/Mon.`}
+                const toggleProduct = (name: string) => {
+                  const isSelected = form.selected_products.includes(name);
+                  const next = isSelected
+                    ? form.selected_products.filter((n) => n !== name)
+                    : [...form.selected_products, name];
+                  const { totalMonthly, totalOneTime } = recalcPrices(next);
+                  setForm((prev) => ({
+                    ...prev,
+                    selected_products: next,
+                    monthly_price: totalMonthly,
+                    one_time_fee: totalOneTime,
+                  }));
+                };
+
+                return (
+                  <div className="space-y-1.5">
+                    {sorted.map((p: any) => {
+                      const isSelected = form.selected_products.includes(p.name);
+                      const today = new Date();
+                      const hasPromo = p.promo_price != null && p.promo_end_date && new Date(p.promo_end_date) >= today;
+                      const baseFeeWaived = hasPromo && p.promo_base_fee_end_date && new Date(p.promo_base_fee_end_date) >= today;
+                      const displayMonthly = baseFeeWaived ? 0 : Number(p.monthly_price);
+                      const displayPerUnit = hasPromo ? Number(p.promo_price) : (p.price_per_unit != null ? Number(p.price_per_unit) : null);
+
+                      return (
+                        <label
+                          key={p.id}
+                          className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                            isSelected
+                              ? "border-primary bg-primary/5 shadow-sm"
+                              : "border-input hover:bg-muted/50"
+                          }`}
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleProduct(p.name)}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-semibold">{p.name}</span>
+                              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap ml-2">
+                                {hasPromo && baseFeeWaived
+                                  ? "0 €/Mon."
+                                  : `${Number(p.monthly_price).toLocaleString("de-DE")} €/Mon.`}
+                                {displayPerUnit != null && ` + ${displayPerUnit.toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."}`}
                               </span>
-                              {baseFeeWaived && (
-                                <span className="text-xs text-green-600 dark:text-green-400 block">
-                                  Keine Grundgebühr bis {new Date(p.promo_base_fee_end_date).toLocaleDateString("de-DE")}
+                            </div>
+                            {hasPromo && (
+                              <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                                <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                                  🎉 Aktion bis {new Date(p.promo_end_date).toLocaleDateString("de-DE")}
                                 </span>
-                              )}
-                              <span className="text-xs text-muted-foreground block line-through">
-                                Regulär: {Number(p.monthly_price).toLocaleString("de-DE")} €/Mon.{p.price_per_unit != null ? ` + ${Number(p.price_per_unit).toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."}` : ""}
-                              </span>
-                              <span className="text-xs text-muted-foreground block">
-                                Bei Abschluss bis {new Date(p.promo_end_date).toLocaleDateString("de-DE")}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-xs text-muted-foreground block">
-                              {Number(p.monthly_price).toLocaleString("de-DE")} €/Mon.
-                              {p.price_per_unit != null && ` + ${Number(p.price_per_unit).toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."}`}
-                            </span>
-                          )}
-                        </div>
-                      </label>
-                    </div>
-                  );
-                })}
-              </div>
+                                {baseFeeWaived && (
+                                  <span className="text-xs text-green-600 dark:text-green-400">
+                                    Keine Grundgebühr bis {new Date(p.promo_base_fee_end_date).toLocaleDateString("de-DE")}
+                                  </span>
+                                )}
+                                <span className="text-xs text-muted-foreground line-through">
+                                  Regulär: {Number(p.monthly_price).toLocaleString("de-DE")} €/Mon.
+                                  {p.price_per_unit != null && ` + ${Number(p.price_per_unit).toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."}`}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
               {/* HFX EBM sub-section: BSNR/LANR + Zusatzmodule */}
               {form.selected_products.includes("HFX EBM") && (
