@@ -843,51 +843,61 @@ export default function Vertraege() {
               Keine Verträge gefunden.
             </div>
           ) : (
-            <table className="data-table">
-              <thead className="bg-muted/50">
-                 <tr>
-                   <th>HFX-Nr.</th>
-                   <th>Kunde</th>
-                   <th>MP-Nr.</th>
-                   <th>Produkt</th>
-                   <th>Vertriebspartner</th>
-                   <th>Laufzeit</th>
-                   <th>Monatspreis</th>
-                   <th>Status</th>
-                   <th>Dokument</th>
-                   <th className="w-12"></th>
+            <table className="data-table w-full">
+              <thead>
+                 <tr className="bg-accent/5">
+                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">HFX-Nr.</th>
+                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Kunde</th>
+                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">MP-Nr.</th>
+                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 max-w-[220px]">Produkt</th>
+                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Partner</th>
+                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Laufzeit</th>
+                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 text-right">Monatspreis</th>
+                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 text-center">Status</th>
+                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Dokument</th>
+                   <th className="w-10"></th>
                  </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border/50">
                  {filtered.map((c: any) => (
-                   <tr key={c.id}>
-                     <td className="text-xs text-muted-foreground font-mono">{c.hfx_customer_number || "–"}</td>
-                     <td className="font-medium text-foreground">{c.customer_name}</td>
-                     <td className="text-muted-foreground text-sm">{c.mp_nr || "–"}</td>
-                    <td className="text-foreground">
-                      <div>
-                        {c.product_name}
+                   <tr key={c.id} className="hover:bg-muted/30 transition-colors">
+                     <td className="py-3.5 px-4 text-xs text-muted-foreground font-mono whitespace-nowrap">{c.hfx_customer_number || "–"}</td>
+                     <td className="py-3.5 px-4 font-medium text-foreground whitespace-nowrap">{c.customer_name}</td>
+                     <td className="py-3.5 px-4 text-muted-foreground text-sm">{c.mp_nr || "–"}</td>
+                    <td className="py-3.5 px-4 max-w-[220px]">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap gap-1">
+                          {c.product_name.split(", ").map((p: string, i: number) => (
+                            <Badge key={i} variant="secondary" className="text-xs font-normal px-2 py-0.5 whitespace-nowrap">
+                              {p}
+                            </Badge>
+                          ))}
+                        </div>
                         {c.selected_addon_modules?.length > 0 && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
+                          <p className="text-xs text-muted-foreground leading-tight">
                             + {c.selected_addon_modules.join(", ")}
                           </p>
                         )}
                       </div>
                     </td>
-                    <td className="text-muted-foreground">{c.sales_partner_name || "–"}</td>
-                    <td className="text-muted-foreground">
-                      {c.start_date && format(new Date(c.start_date), "dd.MM.yy", { locale: de })}
-                      {" – "}
-                      {c.end_date && format(new Date(c.end_date), "dd.MM.yy", { locale: de })}
-                      <span className="block text-xs">{c.duration_months} Mon.</span>
+                    <td className="py-3.5 px-4 text-sm text-muted-foreground whitespace-nowrap">{c.sales_partner_name || "–"}</td>
+                    <td className="py-3.5 px-4 text-sm text-muted-foreground whitespace-nowrap">
+                      <div className="leading-snug">
+                        {c.start_date && format(new Date(c.start_date), "dd.MM.yy", { locale: de })}
+                        {" – "}
+                        {c.end_date && format(new Date(c.end_date), "dd.MM.yy", { locale: de })}
+                        <span className="block text-xs text-muted-foreground/70">{c.duration_months} Mon.</span>
+                      </div>
                     </td>
-                    <td className="font-medium text-foreground">
-                      {Number(c.monthly_price).toLocaleString("de-DE")} €
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      <span className="font-semibold text-foreground tabular-nums">
+                        {Number(c.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+                      </span>
                       {Number(c.discount_percent) > 0 && (
-                        <span className="block text-xs text-green-600">-{c.discount_percent}%</span>
+                        <span className="block text-xs text-success">-{c.discount_percent}%</span>
                       )}
                     </td>
-                    <td>
+                    <td className="py-3.5 px-4 text-center">
                       <Badge className={statusConfig[c.status]?.class || ""}>
                         {statusConfig[c.status]?.label || c.status}
                       </Badge>
