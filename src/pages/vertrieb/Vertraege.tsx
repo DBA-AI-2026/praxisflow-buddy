@@ -1265,10 +1265,7 @@ export default function Vertraege() {
                 <Eye className="h-4 w-4" />
                 Vorschau PDF
               </Button>
-              <Button type="button" variant="outline" onClick={() => handleTemplatePdf(form)} className="gap-2" disabled={!isFormComplete}>
-                <FileText className="h-4 w-4" />
-                Vertragsdokument
-              </Button>
+              
               <div className="flex gap-2 ml-auto">
                 <Button type="button" variant="outline" onClick={closeDialog}>Abbrechen</Button>
                 <Button type="button" variant="secondary" onClick={handleSaveDraft} disabled={upsertMutation.isPending}>
