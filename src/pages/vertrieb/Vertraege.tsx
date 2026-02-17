@@ -1327,10 +1327,6 @@ export default function Vertraege() {
                   <p className="text-xs text-muted-foreground">{form.selected_products.length} Produkt(e) ausgewählt</p>
                 </div>
               )}
-              <div className="w-1/2">
-                <Label>Lizenzen</Label>
-                <Input type="number" min={1} value={form.license_count} onChange={(e) => set("license_count", Number(e.target.value))} />
-              </div>
             </div>
 
 
