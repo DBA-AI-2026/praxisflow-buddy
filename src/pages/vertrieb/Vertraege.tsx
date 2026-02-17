@@ -418,57 +418,58 @@ export default function Vertraege() {
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
       toast({ title: editId ? "Vertrag aktualisiert" : "Vertrag erstellt" });
       // Auto-open template PDF after creating a new contract (only if not a draft)
-      if (!editId && variables.status !== "entwurf") {
+      if (!editId && variables.status === "gezeichnet") {
         handleTemplatePdf(form);
-        // Send confirmation email if email is provided
-        if (form.email || profile?.email) {
-          try {
-            const templateRes = await fetch("/templates/vertrag-honorarfuchs.pdf");
-            const templateBytes = await templateRes.arrayBuffer();
-            let sigData = form.signature_data;
-            if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
-              sigData = signaturePadRef.current.toDataURL();
-            }
-            let vertriebSigData = form.vertrieb_signature_data;
-            if (vertriebSignaturePadRef.current && !vertriebSignaturePadRef.current.isEmpty()) {
-              vertriebSigData = vertriebSignaturePadRef.current.toDataURL();
-            }
-            const pdfBytes = await fillContractTemplate(templateBytes, {
-              mp_nr: form.mp_nr, praxis: form.praxis, fachrichtung: form.fachrichtung,
-              rechtsform: form.rechtsform, vorname: form.vorname, nachname: form.nachname,
-              adresse: form.adresse, praxisanschrift: form.praxisanschrift, plz: form.plz,
-              telefon: form.telefon, email: form.email,
-              kontoinhaber: form.kontoinhaber, kontoinhaber_strasse: form.kontoinhaber_strasse,
-              kontoinhaber_plz_ort: form.kontoinhaber_plz_ort, bank_name: form.bank_name,
-              iban: form.iban, bic: form.bic, bsnr: form.bsnr,
-              lanr: [form.lanr, form.lanr_2, form.lanr_3].filter(Boolean).join(", "),
-              weitere_bsnr: [form.weitere_bsnr_1, form.weitere_bsnr_2, form.weitere_bsnr_3].filter(Boolean).join(", "),
-              weitere_lanr: form.weitere_lanr, ort: form.ort,
-              monthly_price: form.monthly_price, start_date: form.start_date,
-              end_date: addMonths(new Date(form.start_date), form.duration_months).toISOString().split("T")[0],
-              modules: form.selected_products, duration_months: form.duration_months,
-              notes: form.notes, signature_data: sigData, vertrieb_signature_data: vertriebSigData,
-              praxissystem: form.praxissystem, stundenaufwand_pro_woche: form.stundenaufwand_pro_woche,
-              selected_addon_modules: form.selected_modules,
-            });
-            const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBytes)));
-            const customerName = [form.vorname, form.nachname].filter(Boolean).join(" ");
-            await supabase.functions.invoke("send-contract-email", {
-              body: {
-                email: form.email || null,
-                salesPartnerEmail: profile?.email || null,
-                customerName,
-                pdfBase64,
-                products: form.selected_products.join(", "),
-                startDate: form.start_date,
-              },
-            });
-            const sentTo = [form.email, profile?.email].filter(Boolean).join(", ");
-            toast({ title: "Bestätigungs-E-Mail gesendet", description: `An ${sentTo}` });
-          } catch (emailErr: any) {
-            console.error("Email send error:", emailErr);
-            toast({ title: "E-Mail konnte nicht gesendet werden", description: emailErr.message, variant: "destructive" });
+        // Send notification emails to customer, partner and department
+        try {
+          const templateRes = await fetch("/templates/vertrag-honorarfuchs.pdf");
+          const templateBytes = await templateRes.arrayBuffer();
+          let sigData = form.signature_data;
+          if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
+            sigData = signaturePadRef.current.toDataURL();
           }
+          let vertriebSigData = form.vertrieb_signature_data;
+          if (vertriebSignaturePadRef.current && !vertriebSignaturePadRef.current.isEmpty()) {
+            vertriebSigData = vertriebSignaturePadRef.current.toDataURL();
+          }
+          const pdfBytes = await fillContractTemplate(templateBytes, {
+            mp_nr: form.mp_nr, praxis: form.praxis, fachrichtung: form.fachrichtung,
+            rechtsform: form.rechtsform, vorname: form.vorname, nachname: form.nachname,
+            adresse: form.adresse, praxisanschrift: form.praxisanschrift, plz: form.plz,
+            telefon: form.telefon, email: form.email,
+            kontoinhaber: form.kontoinhaber, kontoinhaber_strasse: form.kontoinhaber_strasse,
+            kontoinhaber_plz_ort: form.kontoinhaber_plz_ort, bank_name: form.bank_name,
+            iban: form.iban, bic: form.bic, bsnr: form.bsnr,
+            lanr: [form.lanr, form.lanr_2, form.lanr_3].filter(Boolean).join(", "),
+            weitere_bsnr: [form.weitere_bsnr_1, form.weitere_bsnr_2, form.weitere_bsnr_3].filter(Boolean).join(", "),
+            weitere_lanr: form.weitere_lanr, ort: form.ort,
+            monthly_price: form.monthly_price, start_date: form.start_date,
+            end_date: addMonths(new Date(form.start_date), form.duration_months).toISOString().split("T")[0],
+            modules: form.selected_products, duration_months: form.duration_months,
+            notes: form.notes, signature_data: sigData, vertrieb_signature_data: vertriebSigData,
+            praxissystem: form.praxissystem, stundenaufwand_pro_woche: form.stundenaufwand_pro_woche,
+            selected_addon_modules: form.selected_modules,
+          });
+          const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBytes)));
+          const customerName = [form.vorname, form.nachname].filter(Boolean).join(" ");
+          await supabase.functions.invoke("send-contract-email", {
+            body: {
+              email: form.email || null,
+              salesPartnerEmail: profile?.email || null,
+              departmentEmail: "info@honorarfuchs.de",
+              customerName,
+              pdfBase64,
+              products: form.selected_products.join(", "),
+              startDate: form.start_date,
+              hfxNumber: (form as any).hfx_customer_number || null,
+              emailType: "gezeichnet",
+            },
+          });
+          const sentTo = [form.email, profile?.email, "info@honorarfuchs.de"].filter(Boolean).join(", ");
+          toast({ title: "Vertragsbenachrichtigungen gesendet", description: `An ${sentTo}` });
+        } catch (emailErr: any) {
+          console.error("Email send error:", emailErr);
+          toast({ title: "E-Mail konnte nicht gesendet werden", description: emailErr.message, variant: "destructive" });
         }
       }
       closeDialog();
