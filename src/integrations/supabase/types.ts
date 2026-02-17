@@ -94,6 +94,7 @@ export type Database = {
           plz: string | null
           praxis: string | null
           praxisanschrift: string | null
+          praxissystem: string | null
           product_name: string
           rechtsform: string | null
           sales_partner_id: string | null
@@ -101,6 +102,7 @@ export type Database = {
           signature_data: string | null
           start_date: string
           status: string
+          stundenaufwand_pro_woche: string | null
           telefon: string | null
           updated_at: string
           vertrieb_signature_data: string | null
@@ -145,6 +147,7 @@ export type Database = {
           plz?: string | null
           praxis?: string | null
           praxisanschrift?: string | null
+          praxissystem?: string | null
           product_name: string
           rechtsform?: string | null
           sales_partner_id?: string | null
@@ -152,6 +155,7 @@ export type Database = {
           signature_data?: string | null
           start_date: string
           status?: string
+          stundenaufwand_pro_woche?: string | null
           telefon?: string | null
           updated_at?: string
           vertrieb_signature_data?: string | null
@@ -196,6 +200,7 @@ export type Database = {
           plz?: string | null
           praxis?: string | null
           praxisanschrift?: string | null
+          praxissystem?: string | null
           product_name?: string
           rechtsform?: string | null
           sales_partner_id?: string | null
@@ -203,6 +208,7 @@ export type Database = {
           signature_data?: string | null
           start_date?: string
           status?: string
+          stundenaufwand_pro_woche?: string | null
           telefon?: string | null
           updated_at?: string
           vertrieb_signature_data?: string | null
@@ -538,6 +544,9 @@ export type Database = {
           name: string
           one_time_fee: number
           price_per_unit: number | null
+          price_per_unit_12m: number | null
+          price_per_unit_3m: number | null
+          price_per_unit_6m: number | null
           price_per_unit_label: string | null
           promo_base_fee_end_date: string | null
           promo_end_date: string | null
@@ -554,6 +563,9 @@ export type Database = {
           name: string
           one_time_fee?: number
           price_per_unit?: number | null
+          price_per_unit_12m?: number | null
+          price_per_unit_3m?: number | null
+          price_per_unit_6m?: number | null
           price_per_unit_label?: string | null
           promo_base_fee_end_date?: string | null
           promo_end_date?: string | null
@@ -570,6 +582,9 @@ export type Database = {
           name?: string
           one_time_fee?: number
           price_per_unit?: number | null
+          price_per_unit_12m?: number | null
+          price_per_unit_3m?: number | null
+          price_per_unit_6m?: number | null
           price_per_unit_label?: string | null
           promo_base_fee_end_date?: string | null
           promo_end_date?: string | null

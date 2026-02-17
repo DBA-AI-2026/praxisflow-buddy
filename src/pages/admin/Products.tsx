@@ -24,6 +24,9 @@ interface ProductForm {
   one_time_fee: number;
   price_per_unit: number | null;
   price_per_unit_label: string;
+  price_per_unit_3m: number | null;
+  price_per_unit_6m: number | null;
+  price_per_unit_12m: number | null;
   promo_price: number | null;
   promo_price_label: string;
   promo_end_date: string;
@@ -38,6 +41,9 @@ const emptyForm: ProductForm = {
   one_time_fee: 0,
   price_per_unit: null,
   price_per_unit_label: "",
+  price_per_unit_3m: null,
+  price_per_unit_6m: null,
+  price_per_unit_12m: null,
   promo_price: null,
   promo_price_label: "",
   promo_end_date: "",
@@ -71,6 +77,9 @@ export default function AdminProducts() {
         ...data,
         price_per_unit: data.price_per_unit || null,
         price_per_unit_label: data.price_per_unit_label || null,
+        price_per_unit_3m: data.price_per_unit_3m || null,
+        price_per_unit_6m: data.price_per_unit_6m || null,
+        price_per_unit_12m: data.price_per_unit_12m || null,
         promo_price: data.promo_price || null,
         promo_price_label: data.promo_price_label || null,
         promo_end_date: data.promo_end_date || null,
@@ -119,6 +128,9 @@ export default function AdminProducts() {
       one_time_fee: product.one_time_fee,
       price_per_unit: product.price_per_unit ?? null,
       price_per_unit_label: product.price_per_unit_label || "",
+      price_per_unit_3m: product.price_per_unit_3m ?? null,
+      price_per_unit_6m: product.price_per_unit_6m ?? null,
+      price_per_unit_12m: product.price_per_unit_12m ?? null,
       promo_price: product.promo_price ?? null,
       promo_price_label: product.promo_price_label || "",
       promo_end_date: product.promo_end_date || "",
@@ -196,9 +208,13 @@ export default function AdminProducts() {
                   <TableCell>
                     {p.price_per_unit != null ? (
                       <div>
-                        <span>{formatPrice(p.price_per_unit)}</span>
-                        {p.price_per_unit_label && (
-                          <p className="text-xs text-muted-foreground">{p.price_per_unit_label}</p>
+                        <span>{formatPrice(p.price_per_unit)}/{p.price_per_unit_label || "Stk."}</span>
+                        {(p.price_per_unit_3m != null || p.price_per_unit_6m != null || p.price_per_unit_12m != null) && (
+                          <p className="text-xs text-muted-foreground">
+                            {p.price_per_unit_3m != null && `3M: ${formatPrice(p.price_per_unit_3m)} `}
+                            {p.price_per_unit_6m != null && `6M: ${formatPrice(p.price_per_unit_6m)} `}
+                            {p.price_per_unit_12m != null && `12M: ${formatPrice(p.price_per_unit_12m)}`}
+                          </p>
                         )}
                       </div>
                     ) : "–"}
@@ -273,6 +289,27 @@ export default function AdminProducts() {
                 <Input value={form.price_per_unit_label} onChange={(e) => set("price_per_unit_label", e.target.value)} placeholder="z.B. pro geprüfter Rechnung" />
               </div>
             </div>
+
+            {/* Laufzeitabhängige Preise */}
+            {form.price_per_unit != null && (
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Laufzeitabhängige Stückpreise (optional)</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label>3 Monate (€)</Label>
+                    <Input type="number" min={0} step="0.01" value={form.price_per_unit_3m ?? ""} onChange={(e) => set("price_per_unit_3m", e.target.value ? Number(e.target.value) : null)} placeholder="z.B. 159" />
+                  </div>
+                  <div>
+                    <Label>6 Monate (€)</Label>
+                    <Input type="number" min={0} step="0.01" value={form.price_per_unit_6m ?? ""} onChange={(e) => set("price_per_unit_6m", e.target.value ? Number(e.target.value) : null)} placeholder="z.B. 149" />
+                  </div>
+                  <div>
+                    <Label>12 Monate (€)</Label>
+                    <Input type="number" min={0} step="0.01" value={form.price_per_unit_12m ?? ""} onChange={(e) => set("price_per_unit_12m", e.target.value ? Number(e.target.value) : null)} placeholder="z.B. 139" />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Aktionspreis */}
             <div className="grid grid-cols-2 gap-3">
