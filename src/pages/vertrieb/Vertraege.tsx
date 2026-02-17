@@ -55,9 +55,9 @@ import SignaturePad from "signature_pad";
 
 const statusConfig: Record<string, { label: string; class: string }> = {
   entwurf: { label: "Entwurf", class: "bg-muted text-muted-foreground" },
-  aktiv: { label: "Aktiv", class: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
-  gekuendigt: { label: "Gekündigt", class: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400" },
-  beendet: { label: "Beendet", class: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" },
+  aktiv: { label: "Aktiv", class: "bg-success/10 text-success" },
+  gekuendigt: { label: "Gekündigt", class: "bg-warning/10 text-warning" },
+  beendet: { label: "Beendet", class: "bg-destructive/10 text-destructive" },
 };
 
 // Product options are now loaded from the database
