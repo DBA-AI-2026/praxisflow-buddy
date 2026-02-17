@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -59,7 +60,7 @@ interface ContractFormData {
   telefon: string;
   email: string;
   selected_products: string[];
-  
+  selected_modules: string[];
   license_count: number;
   start_date: string;
   duration_months: number;
@@ -107,6 +108,7 @@ const emptyForm: ContractFormData = {
   telefon: "",
   email: "",
   selected_products: [],
+  selected_modules: [],
   license_count: 1,
   start_date: new Date().toISOString().split("T")[0],
   duration_months: 12,
@@ -238,6 +240,25 @@ export default function Vertraege() {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Find the EBM product ID to load its modules
+  const ebmProduct = products.find((p: any) => p.name === "HFX EBM");
+
+  const { data: ebmModules = [] } = useQuery({
+    queryKey: ["product-modules-ebm", ebmProduct?.id],
+    queryFn: async () => {
+      if (!ebmProduct?.id) return [];
+      const { data, error } = await supabase
+        .from("product_modules")
+        .select("*")
+        .eq("product_id", ebmProduct.id)
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!ebmProduct?.id,
   });
 
   const upsertMutation = useMutation({
@@ -500,7 +521,7 @@ export default function Vertraege() {
       telefon: contract.telefon || "",
       email: contract.email || "",
       selected_products: contract.modules?.length > 0 ? contract.modules : (contract.product_name ? [contract.product_name] : []),
-      
+      selected_modules: [],
       license_count: contract.license_count,
       start_date: contract.start_date,
       duration_months: contract.duration_months,
@@ -1114,7 +1135,63 @@ export default function Vertraege() {
             </div>
             )}
 
-            {/* Praxissystem & Stundenaufwand – nur bei HFX Praxismanagement Zahnmedizin */}
+            {/* EBM Zusatzmodule – nur bei HFX EBM */}
+            {form.selected_products.includes("HFX EBM") && ebmModules.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">EBM Zusatzmodule (optional)</h4>
+                <div className="space-y-2">
+                  {ebmModules.map((mod: any) => {
+                    const isChecked = form.selected_modules.includes(mod.name);
+                    return (
+                      <label
+                        key={mod.id}
+                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                          isChecked ? "border-primary bg-primary/5" : "border-input hover:bg-muted/50"
+                        }`}
+                      >
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={() => {
+                            const next = isChecked
+                              ? form.selected_modules.filter((n) => n !== mod.name)
+                              : [...form.selected_modules, mod.name];
+                            setForm((prev) => ({ ...prev, selected_modules: next }));
+                          }}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">{mod.name}</span>
+                            <span className="text-sm font-medium text-primary">{Number(mod.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.</span>
+                          </div>
+                          {mod.description && (
+                            <p className="text-xs text-muted-foreground mt-1">{mod.description}</p>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+                {form.selected_modules.length > 0 && (
+                  <div className="p-2 rounded bg-muted/50 text-sm">
+                    <span className="text-muted-foreground">Zusatzmodule: </span>
+                    <span className="font-medium">
+                      +{ebmModules
+                        .filter((m: any) => form.selected_modules.includes(m.name))
+                        .reduce((sum: number, m: any) => sum + Number(m.monthly_price), 0)
+                        .toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.
+                    </span>
+                  </div>
+                )}
+                {/* Licensing info */}
+                {ebmProduct?.licensing_notes && (
+                  <div className="p-2 rounded border bg-muted/30 text-xs text-muted-foreground">
+                    ℹ️ {ebmProduct.licensing_notes}
+                  </div>
+                )}
+              </div>
+            )}
+
             {form.selected_products.includes("HFX Praxismanagement Zahnmedizin") && (
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Praxismanagement Details</h4>
