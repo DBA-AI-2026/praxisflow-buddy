@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
       const partnerHtml = `<!DOCTYPE html><html><head><style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #1e40af, #3b82f6); color: white; padding: 30px 20px; border-radius: 8px 8px 0 0; text-align: center; }
+        .header { background: linear-gradient(135deg, #b6193d, #d42050); color: white; padding: 30px 20px; border-radius: 8px 8px 0 0; text-align: center; }
         .content { background: #f9fafb; padding: 30px 20px; border: 1px solid #e5e7eb; border-top: none; }
         .footer { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; font-size: 14px; color: #6b7280; }
       </style></head><body><div class="container">
