@@ -1088,6 +1088,156 @@ export default function Vertraege() {
                   );
                 })}
               </div>
+
+              {/* HFX EBM sub-section: BSNR/LANR + Zusatzmodule */}
+              {form.selected_products.includes("HFX EBM") && (
+                <div className="ml-4 pl-4 border-l-2 border-primary/30 space-y-4 mt-2">
+                  <h5 className="text-xs font-semibold text-primary uppercase tracking-wider">HFX EBM – Details</h5>
+
+                  {/* BSNR & LANR */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground">BSNR &amp; LANR</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>BSNR</Label>
+                        <Input value={form.bsnr} onChange={(e) => set("bsnr", e.target.value)} placeholder="Betriebsstättennummer" />
+                      </div>
+                      <div>
+                        <Label>LANR 1</Label>
+                        <Input value={form.lanr} onChange={(e) => set("lanr", e.target.value)} placeholder="Lebenslange Arztnummer" />
+                      </div>
+                      <div>
+                        <Label>LANR 2</Label>
+                        <Input value={form.lanr_2} onChange={(e) => set("lanr_2", e.target.value)} placeholder="Weitere LANR" />
+                      </div>
+                      <div>
+                        <Label>LANR 3</Label>
+                        <Input value={form.lanr_3} onChange={(e) => set("lanr_3", e.target.value)} placeholder="Weitere LANR" />
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="text-xs text-muted-foreground mt-2 block">Weitere Betriebsstätten</Label>
+                      </div>
+                      <div>
+                        <Label>Weitere BSNR 1</Label>
+                        <Input value={form.weitere_bsnr_1} onChange={(e) => set("weitere_bsnr_1", e.target.value)} placeholder="Zusätzliche BSNR" />
+                      </div>
+                      <div>
+                        <Label>Weitere BSNR 2</Label>
+                        <Input value={form.weitere_bsnr_2} onChange={(e) => set("weitere_bsnr_2", e.target.value)} placeholder="Zusätzliche BSNR" />
+                      </div>
+                      <div>
+                        <Label>Weitere BSNR 3</Label>
+                        <Input value={form.weitere_bsnr_3} onChange={(e) => set("weitere_bsnr_3", e.target.value)} placeholder="Zusätzliche BSNR" />
+                      </div>
+                      <div>
+                        <Label>Weitere LANR</Label>
+                        <Input value={form.weitere_lanr} onChange={(e) => set("weitere_lanr", e.target.value)} placeholder="Zusätzliche LANR" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* EBM Zusatzmodule */}
+                  {ebmModules.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-muted-foreground">Zusatzmodule (optional)</Label>
+                      <div className="space-y-2">
+                        {ebmModules.map((mod: any) => {
+                          const isChecked = form.selected_modules.includes(mod.name);
+                          return (
+                            <label
+                              key={mod.id}
+                              className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                                isChecked ? "border-primary bg-primary/5" : "border-input hover:bg-muted/50"
+                              }`}
+                            >
+                              <Checkbox
+                                checked={isChecked}
+                                onCheckedChange={() => {
+                                  const next = isChecked
+                                    ? form.selected_modules.filter((n) => n !== mod.name)
+                                    : [...form.selected_modules, mod.name];
+                                  setForm((prev) => ({ ...prev, selected_modules: next }));
+                                }}
+                                className="mt-0.5"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium">{mod.name}</span>
+                                  <span className="text-sm font-medium text-primary">{Number(mod.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.</span>
+                                </div>
+                                {mod.description && (
+                                  <p className="text-xs text-muted-foreground mt-1">{mod.description}</p>
+                                )}
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      {form.selected_modules.length > 0 && (
+                        <div className="p-2 rounded bg-muted/50 text-sm">
+                          <span className="text-muted-foreground">Zusatzmodule: </span>
+                          <span className="font-medium">
+                            +{ebmModules
+                              .filter((m: any) => form.selected_modules.includes(m.name))
+                              .reduce((sum: number, m: any) => sum + Number(m.monthly_price), 0)
+                              .toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.
+                          </span>
+                        </div>
+                      )}
+                      {ebmProduct?.licensing_notes && (
+                        <div className="p-2 rounded border bg-muted/30 text-xs text-muted-foreground">
+                          ℹ️ {ebmProduct.licensing_notes}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* HFX Doku sub-section: BSNR/LANR (ohne Zusatzmodule) */}
+              {form.selected_products.includes("HFX Doku") && !form.selected_products.includes("HFX EBM") && (
+                <div className="ml-4 pl-4 border-l-2 border-primary/30 space-y-3 mt-2">
+                  <h5 className="text-xs font-semibold text-primary uppercase tracking-wider">HFX Doku – BSNR &amp; LANR</h5>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>BSNR</Label>
+                      <Input value={form.bsnr} onChange={(e) => set("bsnr", e.target.value)} placeholder="Betriebsstättennummer" />
+                    </div>
+                    <div>
+                      <Label>LANR 1</Label>
+                      <Input value={form.lanr} onChange={(e) => set("lanr", e.target.value)} placeholder="Lebenslange Arztnummer" />
+                    </div>
+                    <div>
+                      <Label>LANR 2</Label>
+                      <Input value={form.lanr_2} onChange={(e) => set("lanr_2", e.target.value)} placeholder="Weitere LANR" />
+                    </div>
+                    <div>
+                      <Label>LANR 3</Label>
+                      <Input value={form.lanr_3} onChange={(e) => set("lanr_3", e.target.value)} placeholder="Weitere LANR" />
+                    </div>
+                    <div className="col-span-2">
+                      <Label className="text-xs text-muted-foreground mt-2 block">Weitere Betriebsstätten</Label>
+                    </div>
+                    <div>
+                      <Label>Weitere BSNR 1</Label>
+                      <Input value={form.weitere_bsnr_1} onChange={(e) => set("weitere_bsnr_1", e.target.value)} placeholder="Zusätzliche BSNR" />
+                    </div>
+                    <div>
+                      <Label>Weitere BSNR 2</Label>
+                      <Input value={form.weitere_bsnr_2} onChange={(e) => set("weitere_bsnr_2", e.target.value)} placeholder="Zusätzliche BSNR" />
+                    </div>
+                    <div>
+                      <Label>Weitere BSNR 3</Label>
+                      <Input value={form.weitere_bsnr_3} onChange={(e) => set("weitere_bsnr_3", e.target.value)} placeholder="Zusätzliche BSNR" />
+                    </div>
+                    <div>
+                      <Label>Weitere LANR</Label>
+                      <Input value={form.weitere_lanr} onChange={(e) => set("weitere_lanr", e.target.value)} placeholder="Zusätzliche LANR" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {form.selected_products.length > 0 && (
                 <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
                   <p className="text-sm font-medium">
@@ -1115,106 +1265,6 @@ export default function Vertraege() {
               </div>
             </div>
 
-            {/* BSNR & LANR – nur bei HFX EBM oder HFX Doku */}
-            {(form.selected_products.includes("HFX EBM") || form.selected_products.includes("HFX Doku")) && (
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">BSNR &amp; LANR erfassen</h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>BSNR</Label>
-                  <Input value={form.bsnr} onChange={(e) => set("bsnr", e.target.value)} placeholder="Betriebsstättennummer" />
-                </div>
-                <div>
-                  <Label>LANR 1</Label>
-                  <Input value={form.lanr} onChange={(e) => set("lanr", e.target.value)} placeholder="Lebenslange Arztnummer" />
-                </div>
-                <div>
-                  <Label>LANR 2</Label>
-                  <Input value={form.lanr_2} onChange={(e) => set("lanr_2", e.target.value)} placeholder="Weitere LANR" />
-                </div>
-                <div>
-                  <Label>LANR 3</Label>
-                  <Input value={form.lanr_3} onChange={(e) => set("lanr_3", e.target.value)} placeholder="Weitere LANR" />
-                </div>
-                <div className="col-span-2">
-                  <Label className="text-xs text-muted-foreground mt-2 block">Weitere Betriebsstätten</Label>
-                </div>
-                <div>
-                  <Label>Weitere BSNR 1</Label>
-                  <Input value={form.weitere_bsnr_1} onChange={(e) => set("weitere_bsnr_1", e.target.value)} placeholder="Zusätzliche BSNR" />
-                </div>
-                <div>
-                  <Label>Weitere BSNR 2</Label>
-                  <Input value={form.weitere_bsnr_2} onChange={(e) => set("weitere_bsnr_2", e.target.value)} placeholder="Zusätzliche BSNR" />
-                </div>
-                <div>
-                  <Label>Weitere BSNR 3</Label>
-                  <Input value={form.weitere_bsnr_3} onChange={(e) => set("weitere_bsnr_3", e.target.value)} placeholder="Zusätzliche BSNR" />
-                </div>
-                <div>
-                  <Label>Weitere LANR</Label>
-                  <Input value={form.weitere_lanr} onChange={(e) => set("weitere_lanr", e.target.value)} placeholder="Zusätzliche LANR" />
-                </div>
-              </div>
-            </div>
-            )}
-
-            {/* EBM Zusatzmodule – nur bei HFX EBM */}
-            {form.selected_products.includes("HFX EBM") && ebmModules.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">EBM Zusatzmodule (optional)</h4>
-                <div className="space-y-2">
-                  {ebmModules.map((mod: any) => {
-                    const isChecked = form.selected_modules.includes(mod.name);
-                    return (
-                      <label
-                        key={mod.id}
-                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                          isChecked ? "border-primary bg-primary/5" : "border-input hover:bg-muted/50"
-                        }`}
-                      >
-                        <Checkbox
-                          checked={isChecked}
-                          onCheckedChange={() => {
-                            const next = isChecked
-                              ? form.selected_modules.filter((n) => n !== mod.name)
-                              : [...form.selected_modules, mod.name];
-                            setForm((prev) => ({ ...prev, selected_modules: next }));
-                          }}
-                          className="mt-0.5"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{mod.name}</span>
-                            <span className="text-sm font-medium text-primary">{Number(mod.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.</span>
-                          </div>
-                          {mod.description && (
-                            <p className="text-xs text-muted-foreground mt-1">{mod.description}</p>
-                          )}
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-                {form.selected_modules.length > 0 && (
-                  <div className="p-2 rounded bg-muted/50 text-sm">
-                    <span className="text-muted-foreground">Zusatzmodule: </span>
-                    <span className="font-medium">
-                      +{ebmModules
-                        .filter((m: any) => form.selected_modules.includes(m.name))
-                        .reduce((sum: number, m: any) => sum + Number(m.monthly_price), 0)
-                        .toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.
-                    </span>
-                  </div>
-                )}
-                {/* Licensing info */}
-                {ebmProduct?.licensing_notes && (
-                  <div className="p-2 rounded border bg-muted/30 text-xs text-muted-foreground">
-                    ℹ️ {ebmProduct.licensing_notes}
-                  </div>
-                )}
-              </div>
-            )}
 
             {form.selected_products.includes("HFX Praxismanagement Zahnmedizin") && (
             <div className="space-y-3">
