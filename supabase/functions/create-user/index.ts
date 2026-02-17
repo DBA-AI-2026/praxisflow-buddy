@@ -249,11 +249,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Store temporary password in profile
-    await supabaseAdmin
-      .from("profiles")
-      .update({ temp_password: password })
-      .eq("user_id", userId);
+    // Temporary password is no longer stored in DB for security reasons
 
     // Send welcome email with credentials
     let emailSent = false;
