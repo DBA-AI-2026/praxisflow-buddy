@@ -1307,24 +1307,60 @@ export default function Vertraege() {
 
 
               {form.selected_products.length > 0 && (
-                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                  <p className="text-sm font-medium">
-                    Summe: {form.monthly_price.toLocaleString("de-DE")} €/Monat
-                    {form.one_time_fee > 0 && ` + ${form.one_time_fee.toLocaleString("de-DE")} € einmalig`}
-                  </p>
-                  {(() => {
-                    const now = new Date();
-                    const promoProducts = products.filter((pr: any) => form.selected_products.includes(pr.name) && pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now);
-                    if (promoProducts.length > 0) {
-                      return (
-                        <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                          🎉 Aktionspreis aktiv für: {promoProducts.map((pr: any) => pr.name).join(", ")}
-                        </p>
-                      );
+                <div className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5 overflow-hidden">
+                  <div className="px-4 py-2.5 bg-primary/10 border-b border-primary/15">
+                    <p className="text-xs font-semibold text-primary uppercase tracking-wider">Produktübersicht</p>
+                  </div>
+                  <div className="p-4 space-y-2">
+                    {(() => {
+                      const now = new Date();
+                      return products
+                        .filter((pr: any) => form.selected_products.includes(pr.name))
+                        .map((pr: any) => {
+                          const hasPromo = pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now;
+                          const baseFeeWaived = hasPromo && pr.promo_base_fee_end_date && new Date(pr.promo_base_fee_end_date) >= now;
+                          const price = baseFeeWaived ? 0 : Number(pr.monthly_price);
+                          return (
+                            <div key={pr.id} className="flex items-center justify-between text-sm">
+                              <span className="text-foreground font-medium truncate mr-2">{pr.name}</span>
+                              <span className="text-muted-foreground whitespace-nowrap tabular-nums">
+                                {hasPromo && baseFeeWaived ? (
+                                  <><span className="line-through text-muted-foreground/60 mr-1">{Number(pr.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</span><span className="text-success font-medium">0,00 €</span></>
+                                ) : (
+                                  <>{price.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</>
+                                )}
+                              </span>
+                            </div>
+                          );
+                        });
+                    })()}
+                    {form.selected_modules.length > 0 && ebmModules
+                      .filter((m: any) => form.selected_modules.includes(m.name))
+                      .map((m: any) => (
+                        <div key={m.id} className="flex items-center justify-between text-sm pl-3 border-l-2 border-primary/20">
+                          <span className="text-muted-foreground truncate mr-2">{m.name}</span>
+                          <span className="text-muted-foreground whitespace-nowrap tabular-nums">{Number(m.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</span>
+                        </div>
+                      ))
                     }
-                    return null;
-                  })()}
-                  <p className="text-xs text-muted-foreground">{form.selected_products.length} Produkt(e) ausgewählt</p>
+                  </div>
+                  <div className="px-4 py-3 bg-primary/10 border-t border-primary/15 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground">{form.selected_products.length} Produkt(e){form.selected_modules.length > 0 ? `, ${form.selected_modules.length} Modul(e)` : ""}</p>
+                      {(() => {
+                        const now = new Date();
+                        const promoProducts = products.filter((pr: any) => form.selected_products.includes(pr.name) && pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now);
+                        if (promoProducts.length > 0) {
+                          return <p className="text-xs text-success font-medium">🎉 Aktionspreis aktiv</p>;
+                        }
+                        return null;
+                      })()}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-foreground tabular-nums">{form.monthly_price.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €<span className="text-xs font-normal text-muted-foreground">/Mon.</span></p>
+                      {form.one_time_fee > 0 && <p className="text-xs text-muted-foreground">+ {form.one_time_fee.toLocaleString("de-DE", { minimumFractionDigits: 2 })} € einmalig</p>}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
