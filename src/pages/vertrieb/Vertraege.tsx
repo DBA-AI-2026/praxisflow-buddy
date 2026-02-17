@@ -482,22 +482,48 @@ export default function Vertraege() {
       c.sales_partner_name?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const requiredFields: (keyof ContractFormData)[] = [
-    "praxis", "vorname", "nachname", "praxisanschrift", "adresse", "plz", "ort",
-    "telefon", "email", "fachrichtung", "rechtsform", "kontoinhaber",
-    "kontoinhaber_strasse", "kontoinhaber_plz_ort", "bank_name", "iban", "bic",
-    "start_date",
-  ];
+  const requiredFieldLabels: Record<string, string> = {
+    praxis: "Praxis",
+    vorname: "Vorname",
+    nachname: "Nachname",
+    praxisanschrift: "Adresse (Straße, Hausnummer)",
+    plz: "PLZ",
+    ort: "Ort",
+    telefon: "Telefon",
+    email: "E-Mail",
+    fachrichtung: "Fachrichtung",
+    rechtsform: "Rechtsform",
+    kontoinhaber: "Kontoinhaber",
+    kontoinhaber_strasse: "Straße Kontoinhaber",
+    kontoinhaber_plz_ort: "PLZ/Ort Kontoinhaber",
+    bank_name: "Bank",
+    iban: "IBAN",
+    bic: "BIC",
+    start_date: "Vertragsbeginn",
+  };
 
-  const isFormComplete = requiredFields.every((f) => {
-    const v = form[f];
-    return typeof v === "string" ? v.trim() !== "" : !!v;
-  }) && form.selected_products.length > 0 && !!form.signature_data && !!form.vertrieb_signature_data;
+  const requiredFields = Object.keys(requiredFieldLabels) as (keyof ContractFormData)[];
+
+  const getMissingFields = () => {
+    const missing: string[] = [];
+    requiredFields.forEach((f) => {
+      const v = form[f];
+      const empty = typeof v === "string" ? v.trim() === "" : !v;
+      if (empty) missing.push(requiredFieldLabels[f]);
+    });
+    if (form.selected_products.length === 0) missing.push("Produkte");
+    if (!form.signature_data) missing.push("Unterschrift Kunde");
+    if (!form.vertrieb_signature_data) missing.push("Unterschrift Vertrieb");
+    return missing;
+  };
+
+  const isFormComplete = getMissingFields().length === 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormComplete) {
-      toast({ title: "Unvollständig", description: "Bitte alle Pflichtfelder ausfüllen, Produkte wählen und beide Unterschriften leisten.", variant: "destructive" });
+    const missing = getMissingFields();
+    if (missing.length > 0) {
+      toast({ title: "Fehlende Pflichtfelder", description: missing.join(", "), variant: "destructive" });
       return;
     }
     if (!validateIban(form.iban).valid) {
