@@ -28,6 +28,23 @@ import { validateBic } from "@/lib/validateBic";
 import { lookupBicFromIban } from "@/lib/lookupBic";
 import foxLogoUrl from "@/assets/fox-logo.jpeg";
 import { useAuth } from "@/hooks/useAuth";
+
+const validateBsnr = (value: string): string | null => {
+  if (!value) return null;
+  const digits = value.replace(/\s/g, "");
+  if (!/^\d*$/.test(digits)) return "Nur Ziffern erlaubt";
+  if (digits.length > 0 && digits.length !== 9) return "BSNR muss 9 Ziffern haben";
+  if (digits.length === 9 && !digits.endsWith("00")) return "BSNR muss auf 00 enden";
+  return null;
+};
+
+const validateLanr = (value: string): string | null => {
+  if (!value) return null;
+  const digits = value.replace(/\s/g, "");
+  if (!/^\d*$/.test(digits)) return "Nur Ziffern erlaubt";
+  if (digits.length > 0 && digits.length !== 9) return "LANR muss 9 Ziffern haben";
+  return null;
+};
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -629,6 +646,27 @@ export default function Vertraege() {
       toast({ title: "Ungültige BIC", description: validateBic(form.bic).message, variant: "destructive" });
       return;
     }
+    // BSNR/LANR format validation
+    const bsnrFields = [
+      { val: form.bsnr, label: "BSNR" },
+      { val: form.weitere_bsnr_1, label: "Weitere BSNR 1" },
+      { val: form.weitere_bsnr_2, label: "Weitere BSNR 2" },
+      { val: form.weitere_bsnr_3, label: "Weitere BSNR 3" },
+    ];
+    const lanrFields = [
+      { val: form.lanr, label: "LANR 1" },
+      { val: form.lanr_2, label: "LANR 2" },
+      { val: form.lanr_3, label: "LANR 3" },
+      { val: form.weitere_lanr, label: "Weitere LANR" },
+    ];
+    for (const f of bsnrFields) {
+      const err = validateBsnr(f.val);
+      if (err) { toast({ title: `Ungültige ${f.label}`, description: err, variant: "destructive" }); return; }
+    }
+    for (const f of lanrFields) {
+      const err = validateLanr(f.val);
+      if (err) { toast({ title: `Ungültige ${f.label}`, description: err, variant: "destructive" }); return; }
+    }
     upsertMutation.mutate(form);
   };
 
@@ -1109,38 +1147,46 @@ export default function Vertraege() {
                                 <div className="grid grid-cols-2 gap-3">
                                   <div>
                                     <Label>BSNR</Label>
-                                    <Input value={form.bsnr} onChange={(e) => set("bsnr", e.target.value)} placeholder="Betriebsstättennummer" />
+                                    <Input value={form.bsnr} onChange={(e) => set("bsnr", e.target.value)} placeholder="9 Ziffern, endet auf 00" maxLength={9} />
+                                    {validateBsnr(form.bsnr) && <p className="text-xs text-destructive mt-1">{validateBsnr(form.bsnr)}</p>}
                                   </div>
                                   <div>
                                     <Label>LANR 1</Label>
-                                    <Input value={form.lanr} onChange={(e) => set("lanr", e.target.value)} placeholder="Lebenslange Arztnummer" />
+                                    <Input value={form.lanr} onChange={(e) => set("lanr", e.target.value)} placeholder="9 Ziffern" maxLength={9} />
+                                    {validateLanr(form.lanr) && <p className="text-xs text-destructive mt-1">{validateLanr(form.lanr)}</p>}
                                   </div>
                                   <div>
                                     <Label>LANR 2</Label>
-                                    <Input value={form.lanr_2} onChange={(e) => set("lanr_2", e.target.value)} placeholder="Weitere LANR" />
+                                    <Input value={form.lanr_2} onChange={(e) => set("lanr_2", e.target.value)} placeholder="9 Ziffern" maxLength={9} />
+                                    {validateLanr(form.lanr_2) && <p className="text-xs text-destructive mt-1">{validateLanr(form.lanr_2)}</p>}
                                   </div>
                                   <div>
                                     <Label>LANR 3</Label>
-                                    <Input value={form.lanr_3} onChange={(e) => set("lanr_3", e.target.value)} placeholder="Weitere LANR" />
+                                    <Input value={form.lanr_3} onChange={(e) => set("lanr_3", e.target.value)} placeholder="9 Ziffern" maxLength={9} />
+                                    {validateLanr(form.lanr_3) && <p className="text-xs text-destructive mt-1">{validateLanr(form.lanr_3)}</p>}
                                   </div>
                                   <div className="col-span-2">
                                     <Label className="text-xs text-muted-foreground mt-2 block">Weitere Betriebsstätten</Label>
                                   </div>
                                   <div>
                                     <Label>Weitere BSNR 1</Label>
-                                    <Input value={form.weitere_bsnr_1} onChange={(e) => set("weitere_bsnr_1", e.target.value)} placeholder="Zusätzliche BSNR" />
+                                    <Input value={form.weitere_bsnr_1} onChange={(e) => set("weitere_bsnr_1", e.target.value)} placeholder="9 Ziffern, endet auf 00" maxLength={9} />
+                                    {validateBsnr(form.weitere_bsnr_1) && <p className="text-xs text-destructive mt-1">{validateBsnr(form.weitere_bsnr_1)}</p>}
                                   </div>
                                   <div>
                                     <Label>Weitere BSNR 2</Label>
-                                    <Input value={form.weitere_bsnr_2} onChange={(e) => set("weitere_bsnr_2", e.target.value)} placeholder="Zusätzliche BSNR" />
+                                    <Input value={form.weitere_bsnr_2} onChange={(e) => set("weitere_bsnr_2", e.target.value)} placeholder="9 Ziffern, endet auf 00" maxLength={9} />
+                                    {validateBsnr(form.weitere_bsnr_2) && <p className="text-xs text-destructive mt-1">{validateBsnr(form.weitere_bsnr_2)}</p>}
                                   </div>
                                   <div>
                                     <Label>Weitere BSNR 3</Label>
-                                    <Input value={form.weitere_bsnr_3} onChange={(e) => set("weitere_bsnr_3", e.target.value)} placeholder="Zusätzliche BSNR" />
+                                    <Input value={form.weitere_bsnr_3} onChange={(e) => set("weitere_bsnr_3", e.target.value)} placeholder="9 Ziffern, endet auf 00" maxLength={9} />
+                                    {validateBsnr(form.weitere_bsnr_3) && <p className="text-xs text-destructive mt-1">{validateBsnr(form.weitere_bsnr_3)}</p>}
                                   </div>
                                   <div>
                                     <Label>Weitere LANR</Label>
-                                    <Input value={form.weitere_lanr} onChange={(e) => set("weitere_lanr", e.target.value)} placeholder="Zusätzliche LANR" />
+                                    <Input value={form.weitere_lanr} onChange={(e) => set("weitere_lanr", e.target.value)} placeholder="9 Ziffern" maxLength={9} />
+                                    {validateLanr(form.weitere_lanr) && <p className="text-xs text-destructive mt-1">{validateLanr(form.weitere_lanr)}</p>}
                                   </div>
                                 </div>
                               </div>
@@ -1208,38 +1254,46 @@ export default function Vertraege() {
                               <div className="grid grid-cols-2 gap-3">
                                 <div>
                                   <Label>BSNR</Label>
-                                  <Input value={form.bsnr} onChange={(e) => set("bsnr", e.target.value)} placeholder="Betriebsstättennummer" />
+                                  <Input value={form.bsnr} onChange={(e) => set("bsnr", e.target.value)} placeholder="9 Ziffern, endet auf 00" maxLength={9} />
+                                  {validateBsnr(form.bsnr) && <p className="text-xs text-destructive mt-1">{validateBsnr(form.bsnr)}</p>}
                                 </div>
                                 <div>
                                   <Label>LANR 1</Label>
-                                  <Input value={form.lanr} onChange={(e) => set("lanr", e.target.value)} placeholder="Lebenslange Arztnummer" />
+                                  <Input value={form.lanr} onChange={(e) => set("lanr", e.target.value)} placeholder="9 Ziffern" maxLength={9} />
+                                  {validateLanr(form.lanr) && <p className="text-xs text-destructive mt-1">{validateLanr(form.lanr)}</p>}
                                 </div>
                                 <div>
                                   <Label>LANR 2</Label>
-                                  <Input value={form.lanr_2} onChange={(e) => set("lanr_2", e.target.value)} placeholder="Weitere LANR" />
+                                  <Input value={form.lanr_2} onChange={(e) => set("lanr_2", e.target.value)} placeholder="9 Ziffern" maxLength={9} />
+                                  {validateLanr(form.lanr_2) && <p className="text-xs text-destructive mt-1">{validateLanr(form.lanr_2)}</p>}
                                 </div>
                                 <div>
                                   <Label>LANR 3</Label>
-                                  <Input value={form.lanr_3} onChange={(e) => set("lanr_3", e.target.value)} placeholder="Weitere LANR" />
+                                  <Input value={form.lanr_3} onChange={(e) => set("lanr_3", e.target.value)} placeholder="9 Ziffern" maxLength={9} />
+                                  {validateLanr(form.lanr_3) && <p className="text-xs text-destructive mt-1">{validateLanr(form.lanr_3)}</p>}
                                 </div>
                                 <div className="col-span-2">
                                   <Label className="text-xs text-muted-foreground mt-2 block">Weitere Betriebsstätten</Label>
                                 </div>
                                 <div>
                                   <Label>Weitere BSNR 1</Label>
-                                  <Input value={form.weitere_bsnr_1} onChange={(e) => set("weitere_bsnr_1", e.target.value)} placeholder="Zusätzliche BSNR" />
+                                  <Input value={form.weitere_bsnr_1} onChange={(e) => set("weitere_bsnr_1", e.target.value)} placeholder="9 Ziffern, endet auf 00" maxLength={9} />
+                                  {validateBsnr(form.weitere_bsnr_1) && <p className="text-xs text-destructive mt-1">{validateBsnr(form.weitere_bsnr_1)}</p>}
                                 </div>
                                 <div>
                                   <Label>Weitere BSNR 2</Label>
-                                  <Input value={form.weitere_bsnr_2} onChange={(e) => set("weitere_bsnr_2", e.target.value)} placeholder="Zusätzliche BSNR" />
+                                  <Input value={form.weitere_bsnr_2} onChange={(e) => set("weitere_bsnr_2", e.target.value)} placeholder="9 Ziffern, endet auf 00" maxLength={9} />
+                                  {validateBsnr(form.weitere_bsnr_2) && <p className="text-xs text-destructive mt-1">{validateBsnr(form.weitere_bsnr_2)}</p>}
                                 </div>
                                 <div>
                                   <Label>Weitere BSNR 3</Label>
-                                  <Input value={form.weitere_bsnr_3} onChange={(e) => set("weitere_bsnr_3", e.target.value)} placeholder="Zusätzliche BSNR" />
+                                  <Input value={form.weitere_bsnr_3} onChange={(e) => set("weitere_bsnr_3", e.target.value)} placeholder="9 Ziffern, endet auf 00" maxLength={9} />
+                                  {validateBsnr(form.weitere_bsnr_3) && <p className="text-xs text-destructive mt-1">{validateBsnr(form.weitere_bsnr_3)}</p>}
                                 </div>
                                 <div>
                                   <Label>Weitere LANR</Label>
-                                  <Input value={form.weitere_lanr} onChange={(e) => set("weitere_lanr", e.target.value)} placeholder="Zusätzliche LANR" />
+                                  <Input value={form.weitere_lanr} onChange={(e) => set("weitere_lanr", e.target.value)} placeholder="9 Ziffern" maxLength={9} />
+                                  {validateLanr(form.weitere_lanr) && <p className="text-xs text-destructive mt-1">{validateLanr(form.weitere_lanr)}</p>}
                                 </div>
                               </div>
                             </div>
