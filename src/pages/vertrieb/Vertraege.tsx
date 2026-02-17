@@ -390,7 +390,8 @@ export default function Vertraege() {
             const pdfBytes = await fillContractTemplate(templateBytes, {
               mp_nr: form.mp_nr, praxis: form.praxis, fachrichtung: form.fachrichtung,
               rechtsform: form.rechtsform, vorname: form.vorname, nachname: form.nachname,
-              adresse: form.adresse, telefon: form.telefon, email: form.email,
+              adresse: form.adresse, praxisanschrift: form.praxisanschrift, plz: form.plz,
+              telefon: form.telefon, email: form.email,
               kontoinhaber: form.kontoinhaber, kontoinhaber_strasse: form.kontoinhaber_strasse,
               kontoinhaber_plz_ort: form.kontoinhaber_plz_ort, bank_name: form.bank_name,
               iban: form.iban, bic: form.bic, bsnr: form.bsnr,
@@ -667,6 +668,8 @@ export default function Vertraege() {
         vorname: contractData.vorname,
         nachname: contractData.nachname,
         adresse: contractData.adresse,
+        praxisanschrift: contractData.praxisanschrift,
+        plz: contractData.plz,
         telefon: contractData.telefon,
         email: contractData.email,
         kontoinhaber: contractData.kontoinhaber,
