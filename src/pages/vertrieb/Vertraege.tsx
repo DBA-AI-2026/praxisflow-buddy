@@ -825,20 +825,19 @@ export default function Vertraege() {
                   <Label>Nachname *</Label>
                   <Input value={form.nachname} onChange={(e) => set("nachname", e.target.value)} required />
                 </div>
+                <div className="col-span-2 pt-2">
+                  <h4 className="font-semibold text-sm text-foreground">Praxisanschrift</h4>
+                </div>
                 <div className="col-span-2">
-                  <Label>Praxisanschrift (Straße, Hausnummer)</Label>
+                  <Label>Adresse (Straße, Hausnummer) *</Label>
                   <Input value={form.praxisanschrift} onChange={(e) => set("praxisanschrift", e.target.value)} placeholder="Straße und Hausnummer der Praxis" />
                 </div>
-                <div className="col-span-2">
-                  <Label>Adresse (Straße, Hausnummer)</Label>
-                  <Input value={form.adresse} onChange={(e) => set("adresse", e.target.value)} placeholder="Straße, Hausnummer" />
-                </div>
                 <div>
-                  <Label>PLZ</Label>
+                  <Label>PLZ *</Label>
                   <Input value={form.plz} onChange={(e) => set("plz", e.target.value)} placeholder="z.B. 10115" />
                 </div>
                 <div>
-                  <Label>Ort</Label>
+                  <Label>Ort *</Label>
                   <Input value={form.ort} onChange={(e) => set("ort", e.target.value)} placeholder="z.B. Berlin" />
                 </div>
                 <div>
