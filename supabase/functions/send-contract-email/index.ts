@@ -39,11 +39,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { email, customerName, pdfBase64, products, startDate, hfxNumber } = await req.json();
+    const { email, salesPartnerEmail, customerName, pdfBase64, products, startDate, hfxNumber } = await req.json();
 
-    if (!email || !pdfBase64) {
+    const recipients = [email, salesPartnerEmail].filter(Boolean) as string[];
+    if (recipients.length === 0 || !pdfBase64) {
       return new Response(
-        JSON.stringify({ error: "Email and PDF data are required" }),
+        JSON.stringify({ error: "At least one email address and PDF data are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -52,7 +53,7 @@ Deno.serve(async (req) => {
 
     const emailResponse = await resend.emails.send({
       from: "HFX Sales Portal <onboarding@resend.dev>",
-      to: [email],
+      to: recipients,
       subject: `Ihre Vertragsunterlagen – ${products || "Honorarfuchs"}`,
       attachments: [
         {
