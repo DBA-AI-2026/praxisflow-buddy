@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import {
-  Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye,
+  Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye, CheckCircle,
 } from "lucide-react";
 import { generateContractPdf } from "@/lib/generateContractPdf";
 import { fillContractTemplate } from "@/lib/fillContractTemplate";
@@ -55,6 +55,7 @@ import SignaturePad from "signature_pad";
 
 const statusConfig: Record<string, { label: string; class: string }> = {
   entwurf: { label: "Entwurf", class: "bg-muted text-muted-foreground" },
+  gezeichnet: { label: "Gezeichnet", class: "bg-primary/10 text-primary" },
   aktiv: { label: "Aktiv", class: "bg-success/10 text-success" },
   gekuendigt: { label: "Gekündigt", class: "bg-warning/10 text-warning" },
   beendet: { label: "Beendet", class: "bg-destructive/10 text-destructive" },
@@ -151,7 +152,7 @@ const emptyForm: ContractFormData = {
   weitere_lanr: "",
   ort: "",
   notes: "",
-  status: "entwurf",
+  status: "gezeichnet",
   signature_data: "",
   vertrieb_signature_data: "",
   praxissystem: "",
@@ -817,8 +818,8 @@ export default function Vertraege() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        {(["entwurf", "aktiv", "gekuendigt", "beendet"] as const).map((s) => (
+       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+        {(["entwurf", "gezeichnet", "aktiv", "gekuendigt", "beendet"] as const).map((s) => (
           <Card key={s}>
             <CardContent className="p-4 flex items-center justify-between">
               <div>
@@ -959,6 +960,23 @@ export default function Vertraege() {
                             <Pencil className="h-4 w-4 mr-2" />
                             Bearbeiten
                           </DropdownMenuItem>
+                          {isAdmin && c.status === "gezeichnet" && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-success"
+                                onClick={async () => {
+                                  const { error } = await supabase.from("contracts").update({ status: "aktiv" }).eq("id", c.id);
+                                  if (error) { toast({ title: "Fehler", description: error.message, variant: "destructive" }); return; }
+                                  queryClient.invalidateQueries({ queryKey: ["contracts"] });
+                                  toast({ title: "Vertrag freigegeben", description: "Status auf Aktiv gesetzt." });
+                                }}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Freigeben (Aktiv)
+                              </DropdownMenuItem>
+                            </>
+                          )}
                           {isAdmin && (
                             <>
                               <DropdownMenuSeparator />
@@ -1615,7 +1633,7 @@ export default function Vertraege() {
                 </Button>
                 <Button type="submit" disabled={upsertMutation.isPending || !isFormComplete}>
                   {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                  {editId ? "Speichern" : "Vertrag anlegen"}
+                  {editId ? "Speichern" : "Vertrag zeichnen"}
                 </Button>
               </div>
             </DialogFooter>
