@@ -27,6 +27,7 @@ interface TemplateFillData {
   end_date?: string;
   ort?: string;
   modules?: string[];
+  selected_addon_modules?: string[];
   notes?: string;
   signature_data?: string | null;
   vertrieb_signature_data?: string | null;
@@ -104,7 +105,9 @@ export async function fillContractTemplate(
   };
 
   const mods = (data.modules || []).map((m) => m.toLowerCase());
+  const addonMods = (data.selected_addon_modules || []).map((m) => m.toLowerCase());
   const has = (name: string) => mods.some((m) => m.includes(name));
+  const hasAddon = (name: string) => addonMods.some((m) => m.includes(name));
   const dur = data.duration_months || 12;
   const CHECK = "X";
 
@@ -176,12 +179,12 @@ export async function fillContractTemplate(
 
   // PAGE 1 – Checkboxes (EBM)
   if (has("ebm")) {
-    write(0, CHECK, 60, 541);  // EBM kostenpflichtig
-    write(0, CHECK, 61, 526);  // EBM Schnittstelle
-    write(0, CHECK, 62, 479);  // EBM Datenbank
-    write(0, CHECK, 61, 439);  // EBM TSVG
-    write(0, CHECK, 60, 400);  // EBM Bericht
-    write(0, CHECK, 61, 377);  // EBM Nephro
+    write(0, CHECK, 60, 541);  // EBM kostenpflichtig ab
+    if (hasAddon("schnittstelle")) write(0, CHECK, 61, 526);  // Schnittstelle Patientenaktivierung
+    if (hasAddon("datenbankrückschrift") || hasAddon("datenbankr")) write(0, CHECK, 62, 479);  // Datenbankrückschrift
+    if (hasAddon("tsvg")) write(0, CHECK, 61, 439);  // TSVG-Modul
+    if (hasAddon("bericht")) write(0, CHECK, 60, 400);  // Bericht-Modul
+    if (hasAddon("nephro")) write(0, CHECK, 61, 377);  // Nephro-Modul
   }
   if (data.bsnr) write(0, CHECK, 318, 595);       // Lizenz BSNR
   if (data.weitere_bsnr) write(0, CHECK, 318, 528); // weitere BSNR

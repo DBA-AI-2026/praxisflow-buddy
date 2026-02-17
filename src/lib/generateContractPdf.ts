@@ -12,6 +12,11 @@ interface ProductPriceDetail {
   has_active_promo?: boolean;
 }
 
+interface AddonModuleDetail {
+  name: string;
+  monthly_price: number;
+}
+
 interface ContractPdfData {
   hfx_customer_number?: string;
   praxis?: string;
@@ -25,6 +30,8 @@ interface ContractPdfData {
   sales_partner_name?: string;
   product_name?: string;
   modules?: string[];
+  selected_addon_modules?: string[];
+  addon_module_details?: AddonModuleDetail[];
   license_count?: number;
   start_date?: string;
   end_date?: string;
@@ -196,6 +203,25 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
   const productList = data.modules?.length ? data.modules.join(", ") : data.product_name || "–";
   fieldFull("Ausgewählte Produkte", productList);
   fieldPair("Anzahl Lizenzen", String(data.license_count ?? 1), "", "");
+
+  // Addon modules
+  if (data.addon_module_details && data.addon_module_details.length > 0) {
+    y -= 4;
+    text("Zusatzmodule:", M + 4, y, 7, font, C_MUTED);
+    y -= 12;
+    for (const mod of data.addon_module_details) {
+      ensureSpace(20);
+      text(`• ${mod.name}`, M + 8, y, 8.5, font, C_TEXT);
+      text(`${formatCurrency(mod.monthly_price)}/Mon.`, COL2_X, y, 8.5, font, C_NAVY);
+      y -= 14;
+    }
+    const addonTotal = data.addon_module_details.reduce((s, m) => s + m.monthly_price, 0);
+    text(`Zusatzmodule gesamt: ${formatCurrency(addonTotal)}/Mon.`, M + 8, y, 8, fontBold, C_NAVY);
+    y -= 14;
+  } else if (data.selected_addon_modules && data.selected_addon_modules.length > 0) {
+    fieldFull("Zusatzmodule", data.selected_addon_modules.join(", "));
+  }
+
   divider();
   ensureSpace();
 
