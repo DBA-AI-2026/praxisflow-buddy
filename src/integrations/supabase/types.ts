@@ -68,6 +68,11 @@ export type Database = {
           cancellation_period_months: number
           created_at: string
           created_by: string | null
+          creditreform_approval_note: string | null
+          creditreform_checked_at: string | null
+          creditreform_checked_by: string | null
+          creditreform_rating: string | null
+          creditreform_score: number | null
           customer_id: string | null
           customer_name: string
           discount_percent: number
@@ -124,6 +129,11 @@ export type Database = {
           cancellation_period_months?: number
           created_at?: string
           created_by?: string | null
+          creditreform_approval_note?: string | null
+          creditreform_checked_at?: string | null
+          creditreform_checked_by?: string | null
+          creditreform_rating?: string | null
+          creditreform_score?: number | null
           customer_id?: string | null
           customer_name: string
           discount_percent?: number
@@ -180,6 +190,11 @@ export type Database = {
           cancellation_period_months?: number
           created_at?: string
           created_by?: string | null
+          creditreform_approval_note?: string | null
+          creditreform_checked_at?: string | null
+          creditreform_checked_by?: string | null
+          creditreform_rating?: string | null
+          creditreform_score?: number | null
           customer_id?: string | null
           customer_name?: string
           discount_percent?: number
