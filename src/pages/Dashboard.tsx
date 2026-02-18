@@ -2,11 +2,23 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { RecentTickets } from "@/components/dashboard/RecentTickets";
 import { RecentPraxen } from "@/components/dashboard/RecentPraxen";
+import { PendingContractApprovals } from "@/components/dashboard/PendingContractApprovals";
 import { Building2, Ticket, Key, TrendingUp } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
 
 export default function Dashboard() {
+  const { isAdmin, isVertragsabteilung } = useUserRole();
+  const showApprovals = isAdmin || isVertragsabteilung;
+
   return (
     <MainLayout title="Dashboard" subtitle="Übersicht aller wichtigen Kennzahlen">
+      {/* Contract Approvals for Vertragsabteilung / Admin */}
+      {showApprovals && (
+        <div className="mb-8">
+          <PendingContractApprovals />
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <StatCard
