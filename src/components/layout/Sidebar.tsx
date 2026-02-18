@@ -47,7 +47,7 @@ const adminNavigation = [
   { name: "Benutzerverwaltung", href: "/admin/users", icon: Users },
   { name: "Produktverwaltung", href: "/admin/products", icon: Package },
   { name: "Datenexport", href: "/export", icon: FileDown },
-  { name: "Integrationen", href: "/integrationen", icon: Link2 },
+  { name: "Buchhaltung", href: "/integrationen", icon: Link2 },
   { name: "Audit-Protokoll", href: "/admin/audit-logs", icon: Lock },
   { name: "Einstellungen", href: "/admin/settings", icon: Settings },
 ];
