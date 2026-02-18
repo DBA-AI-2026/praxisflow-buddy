@@ -26,6 +26,7 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import PdfCoordinateFinder from "./pages/tools/PdfCoordinateFinder";
+import { PdfViewerOverlay } from "@/components/PdfViewerOverlay";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <PdfViewerOverlay />
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
