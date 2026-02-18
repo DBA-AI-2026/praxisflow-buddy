@@ -247,6 +247,21 @@ export default function Vertraege() {
     },
   });
 
+  const { data: profilesMap = {} } = useQuery({
+    queryKey: ["profiles-map"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name");
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      for (const p of data || []) {
+        map[p.user_id] = p.full_name;
+      }
+      return map;
+    },
+  });
+
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
@@ -855,6 +870,7 @@ export default function Vertraege() {
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Laufzeit</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 text-right">Monatspreis</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 text-center">Status</th>
+                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Freigabe</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Dokument</th>
                    <th className="w-10"></th>
                  </tr>
@@ -902,6 +918,18 @@ export default function Vertraege() {
                       <Badge className={statusConfig[c.status]?.class || ""}>
                         {statusConfig[c.status]?.label || c.status}
                       </Badge>
+                    </td>
+                    <td className="py-3.5 px-4 text-sm text-muted-foreground whitespace-nowrap">
+                      {c.approved_at ? (
+                        <div className="leading-snug">
+                          <span className="text-foreground font-medium">{profilesMap[(c as any).approved_by] || "–"}</span>
+                          <span className="block text-xs text-muted-foreground/70">
+                            {format(new Date(c.approved_at), "dd.MM.yy HH:mm", { locale: de })}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground/50">–</span>
+                      )}
                     </td>
                      <td>
                        <div className="flex flex-col gap-1">
