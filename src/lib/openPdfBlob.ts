@@ -11,15 +11,11 @@ export function openPdfBlob(pdfBytes: Uint8Array, filename = "Vertrag.pdf") {
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
   if (isIOS) {
-    // iOS Safari cannot open blob: URLs in new tabs.
-    // Convert to base64 data-URI and show in the in-app PDF viewer overlay.
-    let binary = "";
-    for (let i = 0; i < pdfBytes.length; i++) {
-      binary += String.fromCharCode(pdfBytes[i]);
-    }
-    const base64 = btoa(binary);
-    const dataUrl = `data:application/pdf;base64,${base64}`;
-    showPdfInViewer(dataUrl);
+    // iOS Safari cannot open blob: URLs in new *tabs*, but they work
+    // inside iframes. Create a blob URL and show it in the in-app viewer.
+    const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
+    const blobUrl = URL.createObjectURL(blob);
+    showPdfInViewer(blobUrl);
   } else {
     // Standard browsers: blob URL + window.open works fine
     const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
