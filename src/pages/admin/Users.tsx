@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus } from "lucide-react";
+import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText } from "lucide-react";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import {
   DropdownMenu,
@@ -46,6 +46,7 @@ interface UserWithRole {
 
 const roleConfig: Record<AppRole, { label: string; color: string }> = {
   admin: { label: "Admin", color: "bg-primary/10 text-primary" },
+  vertragsabteilung: { label: "Vertragsabteilung", color: "bg-emerald-100 text-emerald-800" },
   sales_lead: { label: "Vertriebsleitung", color: "bg-purple-100 text-purple-800" },
   sales_partner: { label: "Vertriebspartner", color: "bg-blue-100 text-blue-800" },
   user: { label: "Benutzer", color: "bg-secondary text-secondary-foreground" },
@@ -159,6 +160,7 @@ export default function AdminUsers() {
   );
 
   const adminCount = users.filter((u) => u.role === "admin").length;
+  const vertragsabteilungCount = users.filter((u) => u.role === "vertragsabteilung").length;
   const salesLeadCount = users.filter((u) => u.role === "sales_lead").length;
   const salesPartnerCount = users.filter((u) => u.role === "sales_partner").length;
   const userCount = users.filter((u) => u.role === "user").length;
@@ -177,7 +179,7 @@ export default function AdminUsers() {
   return (
     <MainLayout title="Benutzerverwaltung" subtitle="Benutzer und Rollen verwalten">
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <div className="stat-card">
           <div className="flex items-center gap-3 mb-2">
             <div className="rounded-lg p-3 bg-primary/10">
@@ -190,6 +192,20 @@ export default function AdminUsers() {
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
             Vollzugriff: Benutzerverwaltung, Einstellungen, Audit-Logs, Salesforce, Preise ändern, Reservierungsdaten anpassen.
+          </p>
+        </div>
+        <div className="stat-card">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="rounded-lg p-3 bg-emerald-100">
+              <FileText className="h-5 w-5 text-emerald-700" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Vertragsabteilung</p>
+              <p className="text-2xl font-semibold text-foreground">{vertragsabteilungCount}</p>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Verträge einsehen, freigeben und verwalten. Zugriff auf Kunden, Lizenzen und Umsätze.
           </p>
         </div>
         <div className="stat-card">
@@ -366,6 +382,7 @@ export default function AdminUsers() {
                     <SelectItem value="user">Benutzer</SelectItem>
                     <SelectItem value="sales_partner">Vertriebspartner</SelectItem>
                     <SelectItem value="sales_lead">Vertriebsleitung</SelectItem>
+                    <SelectItem value="vertragsabteilung">Vertragsabteilung</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>

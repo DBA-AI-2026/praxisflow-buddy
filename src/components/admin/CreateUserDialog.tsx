@@ -227,6 +227,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
                     <SelectItem value="user">Benutzer</SelectItem>
                     <SelectItem value="sales_partner">Vertriebspartner</SelectItem>
                     <SelectItem value="sales_lead">Vertriebsleitung</SelectItem>
+                    <SelectItem value="vertragsabteilung">Vertragsabteilung</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>

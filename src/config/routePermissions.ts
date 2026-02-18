@@ -10,16 +10,16 @@ export interface RoutePermission {
 // Define which roles can access each route
 export const routePermissions: RoutePermission[] = [
   // Base routes - accessible by all authenticated users
-  { path: "/", allowedRoles: ["user", "sales_partner", "sales_lead", "admin"] },
-  { path: "/praxen", allowedRoles: ["user", "sales_partner", "sales_lead", "admin"] },
-  { path: "/tickets", allowedRoles: ["user", "sales_partner", "sales_lead", "admin"] },
-  { path: "/lizenzen", allowedRoles: ["user", "sales_partner", "sales_lead", "admin"] },
-  { path: "/umsaetze", allowedRoles: ["user", "sales_partner", "sales_lead", "admin"] },
+  { path: "/", allowedRoles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] },
+  { path: "/praxen", allowedRoles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] },
+  { path: "/tickets", allowedRoles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] },
+  { path: "/lizenzen", allowedRoles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] },
+  { path: "/umsaetze", allowedRoles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] },
   
   // Reservierungen - only sales partners and admins
   { path: "/reservierungen", allowedRoles: ["sales_partner", "admin"] },
-  { path: "/lizenzen", allowedRoles: ["user", "sales_partner", "sales_lead", "admin"] },
-  { path: "/umsaetze", allowedRoles: ["user", "sales_partner", "sales_lead", "admin"] },
+  { path: "/lizenzen", allowedRoles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] },
+  { path: "/umsaetze", allowedRoles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] },
   
   // Sales Lead and Admin routes
   { path: "/kalender", allowedRoles: ["sales_lead", "admin"] },
@@ -28,7 +28,7 @@ export const routePermissions: RoutePermission[] = [
   
   // Vertrieb routes - Sales Lead and Admin only
   { path: "/vertrieb/vertriebler", allowedRoles: ["sales_lead", "admin"] },
-  { path: "/vertrieb/vertraege", allowedRoles: ["user", "sales_partner", "sales_lead", "admin"] },
+  { path: "/vertrieb/vertraege", allowedRoles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] },
   { path: "/vertrieb/provisionen", allowedRoles: ["sales_lead", "admin"] },
   
   // Admin routes - Admin only

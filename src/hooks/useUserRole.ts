@@ -9,6 +9,7 @@ interface UseUserRoleResult {
   role: AppRole | null;
   isLoading: boolean;
   isAdmin: boolean;
+  isVertragsabteilung: boolean;
   isSalesLead: boolean;
   isSalesPartner: boolean;
   isUser: boolean;
@@ -56,6 +57,7 @@ export function useUserRole(): UseUserRoleResult {
     role,
     isLoading: authLoading || isLoading,
     isAdmin: role === "admin",
+    isVertragsabteilung: role === "vertragsabteilung",
     isSalesLead: role === "sales_lead",
     isSalesPartner: role === "sales_partner",
     isUser: role === "user",
