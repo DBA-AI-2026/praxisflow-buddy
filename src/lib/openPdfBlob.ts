@@ -1,7 +1,8 @@
+import { showPdfInViewer } from "@/lib/pdfViewerState";
+
 /**
- * Opens a PDF Uint8Array in a way that works reliably across all browsers,
- * including iOS Safari on iPhone & iPad where blob: URLs fail with
- * "WebKitBlobResource-Fehler 1".
+ * Opens a PDF Uint8Array reliably across all browsers,
+ * including iOS Safari on iPhone & iPad.
  */
 export function openPdfBlob(pdfBytes: Uint8Array, filename = "Vertrag.pdf") {
   // Detect iOS (iPhone / iPad / iPod — including iPad with desktop UA)
@@ -11,17 +12,14 @@ export function openPdfBlob(pdfBytes: Uint8Array, filename = "Vertrag.pdf") {
 
   if (isIOS) {
     // iOS Safari cannot open blob: URLs in new tabs.
-    // Convert to base64 data-URI and open that instead.
+    // Convert to base64 data-URI and show in the in-app PDF viewer overlay.
     let binary = "";
     for (let i = 0; i < pdfBytes.length; i++) {
       binary += String.fromCharCode(pdfBytes[i]);
     }
     const base64 = btoa(binary);
     const dataUrl = `data:application/pdf;base64,${base64}`;
-
-    // Use window.location to navigate the current tab to the PDF.
-    // This is the most reliable method on iOS Safari.
-    window.location.href = dataUrl;
+    showPdfInViewer(dataUrl);
   } else {
     // Standard browsers: blob URL + window.open works fine
     const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
