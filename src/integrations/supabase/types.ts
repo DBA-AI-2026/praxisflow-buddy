@@ -59,6 +59,8 @@ export type Database = {
       contracts: {
         Row: {
           adresse: string | null
+          approved_at: string | null
+          approved_by: string | null
           auto_renewal: boolean
           bank_name: string | null
           bic: string | null
@@ -113,6 +115,8 @@ export type Database = {
         }
         Insert: {
           adresse?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           auto_renewal?: boolean
           bank_name?: string | null
           bic?: string | null
@@ -167,6 +171,8 @@ export type Database = {
         }
         Update: {
           adresse?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           auto_renewal?: boolean
           bank_name?: string | null
           bic?: string | null

@@ -966,7 +966,7 @@ export default function Vertraege() {
                               <DropdownMenuItem
                                 className="text-success"
                                 onClick={async () => {
-                                  const { error } = await supabase.from("contracts").update({ status: "aktiv" }).eq("id", c.id);
+                                  const { error } = await supabase.from("contracts").update({ status: "aktiv", approved_by: user?.id, approved_at: new Date().toISOString() } as any).eq("id", c.id);
                                   if (error) { toast({ title: "Fehler", description: error.message, variant: "destructive" }); return; }
                                   queryClient.invalidateQueries({ queryKey: ["contracts"] });
                                   toast({ title: "Vertrag freigegeben", description: "Status auf Aktiv gesetzt." });
