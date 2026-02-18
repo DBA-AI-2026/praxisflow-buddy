@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { generateContractPdf } from "@/lib/generateContractPdf";
 import { fillContractTemplate } from "@/lib/fillContractTemplate";
+import { openPdfBlob } from "@/lib/openPdfBlob";
 import { validateIban } from "@/lib/validateIban";
 import { validateBic } from "@/lib/validateBic";
 import { lookupBicFromIban } from "@/lib/lookupBic";
@@ -736,10 +737,7 @@ export default function Vertraege() {
         selected_addon_modules: addonNames,
         addon_module_details,
       }, logoBytes);
-      const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      openPdfBlob(new Uint8Array(pdfBytes));
     } catch (err: any) {
       toast({ title: "PDF-Fehler", description: err.message, variant: "destructive" });
     }
@@ -796,10 +794,7 @@ export default function Vertraege() {
         selected_addon_modules: contractData.selected_addon_modules || contractData.selected_modules || [],
       });
 
-      const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      openPdfBlob(new Uint8Array(pdfBytes));
     } catch (err: any) {
       toast({ title: "PDF-Fehler", description: err.message, variant: "destructive" });
     }
