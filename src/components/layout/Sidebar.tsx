@@ -83,16 +83,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 px-4 md:px-6 border-b border-sidebar-border">
-        <img src={logo} alt="Honorarfuchs Logo" className="h-11 w-11 md:h-12 md:w-12 rounded-full object-cover" />
+      <div className="flex h-16 items-center gap-3 px-4 lg:px-6 border-b border-sidebar-border">
+        <img src={logo} alt="Honorarfuchs Logo" className="h-11 w-11 lg:h-12 lg:w-12 rounded-full object-cover" />
         <div>
-          <span className="text-base md:text-lg font-semibold text-sidebar-foreground">HFX Sales</span>
+          <span className="text-base lg:text-lg font-semibold text-sidebar-foreground">HFX Sales</span>
           <span className="text-xs block text-sidebar-foreground/60">das Portal für den Vertrieb</span>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-2 md:px-3 py-4 overflow-y-auto">
+      <nav className="flex-1 space-y-1 px-2 lg:px-3 py-4 overflow-y-auto">
         <div className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
           Hauptmenü
         </div>
@@ -157,9 +157,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       {/* User */}
-      <div className="border-t border-sidebar-border p-3 md:p-4">
-        <div className="flex items-center gap-2 md:gap-3 rounded-lg bg-sidebar-accent p-2 md:p-3">
-          <div className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-full bg-sidebar-primary text-xs md:text-sm font-medium text-sidebar-primary-foreground flex-shrink-0">
+      <div className="border-t border-sidebar-border p-3 lg:p-4">
+        <div className="flex items-center gap-2 lg:gap-3 rounded-lg bg-sidebar-accent p-2 lg:p-3">
+          <div className="flex h-8 w-8 lg:h-9 lg:w-9 items-center justify-center rounded-full bg-sidebar-primary text-xs lg:text-sm font-medium text-sidebar-primary-foreground flex-shrink-0">
             {initials}
           </div>
           <div className="flex-1 min-w-0">
@@ -194,7 +194,7 @@ export function Sidebar() {
           <Button
             variant="ghost"
             size="icon"
-            className="fixed top-3 left-3 z-50 md:hidden bg-background/80 backdrop-blur-sm border border-border shadow-sm"
+            className="fixed top-3 left-3 z-50 lg:hidden bg-background/80 backdrop-blur-sm border border-border shadow-sm"
           >
             <Menu className="h-5 w-5" />
           </Button>
@@ -205,7 +205,7 @@ export function Sidebar() {
       </Sheet>
 
       {/* Desktop Sidebar */}
-      <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border hidden md:block">
+      <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border hidden lg:block">
         <SidebarContent />
       </aside>
     </>
