@@ -162,7 +162,7 @@ const Vertriebler = () => {
     <MainLayout title="Vertriebler" subtitle="Verwaltung der Vertriebspartner und Provisionsmodelle">
       <div className="space-y-6">
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Gesamt Vertriebler</CardTitle>
