@@ -22,6 +22,7 @@ import {
   Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye, CheckCircle,
   FilePen, FileSignature, CircleCheck, CircleOff, ArchiveX,
 } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { generateContractPdf } from "@/lib/generateContractPdf";
 import { fillContractTemplate } from "@/lib/fillContractTemplate";
 import { openPdfBlob } from "@/lib/openPdfBlob";
@@ -837,9 +838,14 @@ export default function Vertraege() {
           return (
             <Card key={s} className="overflow-hidden">
               <CardContent className="p-3 sm:p-4 flex flex-col items-center gap-1.5 text-center">
-                <div className={`rounded-full p-2 ${cfg.class}`}>
-                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className={`rounded-full p-2 ${cfg.class} cursor-default`}>
+                      <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>{cfg.label}</TooltipContent>
+                </Tooltip>
                 <p className="text-xl sm:text-2xl font-semibold leading-none">{count}</p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight hidden sm:block">{cfg.label}</p>
               </CardContent>
