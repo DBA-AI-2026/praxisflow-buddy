@@ -94,27 +94,36 @@ Deno.serve(async (req) => {
     const body: SyncPriceRequest = await req.json();
     const { mpNr, preis } = body;
 
-    if (!mpNr) {
+    if (!mpNr || typeof mpNr !== "string") {
       return new Response(
         JSON.stringify({ error: "MP-Nr ist erforderlich" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (preis === undefined || preis === null) {
+    // Sanitize mpNr to prevent SOQL injection - only allow alphanumeric, hyphen, underscore
+    const sanitizedMpNr = mpNr.trim();
+    if (!/^[A-Za-z0-9_-]+$/.test(sanitizedMpNr) || sanitizedMpNr.length > 50) {
       return new Response(
-        JSON.stringify({ error: "Preis ist erforderlich" }),
+        JSON.stringify({ error: "Ungültiges MP-Nr Format" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Syncing price for MP-Nr: ${mpNr}, Preis: ${preis}`);
+    if (preis === undefined || preis === null || typeof preis !== "number" || !isFinite(preis)) {
+      return new Response(
+        JSON.stringify({ error: "Preis ist erforderlich und muss eine gültige Zahl sein" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Syncing price for MP-Nr: ${sanitizedMpNr}, Preis: ${preis}`);
 
     let accessToken = connection.access_token;
     const instanceUrl = connection.instance_url;
 
-    // First, query Salesforce to find the record by MPID__c
-    const soqlQuery = encodeURIComponent(`SELECT Id FROM Account WHERE MPID__c = '${mpNr}'`);
+    // First, query Salesforce to find the record by MPID__c (input already sanitized)
+    const soqlQuery = encodeURIComponent(`SELECT Id FROM Account WHERE MPID__c = '${sanitizedMpNr}'`);
     let queryResponse = await fetch(
       `${instanceUrl}/services/data/v59.0/query?q=${soqlQuery}`,
       {

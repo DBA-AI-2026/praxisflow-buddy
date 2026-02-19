@@ -311,10 +311,8 @@ export default function Vertraege() {
           .upload(filePath, file);
         if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage
-          .from("contracts")
-          .getPublicUrl(filePath);
-        documentUrl = urlData.publicUrl;
+        // Store file path instead of public URL (bucket is private)
+        documentUrl = filePath;
         documentName = file.name;
       }
 
@@ -516,13 +514,10 @@ export default function Vertraege() {
         .upload(filePath, uploadFile);
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from("contracts")
-        .getPublicUrl(filePath);
-
+      // Store file path instead of public URL (bucket is private)
       const { error: updateError } = await supabase
         .from("contracts")
-        .update({ document_url: urlData.publicUrl, document_name: uploadFile.name })
+        .update({ document_url: filePath, document_name: uploadFile.name })
         .eq("id", contractId);
       if (updateError) throw updateError;
 
@@ -958,12 +953,24 @@ export default function Vertraege() {
                            <FileText className="h-3 w-3" />
                            Vertragsdokument
                          </Button>
-                         {c.document_url && (
-                           <a href={c.document_url} target="_blank" rel="noreferrer" className="text-primary hover:underline text-xs flex items-center gap-1">
-                             <Download className="h-3 w-3" />
-                             <span className="truncate max-w-[80px]">{c.document_name || "PDF"}</span>
-                           </a>
-                         )}
+                          {c.document_url && (
+                            <button
+                              className="text-primary hover:underline text-xs flex items-center gap-1"
+                              onClick={async () => {
+                                const { data, error } = await supabase.storage
+                                  .from("contracts")
+                                  .createSignedUrl(c.document_url!, 300);
+                                if (error || !data?.signedUrl) {
+                                  toast({ title: "Fehler beim Laden des Dokuments", variant: "destructive" });
+                                  return;
+                                }
+                                window.open(data.signedUrl, "_blank");
+                              }}
+                            >
+                              <Download className="h-3 w-3" />
+                              <span className="truncate max-w-[80px]">{c.document_name || "PDF"}</span>
+                            </button>
+                          )}
                        </div>
                      </td>
                     <td>
