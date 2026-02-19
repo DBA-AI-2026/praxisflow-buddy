@@ -20,6 +20,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import {
   Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye, CheckCircle,
+  FilePen, FileSignature, CircleCheck, CircleOff, ArchiveX,
 } from "lucide-react";
 import { generateContractPdf } from "@/lib/generateContractPdf";
 import { fillContractTemplate } from "@/lib/fillContractTemplate";
@@ -54,12 +55,12 @@ import { format, addMonths } from "date-fns";
 import { de } from "date-fns/locale";
 import SignaturePad from "signature_pad";
 
-const statusConfig: Record<string, { label: string; class: string }> = {
-  entwurf: { label: "Entwurf", class: "bg-muted text-muted-foreground" },
-  gezeichnet: { label: "Gezeichnet", class: "bg-primary/10 text-primary" },
-  aktiv: { label: "Aktiv", class: "bg-success/10 text-success" },
-  gekuendigt: { label: "Gekündigt", class: "bg-warning/10 text-warning" },
-  beendet: { label: "Beendet", class: "bg-destructive/10 text-destructive" },
+const statusConfig: Record<string, { label: string; class: string; icon: typeof FileText }> = {
+  entwurf: { label: "Entwurf", class: "bg-muted text-muted-foreground", icon: FilePen },
+  gezeichnet: { label: "Gezeichnet", class: "bg-primary/10 text-primary", icon: FileSignature },
+  aktiv: { label: "Aktiv", class: "bg-success/10 text-success", icon: CircleCheck },
+  gekuendigt: { label: "Gekündigt", class: "bg-warning/10 text-warning", icon: CircleOff },
+  beendet: { label: "Beendet", class: "bg-destructive/10 text-destructive", icon: ArchiveX },
 };
 
 // Product options are now loaded from the database
@@ -828,18 +829,23 @@ export default function Vertraege() {
       </div>
 
       {/* Stats */}
-       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
-        {(["entwurf", "gezeichnet", "aktiv", "gekuendigt", "beendet"] as const).map((s) => (
-          <Card key={s}>
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">{statusConfig[s].label}</p>
-                <p className="text-2xl font-semibold">{contracts.filter((c: any) => c.status === s).length}</p>
-              </div>
-              <Badge className={statusConfig[s].class}>{statusConfig[s].label}</Badge>
-            </CardContent>
-          </Card>
-        ))}
+       <div className="grid grid-cols-5 gap-2 sm:gap-4 mb-6">
+        {(["entwurf", "gezeichnet", "aktiv", "gekuendigt", "beendet"] as const).map((s) => {
+          const cfg = statusConfig[s];
+          const Icon = cfg.icon;
+          const count = contracts.filter((c: any) => c.status === s).length;
+          return (
+            <Card key={s} className="overflow-hidden">
+              <CardContent className="p-3 sm:p-4 flex flex-col items-center gap-1.5 text-center">
+                <div className={`rounded-full p-2 ${cfg.class}`}>
+                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                </div>
+                <p className="text-xl sm:text-2xl font-semibold leading-none">{count}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight hidden sm:block">{cfg.label}</p>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Table */}
