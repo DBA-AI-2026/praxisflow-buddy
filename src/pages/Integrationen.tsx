@@ -254,7 +254,7 @@ export default function Integrationen() {
           ) : (
             <>
               {/* Summary Cards */}
-              <div className="grid grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                 <div className="p-3 rounded-lg bg-muted/50">
                   <p className="text-xs text-muted-foreground">Anzahl</p>
                   <p className="text-lg font-semibold">{previewTotals.count} Positionen</p>
