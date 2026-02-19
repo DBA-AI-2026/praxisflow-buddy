@@ -319,87 +319,19 @@ export async function fillContractTemplate(
   }
 
   // ============================================================
-  // PAGE 5
+  // PAGES 5–22: Only MP-Nr in header
   // ============================================================
-  if (pages.length > 4) {
-    write(4, data.mp_nr || "", 101, 784);
-    write(4, data.mp_nr || "", 271, 657);
+  for (let i = 4; i < Math.min(pages.length, 22); i++) {
+    write(i, data.mp_nr || "", 101, 784);
   }
 
-  // ============================================================
-  // PAGE 6
-  // ============================================================
-  if (pages.length > 5) {
-    write(5, data.mp_nr || "", 103, 784);
-    write(5, ortText, 67, 185);
-    write(5, today, 69, 161);
-    await drawSignature(5, 201, 166, 100, 28, "vertrieb");
-    write(5, ortText, 67, 80);
-    write(5, today, 69, 57);
-    await drawSignature(5, 204, 61, 100, 28, "customer");
-  }
-
-  // ============================================================
-  // PAGE 7
-  // ============================================================
-  if (pages.length > 6) {
-    write(6, data.mp_nr || "", 101, 783);
-    write(6, data.mp_nr || "", 271, 669);
-  }
-
-  // ============================================================
-  // PAGE 8
-  // ============================================================
-  if (pages.length > 7) {
-    write(7, data.mp_nr || "", 102, 784);
-  }
-
-  // ============================================================
-  // PAGE 9
-  // ============================================================
-  if (pages.length > 8) {
-    write(8, data.mp_nr || "", 99, 785);
-    write(8, ortText, 65, 190);
-    write(8, today, 64, 165);
-    await drawSignature(8, 199, 181, 100, 28, "vertrieb");
-    write(8, ortText, 65, 81);
-    write(8, today, 67, 56);
-    await drawSignature(8, 200, 71, 100, 28, "customer");
-  }
-
-  // ============================================================
-  // PAGE 10
-  // ============================================================
-  if (pages.length > 9) {
-    write(9, data.mp_nr || "", 99, 785);
-  }
-
-  // ============================================================
-  // PAGE 11
-  // ============================================================
-  if (pages.length > 10) {
-    write(10, data.mp_nr || "", 100, 785);
-  }
-
-  // ============================================================
-  // PAGE 12
-  // ============================================================
-  if (pages.length > 11) {
-    write(11, data.mp_nr || "", 101, 785);
-    write(11, data.mp_nr || "", 271, 669);
-  }
-
-  // ============================================================
-  // PAGE 13
-  // ============================================================
-  if (pages.length > 12) {
-    write(12, data.mp_nr || "", 101, 785);
-    write(12, ortText, 67, 191);
-    write(12, today, 67, 167);
-    await drawSignature(12, 201, 181, 100, 28, "vertrieb");
-    write(12, ortText, 63, 81);
-    write(12, today, 65, 55);
-    await drawSignature(12, 201, 72, 100, 28, "customer");
+  // Pages with "MP-Nummer, falls vorhanden" box in body text
+  // Page 5 (AGB DL-Vertrag), Page 7 (AGB Wartung), Page 12 (EULA), Page 14 (AVV)
+  const bodyMpPages = [4, 6, 11, 13];
+  for (const idx of bodyMpPages) {
+    if (idx < pages.length) {
+      write(idx, data.mp_nr || "", 271, 669);
+    }
   }
 
   return doc.save();
