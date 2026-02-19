@@ -1,9 +1,19 @@
 import { Resend } from "https://esm.sh/resend@2.0.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = [
+  "https://praxisflow-buddy.lovable.app",
+  "https://id-preview--f9dcf8ed-b381-4f00-af4c-2993b99115fa.lovable.app",
+  "http://localhost:5173",
+];
+
+function getCorsHeaders(origin: string | null) {
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin || "") ? origin! : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Credentials": "true",
+  };
+}
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -11,6 +21,9 @@ const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const ADMIN_EMAIL = "info@honorarfuchs.de";
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });

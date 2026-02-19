@@ -1,10 +1,20 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encode as base64UrlEncode } from "https://deno.land/std@0.208.0/encoding/base64url.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = [
+  "https://praxisflow-buddy.lovable.app",
+  "https://id-preview--f9dcf8ed-b381-4f00-af4c-2993b99115fa.lovable.app",
+  "http://localhost:5173",
+];
+
+function getCorsHeaders(origin: string | null) {
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin || "") ? origin! : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Credentials": "true",
+  };
+}
 
 // Generate a random code verifier for PKCE
 function generateCodeVerifier(): string {
@@ -22,6 +32,9 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
