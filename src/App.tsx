@@ -14,6 +14,7 @@ import Export from "./pages/Export";
 import Integrationen from "./pages/Integrationen";
 import Umsaetze from "./pages/Umsaetze";
 import Reservierungen from "./pages/Reservierungen";
+import DemoTracking from "./pages/DemoTracking";
 import Provisionen from "./pages/vertrieb/Provisionen";
 import Vertraege from "./pages/vertrieb/Vertraege";
 import Vertriebler from "./pages/vertrieb/Vertriebler";
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/reservierungen" element={<ProtectedRoute><Reservierungen /></ProtectedRoute>} />
             <Route path="/praxen" element={<ProtectedRoute><Praxen /></ProtectedRoute>} />
+            <Route path="/demo-tracking" element={<ProtectedRoute><DemoTracking /></ProtectedRoute>} />
             <Route path="/tickets" element={<ProtectedRoute><Tickets /></ProtectedRoute>} />
             <Route path="/kalender" element={<ProtectedRoute><Kalender /></ProtectedRoute>} />
             <Route path="/lizenzen" element={<ProtectedRoute><Lizenzen /></ProtectedRoute>} />

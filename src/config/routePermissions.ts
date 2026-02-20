@@ -10,26 +10,27 @@ export interface RoutePermission {
 // Define which roles can access each route
 export const routePermissions: RoutePermission[] = [
   // Base routes - accessible by all authenticated users
-  { path: "/", allowedRoles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] },
-  { path: "/praxen", allowedRoles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] },
-  { path: "/tickets", allowedRoles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] },
-  { path: "/lizenzen", allowedRoles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] },
-  { path: "/umsaetze", allowedRoles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] },
+  { path: "/", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
+  { path: "/praxen", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
+  { path: "/tickets", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
+  { path: "/lizenzen", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
+  { path: "/umsaetze", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
   
-  // Reservierungen - only sales partners and admins
-  { path: "/reservierungen", allowedRoles: ["sales_partner", "admin"] },
-  { path: "/lizenzen", allowedRoles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] },
-  { path: "/umsaetze", allowedRoles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] },
+  // Reservierungen
+  { path: "/reservierungen", allowedRoles: ["sales_partner", "regional_lead", "admin"] },
   
-  // Sales Lead and Admin routes
-  { path: "/kalender", allowedRoles: ["sales_lead", "admin"] },
+  // Demo-Tracking
+  { path: "/demo-tracking", allowedRoles: ["sales_partner", "sales_lead", "regional_lead", "admin"] },
+  
+  // Sales Lead, Regional Lead and Admin routes
+  { path: "/kalender", allowedRoles: ["sales_lead", "regional_lead", "admin"] },
   { path: "/export", allowedRoles: ["sales_lead", "admin"] },
   { path: "/integrationen", allowedRoles: ["sales_lead", "admin"] },
   
-  // Vertrieb routes - Sales Lead and Admin only
-  { path: "/vertrieb/vertriebler", allowedRoles: ["sales_lead", "admin"] },
-  { path: "/vertrieb/vertraege", allowedRoles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] },
-  { path: "/vertrieb/provisionen", allowedRoles: ["sales_lead", "admin"] },
+  // Vertrieb routes
+  { path: "/vertrieb/vertriebler", allowedRoles: ["sales_lead", "regional_lead", "admin"] },
+  { path: "/vertrieb/vertraege", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
+  { path: "/vertrieb/provisionen", allowedRoles: ["sales_lead", "regional_lead", "admin"] },
   
   // Admin routes - Admin only
   { path: "/admin/access-requests", allowedRoles: ["admin"] },

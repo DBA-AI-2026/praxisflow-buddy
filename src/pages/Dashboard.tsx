@@ -2,23 +2,11 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { RecentTickets } from "@/components/dashboard/RecentTickets";
 import { RecentPraxen } from "@/components/dashboard/RecentPraxen";
-import { PendingContractApprovals } from "@/components/dashboard/PendingContractApprovals";
-import { Building2, Ticket, Key, TrendingUp } from "lucide-react";
-import { useUserRole } from "@/hooks/useUserRole";
+import { Building2, Ticket, FlaskConical, TrendingUp } from "lucide-react";
 
 export default function Dashboard() {
-  const { isAdmin, isVertragsabteilung } = useUserRole();
-  const showApprovals = isAdmin || isVertragsabteilung;
-
   return (
     <MainLayout title="Dashboard" subtitle="Übersicht aller wichtigen Kennzahlen">
-      {/* Contract Approvals for Vertragsabteilung / Admin */}
-      {showApprovals && (
-        <div className="mb-8">
-          <PendingContractApprovals />
-        </div>
-      )}
-
       {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <StatCard
@@ -30,20 +18,20 @@ export default function Dashboard() {
           iconColor="bg-primary/10 text-primary"
         />
         <StatCard
+          title="Demo-Phase"
+          value={34}
+          change="8 laufen diese Woche aus"
+          changeType="neutral"
+          icon={FlaskConical}
+          iconColor="bg-amber-500/10 text-amber-600"
+        />
+        <StatCard
           title="Offene Tickets"
           value={18}
           change="5 dringend"
           changeType="negative"
           icon={Ticket}
           iconColor="bg-warning/10 text-warning"
-        />
-        <StatCard
-          title="Aktive Lizenzen"
-          value={312}
-          change="+8 diese Woche"
-          changeType="positive"
-          icon={Key}
-          iconColor="bg-accent/10 text-accent"
         />
         <StatCard
           title="Monatsumsatz"

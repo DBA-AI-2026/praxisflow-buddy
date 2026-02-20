@@ -17,6 +17,7 @@ import {
   Lock,
   FileText,
   Package,
+  FlaskConical,
 } from "lucide-react";
 import logo from "@/assets/fox-logo.jpeg";
 import { useState } from "react";
@@ -26,20 +27,23 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole, AppRole } from "@/hooks/useUserRole";
 
 // Navigation items with role-based visibility
+const allRoles: AppRole[] = ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"];
+
 const baseNavigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] as AppRole[] },
-  { name: "Reservierungen", href: "/reservierungen", icon: BookMarked, roles: ["sales_partner", "admin"] as AppRole[] },
-  { name: "Kunden", href: "/praxen", icon: Building2, roles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] as AppRole[] },
-  { name: "Tickets", href: "/tickets", icon: Ticket, roles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] as AppRole[] },
-  { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "admin"] as AppRole[] },
-  { name: "Lizenzen", href: "/lizenzen", icon: Key, roles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] as AppRole[] },
+  { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: allRoles },
+  { name: "Reservierungen", href: "/reservierungen", icon: BookMarked, roles: ["sales_partner", "regional_lead", "admin"] as AppRole[] },
+  { name: "Kunden", href: "/praxen", icon: Building2, roles: allRoles },
+  { name: "Demo-Tracking", href: "/demo-tracking", icon: FlaskConical, roles: ["sales_partner", "sales_lead", "regional_lead", "admin"] as AppRole[] },
+  { name: "Tickets", href: "/tickets", icon: Ticket, roles: allRoles },
+  { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "regional_lead", "admin"] as AppRole[] },
+  { name: "Lizenzen", href: "/lizenzen", icon: Key, roles: allRoles },
 ];
 
 const vertriebNavigation = [
-  { name: "Umsätze", href: "/umsaetze", icon: Euro, roles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] as AppRole[] },
-  { name: "Verträge", href: "/vertrieb/vertraege", icon: FileText, roles: ["user", "sales_partner", "sales_lead", "vertragsabteilung", "admin"] as AppRole[] },
-  { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users, roles: ["sales_lead", "admin"] as AppRole[] },
-  { name: "Provisionen", href: "/vertrieb/provisionen", icon: Euro, roles: ["sales_lead", "admin"] as AppRole[] },
+  { name: "Umsätze", href: "/umsaetze", icon: Euro, roles: allRoles },
+  { name: "Verträge", href: "/vertrieb/vertraege", icon: FileText, roles: allRoles },
+  { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users, roles: ["sales_lead", "regional_lead", "admin"] as AppRole[] },
+  { name: "Provisionen", href: "/vertrieb/provisionen", icon: Euro, roles: ["sales_lead", "regional_lead", "admin"] as AppRole[] },
 ];
 
 const adminNavigation = [
