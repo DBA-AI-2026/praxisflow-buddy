@@ -20,7 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Plus, Loader2, FlaskConical, ArrowUpRight } from "lucide-react";
+import { Search, Plus, Loader2, FlaskConical, ArrowUpRight, Upload } from "lucide-react";
+import { CsvImportDialog } from "@/components/demo-tracking/CsvImportDialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,6 +39,7 @@ export default function DemoTracking() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("alle");
   const [createOpen, setCreateOpen] = useState(false);
+  const [csvOpen, setCsvOpen] = useState(false);
   const [form, setForm] = useState({ company_name: "", contact_name: "", email: "", telefon: "", product_name: "", notes: "" });
   const { toast } = useToast();
   const { user } = useAuth();
@@ -154,10 +156,16 @@ export default function DemoTracking() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Neuer Eintrag
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setCsvOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            CSV-Import
+          </Button>
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Neuer Eintrag
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
@@ -261,6 +269,7 @@ export default function DemoTracking() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <CsvImportDialog open={csvOpen} onOpenChange={setCsvOpen} />
     </MainLayout>
   );
 }

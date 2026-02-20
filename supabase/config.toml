@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.creditreform-check]
 verify_jwt = false
+
+[functions.demo-import]
+verify_jwt = false
