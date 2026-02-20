@@ -1127,7 +1127,7 @@ export default function Vertraege() {
                 };
                 const sorted = [...products].sort((a: any, b: any) => (productOrder[a.name] ?? 99) - (productOrder[b.name] ?? 99));
 
-                const recalcPrices = (nextProducts: string[]) => {
+                const recalcPrices = (nextProducts: string[], selectedModules?: string[]) => {
                   const now = new Date();
                   const totalMonthly = products
                     .filter((pr: any) => nextProducts.includes(pr.name))
@@ -1136,10 +1136,13 @@ export default function Vertraege() {
                       const bfWaived = promoActive && pr.promo_base_fee_end_date && new Date(pr.promo_base_fee_end_date) >= now;
                       return sum + (bfWaived ? 0 : Number(pr.monthly_price));
                     }, 0);
+                  const modulesTotal = ebmModules
+                    .filter((m: any) => (selectedModules ?? form.selected_modules).includes(m.name))
+                    .reduce((sum: number, m: any) => sum + Number(m.monthly_price), 0);
                   const totalOneTime = products
                     .filter((pr: any) => nextProducts.includes(pr.name))
                     .reduce((sum: number, pr: any) => sum + Number(pr.one_time_fee), 0);
-                  return { totalMonthly, totalOneTime };
+                  return { totalMonthly: totalMonthly + modulesTotal, totalOneTime };
                 };
 
                 const toggleProduct = (name: string) => {
@@ -1275,12 +1278,13 @@ export default function Vertraege() {
                                         >
                                           <Checkbox
                                             checked={isChecked}
-                                            onCheckedChange={() => {
-                                              const next = isChecked
-                                                ? form.selected_modules.filter((n) => n !== mod.name)
-                                                : [...form.selected_modules, mod.name];
-                                              setForm((prev) => ({ ...prev, selected_modules: next }));
-                                            }}
+                            onCheckedChange={() => {
+                              const next = isChecked
+                                ? form.selected_modules.filter((n) => n !== mod.name)
+                                : [...form.selected_modules, mod.name];
+                              const { totalMonthly, totalOneTime } = recalcPrices(form.selected_products, next);
+                              setForm((prev) => ({ ...prev, selected_modules: next, monthly_price: totalMonthly, one_time_fee: totalOneTime }));
+                            }}
                                             className="mt-0.5"
                                           />
                                           <div className="flex-1 min-w-0">
