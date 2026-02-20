@@ -20,8 +20,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText } from "lucide-react";
+import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText, UserCog } from "lucide-react";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
+import { RegionalAssignmentDialog } from "@/components/admin/RegionalAssignmentDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,6 +59,7 @@ export default function AdminUsers() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [selectedRole, setSelectedRole] = useState<AppRole>("user");
   const { toast } = useToast();
@@ -176,6 +178,11 @@ export default function AdminUsers() {
   const handleDeleteClick = (user: UserWithRole) => {
     setSelectedUser(user);
     setDeleteDialogOpen(true);
+  };
+
+  const handleAssignClick = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setAssignDialogOpen(true);
   };
 
   return (
@@ -349,10 +356,16 @@ export default function AdminUsers() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEditClick(user)}>
-                            <Pencil className="h-4 w-4 mr-2" />
-                            Rolle ändern
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
+                             <Pencil className="h-4 w-4 mr-2" />
+                             Rolle ändern
+                           </DropdownMenuItem>
+                           {user.role === "regional_lead" && (
+                             <DropdownMenuItem onClick={() => handleAssignClick(user)}>
+                               <UserCog className="h-4 w-4 mr-2" />
+                               Team zuordnen
+                             </DropdownMenuItem>
+                           )}
+                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => handleDeleteClick(user)}
@@ -481,6 +494,13 @@ export default function AdminUsers() {
 
       {/* Create User Dialog */}
       <CreateUserDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+
+      {/* Regional Assignment Dialog */}
+      <RegionalAssignmentDialog
+        open={assignDialogOpen}
+        onOpenChange={setAssignDialogOpen}
+        regionalLead={selectedUser}
+      />
     </MainLayout>
   );
 }
