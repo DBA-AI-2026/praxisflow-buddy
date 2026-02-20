@@ -319,7 +319,7 @@ export async function fillContractTemplate(
   }
 
   // ============================================================
-  // PAGES 5–22: Only MP-Nr in header
+  // PAGES 5–22: MP-Nr in header
   // ============================================================
   for (let i = 4; i < Math.min(pages.length, 22); i++) {
     write(i, data.mp_nr || "", 101, 784);
@@ -332,6 +332,54 @@ export async function fillContractTemplate(
     if (idx < pages.length) {
       write(idx, data.mp_nr || "", 271, 669);
     }
+  }
+
+  // ============================================================
+  // PAGE 6 (index 5) – Unterschriften (Vertrieb + Kunde)
+  // ============================================================
+  if (pages.length > 5) {
+    write(5, ortText, 67, 185);
+    write(5, today, 69, 161);
+    await drawSignature(5, 201, 166, 100, 28, "vertrieb");
+    write(5, ortText, 67, 80);
+    write(5, today, 69, 57);
+    await drawSignature(5, 204, 61, 100, 28, "customer");
+  }
+
+  // ============================================================
+  // PAGE 9 (index 8) – Unterschriften (Vertrieb + Kunde)
+  // ============================================================
+  if (pages.length > 8) {
+    write(8, ortText, 65, 190);
+    write(8, today, 64, 165);
+    await drawSignature(8, 199, 181, 100, 28, "vertrieb");
+    write(8, ortText, 65, 81);
+    write(8, today, 67, 56);
+    await drawSignature(8, 200, 71, 100, 28, "customer");
+  }
+
+  // ============================================================
+  // PAGE 13 (index 12) – Unterschriften (Vertrieb + Kunde)
+  // ============================================================
+  if (pages.length > 12) {
+    write(12, ortText, 67, 191);
+    write(12, today, 67, 167);
+    await drawSignature(12, 201, 181, 100, 28, "vertrieb");
+    write(12, ortText, 63, 81);
+    write(12, today, 65, 55);
+    await drawSignature(12, 201, 72, 100, 28, "customer");
+  }
+
+  // ============================================================
+  // PAGE 16 (index 15) – Unterschriften (Vertrieb + Kunde)
+  // ============================================================
+  if (pages.length > 15) {
+    write(15, ortText, 67, 185);
+    write(15, today, 69, 161);
+    await drawSignature(15, 201, 166, 100, 28, "vertrieb");
+    write(15, ortText, 67, 80);
+    write(15, today, 69, 57);
+    await drawSignature(15, 204, 61, 100, 28, "customer");
   }
 
   return doc.save();
