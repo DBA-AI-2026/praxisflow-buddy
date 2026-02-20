@@ -117,7 +117,7 @@ export default function Lizenzen() {
   };
 
   return (
-    <MainLayout title="HFX EBM Lizenzen" subtitle="Lizenzverwaltung und Freischaltung">
+    <MainLayout title="Lizenzen" subtitle="Lizenzverwaltung und Freischaltung">
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="stat-card">
