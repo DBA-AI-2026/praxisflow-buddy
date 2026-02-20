@@ -12,12 +12,14 @@ import {
   LogOut,
   Menu,
   BookMarked,
-  Euro,
+  TrendingUp,
   Link2,
   Lock,
   FileText,
   Package,
   FlaskConical,
+  BarChart3,
+  ClipboardList,
 } from "lucide-react";
 import logo from "@/assets/fox-logo.jpeg";
 import { useState } from "react";
@@ -25,51 +27,119 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole, AppRole } from "@/hooks/useUserRole";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-// Navigation items with role-based visibility
 const allRoles: AppRole[] = ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"];
 
-const baseNavigation = [
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  roles: AppRole[];
+  adminOnly?: boolean;
+}
+
+const dashboardNav: NavItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: allRoles },
-  { name: "Reservierungen", href: "/reservierungen", icon: BookMarked, roles: ["sales_partner", "regional_lead", "admin"] as AppRole[] },
+];
+
+const kundenNavigation: NavItem[] = [
   { name: "Kunden", href: "/praxen", icon: Building2, roles: allRoles },
-  { name: "Demo-Tracking", href: "/demo-tracking", icon: FlaskConical, roles: ["sales_partner", "sales_lead", "regional_lead", "admin"] as AppRole[] },
-  { name: "Tickets", href: "/tickets", icon: Ticket, roles: allRoles },
-  { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "regional_lead", "admin"] as AppRole[] },
-  { name: "Lizenzen", href: "/lizenzen", icon: Key, roles: allRoles },
+  { name: "Reservierungen", href: "/reservierungen", icon: BookMarked, roles: ["sales_partner", "regional_lead", "admin"] },
+  { name: "Demo-Tracking", href: "/demo-tracking", icon: FlaskConical, roles: ["sales_partner", "sales_lead", "regional_lead", "admin"] },
 ];
 
-const vertriebNavigation = [
-  { name: "Umsätze", href: "/umsaetze", icon: Euro, roles: allRoles },
+const vertriebNavigation: NavItem[] = [
   { name: "Verträge", href: "/vertrieb/vertraege", icon: FileText, roles: allRoles },
-  { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users, roles: ["sales_lead", "regional_lead", "admin"] as AppRole[] },
-  { name: "Provisionen", href: "/vertrieb/provisionen", icon: Euro, roles: ["sales_lead", "regional_lead", "admin"] as AppRole[] },
+  { name: "Umsätze", href: "/umsaetze", icon: TrendingUp, roles: allRoles },
+  { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users, roles: ["sales_lead", "regional_lead", "admin"] },
+  { name: "Provisionen", href: "/vertrieb/provisionen", icon: BarChart3, roles: ["sales_lead", "regional_lead", "admin"] },
 ];
 
-const adminNavigation = [
-  { name: "Zugangsanfragen", href: "/admin/access-requests", icon: UserPlus },
-  { name: "Benutzerverwaltung", href: "/admin/users", icon: Users },
-  { name: "Produktverwaltung", href: "/admin/products", icon: Package },
-  { name: "Datenexport", href: "/export", icon: FileDown },
-  { name: "Buchhaltung", href: "/integrationen", icon: Link2 },
-  { name: "Audit-Protokoll", href: "/admin/audit-logs", icon: Lock },
-  { name: "Einstellungen", href: "/admin/settings", icon: Settings },
+const allgemeinNavigation: NavItem[] = [
+  { name: "Tickets", href: "/tickets", icon: Ticket, roles: allRoles },
+  { name: "Lizenzen", href: "/lizenzen", icon: Key, roles: allRoles },
+  { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "regional_lead", "admin"] },
 ];
+
+const adminNavigation: NavItem[] = [
+  { name: "Zugangsanfragen", href: "/admin/access-requests", icon: UserPlus, roles: ["admin"], adminOnly: true },
+  { name: "Benutzerverwaltung", href: "/admin/users", icon: Users, roles: ["admin"], adminOnly: true },
+  { name: "Produktverwaltung", href: "/admin/products", icon: Package, roles: ["admin"], adminOnly: true },
+  { name: "Datenexport", href: "/export", icon: FileDown, roles: ["admin"], adminOnly: true },
+  { name: "Buchhaltung", href: "/integrationen", icon: Link2, roles: ["admin"], adminOnly: true },
+  { name: "Audit-Protokoll", href: "/admin/audit-logs", icon: ClipboardList, roles: ["admin"], adminOnly: true },
+  { name: "Einstellungen", href: "/admin/settings", icon: Settings, roles: ["admin"], adminOnly: true },
+];
+
+interface NavSectionProps {
+  label: string;
+  items: NavItem[];
+  userRole: AppRole | null;
+  isAdmin: boolean;
+  currentPath: string;
+  onNavigate?: () => void;
+}
+
+function NavSection({ label, items, userRole, isAdmin, currentPath, onNavigate }: NavSectionProps) {
+  const visibleItems = items.filter(
+    (item) => (userRole && item.roles.includes(userRole)) || item.adminOnly
+  );
+
+  if (visibleItems.length === 0) return null;
+
+  return (
+    <>
+      <div className="mt-6 first:mt-0 mb-2 px-3 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
+        {label}
+      </div>
+      {visibleItems.map((item) => {
+        const hasAccess = userRole && item.roles.includes(userRole);
+        const isActive = currentPath === item.href;
+        const isLocked = item.adminOnly && !isAdmin;
+
+        if (isLocked) {
+          return (
+            <Tooltip key={item.name}>
+              <TooltipTrigger asChild>
+                <div
+                  className="sidebar-link opacity-40 cursor-not-allowed pointer-events-auto"
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  <span className="truncate flex-1">{item.name}</span>
+                  <Lock className="h-3.5 w-3.5 flex-shrink-0 text-sidebar-foreground/40" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Nur für Administratoren</p>
+              </TooltipContent>
+            </Tooltip>
+          );
+        }
+
+        if (!hasAccess) return null;
+
+        return (
+          <Link
+            key={item.name}
+            to={item.href}
+            onClick={onNavigate}
+            className={`sidebar-link ${isActive ? "active" : ""}`}
+          >
+            <item.icon className="h-5 w-5 flex-shrink-0" />
+            <span className="truncate">{item.name}</span>
+          </Link>
+        );
+      })}
+    </>
+  );
+}
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
   const { role: userRole, isAdmin } = useUserRole();
-  
-  // Filter navigation items based on user role
-  const filteredNavigation = baseNavigation.filter(
-    (item) => userRole && item.roles.includes(userRole)
-  );
-  
-  const filteredVertriebNavigation = vertriebNavigation.filter(
-    (item) => userRole && item.roles.includes(userRole)
-  );
 
   const handleLogout = async () => {
     await signOut();
@@ -84,6 +154,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     .toUpperCase()
     .slice(0, 2);
 
+  const sectionProps = {
+    userRole,
+    isAdmin,
+    currentPath: location.pathname,
+    onNavigate,
+  };
+
   return (
     <div className="flex h-full flex-col">
       {/* Logo */}
@@ -97,67 +174,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-2 lg:px-3 py-4 overflow-y-auto">
-        <div className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
-          Hauptmenü
-        </div>
-        {filteredNavigation.map((item) => {
-          const isActive = location.pathname === item.href;
-          return (
-            <Link
-              key={item.name}
-              to={item.href}
-              onClick={onNavigate}
-              className={`sidebar-link ${isActive ? "active" : ""}`}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              <span className="truncate">{item.name}</span>
-            </Link>
-          );
-        })}
-
-        {filteredVertriebNavigation.length > 0 && (
-          <>
-            <div className="mt-8 mb-2 px-3 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
-              Vertrieb
-            </div>
-            {filteredVertriebNavigation.map((item) => {
-              const isActive = location.pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  onClick={onNavigate}
-                  className={`sidebar-link ${isActive ? "active" : ""}`}
-                >
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
-                  <span className="truncate">{item.name}</span>
-                </Link>
-              );
-            })}
-          </>
-        )}
-
-        {isAdmin && (
-          <>
-            <div className="mt-8 mb-2 px-3 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
-              Administration
-            </div>
-            {adminNavigation.map((item) => {
-              const isActive = location.pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  onClick={onNavigate}
-                  className={`sidebar-link ${isActive ? "active" : ""}`}
-                >
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
-                  <span className="truncate">{item.name}</span>
-                </Link>
-              );
-            })}
-          </>
-        )}
+        <NavSection label="Übersicht" items={dashboardNav} {...sectionProps} />
+        <NavSection label="Kunden" items={kundenNavigation} {...sectionProps} />
+        <NavSection label="Vertrieb" items={vertriebNavigation} {...sectionProps} />
+        <NavSection label="Allgemein" items={allgemeinNavigation} {...sectionProps} />
+        <NavSection label="Administration" items={adminNavigation} {...sectionProps} />
       </nav>
 
       {/* User */}
@@ -174,7 +195,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               {user?.email || ""}
             </p>
           </div>
-          <button 
+          <button
             onClick={handleLogout}
             className="p-1.5 rounded-md hover:bg-sidebar-border/50 transition-colors flex-shrink-0"
             title="Abmelden"
