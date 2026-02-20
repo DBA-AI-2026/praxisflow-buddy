@@ -339,6 +339,57 @@ export type Database = {
           },
         ]
       }
+      demo_downloads: {
+        Row: {
+          company_name: string
+          contact_name: string | null
+          created_at: string
+          created_by: string | null
+          download_date: string
+          email: string | null
+          hfx_customer_number: string | null
+          id: string
+          notes: string | null
+          product_name: string | null
+          status: string
+          telefon: string | null
+          test_phase_end: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_name: string
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          download_date?: string
+          email?: string | null
+          hfx_customer_number?: string | null
+          id?: string
+          notes?: string | null
+          product_name?: string | null
+          status?: string
+          telefon?: string | null
+          test_phase_end?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          download_date?: string
+          email?: string | null
+          hfx_customer_number?: string | null
+          id?: string
+          notes?: string | null
+          product_name?: string | null
+          status?: string
+          telefon?: string | null
+          test_phase_end?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       integration_settings: {
         Row: {
           api_key_encrypted: string | null
@@ -831,6 +882,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_regional_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          regional_lead_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          regional_lead_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          regional_lead_id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

@@ -11,11 +11,12 @@ interface UseUserRoleResult {
   isAdmin: boolean;
   isVertragsabteilung: boolean;
   isSalesLead: boolean;
+  isRegionalLead: boolean;
   isSalesPartner: boolean;
   isUser: boolean;
 }
 
-export function useUserRole(): UseUserRoleResult {
+export function useUserRole(): UseUserRoleResult & { isRegionalLead: boolean } {
   const { user, isLoading: authLoading } = useAuth();
   const [role, setRole] = useState<AppRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,6 +60,7 @@ export function useUserRole(): UseUserRoleResult {
     isAdmin: role === "admin",
     isVertragsabteilung: role === "vertragsabteilung",
     isSalesLead: role === "sales_lead",
+    isRegionalLead: role === "regional_lead",
     isSalesPartner: role === "sales_partner",
     isUser: role === "user",
   };
