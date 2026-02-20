@@ -58,7 +58,7 @@ const vertriebNavigation: NavItem[] = [
 
 const allgemeinNavigation: NavItem[] = [
   { name: "Tickets", href: "/tickets", icon: Ticket, roles: allRoles },
-  { name: "Lizenzen", href: "/lizenzen", icon: Key, roles: allRoles },
+  { name: "HFX EBM Lizenzen", href: "/lizenzen", icon: Key, roles: allRoles },
   { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "regional_lead", "admin"] },
 ];
 
