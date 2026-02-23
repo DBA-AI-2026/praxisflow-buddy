@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
       </div></body></html>`;
 
       results.customer = await resend.emails.send({
-        from: "HFX Sales Portal <onboarding@resend.dev>",
+        from: "HFX Sales Portal <noreply@honorarfuchs.de>",
         to: [email],
         subject: `Ihre Vertragsunterlagen – ${products || "Honorarfuchs"}`,
         attachments: [attachment],
@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
       </div></body></html>`;
 
       results.partner = await resend.emails.send({
-        from: "HFX Sales Portal <onboarding@resend.dev>",
+        from: "HFX Sales Portal <noreply@honorarfuchs.de>",
         to: [salesPartnerEmail],
         subject: `Vertragskopie – ${customerName || "Neuer Kunde"} – ${products || "Honorarfuchs"}`,
         attachments: [attachment],
