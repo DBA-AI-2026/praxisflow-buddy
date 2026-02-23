@@ -1,16 +1,15 @@
 project_id = "gvsxentbbzuyanqbqvea"
 
-[functions.salesforce-auth]
-verify_jwt = false
-
-[functions.salesforce-callback]
-verify_jwt = false
-
-[functions.salesforce-sync-price]
-verify_jwt = false
-
-[functions.creditreform-check]
-verify_jwt = false
-
-[functions.demo-import]
-verify_jwt = false
+[functions]
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.creditreform-check]
+    verify_jwt = false
+  [functions.demo-import]
+    verify_jwt = false
+  [functions.salesforce-auth]
+    verify_jwt = false
+  [functions.salesforce-callback]
+    verify_jwt = false
+  [functions.salesforce-sync-price]
+    verify_jwt = false
