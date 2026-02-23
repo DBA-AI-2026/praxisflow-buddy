@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
         try {
           const portalUrl = "https://praxisflow-buddy.lovable.app";
           await resend.emails.send({
-            from: "HFX Sales Portal <noreply@honorarfuchs.de>",
+            from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
             to: [email],
             subject: "Ihr Passwort wurde zurückgesetzt - HFX Sales Portal",
             html: `
@@ -272,7 +272,7 @@ Deno.serve(async (req) => {
         const roleLabel = roleLabels[role] || role;
 
         const emailResponse = await resend.emails.send({
-          from: "HFX Sales Portal <noreply@honorarfuchs.de>",
+          from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
           to: [email],
           subject: "Ihre Zugangsdaten für das HFX Sales Portal",
           html: `

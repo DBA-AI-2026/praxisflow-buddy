@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
 
     // Send notification email to admin
     const emailResponse = await resend.emails.send({
-      from: "HFX Sales Portal <noreply@honorarfuchs.de>",
+      from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
       to: [ADMIN_EMAIL],
       subject: `Neue Zugangsanfrage: ${fullName}`,
       html: `
