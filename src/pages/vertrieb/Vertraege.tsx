@@ -700,6 +700,11 @@ export default function Vertraege() {
       toast({ title: "Fehlende Pflichtfelder", description: missing.join(", "), variant: "destructive" });
       return;
     }
+    // MP-Nummer validation: if provided, must be exactly 5 digits
+    if (form.mp_nr && !/^\d{5}$/.test(form.mp_nr)) {
+      toast({ title: "Ungültige MP-Nummer", description: "Die MP-Nummer muss genau 5-stellig sein (nur Ziffern).", variant: "destructive" });
+      return;
+    }
     // SEPA validation only when SEPA is selected
     if (form.payment_method === "sepa") {
       if (!validateIban(form.iban).valid) {
@@ -1156,7 +1161,19 @@ export default function Vertraege() {
                 </div>
                 <div>
                   <Label>MP-Nummer</Label>
-                  <Input value={form.mp_nr} onChange={(e) => set("mp_nr", e.target.value)} placeholder="z.B. MP-12345" />
+                  <Input
+                    value={form.mp_nr}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 5);
+                      set("mp_nr", val);
+                    }}
+                    placeholder="z.B. 12345"
+                    maxLength={5}
+                    inputMode="numeric"
+                  />
+                  {form.mp_nr && form.mp_nr.length > 0 && form.mp_nr.length < 5 && (
+                    <p className="text-xs text-destructive mt-1">MP-Nummer muss 5-stellig sein</p>
+                  )}
                 </div>
                 <div>
                   <Label>Vertriebspartner</Label>
