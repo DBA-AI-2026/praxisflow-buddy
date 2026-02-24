@@ -1,6 +1,6 @@
-<?php
+<?php // -*- coding: utf-8 -*-
 /**
- * Plugin Name: HFX Honorarfuchs – CF7 Webhook
+ * Plugin Name: HFX Honorarfuchs - CF7 Webhook
  * Plugin URI: https://www.honorarfuchs.de
  * Description: Sendet Contact Form 7 Formulardaten automatisch an die Honorarfuchs Lead-API.
  * Version: 1.0.0
@@ -29,7 +29,7 @@ if (!defined('ABSPATH')) {
  * ============================================================
  */
 
-// ── Einstellungsseite registrieren ──────────────────────────
+// -- Einstellungsseite registrieren --
 
 add_action('admin_menu', 'hfx_webhook_admin_menu');
 add_action('admin_init', 'hfx_webhook_settings_init');
@@ -99,7 +99,7 @@ function hfx_webhook_settings_page() {
     }
     ?>
     <div class="wrap">
-        <h1>HFX Honorarfuchs – CF7 Webhook</h1>
+        <h1>HFX Honorarfuchs - CF7 Webhook</h1>
         <form action="options.php" method="post">
             <?php
             settings_fields('hfx_webhook');
@@ -171,7 +171,7 @@ function hfx_webhook_settings_page() {
     <?php
 }
 
-// ── Letzte Webhook-Aufrufe anzeigen ─────────────────────────
+// -- Letzte Webhook-Aufrufe anzeigen --
 
 function hfx_webhook_render_log_viewer() {
     $logs = get_option('hfx_webhook_logs', []);
@@ -212,7 +212,7 @@ function hfx_webhook_render_log_viewer() {
     <?php
 }
 
-// ── CF7 Hook: Nach erfolgreicher Validierung senden ─────────
+// -- CF7 Hook: Nach erfolgreicher Validierung senden --
 
 add_action('wpcf7_before_send_mail', 'hfx_cf7_send_to_api', 10, 3);
 
