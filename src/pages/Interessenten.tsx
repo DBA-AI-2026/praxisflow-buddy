@@ -1,0 +1,298 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Search, UserPlus, Eye, CheckCircle2, XCircle, Clock, RefreshCw } from "lucide-react";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
+
+const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  neu: { label: "Neu", variant: "default" },
+  kontaktiert: { label: "Kontaktiert", variant: "secondary" },
+  qualifiziert: { label: "Qualifiziert", variant: "outline" },
+  abgelehnt: { label: "Abgelehnt", variant: "destructive" },
+  kunde: { label: "Kunde", variant: "default" },
+};
+
+export default function Interessenten() {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("alle");
+  const [selectedLead, setSelectedLead] = useState<any>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: leads = [], isLoading } = useQuery({
+    queryKey: ["leads", statusFilter],
+    queryFn: async () => {
+      let query = supabase
+        .from("leads")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (statusFilter !== "alle") {
+        query = query.eq("status", statusFilter);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase
+        .from("leads")
+        .update({ status })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast({ title: "Status aktualisiert" });
+    },
+  });
+
+  const filtered = leads.filter((l: any) => {
+    const s = search.toLowerCase();
+    return (
+      !s ||
+      l.praxis_name?.toLowerCase().includes(s) ||
+      l.vorname?.toLowerCase().includes(s) ||
+      l.nachname?.toLowerCase().includes(s) ||
+      l.email?.toLowerCase().includes(s) ||
+      l.hfx_customer_number?.toLowerCase().includes(s) ||
+      l.plz?.includes(s)
+    );
+  });
+
+  return (
+    <MainLayout title="Interessenten" subtitle="Lead-Übersicht aus Website-Kontaktformular">
+      <div className="space-y-4">
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Suchen nach Name, Praxis, E-Mail, HFX-Nr..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="alle">Alle Status</SelectItem>
+              <SelectItem value="neu">Neu</SelectItem>
+              <SelectItem value="kontaktiert">Kontaktiert</SelectItem>
+              <SelectItem value="qualifiziert">Qualifiziert</SelectItem>
+              <SelectItem value="abgelehnt">Abgelehnt</SelectItem>
+              <SelectItem value="kunde">Kunde</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="card-elevated p-4">
+            <p className="text-sm text-muted-foreground">Gesamt</p>
+            <p className="text-2xl font-bold text-foreground">{leads.length}</p>
+          </div>
+          <div className="card-elevated p-4">
+            <p className="text-sm text-muted-foreground">Neue Leads</p>
+            <p className="text-2xl font-bold text-primary">{leads.filter((l: any) => l.status === "neu").length}</p>
+          </div>
+          <div className="card-elevated p-4">
+            <p className="text-sm text-muted-foreground">SF synced</p>
+            <p className="text-2xl font-bold text-green-600">{leads.filter((l: any) => l.salesforce_synced).length}</p>
+          </div>
+          <div className="card-elevated p-4">
+            <p className="text-sm text-muted-foreground">Heute</p>
+            <p className="text-2xl font-bold text-foreground">
+              {leads.filter((l: any) => new Date(l.created_at).toDateString() === new Date().toDateString()).length}
+            </p>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="card-elevated overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>HFX-Nr.</TableHead>
+                <TableHead>Praxis / Name</TableHead>
+                <TableHead>E-Mail</TableHead>
+                <TableHead>PLZ</TableHead>
+                <TableHead>Abr.-Zentrum</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-center">SF</TableHead>
+                <TableHead>Datum</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    Lade Interessenten...
+                  </TableCell>
+                </TableRow>
+              ) : filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    Keine Interessenten gefunden
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filtered.map((lead: any) => {
+                  const sc = statusConfig[lead.status] || statusConfig.neu;
+                  return (
+                    <TableRow key={lead.id}>
+                      <TableCell className="font-mono text-sm font-medium">{lead.hfx_customer_number}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium text-foreground">{lead.praxis_name}</p>
+                          <p className="text-sm text-muted-foreground">{lead.vorname} {lead.nachname}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm">{lead.email}</TableCell>
+                      <TableCell>{lead.plz}</TableCell>
+                      <TableCell className="text-sm">{lead.abrechnungszentrum === "nein" ? "–" : lead.abrechnungszentrum}</TableCell>
+                      <TableCell>
+                        <Select
+                          value={lead.status}
+                          onValueChange={(val) => updateStatusMutation.mutate({ id: lead.id, status: val })}
+                        >
+                          <SelectTrigger className="h-7 w-[130px]">
+                            <Badge variant={sc.variant} className="text-xs">{sc.label}</Badge>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(statusConfig).map(([key, cfg]) => (
+                              <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {lead.salesforce_synced ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-muted-foreground/40 mx-auto" />
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {format(new Date(lead.created_at), "dd.MM.yy HH:mm", { locale: de })}
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" onClick={() => setSelectedLead(lead)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* Detail Dialog */}
+      <Dialog open={!!selectedLead} onOpenChange={(open) => !open && setSelectedLead(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Interessent: {selectedLead?.hfx_customer_number}</DialogTitle>
+          </DialogHeader>
+          {selectedLead && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Praxisname</p>
+                  <p className="font-medium">{selectedLead.praxis_name}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Name</p>
+                  <p className="font-medium">{selectedLead.vorname} {selectedLead.nachname}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">E-Mail</p>
+                  <p className="font-medium">{selectedLead.email}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Mobilnummer</p>
+                  <p className="font-medium">{selectedLead.mobilnummer}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">PLZ</p>
+                  <p className="font-medium">{selectedLead.plz}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Abrechnungszentrum</p>
+                  <p className="font-medium">{selectedLead.abrechnungszentrum}</p>
+                </div>
+                {selectedLead.mp_nummer && (
+                  <div>
+                    <p className="text-muted-foreground">MP-Nummer</p>
+                    <p className="font-medium">{selectedLead.mp_nummer}</p>
+                  </div>
+                )}
+              </div>
+              {selectedLead.nachricht && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Nachricht</p>
+                  <p className="text-sm bg-muted p-3 rounded-md mt-1">{selectedLead.nachricht}</p>
+                </div>
+              )}
+              <div className="flex gap-2 text-xs text-muted-foreground pt-2 border-t">
+                <span className="flex items-center gap-1">
+                  {selectedLead.confirmation_email_sent ? <CheckCircle2 className="h-3 w-3 text-green-500" /> : <Clock className="h-3 w-3" />}
+                  E-Mail
+                </span>
+                <span className="flex items-center gap-1">
+                  {selectedLead.salesforce_synced ? <CheckCircle2 className="h-3 w-3 text-green-500" /> : <Clock className="h-3 w-3" />}
+                  Salesforce
+                </span>
+                <span className="flex items-center gap-1">
+                  {selectedLead.qodia_synced ? <CheckCircle2 className="h-3 w-3 text-green-500" /> : <Clock className="h-3 w-3" />}
+                  Qodia
+                </span>
+                <span className="flex items-center gap-1">
+                  {selectedLead.honorarplus_synced ? <CheckCircle2 className="h-3 w-3 text-green-500" /> : <Clock className="h-3 w-3" />}
+                  HonorarPlus
+                </span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </MainLayout>
+  );
+}

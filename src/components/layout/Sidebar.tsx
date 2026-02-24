@@ -44,6 +44,7 @@ const dashboardNav: NavItem[] = [
 ];
 
 const kundenNavigation: NavItem[] = [
+  { name: "Interessenten", href: "/interessenten", icon: UserPlus, roles: ["sales_partner", "sales_lead", "regional_lead", "admin"] },
   { name: "Kunden", href: "/praxen", icon: Building2, roles: allRoles },
   { name: "Verträge", href: "/vertrieb/vertraege", icon: FileText, roles: allRoles },
   { name: "Reservierungen", href: "/reservierungen", icon: BookMarked, roles: ["sales_partner", "regional_lead", "admin"] },

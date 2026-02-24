@@ -468,6 +468,72 @@ export type Database = {
         }
         Relationships: []
       }
+      leads: {
+        Row: {
+          abrechnungszentrum: string
+          confirmation_email_sent: boolean
+          created_at: string
+          email: string
+          hfx_customer_number: string | null
+          honorarplus_synced: boolean
+          id: string
+          mobilnummer: string
+          mp_nummer: string | null
+          nachname: string
+          nachricht: string | null
+          plz: string
+          praxis_name: string
+          qodia_synced: boolean
+          salesforce_id: string | null
+          salesforce_synced: boolean
+          status: string
+          updated_at: string
+          vorname: string
+        }
+        Insert: {
+          abrechnungszentrum?: string
+          confirmation_email_sent?: boolean
+          created_at?: string
+          email: string
+          hfx_customer_number?: string | null
+          honorarplus_synced?: boolean
+          id?: string
+          mobilnummer: string
+          mp_nummer?: string | null
+          nachname: string
+          nachricht?: string | null
+          plz: string
+          praxis_name: string
+          qodia_synced?: boolean
+          salesforce_id?: string | null
+          salesforce_synced?: boolean
+          status?: string
+          updated_at?: string
+          vorname: string
+        }
+        Update: {
+          abrechnungszentrum?: string
+          confirmation_email_sent?: boolean
+          created_at?: string
+          email?: string
+          hfx_customer_number?: string | null
+          honorarplus_synced?: boolean
+          id?: string
+          mobilnummer?: string
+          mp_nummer?: string | null
+          nachname?: string
+          nachricht?: string | null
+          plz?: string
+          praxis_name?: string
+          qodia_synced?: boolean
+          salesforce_id?: string | null
+          salesforce_synced?: boolean
+          status?: string
+          updated_at?: string
+          vorname?: string
+        }
+        Relationships: []
+      }
       praxen: {
         Row: {
           adresse: string | null

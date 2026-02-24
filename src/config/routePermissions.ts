@@ -19,6 +19,9 @@ export const routePermissions: RoutePermission[] = [
   // Reservierungen
   { path: "/reservierungen", allowedRoles: ["sales_partner", "regional_lead", "admin"] },
   
+  // Interessenten
+  { path: "/interessenten", allowedRoles: ["sales_partner", "sales_lead", "regional_lead", "admin"] },
+  
   // Demo-Tracking
   { path: "/demo-tracking", allowedRoles: ["sales_partner", "sales_lead", "regional_lead", "admin"] },
   
