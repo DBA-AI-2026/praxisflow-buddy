@@ -11,7 +11,17 @@ const ALLOWED_ORIGINS = [
 ];
 
 function getCorsHeaders(origin: string | null) {
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin || "") ? origin! : ALLOWED_ORIGINS[0];
+  // Server-to-server requests (no origin header) are allowed
+  if (!origin) {
+    return {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    };
+  }
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : null;
+  if (!allowedOrigin) {
+    return null; // Origin not allowed
+  }
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -19,112 +29,57 @@ function getCorsHeaders(origin: string | null) {
   };
 }
 
-Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  const corsHeaders = getCorsHeaders(origin);
-
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+/**
+ * Maps CF7 to Webhook / CF7 to Any API field names to our internal format.
+ * Supports multiple common CF7 field naming conventions.
+ */
+function mapCf7Fields(body: Record<string, any>): Record<string, any> {
+  // If the body already has our expected field names, return as-is
+  if (body.praxis_name && body.vorname && body.nachname) {
+    return body;
   }
 
-  try {
-    const body = await req.json();
-    const {
-      praxis_name,
-      vorname,
-      nachname,
-      email,
-      plz,
-      mobilnummer,
-      abrechnungszentrum,
-      mp_nummer,
-      nachricht,
-    } = body;
+  // CF7 to Webhook wraps data in various ways depending on plugin config
+  // Check for nested "data" or "fields" wrapper
+  const data = body.data || body.fields || body;
 
-    // Validate required fields
-    if (!praxis_name || !vorname || !nachname || !email || !plz || !mobilnummer || !abrechnungszentrum) {
-      return new Response(
-        JSON.stringify({ error: "Fehlende Pflichtfelder" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+  return {
+    praxis_name: data.praxis_name || data["praxis-name"] || data["your-praxis"] || data.praxisname || data.company || data.firma || "",
+    vorname: data.vorname || data["your-vorname"] || data["first-name"] || data.firstname || data.first_name || "",
+    nachname: data.nachname || data["your-nachname"] || data["last-name"] || data.lastname || data.last_name || data["your-name"] || "",
+    email: data.email || data["your-email"] || data.mail || "",
+    plz: data.plz || data["your-plz"] || data.postleitzahl || data.zip || data.postal_code || "",
+    mobilnummer: data.mobilnummer || data["your-mobilnummer"] || data.telefon || data.phone || data.tel || data["your-tel"] || data.mobile || "",
+    abrechnungszentrum: data.abrechnungszentrum || data["your-abrechnungszentrum"] || data.abrechnung || "nein",
+    mp_nummer: data.mp_nummer || data["your-mp-nummer"] || data.mp_nr || data.mpnummer || null,
+    nachricht: data.nachricht || data["your-message"] || data.message || data.nachricht || null,
+  };
+}
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return new Response(
-        JSON.stringify({ error: "Ungültige E-Mail-Adresse" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+function buildConfirmationEmailHtml(fields: {
+  praxis_name: string;
+  vorname: string;
+  nachname: string;
+  email: string;
+  plz: string;
+  mobilnummer: string;
+  abrechnungszentrum: string;
+  mp_nummer?: string | null;
+  nachricht?: string | null;
+}): string {
+  const { praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht } = fields;
 
-    // Validate abrechnungszentrum values
-    const validAbrechnungszentren = ["nein", "CareCapital", "privadis", "anderes"];
-    if (!validAbrechnungszentren.includes(abrechnungszentrum)) {
-      return new Response(
-        JSON.stringify({ error: "Ungültiges Abrechnungszentrum" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+  const mpSection = mp_nummer ? `<tr>
+    <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Medizinpartner-Nummer (falls bekannt):</td>
+    <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${mp_nummer}&nbsp;</td>
+  </tr>` : "";
 
-    // MP-Nummer required for CareCapital and privadis
-    if ((abrechnungszentrum === "CareCapital" || abrechnungszentrum === "privadis") && !mp_nummer) {
-      return new Response(
-        JSON.stringify({ error: "MP-Nummer ist bei CareCapital/privadis erforderlich" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+  const nachrichtSection = nachricht ? `<tr>
+    <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Nachricht:</td>
+    <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${nachricht}&nbsp;</td>
+  </tr>` : "";
 
-    // Save to database using service role
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    const { data: lead, error: insertError } = await supabase
-      .from("leads")
-      .insert({
-        praxis_name: praxis_name.trim().slice(0, 200),
-        vorname: vorname.trim().slice(0, 100),
-        nachname: nachname.trim().slice(0, 100),
-        email: email.trim().toLowerCase().slice(0, 255),
-        plz: plz.trim().slice(0, 10),
-        mobilnummer: mobilnummer.trim().slice(0, 30),
-        abrechnungszentrum,
-        mp_nummer: mp_nummer?.trim().slice(0, 50) || null,
-        nachricht: nachricht?.trim().slice(0, 2000) || null,
-      })
-      .select("id, hfx_customer_number")
-      .single();
-
-    if (insertError) {
-      console.error("Error inserting lead:", insertError);
-      return new Response(
-        JSON.stringify({ error: "Fehler beim Speichern" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log(`Lead created: ${lead.hfx_customer_number} for ${email}`);
-
-    // Send confirmation email via Resend
-    try {
-      const resendApiKey = Deno.env.get("RESEND_API_KEY");
-      if (resendApiKey) {
-        const resend = new Resend(resendApiKey);
-
-        // Build conditional sections
-        const mpSection = mp_nummer ? `<tr>
-          <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Medizinpartner-Nummer (falls bekannt):</td>
-          <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${mp_nummer}&nbsp;</td>
-        </tr>` : "";
-
-        const nachrichtSection = nachricht ? `<tr>
-          <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Nachricht:</td>
-          <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${nachricht}&nbsp;</td>
-        </tr>` : "";
-
-        const emailHtml = `<table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>
+  return `<table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>
 <table align="center" border="0" cellpadding="0" cellspacing="0" width="600">
 <tr><td align="center" valign="top" bgcolor="#ffffff">
 <img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/Mailheader-Neutral-hfx-1200px.png" alt="Honorarfuchs" width="600" height="80" border="0" style="border-width:0px;" />
@@ -251,6 +206,118 @@ Geschäftsführer:<br />Olaf Hagelkruys, Thilo Wiers-Keiser und Robbin Zielke<br
 </td></tr>
 </table>
 </td></tr></table>`;
+}
+
+Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
+  // Block browser requests from unknown origins
+  if (origin && !corsHeaders) {
+    return new Response(
+      JSON.stringify({ error: "Origin not allowed" }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  const headers = corsHeaders || {};
+
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers });
+  }
+
+  try {
+    const rawBody = await req.json();
+    
+    // Log source for debugging
+    const source = origin ? `browser:${origin}` : "server-to-server";
+    console.log(`Lead request from: ${source}`);
+
+    // Map CF7 field names to our internal format
+    const {
+      praxis_name,
+      vorname,
+      nachname,
+      email,
+      plz,
+      mobilnummer,
+      abrechnungszentrum,
+      mp_nummer,
+      nachricht,
+    } = mapCf7Fields(rawBody);
+
+    // Validate required fields
+    if (!praxis_name || !vorname || !nachname || !email || !plz || !mobilnummer || !abrechnungszentrum) {
+      return new Response(
+        JSON.stringify({ error: "Fehlende Pflichtfelder", details: { praxis_name: !!praxis_name, vorname: !!vorname, nachname: !!nachname, email: !!email, plz: !!plz, mobilnummer: !!mobilnummer, abrechnungszentrum: !!abrechnungszentrum } }),
+        { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return new Response(
+        JSON.stringify({ error: "Ungültige E-Mail-Adresse" }),
+        { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate abrechnungszentrum values
+    const validAbrechnungszentren = ["nein", "CareCapital", "privadis", "anderes"];
+    if (!validAbrechnungszentren.includes(abrechnungszentrum)) {
+      return new Response(
+        JSON.stringify({ error: "Ungültiges Abrechnungszentrum" }),
+        { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
+      );
+    }
+
+    // MP-Nummer required for CareCapital and privadis
+    if ((abrechnungszentrum === "CareCapital" || abrechnungszentrum === "privadis") && !mp_nummer) {
+      return new Response(
+        JSON.stringify({ error: "MP-Nummer ist bei CareCapital/privadis erforderlich" }),
+        { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Save to database using service role
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: lead, error: insertError } = await supabase
+      .from("leads")
+      .insert({
+        praxis_name: praxis_name.trim().slice(0, 200),
+        vorname: vorname.trim().slice(0, 100),
+        nachname: nachname.trim().slice(0, 100),
+        email: email.trim().toLowerCase().slice(0, 255),
+        plz: plz.trim().slice(0, 10),
+        mobilnummer: mobilnummer.trim().slice(0, 30),
+        abrechnungszentrum,
+        mp_nummer: mp_nummer?.trim().slice(0, 50) || null,
+        nachricht: nachricht?.trim().slice(0, 2000) || null,
+      })
+      .select("id, hfx_customer_number")
+      .single();
+
+    if (insertError) {
+      console.error("Error inserting lead:", insertError);
+      return new Response(
+        JSON.stringify({ error: "Fehler beim Speichern" }),
+        { status: 500, headers: { ...headers, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Lead created: ${lead.hfx_customer_number} for ${email}`);
+
+    // Send confirmation email via Resend
+    try {
+      const resendApiKey = Deno.env.get("RESEND_API_KEY");
+      if (resendApiKey) {
+        const resend = new Resend(resendApiKey);
+        const emailHtml = buildConfirmationEmailHtml({ praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht });
 
         await resend.emails.send({
           from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
@@ -268,7 +335,6 @@ Geschäftsführer:<br />Olaf Hagelkruys, Thilo Wiers-Keiser und Robbin Zielke<br
       }
     } catch (emailErr) {
       console.error("Error sending confirmation email:", emailErr);
-      // Don't fail the request if email fails
     }
 
     // Sync to Salesforce (async, don't block response)
@@ -315,22 +381,21 @@ Geschäftsführer:<br />Olaf Hagelkruys, Thilo Wiers-Keiser und Robbin Zielke<br
       console.error("Salesforce sync error:", sfErr);
     }
 
-    // TODO: Sync to Qodia API
-    // TODO: Sync to HonorarPlus API
-
     return new Response(
       JSON.stringify({
         success: true,
         hfx_customer_number: lead.hfx_customer_number,
         message: "Ihre Anfrage wurde erfolgreich übermittelt.",
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...headers, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
     console.error("Error in capture-lead:", error);
+    const origin2 = req.headers.get("origin");
+    const fallbackHeaders = getCorsHeaders(origin2) || {};
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...fallbackHeaders, "Content-Type": "application/json" } }
     );
   }
 });
