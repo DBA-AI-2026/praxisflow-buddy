@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, UserPlus, Eye, CheckCircle2, XCircle, Clock, RefreshCw } from "lucide-react";
+import { Search, UserPlus, Eye, CheckCircle2, XCircle, Clock, RefreshCw, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -45,6 +46,7 @@ export default function Interessenten() {
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["leads", statusFilter],
@@ -288,6 +290,35 @@ export default function Interessenten() {
                   {selectedLead.honorarplus_synced ? <CheckCircle2 className="h-3 w-3 text-green-500" /> : <Clock className="h-3 w-3" />}
                   HonorarPlus
                 </span>
+              </div>
+              <div className="pt-2 border-t">
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    const lead = selectedLead;
+                    setSelectedLead(null);
+                    // Update lead status to "kunde"
+                    updateStatusMutation.mutate({ id: lead.id, status: "kunde" });
+                    // Navigate to Vertraege with pre-filled data
+                    navigate("/vertrieb/vertraege", {
+                      state: {
+                        fromLead: {
+                          hfx_customer_number: lead.hfx_customer_number,
+                          praxis: lead.praxis_name,
+                          vorname: lead.vorname,
+                          nachname: lead.nachname,
+                          email: lead.email,
+                          plz: lead.plz,
+                          telefon: lead.mobilnummer,
+                          mp_nr: lead.mp_nummer || "",
+                        },
+                      },
+                    });
+                  }}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Zum Vertrag konvertieren
+                </Button>
               </div>
             </div>
           )}

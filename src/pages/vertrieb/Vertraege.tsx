@@ -51,6 +51,7 @@ const validateLanr = (value: string): string | null => {
   return null;
 };
 import { useUserRole } from "@/hooks/useUserRole";
+import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -177,10 +178,12 @@ export default function Vertraege() {
   const [file, setFile] = useState<File | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [bicLoading, setBicLoading] = useState(false);
+  const [leadHfxNumber, setLeadHfxNumber] = useState<string | null>(null);
   const { user, profile } = useAuth();
   const { isAdmin } = useUserRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const location = useLocation();
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const signaturePadRef = useRef<SignaturePad | null>(null);
   const vertriebSignatureCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -234,6 +237,30 @@ export default function Vertraege() {
 
     return () => clearTimeout(timer);
   }, [dialogOpen, form.signature_data, form.vertrieb_signature_data]);
+
+  // Auto-open form when navigating from lead conversion
+  useEffect(() => {
+    const state = location.state as { fromLead?: Record<string, string> } | null;
+    if (state?.fromLead) {
+      const lead = state.fromLead;
+      setLeadHfxNumber(lead.hfx_customer_number || null);
+      setForm({
+        ...emptyForm,
+        praxis: lead.praxis || "",
+        vorname: lead.vorname || "",
+        nachname: lead.nachname || "",
+        email: lead.email || "",
+        plz: lead.plz || "",
+        telefon: lead.telefon || "",
+        mp_nr: lead.mp_nr || "",
+        customer_name: `${lead.vorname || ""} ${lead.nachname || ""}`.trim() || lead.praxis || "",
+        sales_partner_name: profile?.full_name || "",
+        status: "entwurf",
+      });
+      setDialogOpen(true);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, profile?.full_name]);
 
   const clearSignature = useCallback(() => {
     signaturePadRef.current?.clear();
@@ -380,6 +407,7 @@ export default function Vertraege() {
         stundenaufwand_pro_woche: data.stundenaufwand_pro_woche || null,
         selected_addon_modules: data.selected_modules.length > 0 ? data.selected_modules : [],
         ...(documentUrl ? { document_url: documentUrl, document_name: documentName } : {}),
+        ...(leadHfxNumber && !editId ? { hfx_customer_number: leadHfxNumber } : {}),
       };
 
       let contractId = editId;
@@ -547,6 +575,7 @@ export default function Vertraege() {
   const closeDialog = () => {
     setDialogOpen(false);
     setEditId(null);
+    setLeadHfxNumber(null);
     setForm(emptyForm);
     setFile(null);
   };
