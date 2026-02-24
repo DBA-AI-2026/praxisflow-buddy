@@ -3,7 +3,7 @@
  * Plugin Name: HFX Honorarfuchs - CF7 Webhook
  * Plugin URI: https://www.honorarfuchs.de
  * Description: Sendet Contact Form 7 Formulardaten automatisch an die Honorarfuchs Lead-API.
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Honorarfuchs / MCC Medical CareCapital GmbH
  * Author URI: https://www.honorarfuchs.de
  * License: GPL v2 or later
@@ -14,20 +14,52 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * ============================================================
- * KONFIGURATION
- * ============================================================
- * 
- * 1. CF7-Formular-ID: Die ID des Contact Form 7 Formulars,
- *    das an die API gesendet werden soll.
- *    -> Unter Kontakt -> Kontaktformulare in WordPress zu finden.
- *
- * 2. Feld-Mapping: Die CF7-Feldnamen werden auf die API-Felder
- *    gemappt. Passen Sie die linken Werte (CF7-Feldnamen) an
- *    Ihr Formular an.
- * ============================================================
- */
+// -- Standard-Feldnamen --
+
+function hfx_default_field_mapping() {
+    return [
+        'praxis_name'        => 'praxis-name',
+        'vorname'            => 'vorname',
+        'nachname'           => 'nachname',
+        'email'              => 'your-email',
+        'plz'                => 'plz',
+        'mobilnummer'        => 'mobilnummer',
+        'abrechnungszentrum' => 'abrechnungszentrum',
+        'mp_nummer'          => 'mp-nummer',
+        'nachricht'          => 'your-message',
+    ];
+}
+
+function hfx_api_field_labels() {
+    return [
+        'praxis_name'        => 'Praxisname',
+        'vorname'            => 'Vorname',
+        'nachname'           => 'Nachname',
+        'email'              => 'E-Mail',
+        'plz'                => 'PLZ',
+        'mobilnummer'        => 'Mobilnummer',
+        'abrechnungszentrum' => 'Abrechnungszentrum',
+        'mp_nummer'          => 'MP-Nummer',
+        'nachricht'          => 'Nachricht',
+    ];
+}
+
+function hfx_required_fields() {
+    return ['praxis_name', 'vorname', 'nachname', 'email', 'plz', 'abrechnungszentrum'];
+}
+
+// -- Hilfsfunktionen --
+
+function hfx_get_option($key, $default = '') {
+    $options = get_option('hfx_webhook_options', []);
+    return $options[$key] ?? $default;
+}
+
+function hfx_get_field_mapping() {
+    $saved = get_option('hfx_webhook_field_mapping', []);
+    $defaults = hfx_default_field_mapping();
+    return array_merge($defaults, array_filter($saved));
+}
 
 // -- Einstellungsseite registrieren --
 
@@ -45,8 +77,14 @@ function hfx_webhook_admin_menu() {
 }
 
 function hfx_webhook_settings_init() {
+    // Allgemeine Einstellungen
     register_setting('hfx_webhook', 'hfx_webhook_options', [
         'sanitize_callback' => 'hfx_webhook_sanitize',
+    ]);
+
+    // Feld-Mapping
+    register_setting('hfx_webhook', 'hfx_webhook_field_mapping', [
+        'sanitize_callback' => 'hfx_webhook_sanitize_mapping',
     ]);
 
     add_settings_section(
@@ -61,6 +99,32 @@ function hfx_webhook_settings_init() {
     add_settings_field('api_url', 'API-URL', 'hfx_field_api_url', 'hfx-cf7-webhook', 'hfx_webhook_section');
     add_settings_field('cf7_form_id', 'CF7 Formular-ID', 'hfx_field_cf7_form_id', 'hfx-cf7-webhook', 'hfx_webhook_section');
     add_settings_field('enable_logging', 'Logging aktivieren', 'hfx_field_enable_logging', 'hfx-cf7-webhook', 'hfx_webhook_section');
+
+    // Feld-Mapping Sektion
+    add_settings_section(
+        'hfx_webhook_mapping_section',
+        'Feld-Mapping (CF7-Feldnamen)',
+        function () {
+            echo '<p>Tragen Sie hier die Feldnamen ein, die Sie in Ihrem CF7-Formular verwenden. ';
+            echo 'Die rechte Spalte zeigt das zugehoerige API-Feld.</p>';
+        },
+        'hfx-cf7-webhook-mapping'
+    );
+
+    $labels = hfx_api_field_labels();
+    $required = hfx_required_fields();
+    foreach (array_keys(hfx_default_field_mapping()) as $api_field) {
+        $is_required = in_array($api_field, $required);
+        $label = $labels[$api_field] . ($is_required ? ' *' : '');
+        add_settings_field(
+            'mapping_' . $api_field,
+            $label,
+            'hfx_field_mapping_render',
+            'hfx-cf7-webhook-mapping',
+            'hfx_webhook_mapping_section',
+            ['api_field' => $api_field]
+        );
+    }
 }
 
 function hfx_webhook_sanitize($input) {
@@ -71,10 +135,17 @@ function hfx_webhook_sanitize($input) {
     return $sanitized;
 }
 
-function hfx_get_option($key, $default = '') {
-    $options = get_option('hfx_webhook_options', []);
-    return $options[$key] ?? $default;
+function hfx_webhook_sanitize_mapping($input) {
+    $sanitized = [];
+    $defaults = hfx_default_field_mapping();
+    foreach (array_keys($defaults) as $api_field) {
+        $val = trim(sanitize_text_field($input[$api_field] ?? ''));
+        $sanitized[$api_field] = !empty($val) ? $val : $defaults[$api_field];
+    }
+    return $sanitized;
 }
+
+// -- Feld-Render-Funktionen --
 
 function hfx_field_api_url() {
     $val = hfx_get_option('api_url', 'https://gvsxentbbzuyanqbqvea.supabase.co/functions/v1/capture-lead');
@@ -93,6 +164,17 @@ function hfx_field_enable_logging() {
     echo '<label><input type="checkbox" name="hfx_webhook_options[enable_logging]" value="1" ' . checked($val, 1, false) . ' /> Debug-Logs in wp-content/debug.log schreiben</label>';
 }
 
+function hfx_field_mapping_render($args) {
+    $api_field = $args['api_field'];
+    $mapping = hfx_get_field_mapping();
+    $val = $mapping[$api_field] ?? '';
+    $default = hfx_default_field_mapping()[$api_field];
+    echo '<input type="text" name="hfx_webhook_field_mapping[' . esc_attr($api_field) . ']" value="' . esc_attr($val) . '" class="regular-text" />';
+    echo '<p class="description">API-Feld: <code>' . esc_html($api_field) . '</code> &mdash; Standard-CF7-Feld: <code>' . esc_html($default) . '</code></p>';
+}
+
+// -- Einstellungsseite rendern --
+
 function hfx_webhook_settings_page() {
     if (!current_user_can('manage_options')) {
         return;
@@ -100,74 +182,96 @@ function hfx_webhook_settings_page() {
     ?>
     <div class="wrap">
         <h1>HFX Honorarfuchs - CF7 Webhook</h1>
-        <form action="options.php" method="post">
-            <?php
-            settings_fields('hfx_webhook');
-            do_settings_sections('hfx-cf7-webhook');
-            submit_button('Einstellungen speichern');
-            ?>
-        </form>
 
-        <hr />
-        <h2>Feld-Mapping (CF7 -&gt; API)</h2>
-        <p>Stellen Sie sicher, dass Ihr CF7-Formular folgende Feldnamen verwendet:</p>
-        <table class="widefat fixed" style="max-width: 600px;">
-            <thead>
-                <tr>
-                    <th>CF7-Feld</th>
-                    <th>API-Feld</th>
-                    <th>Pflicht</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr><td><code>praxis-name</code></td><td>praxis_name</td><td>Ja</td></tr>
-                <tr><td><code>vorname</code></td><td>vorname</td><td>Ja</td></tr>
-                <tr><td><code>nachname</code></td><td>nachname</td><td>Ja</td></tr>
-                <tr><td><code>your-email</code></td><td>email</td><td>Ja</td></tr>
-                <tr><td><code>plz</code></td><td>plz</td><td>Ja</td></tr>
-                <tr><td><code>mobilnummer</code></td><td>mobilnummer</td><td>Ja</td></tr>
-                <tr><td><code>abrechnungszentrum</code></td><td>abrechnungszentrum</td><td>Ja</td></tr>
-                <tr><td><code>mp-nummer</code></td><td>mp_nummer</td><td>Bei CC/privadis</td></tr>
-                <tr><td><code>your-message</code></td><td>nachricht</td><td>Nein</td></tr>
-            </tbody>
-        </table>
+        <h2 class="nav-tab-wrapper">
+            <a href="#tab-general" class="nav-tab nav-tab-active" onclick="hfxSwitchTab(event,'tab-general')">Allgemein</a>
+            <a href="#tab-mapping" class="nav-tab" onclick="hfxSwitchTab(event,'tab-mapping')">Feld-Mapping</a>
+            <a href="#tab-logs" class="nav-tab" onclick="hfxSwitchTab(event,'tab-logs')">Logs</a>
+        </h2>
 
-        <hr />
-        <h2>CF7 Formular-Vorlage</h2>
-        <p>Kopieren Sie folgendes Template in Ihr Contact Form 7 Formular:</p>
-        <textarea readonly rows="20" style="width:100%; max-width:700px; font-family:monospace; font-size:12px;">
+        <!-- Tab: Allgemein -->
+        <div id="tab-general" class="hfx-tab-content">
+            <form action="options.php" method="post">
+                <?php
+                settings_fields('hfx_webhook');
+                do_settings_sections('hfx-cf7-webhook');
+                submit_button('Einstellungen speichern');
+                ?>
+            </form>
+        </div>
+
+        <!-- Tab: Feld-Mapping -->
+        <div id="tab-mapping" class="hfx-tab-content" style="display:none;">
+            <form action="options.php" method="post">
+                <?php
+                settings_fields('hfx_webhook');
+                do_settings_sections('hfx-cf7-webhook-mapping');
+                submit_button('Mapping speichern');
+                ?>
+            </form>
+
+            <hr />
+            <h3>CF7 Formular-Vorlage</h3>
+            <p>Kopieren Sie folgendes Template in Ihr Contact Form 7 Formular (passen Sie die Feldnamen ggf. an):</p>
+            <?php hfx_render_cf7_template(); ?>
+        </div>
+
+        <!-- Tab: Logs -->
+        <div id="tab-logs" class="hfx-tab-content" style="display:none;">
+            <?php hfx_webhook_render_log_viewer(); ?>
+        </div>
+
+        <script>
+        function hfxSwitchTab(e, tabId) {
+            e.preventDefault();
+            var tabs = document.querySelectorAll('.hfx-tab-content');
+            for (var i = 0; i < tabs.length; i++) { tabs[i].style.display = 'none'; }
+            document.getElementById(tabId).style.display = 'block';
+            var links = document.querySelectorAll('.nav-tab');
+            for (var i = 0; i < links.length; i++) { links[i].className = 'nav-tab'; }
+            e.target.className = 'nav-tab nav-tab-active';
+        }
+        </script>
+    </div>
+    <?php
+}
+
+// -- CF7 Template anzeigen --
+
+function hfx_render_cf7_template() {
+    $mapping = hfx_get_field_mapping();
+    $required = hfx_required_fields();
+    ?>
+    <textarea readonly rows="22" style="width:100%; max-width:700px; font-family:monospace; font-size:12px;">
 <label>Praxisname *
-    [text* praxis-name]</label>
+    [text* <?php echo esc_html($mapping['praxis_name']); ?>]</label>
 
 <label>Vorname *
-    [text* vorname]</label>
+    [text* <?php echo esc_html($mapping['vorname']); ?>]</label>
 
 <label>Nachname *
-    [text* nachname]</label>
+    [text* <?php echo esc_html($mapping['nachname']); ?>]</label>
 
 <label>E-Mail-Adresse *
-    [email* your-email]</label>
+    [email* <?php echo esc_html($mapping['email']); ?>]</label>
 
 <label>PLZ *
-    [text* plz]</label>
+    [text* <?php echo esc_html($mapping['plz']); ?>]</label>
 
-<label>Mobilnummer *
-    [tel* mobilnummer]</label>
+<label>Mobilnummer
+    [tel <?php echo esc_html($mapping['mobilnummer']); ?>]</label>
 
 <label>Nutzen Sie ein Abrechnungszentrum? *
-    [select* abrechnungszentrum "nein" "CareCapital" "privadis" "anderes"]</label>
+    [select* <?php echo esc_html($mapping['abrechnungszentrum']); ?> "nein" "CareCapital" "privadis" "anderes"]</label>
 
 <label>Medizinpartner-Nummer (falls bekannt)
-    [text mp-nummer]</label>
+    [text <?php echo esc_html($mapping['mp_nummer']); ?>]</label>
 
 <label>Ihre Nachricht
-    [textarea your-message]</label>
+    [textarea <?php echo esc_html($mapping['nachricht']); ?>]</label>
 
 [submit "Absenden"]
-        </textarea>
-
-        <?php hfx_webhook_render_log_viewer(); ?>
-    </div>
+    </textarea>
     <?php
 }
 
@@ -176,11 +280,11 @@ function hfx_webhook_settings_page() {
 function hfx_webhook_render_log_viewer() {
     $logs = get_option('hfx_webhook_logs', []);
     if (empty($logs)) {
+        echo '<p>Noch keine Webhook-Aufrufe protokolliert.</p>';
         return;
     }
     ?>
-    <hr />
-    <h2>Letzte Webhook-Aufrufe</h2>
+    <h3>Letzte Webhook-Aufrufe</h3>
     <table class="widefat fixed striped">
         <thead>
             <tr>
@@ -229,26 +333,38 @@ function hfx_cf7_send_to_api($contact_form, &$abort, $submission) {
     }
 
     $posted = $submission->get_posted_data();
+    $mapping = hfx_get_field_mapping();
 
-    // CF7-Felder auf API-Format mappen
+    // Wert aus geposteten Daten anhand des konfigurierten Feldnamens lesen
+    $get = function($api_field) use ($posted, $mapping) {
+        $cf7_field = $mapping[$api_field] ?? '';
+        if (empty($cf7_field)) return '';
+        $val = $posted[$cf7_field] ?? '';
+        return is_array($val) ? ($val[0] ?? '') : $val;
+    };
+
     $payload = [
-        'praxis_name'       => sanitize_text_field($posted['praxis-name'] ?? $posted['praxis_name'] ?? ''),
-        'vorname'           => sanitize_text_field($posted['vorname'] ?? $posted['first-name'] ?? ''),
-        'nachname'          => sanitize_text_field($posted['nachname'] ?? $posted['last-name'] ?? $posted['your-name'] ?? ''),
-        'email'             => sanitize_email($posted['your-email'] ?? $posted['email'] ?? ''),
-        'plz'               => sanitize_text_field($posted['plz'] ?? $posted['postleitzahl'] ?? ''),
-        'mobilnummer'       => sanitize_text_field($posted['mobilnummer'] ?? $posted['your-tel'] ?? $posted['telefon'] ?? ''),
-        'abrechnungszentrum' => sanitize_text_field(is_array($posted['abrechnungszentrum'] ?? null) ? ($posted['abrechnungszentrum'][0] ?? 'nein') : ($posted['abrechnungszentrum'] ?? 'nein')),
-        'mp_nummer'         => sanitize_text_field($posted['mp-nummer'] ?? $posted['mp_nummer'] ?? ''),
-        'nachricht'         => sanitize_textarea_field($posted['your-message'] ?? $posted['nachricht'] ?? ''),
+        'praxis_name'        => sanitize_text_field($get('praxis_name')),
+        'vorname'            => sanitize_text_field($get('vorname')),
+        'nachname'           => sanitize_text_field($get('nachname')),
+        'email'              => sanitize_email($get('email')),
+        'plz'                => sanitize_text_field($get('plz')),
+        'mobilnummer'        => sanitize_text_field($get('mobilnummer')),
+        'abrechnungszentrum' => sanitize_text_field($get('abrechnungszentrum')),
+        'mp_nummer'          => sanitize_text_field($get('mp_nummer')),
+        'nachricht'          => sanitize_textarea_field($get('nachricht')),
     ];
 
-    // Leere optionale Felder entfernen
-    if (empty($payload['mp_nummer'])) {
-        $payload['mp_nummer'] = null;
+    // Standardwert fuer Abrechnungszentrum
+    if (empty($payload['abrechnungszentrum'])) {
+        $payload['abrechnungszentrum'] = 'nein';
     }
-    if (empty($payload['nachricht'])) {
-        $payload['nachricht'] = null;
+
+    // Leere optionale Felder auf null setzen
+    foreach (['mobilnummer', 'mp_nummer', 'nachricht'] as $optional) {
+        if (empty($payload[$optional])) {
+            $payload[$optional] = null;
+        }
     }
 
     $logging = (bool) hfx_get_option('enable_logging', 0);
@@ -257,7 +373,6 @@ function hfx_cf7_send_to_api($contact_form, &$abort, $submission) {
         error_log('[HFX Webhook] Sending payload: ' . wp_json_encode($payload));
     }
 
-    // API-Request senden (Server-to-Server, kein CORS)
     $response = wp_remote_post($api_url, [
         'timeout'   => 15,
         'headers'   => [
@@ -268,10 +383,10 @@ function hfx_cf7_send_to_api($contact_form, &$abort, $submission) {
 
     // Ergebnis loggen
     $log_entry = [
-        'time'    => current_time('Y-m-d H:i:s'),
-        'email'   => $payload['email'],
-        'success' => false,
-        'response' => '',
+        'time'       => current_time('Y-m-d H:i:s'),
+        'email'      => $payload['email'],
+        'success'    => false,
+        'response'   => '',
         'hfx_number' => '',
     ];
 
@@ -285,8 +400,8 @@ function hfx_cf7_send_to_api($contact_form, &$abort, $submission) {
         $body        = wp_remote_retrieve_body($response);
         $data        = json_decode($body, true);
 
-        $log_entry['response'] = $body;
-        $log_entry['success']  = $status_code === 200 && !empty($data['success']);
+        $log_entry['response']   = $body;
+        $log_entry['success']    = $status_code === 200 && !empty($data['success']);
         $log_entry['hfx_number'] = $data['hfx_customer_number'] ?? '';
 
         if ($logging) {
