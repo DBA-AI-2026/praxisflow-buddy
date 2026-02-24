@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
  * 
  * 1. CF7-Formular-ID: Die ID des Contact Form 7 Formulars,
  *    das an die API gesendet werden soll.
- *    → Unter Kontakt → Kontaktformulare in WordPress zu finden.
+ *    -> Unter Kontakt -> Kontaktformulare in WordPress zu finden.
  *
  * 2. Feld-Mapping: Die CF7-Feldnamen werden auf die API-Felder
  *    gemappt. Passen Sie die linken Werte (CF7-Feldnamen) an
@@ -109,7 +109,7 @@ function hfx_webhook_settings_page() {
         </form>
 
         <hr />
-        <h2>Feld-Mapping (CF7 → API)</h2>
+        <h2>Feld-Mapping (CF7 -&gt; API)</h2>
         <p>Stellen Sie sicher, dass Ihr CF7-Formular folgende Feldnamen verwendet:</p>
         <table class="widefat fixed" style="max-width: 600px;">
             <thead>
@@ -120,13 +120,13 @@ function hfx_webhook_settings_page() {
                 </tr>
             </thead>
             <tbody>
-                <tr><td><code>praxis-name</code></td><td>praxis_name</td><td>✅ Ja</td></tr>
-                <tr><td><code>vorname</code></td><td>vorname</td><td>✅ Ja</td></tr>
-                <tr><td><code>nachname</code></td><td>nachname</td><td>✅ Ja</td></tr>
-                <tr><td><code>your-email</code></td><td>email</td><td>✅ Ja</td></tr>
-                <tr><td><code>plz</code></td><td>plz</td><td>✅ Ja</td></tr>
-                <tr><td><code>mobilnummer</code></td><td>mobilnummer</td><td>✅ Ja</td></tr>
-                <tr><td><code>abrechnungszentrum</code></td><td>abrechnungszentrum</td><td>✅ Ja</td></tr>
+                <tr><td><code>praxis-name</code></td><td>praxis_name</td><td>Ja</td></tr>
+                <tr><td><code>vorname</code></td><td>vorname</td><td>Ja</td></tr>
+                <tr><td><code>nachname</code></td><td>nachname</td><td>Ja</td></tr>
+                <tr><td><code>your-email</code></td><td>email</td><td>Ja</td></tr>
+                <tr><td><code>plz</code></td><td>plz</td><td>Ja</td></tr>
+                <tr><td><code>mobilnummer</code></td><td>mobilnummer</td><td>Ja</td></tr>
+                <tr><td><code>abrechnungszentrum</code></td><td>abrechnungszentrum</td><td>Ja</td></tr>
                 <tr><td><code>mp-nummer</code></td><td>mp_nummer</td><td>Bei CC/privadis</td></tr>
                 <tr><td><code>your-message</code></td><td>nachricht</td><td>Nein</td></tr>
             </tbody>
@@ -197,13 +197,13 @@ function hfx_webhook_render_log_viewer() {
                 <td><?php echo esc_html($log['time']); ?></td>
                 <td>
                     <?php if ($log['success']): ?>
-                        <span style="color:green;">✅ OK</span>
+                        <span style="color:green;">OK</span>
                     <?php else: ?>
-                        <span style="color:red;">❌ Fehler</span>
+                        <span style="color:red;">Fehler</span>
                     <?php endif; ?>
                 </td>
-                <td><?php echo esc_html($log['email'] ?? '–'); ?></td>
-                <td><?php echo esc_html($log['hfx_number'] ?? '–'); ?></td>
+                <td><?php echo esc_html($log['email'] ?? '-'); ?></td>
+                <td><?php echo esc_html($log['hfx_number'] ?? '-'); ?></td>
                 <td><code style="font-size:11px;"><?php echo esc_html(wp_trim_words($log['response'] ?? '', 20)); ?></code></td>
             </tr>
             <?php endforeach; ?>
@@ -222,7 +222,7 @@ function hfx_cf7_send_to_api($contact_form, &$abort, $submission) {
         return;
     }
 
-    // Formular-ID-Filter prüfen
+    // Formular-ID-Filter pruefen
     $target_form_id = (int) hfx_get_option('cf7_form_id', 0);
     if ($target_form_id > 0 && $contact_form->id() !== $target_form_id) {
         return;
@@ -294,7 +294,7 @@ function hfx_cf7_send_to_api($contact_form, &$abort, $submission) {
         }
     }
 
-    // Letzten 20 Log-Einträge speichern
+    // Letzte 20 Log-Eintraege speichern
     $logs = get_option('hfx_webhook_logs', []);
     $logs[] = $log_entry;
     $logs = array_slice($logs, -20);
