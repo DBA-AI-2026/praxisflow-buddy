@@ -79,13 +79,13 @@ function hfx_webhook_admin_menu() {
 }
 
 function hfx_webhook_settings_init() {
-    // Allgemeine Einstellungen
-    register_setting('hfx_webhook', 'hfx_webhook_options', [
+    // Allgemeine Einstellungen - eigene Gruppe
+    register_setting('hfx_webhook_general', 'hfx_webhook_options', [
         'sanitize_callback' => 'hfx_webhook_sanitize',
     ]);
 
-    // Feld-Mapping
-    register_setting('hfx_webhook', 'hfx_webhook_field_mapping', [
+    // Feld-Mapping - eigene Gruppe
+    register_setting('hfx_webhook_mapping', 'hfx_webhook_field_mapping', [
         'sanitize_callback' => 'hfx_webhook_sanitize_mapping',
     ]);
 
@@ -210,7 +210,7 @@ function hfx_webhook_settings_page() {
         <div id="tab-general" class="hfx-tab-content">
             <form action="options.php" method="post">
                 <?php
-                settings_fields('hfx_webhook');
+                settings_fields('hfx_webhook_general');
                 do_settings_sections('hfx-cf7-webhook');
                 submit_button('Einstellungen speichern');
                 ?>
@@ -221,7 +221,7 @@ function hfx_webhook_settings_page() {
         <div id="tab-mapping" class="hfx-tab-content" style="display:none;">
             <form action="options.php" method="post">
                 <?php
-                settings_fields('hfx_webhook');
+                settings_fields('hfx_webhook_mapping');
                 do_settings_sections('hfx-cf7-webhook-mapping');
                 submit_button('Mapping speichern');
                 ?>
