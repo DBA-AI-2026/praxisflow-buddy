@@ -29,6 +29,8 @@ import { openPdfBlob } from "@/lib/openPdfBlob";
 import { validateIban } from "@/lib/validateIban";
 import { validateBic } from "@/lib/validateBic";
 import { lookupBicFromIban } from "@/lib/lookupBic";
+import { buildStripeLineItems, hasStripeProducts } from "@/lib/stripeProducts";
+import { CreditCard } from "lucide-react";
 import foxLogoUrl from "@/assets/fox-logo.jpeg";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -66,6 +68,8 @@ const statusConfig: Record<string, { label: string; class: string; icon: typeof 
 
 // Product options are now loaded from the database
 
+type PaymentMethod = "stripe" | "sepa" | "rechnung";
+
 interface ContractFormData {
   customer_name: string;
   sales_partner_name: string;
@@ -91,6 +95,7 @@ interface ContractFormData {
   one_time_fee: number;
   discount_percent: number;
   payment_interval: string;
+  payment_method: PaymentMethod;
   kontoinhaber: string;
   kontoinhaber_strasse: string;
   kontoinhaber_plz_ort: string;
@@ -139,6 +144,7 @@ const emptyForm: ContractFormData = {
   one_time_fee: 0,
   discount_percent: 0,
   payment_interval: "monatlich",
+  payment_method: "stripe" as PaymentMethod,
   kontoinhaber: "",
   kontoinhaber_strasse: "",
   kontoinhaber_plz_ort: "",
@@ -298,7 +304,7 @@ export default function Vertraege() {
   });
 
   const upsertMutation = useMutation({
-    mutationFn: async (data: ContractFormData) => {
+    mutationFn: async (data: ContractFormData): Promise<string | null> => {
       const endDate = addMonths(new Date(data.start_date), data.duration_months);
       let documentUrl: string | undefined;
       let documentName: string | undefined;
@@ -429,8 +435,10 @@ export default function Vertraege() {
           if (auditError) console.error("Signature audit log error:", auditError);
         }
       }
+
+      return contractId;
     },
-    onSuccess: async (_, variables) => {
+    onSuccess: async (contractId, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
       toast({ title: editId ? "Vertrag aktualisiert" : "Vertrag erstellt" });
       // Auto-open template PDF after creating a new contract (only if not a draft)
@@ -485,6 +493,11 @@ export default function Vertraege() {
             console.error("Email send error:", emailErr);
             toast({ title: "E-Mail konnte nicht gesendet werden", description: emailErr.message, variant: "destructive" });
           }
+        }
+
+        // Trigger Stripe Checkout if payment method is Stripe and products have Stripe pricing
+        if (variables.payment_method === "stripe" && contractId && hasStripeProducts(variables.selected_products)) {
+          await handleStripeCheckout(contractId);
         }
       }
       closeDialog();
@@ -564,6 +577,7 @@ export default function Vertraege() {
       one_time_fee: contract.one_time_fee,
       discount_percent: contract.discount_percent,
       payment_interval: contract.payment_interval,
+      payment_method: (contract.iban ? "sepa" : "stripe") as PaymentMethod,
       notes: contract.notes || "",
       kontoinhaber: contract.kontoinhaber || "",
       kontoinhaber_strasse: contract.kontoinhaber_strasse || "",
@@ -596,7 +610,7 @@ export default function Vertraege() {
       c.sales_partner_name?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const requiredFieldLabels: Record<string, string> = {
+  const baseRequiredFieldLabels: Record<string, string> = {
     praxis: "Praxis",
     vorname: "Vorname",
     nachname: "Nachname",
@@ -607,13 +621,21 @@ export default function Vertraege() {
     email: "E-Mail",
     fachrichtung: "Fachrichtung",
     rechtsform: "Rechtsform",
+    start_date: "Vertragsbeginn",
+  };
+
+  const sepaFieldLabels: Record<string, string> = {
     kontoinhaber: "Kontoinhaber",
     kontoinhaber_strasse: "Straße Kontoinhaber",
     kontoinhaber_plz_ort: "PLZ/Ort Kontoinhaber",
     bank_name: "Bank",
     iban: "IBAN",
     bic: "BIC",
-    start_date: "Vertragsbeginn",
+  };
+
+  const requiredFieldLabels: Record<string, string> = {
+    ...baseRequiredFieldLabels,
+    ...(form.payment_method === "sepa" ? sepaFieldLabels : {}),
   };
 
   const requiredFields = Object.keys(requiredFieldLabels) as (keyof ContractFormData)[];
@@ -634,15 +656,41 @@ export default function Vertraege() {
   const isFormComplete = getMissingFields().length === 0;
 
   const handleSaveDraft = () => {
-    // Require at least a customer name or praxis for draft
     const hasMinimum = form.praxis.trim() !== "" || form.vorname.trim() !== "" || form.nachname.trim() !== "";
     if (!hasMinimum) {
       toast({ title: "Mindestangabe fehlt", description: "Bitte mindestens Praxis oder einen Namen angeben.", variant: "destructive" });
       return;
     }
-    // Force status to Entwurf for draft saves
     const draftForm = { ...form, status: "entwurf" };
     upsertMutation.mutate(draftForm);
+  };
+
+  const handleStripeCheckout = async (contractId: string) => {
+    const stripeItems = buildStripeLineItems(form.selected_products);
+    if (stripeItems.length === 0) {
+      toast({ title: "Keine Stripe-Produkte", description: "Für die gewählten Produkte ist noch kein Stripe-Preis hinterlegt.", variant: "destructive" });
+      return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: {
+          customer_email: form.email,
+          customer_name: `${form.vorname} ${form.nachname}`.trim(),
+          contract_id: contractId,
+          line_items: stripeItems,
+        },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, "_blank");
+        toast({ title: "Stripe Checkout geöffnet", description: "Der Zahlungslink wurde in einem neuen Tab geöffnet." });
+      } else {
+        throw new Error("Keine Checkout-URL erhalten");
+      }
+    } catch (err: any) {
+      console.error("Stripe checkout error:", err);
+      toast({ title: "Stripe-Fehler", description: err.message || "Checkout konnte nicht erstellt werden.", variant: "destructive" });
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -652,13 +700,16 @@ export default function Vertraege() {
       toast({ title: "Fehlende Pflichtfelder", description: missing.join(", "), variant: "destructive" });
       return;
     }
-    if (!validateIban(form.iban).valid) {
-      toast({ title: "Ungültige IBAN", description: validateIban(form.iban).message, variant: "destructive" });
-      return;
-    }
-    if (!validateBic(form.bic).valid) {
-      toast({ title: "Ungültige BIC", description: validateBic(form.bic).message, variant: "destructive" });
-      return;
+    // SEPA validation only when SEPA is selected
+    if (form.payment_method === "sepa") {
+      if (!validateIban(form.iban).valid) {
+        toast({ title: "Ungültige IBAN", description: validateIban(form.iban).message, variant: "destructive" });
+        return;
+      }
+      if (!validateBic(form.bic).valid) {
+        toast({ title: "Ungültige BIC", description: validateBic(form.bic).message, variant: "destructive" });
+        return;
+      }
     }
     // BSNR/LANR format validation
     const bsnrFields = [
@@ -1526,68 +1577,114 @@ export default function Vertraege() {
               </div>
             )}
 
-            {/* SEPA-Lastschrifteinzug */}
+            {/* Zahlungsmethode */}
             <div className="space-y-3">
-              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">SEPA-Lastschrifteinzug</h4>
+              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Zahlungsmethode</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="sm:col-span-2">
-                  <Label>Kontoinhaber</Label>
-                  <Input value={form.kontoinhaber} onChange={(e) => set("kontoinhaber", e.target.value)} placeholder="Vor- und Nachname des Kontoinhabers" />
+                <div
+                  className={`p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                    form.payment_method === "stripe"
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-muted-foreground/50"
+                  }`}
+                  onClick={() => set("payment_method", "stripe")}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                    <span className="font-medium text-foreground">Stripe</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Kreditkarte oder SEPA-Lastschrift über Stripe Checkout
+                  </p>
                 </div>
-                <div>
-                  <Label>Straße/Hausnr. (Kontoinhaber)</Label>
-                  <Input value={form.kontoinhaber_strasse} onChange={(e) => set("kontoinhaber_strasse", e.target.value)} placeholder="Musterstraße 1" />
-                </div>
-                <div>
-                  <Label>PLZ/Ort (Kontoinhaber)</Label>
-                  <Input value={form.kontoinhaber_plz_ort} onChange={(e) => set("kontoinhaber_plz_ort", e.target.value)} placeholder="12345 Musterstadt" />
-                </div>
-                <div className="sm:col-span-2">
-                  <Label>Name der Bank</Label>
-                  <Input value={form.bank_name} onChange={(e) => set("bank_name", e.target.value)} placeholder="z.B. Deutsche Bank" />
-                </div>
-                <div className="sm:col-span-2">
-                  <Label>IBAN</Label>
-                  <Input
-                    value={form.iban.replace(/(.{4})/g, "$1 ").trim()}
-                    onChange={async (e) => {
-                      const val = e.target.value.toUpperCase().replace(/\s/g, "");
-                      set("iban", val);
-                      if (val && validateIban(val).valid && !form.bic) {
-                        setBicLoading(true);
-                        const bic = await lookupBicFromIban(val);
-                        if (bic) set("bic", bic);
-                        setBicLoading(false);
-                      }
-                    }}
-                    placeholder="DE89 3704 0044 0532 0130 00"
-                    className={form.iban && !validateIban(form.iban).valid ? "border-destructive" : ""}
-                  />
-                  {form.iban && (() => {
-                    const result = validateIban(form.iban);
-                    if (!result.valid) {
-                      return <p className="text-xs text-destructive mt-1">{result.message}</p>;
-                    }
-                    return <p className="text-xs text-green-600 mt-1">✓ IBAN gültig</p>;
-                  })()}
-                </div>
-                <div>
-                  <Label>BIC {bicLoading && <span className="text-xs text-muted-foreground ml-1">(wird ermittelt...)</span>}</Label>
-                  <Input
-                    value={form.bic}
-                    onChange={(e) => set("bic", e.target.value.toUpperCase().replace(/\s/g, ""))}
-                    placeholder="COBADEFFXXX"
-                    className={form.bic && !validateBic(form.bic).valid ? "border-destructive" : ""}
-                  />
-                  {form.bic && (() => {
-                    const result = validateBic(form.bic);
-                    if (!result.valid) {
-                      return <p className="text-xs text-destructive mt-1">{result.message}</p>;
-                    }
-                    return <p className="text-xs text-green-600 mt-1">✓ BIC gültig</p>;
-                  })()}
+                <div
+                  className={`p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                    form.payment_method === "sepa"
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-muted-foreground/50"
+                  }`}
+                  onClick={() => set("payment_method", "sepa")}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium text-foreground">SEPA-Mandat</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Klassische Bankverbindung direkt im Vertrag
+                  </p>
                 </div>
               </div>
+
+              {form.payment_method === "stripe" && (
+                <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+                  <p>Nach Vertragsunterzeichnung wird automatisch ein Stripe Checkout-Link erstellt. Der Kunde kann dort bequem per Kreditkarte oder SEPA-Lastschrift zahlen.</p>
+                  {!hasStripeProducts(form.selected_products) && form.selected_products.length > 0 && (
+                    <p className="mt-2 text-warning font-medium">⚠ Für die gewählten Produkte ist noch kein Stripe-Preis hinterlegt. Der Checkout kann nur für Produkte mit Stripe-Preiszuordnung erstellt werden.</p>
+                  )}
+                </div>
+              )}
+
+              {form.payment_method === "sepa" && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="sm:col-span-2">
+                    <Label>Kontoinhaber</Label>
+                    <Input value={form.kontoinhaber} onChange={(e) => set("kontoinhaber", e.target.value)} placeholder="Vor- und Nachname des Kontoinhabers" />
+                  </div>
+                  <div>
+                    <Label>Straße/Hausnr. (Kontoinhaber)</Label>
+                    <Input value={form.kontoinhaber_strasse} onChange={(e) => set("kontoinhaber_strasse", e.target.value)} placeholder="Musterstraße 1" />
+                  </div>
+                  <div>
+                    <Label>PLZ/Ort (Kontoinhaber)</Label>
+                    <Input value={form.kontoinhaber_plz_ort} onChange={(e) => set("kontoinhaber_plz_ort", e.target.value)} placeholder="12345 Musterstadt" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label>Name der Bank</Label>
+                    <Input value={form.bank_name} onChange={(e) => set("bank_name", e.target.value)} placeholder="z.B. Deutsche Bank" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label>IBAN</Label>
+                    <Input
+                      value={form.iban.replace(/(.{4})/g, "$1 ").trim()}
+                      onChange={async (e) => {
+                        const val = e.target.value.toUpperCase().replace(/\s/g, "");
+                        set("iban", val);
+                        if (val && validateIban(val).valid && !form.bic) {
+                          setBicLoading(true);
+                          const bic = await lookupBicFromIban(val);
+                          if (bic) set("bic", bic);
+                          setBicLoading(false);
+                        }
+                      }}
+                      placeholder="DE89 3704 0044 0532 0130 00"
+                      className={form.iban && !validateIban(form.iban).valid ? "border-destructive" : ""}
+                    />
+                    {form.iban && (() => {
+                      const result = validateIban(form.iban);
+                      if (!result.valid) {
+                        return <p className="text-xs text-destructive mt-1">{result.message}</p>;
+                      }
+                      return <p className="text-xs text-success mt-1">✓ IBAN gültig</p>;
+                    })()}
+                  </div>
+                  <div>
+                    <Label>BIC {bicLoading && <span className="text-xs text-muted-foreground ml-1">(wird ermittelt...)</span>}</Label>
+                    <Input
+                      value={form.bic}
+                      onChange={(e) => set("bic", e.target.value.toUpperCase().replace(/\s/g, ""))}
+                      placeholder="COBADEFFXXX"
+                      className={form.bic && !validateBic(form.bic).valid ? "border-destructive" : ""}
+                    />
+                    {form.bic && (() => {
+                      const result = validateBic(form.bic);
+                      if (!result.valid) {
+                        return <p className="text-xs text-destructive mt-1">{result.message}</p>;
+                      }
+                      return <p className="text-xs text-success mt-1">✓ BIC gültig</p>;
+                    })()}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Dokument */}
