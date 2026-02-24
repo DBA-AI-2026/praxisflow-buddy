@@ -17,3 +17,5 @@ project_id = "gvsxentbbzuyanqbqvea"
     verify_jwt = false
   [functions.check-subscription]
     verify_jwt = false
+  [functions.capture-lead]
+    verify_jwt = false
