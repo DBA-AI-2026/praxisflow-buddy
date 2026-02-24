@@ -112,34 +112,151 @@ Deno.serve(async (req) => {
       const resendApiKey = Deno.env.get("RESEND_API_KEY");
       if (resendApiKey) {
         const resend = new Resend(resendApiKey);
+
+        // Build conditional sections
+        const mpSection = mp_nummer ? `<tr>
+          <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Medizinpartner-Nummer (falls bekannt):</td>
+          <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${mp_nummer}&nbsp;</td>
+        </tr>` : "";
+
+        const nachrichtSection = nachricht ? `<tr>
+          <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Nachricht:</td>
+          <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${nachricht}&nbsp;</td>
+        </tr>` : "";
+
+        const emailHtml = `<table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>
+<table align="center" border="0" cellpadding="0" cellspacing="0" width="600">
+<tr><td align="center" valign="top" bgcolor="#ffffff">
+<img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/Mailheader-Neutral-hfx-1200px.png" alt="Honorarfuchs" width="600" height="80" border="0" style="border-width:0px;" />
+</td></tr>
+<tr><td bgcolor="#ffffff" align="center">
+<table align="center" border="0" cellpadding="0" cellspacing="0" width="600"><tbody><tr><td style="width:10px;"></td><td style="width:580px;">
+<table align="center" border="0" cellpadding="0" cellspacing="0" width="580">
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="90">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#444444;">
+<strong>Danke für Ihr Interesse am Honorarfuchs!<br>Entdecken Sie, was KI aus Ihrer Privatabrechnung holt.</strong>
+</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="30">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Mit HFX.GOÄ gewinnen Sie schnell Klarheit über Ihre Abrechnung. Erkennen Sie Optimierungspotenziale, prüfen Sie Ihre Daten strukturiert und verschaffen Sie sich ein besseres Gefühl für Ihre Privatliquidation – ganz ohne Aufwand.</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Das erwartet Sie:</strong><br>Einfacher Import Ihrer Abrechnungsdaten<br>Verständliche Analyse statt komplizierter Prüfung<br>Mehr Transparenz und Sicherheit bei der GOÄ-Abrechnung</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Sie nutzen noch kein Abrechnungszentrum?</strong><br>Für die Nutzung von HFX.GOÄ benötigen Sie eine PAD- oder PADnext-Datei. Wenn Ihnen das gerade nichts sagt, kümmern wir uns darum: Ein Mitarbeiter meldet sich zeitnah bei Ihnen und begleitet Sie Schritt für Schritt durch die technischen Voraussetzungen.</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="80">&nbsp;</td></tr>
+<tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#444444;"><strong>Jetzt Testversion downloaden und starten!</strong></td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="5">&nbsp;</td></tr>
+<tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:10pt; line-height:12pt; color:#444444;">Sie benötigen dafür eine PAD/PAD.next-Schnittstelle.</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="15">&nbsp;</td></tr>
+<tr><td>
+<table align="center" border="0" cellpadding="0" cellspacing="0" width="580"><tr>
+<td align="center" valign="top" width="290" style="padding: 10px;">
+<a href="https://download.qodia.de/production/hfx/latest/mac/hfx-desktop.dmg" style="text-decoration:none; display:block;">
+<table border="0" cellpadding="0" cellspacing="0" style="border: 1px solid #6d6d6d; border-radius: 6px; width: 100%;"><tr><td align="center" style="padding: 15px 10px; height: 65px;">
+<table border="0" cellpadding="0" cellspacing="0" align="center"><tr>
+<td style="padding-right:10px;"><img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/apple-100.png" width="25" alt="MacOS" style="display:block; border:0; width:25px;"></td>
+<td align="left" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; line-height:16pt;">Download MacOS</td>
+</tr></table></td></tr></table></a></td>
+<td align="center" valign="top" width="290" style="padding: 10px;">
+<a href="https://download.qodia.de/production/hfx/latest/windows/hfx-desktop.exe" style="text-decoration:none; display:block;">
+<table border="0" cellpadding="0" cellspacing="0" style="border: 1px solid #6d6d6d; border-radius: 6px; width: 100%;"><tr><td align="center" style="padding: 15px 10px; height: 65px;">
+<table border="0" cellpadding="0" cellspacing="0" align="center"><tr>
+<td style="padding-right:10px;"><img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/Windows.png" width="25" alt="Windows" style="display:block; border:0; width:25px;"></td>
+<td align="left" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; line-height:16pt;">Download Windows</td>
+</tr></table></td></tr></table></a></td>
+</tr></table>
+</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="80">&nbsp;</td></tr>
+<tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#444444;"><strong>So funktioniert HFX.GOÄ</strong></td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;"><strong>Step 1: Vorbereitung – Daten bereitstellen</strong><br>Patientenverwaltungssystem kurz offline nehmen<br>PAD-Datei aus dem PVS exportieren<br><strong>→ Saubere Ausgangsbasis für die Analyse</strong></td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="border-top:1px solid #acacac; padding-top:10px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;"><strong>Step 2: Import – Daten in HFX.GOÄ laden</strong><br>PAD-Datei hochladen<br>Keine Einrichtung notwendig<br><strong>→ Der Import erfolgt in wenigen Sekunden</strong></td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="border-top:1px solid #acacac; padding-top:10px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;"><strong>Step 3: Analyse – Abrechnung prüfen lassen</strong><br>Analyse per Klick starten<br>Auffälligkeiten &amp; Potenziale erkennen<br><strong>→ Automatisiert, strukturiert, nachvollziehbar</strong></td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="border-top:1px solid #acacac; padding-top:10px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;"><strong>Step 4: Entscheidung – Optimierungen bewerten</strong><br>Vorschläge prüfen<br>Entscheidungen selbst treffen<br>Keine automatischen Änderungen<br><strong>→ Sie behalten jederzeit die Kontrolle</strong></td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="border-top:1px solid #acacac; padding-top:10px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;"><strong>Step 5: Abschluss – Optimierte Abrechnung übergeben</strong><br>Neue PAD-Datei speichern<br>Optional wieder ins PVS laden<br>Übergabe an ihr Abrechnungszentrum<br><strong>→ Abrechnung wie gewohnt – nur optimiert</strong></td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="30">&nbsp;</td></tr>
+<tr><td align="center" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Alle Schritte erfolgen lokal und nachvollziehbar!<br>Sie behalten jederzeit die volle Kontrolle über Ihre Abrechnungsdaten.</strong></td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="60">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="60">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Folgende Daten haben Sie an uns übermittelt:</strong></td></tr>
+<tr><td>
+<table border="0" cellpadding="3" cellspacing="0" width="100%"><tbody>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td></tr>
+<tr>
+<td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"><strong>Praxisdaten</strong></td>
+<td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"></td>
+</tr>
+<tr>
+<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Praxisname:</td>
+<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${praxis_name}&nbsp;</td>
+</tr>
+<tr>
+<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Vorname:</td>
+<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${vorname}&nbsp;</td>
+</tr>
+<tr>
+<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Nachname:</td>
+<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${nachname}&nbsp;</td>
+</tr>
+<tr>
+<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">E-Mail:</td>
+<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${email}&nbsp;</td>
+</tr>
+<tr>
+<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">PLZ:</td>
+<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${plz}&nbsp;</td>
+</tr>
+<tr>
+<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Mobilnummer:</td>
+<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${mobilnummer}&nbsp;</td>
+</tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td></tr>
+<tr>
+<td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"><strong>Abrechnungszentrum</strong></td>
+<td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"></td>
+</tr>
+<tr>
+<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Nutzen Sie ein Abrechnungszentrum?</td>
+<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${abrechnungszentrum}&nbsp;</td>
+</tr>
+${mpSection}
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td></tr>
+<tr>
+<td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"><strong>Nachricht</strong></td>
+<td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"></td>
+</tr>
+${nachrichtSection}
+</tbody></table>
+</td></tr>
+<tr><td align="center" valign="top" style="font-size:0; line-height:0;" height="120">&nbsp;</td></tr>
+<tr><td bgcolor="#ffffff" align="center" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:10pt; font-weight:400;">
+<img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/8270-Logo-RZ-Honorarfuchs-HFX-Claim.png" width="310" height="80" alt="Honorarfuchs" style="width:310px; height:80px;" />
+</td></tr>
+<tr><td bgcolor="#ffffff" align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td></tr>
+<tr><td bgcolor="#f8f8f8" align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td></tr>
+<tr><td bgcolor="#f8f8f8" align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:8pt; line-height:12pt; color:#444444;">
+Honorarfuchs ist ein Produkt der MCC Medical CareCapital GmbH<br />Hohenzollernstr. 47 · 47799 Krefeld<br />
+<a href="https://www.honorarfuchs.de" target="_blank"><strong style="color:#444444; font-weight:normal;">Zur Webseite</strong></a>
+</td></tr>
+<tr><td bgcolor="#f8f8f8" style="font-size:0; line-height:0;" height="18">&nbsp;</td></tr>
+<tr><td bgcolor="#f8f8f8" align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:8pt; line-height:12pt; color:#444444;">
+Geschäftsführer:<br />Olaf Hagelkruys, Thilo Wiers-Keiser und Robbin Zielke<br />Registergericht: Amtsgericht Krefeld · HRB 14709<br />Umsatzsteueridentifikationsnummer gemäß §27a Umsatzsteuergesetz: DE 227 420 712
+</td></tr>
+<tr><td bgcolor="#f8f8f8" style="font-size:0; line-height:0;" height="20">&nbsp;</td></tr>
+</table>
+</td><td style="width:10px;"></td></tr></tbody></table>
+</td></tr>
+</table>
+</td></tr></table>`;
+
         await resend.emails.send({
           from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
           to: [email],
-          subject: `Ihre Anfrage bei Honorarfuchs – ${lead.hfx_customer_number}`,
-          html: `
-            <!DOCTYPE html>
-            <html>
-            <head><meta charset="utf-8"></head>
-            <body style="font-family: Arial, sans-serif; background: #ffffff; margin: 0; padding: 0;">
-              <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <div style="background: linear-gradient(135deg, #0b367f, #1a4a9e); color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
-                  <h1 style="margin: 0; font-size: 24px;">🦊 Vielen Dank für Ihr Interesse!</h1>
-                  <p style="margin: 10px 0 0 0; opacity: 0.9;">Honorarfuchs – Ihre Anfrage ist eingegangen</p>
-                </div>
-                <div style="background: #f9fafb; padding: 25px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
-                  <p style="font-size: 16px; color: #333;">Guten Tag ${vorname} ${nachname},</p>
-                  <p style="color: #555;">wir haben Ihre Anfrage erhalten und werden uns schnellstmöglich bei Ihnen melden.</p>
-                  <div style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; margin: 20px 0;">
-                    <p style="margin: 0 0 8px 0; font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: bold;">Ihre Referenznummer</p>
-                    <p style="margin: 0; font-size: 20px; font-weight: bold; color: #0b367f;">${lead.hfx_customer_number}</p>
-                  </div>
-                  <p style="color: #555; font-size: 14px;">Bitte bewahren Sie diese Nummer für Rückfragen auf.</p>
-                  <p style="color: #888; font-size: 12px; margin-top: 30px;">Mit freundlichen Grüßen<br>Ihr Honorarfuchs-Team</p>
-                </div>
-              </div>
-            </body>
-            </html>
-          `,
+          subject: `Danke für Ihr Interesse am Honorarfuchs!`,
+          html: emailHtml,
         });
 
         await supabase
