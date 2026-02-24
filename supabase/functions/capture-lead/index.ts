@@ -232,6 +232,7 @@ Deno.serve(async (req) => {
     // Log source for debugging
     const source = origin ? `browser:${origin}` : "server-to-server";
     console.log(`Lead request from: ${source}`);
+    console.log(`Raw body received:`, JSON.stringify(rawBody));
 
     // Map CF7 field names to our internal format
     const {
