@@ -20,7 +20,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import {
   Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye, CheckCircle,
-  FilePen, FileSignature, CircleCheck, CircleOff, ArchiveX,
+  FilePen, FileSignature, CircleCheck, CircleOff, ArchiveX, ShieldBan,
 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { generateContractPdf } from "@/lib/generateContractPdf";
@@ -64,6 +64,7 @@ const statusConfig: Record<string, { label: string; class: string; icon: typeof 
   aktiv: { label: "Aktiv", class: "bg-success/10 text-success", icon: CircleCheck },
   gekuendigt: { label: "Gekündigt", class: "bg-warning/10 text-warning", icon: CircleOff },
   beendet: { label: "Beendet", class: "bg-destructive/10 text-destructive", icon: ArchiveX },
+  gesperrt: { label: "Gesperrt", class: "bg-destructive/20 text-destructive", icon: ShieldBan },
 };
 
 // Product options are now loaded from the database
@@ -881,8 +882,8 @@ export default function Vertraege() {
       </div>
 
       {/* Stats */}
-       <div className="grid grid-cols-5 gap-2 sm:gap-4 mb-6">
-        {(["entwurf", "gezeichnet", "aktiv", "gekuendigt", "beendet"] as const).map((s) => {
+       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-4 mb-6">
+        {(["entwurf", "gezeichnet", "aktiv", "gekuendigt", "beendet", "gesperrt"] as const).map((s) => {
           const cfg = statusConfig[s];
           const Icon = cfg.icon;
           const count = contracts.filter((c: any) => c.status === s).length;
@@ -1589,6 +1590,7 @@ export default function Vertraege() {
                     <SelectItem value="aktiv">Aktiv</SelectItem>
                     <SelectItem value="gekuendigt">Gekündigt</SelectItem>
                     <SelectItem value="beendet">Beendet</SelectItem>
+                    <SelectItem value="gesperrt">Gesperrt</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
