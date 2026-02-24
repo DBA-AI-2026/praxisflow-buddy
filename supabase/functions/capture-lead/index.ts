@@ -273,6 +273,14 @@ Deno.serve(async (req) => {
       );
     }
 
+    // MP-Nummer validation: must be exactly 5 digits if provided
+    if (mp_nummer && !/^\d{5}$/.test(mp_nummer.trim())) {
+      return new Response(
+        JSON.stringify({ error: "MP-Nummer muss genau 5-stellig sein (nur Ziffern)" }),
+        { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
+      );
+    }
+
     // MP-Nummer required for CareCapital and privadis
     if ((abrechnungszentrum === "CareCapital" || abrechnungszentrum === "privadis") && !mp_nummer) {
       return new Response(
