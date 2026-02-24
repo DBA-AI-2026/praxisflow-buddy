@@ -3,7 +3,7 @@
  * Plugin Name: HFX Honorarfuchs - CF7 Webhook
  * Plugin URI: https://www.honorarfuchs.de
  * Description: Sendet Contact Form 7 Formulardaten automatisch an die Honorarfuchs Lead-API.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Honorarfuchs / MCC Medical CareCapital GmbH
  * Author URI: https://www.honorarfuchs.de
  * License: GPL v2 or later
@@ -18,34 +18,36 @@ if (!defined('ABSPATH')) {
 
 function hfx_default_field_mapping() {
     return [
-        'praxis_name'        => 'praxis-name',
-        'vorname'            => 'vorname',
-        'nachname'           => 'nachname',
-        'email'              => 'your-email',
-        'plz'                => 'plz',
-        'mobilnummer'        => 'mobilnummer',
-        'abrechnungszentrum' => 'abrechnungszentrum',
-        'mp_nummer'          => 'mp-nummer',
-        'nachricht'          => 'your-message',
+        'praxis_name'               => 'praxis-name',
+        'vorname'                    => 'vorname',
+        'nachname'                   => 'nachname',
+        'email'                      => 'your-email',
+        'plz'                        => 'plz',
+        'mobilnummer'                => 'mobilnummer',
+        'mpartner'                   => 'MPartner',
+        'anderes_abrechnungszentrum' => 'AnderesAbrechnungszentrum',
+        'mp_nummer'                  => 'MPNummer',
+        'nachricht'                  => 'your-message',
     ];
 }
 
 function hfx_api_field_labels() {
     return [
-        'praxis_name'        => 'Praxisname',
-        'vorname'            => 'Vorname',
-        'nachname'           => 'Nachname',
-        'email'              => 'E-Mail',
-        'plz'                => 'PLZ',
-        'mobilnummer'        => 'Mobilnummer',
-        'abrechnungszentrum' => 'Abrechnungszentrum',
-        'mp_nummer'          => 'MP-Nummer',
-        'nachricht'          => 'Nachricht',
+        'praxis_name'               => 'Praxisname',
+        'vorname'                    => 'Vorname',
+        'nachname'                   => 'Nachname',
+        'email'                      => 'E-Mail',
+        'plz'                        => 'PLZ',
+        'mobilnummer'                => 'Mobilnummer',
+        'mpartner'                   => 'MPartner (careCapital/privadis)',
+        'anderes_abrechnungszentrum' => 'Anderes Abrechnungszentrum',
+        'mp_nummer'                  => 'MP-Nummer (Kundennr. MPartner)',
+        'nachricht'                  => 'Nachricht',
     ];
 }
 
 function hfx_required_fields() {
-    return ['praxis_name', 'vorname', 'nachname', 'email', 'plz', 'abrechnungszentrum'];
+    return ['praxis_name', 'vorname', 'nachname', 'email', 'plz'];
 }
 
 // -- Hilfsfunktionen --
@@ -105,8 +107,10 @@ function hfx_webhook_settings_init() {
         'hfx_webhook_mapping_section',
         'Feld-Mapping (CF7-Feldnamen)',
         function () {
-            echo '<p>Tragen Sie hier die Feldnamen ein, die Sie in Ihrem CF7-Formular verwenden. ';
-            echo 'Die rechte Spalte zeigt das zugehoerige API-Feld.</p>';
+            echo '<p>Tragen Sie hier die CF7-Feldnamen ein, die in Ihrem Formular verwendet werden.</p>';
+            echo '<p><strong>Abrechnungszentrum-Logik:</strong> Das Plugin kombiniert die drei Felder ';
+            echo '<em>MPartner</em>, <em>AnderesAbrechnungszentrum</em> und <em>MPNummer</em> ';
+            echo 'automatisch zum API-Feld <code>abrechnungszentrum</code> bzw. <code>mp_nummer</code>.</p>';
         },
         'hfx-cf7-webhook-mapping'
     );
@@ -169,8 +173,21 @@ function hfx_field_mapping_render($args) {
     $mapping = hfx_get_field_mapping();
     $val = $mapping[$api_field] ?? '';
     $default = hfx_default_field_mapping()[$api_field];
+
+    // Beschreibungen je Feld
+    $descriptions = [
+        'mpartner'                   => 'CF7-Feld fuer careCapital/privadis Auswahl. Wird zum API-Feld <code>abrechnungszentrum</code> zusammengefuehrt.',
+        'anderes_abrechnungszentrum' => 'CF7-Feld fuer andere Abrechnungszentren (Freitext). Wird zum API-Feld <code>abrechnungszentrum</code> zusammengefuehrt.',
+        'mp_nummer'                  => 'Kundennummer von careCapital/privadis. Wird nur gesendet wenn MPartner gesetzt ist.',
+    ];
+
     echo '<input type="text" name="hfx_webhook_field_mapping[' . esc_attr($api_field) . ']" value="' . esc_attr($val) . '" class="regular-text" />';
-    echo '<p class="description">API-Feld: <code>' . esc_html($api_field) . '</code> &mdash; Standard-CF7-Feld: <code>' . esc_html($default) . '</code></p>';
+
+    if (isset($descriptions[$api_field])) {
+        echo '<p class="description">' . $descriptions[$api_field] . ' Standard-CF7-Feld: <code>' . esc_html($default) . '</code></p>';
+    } else {
+        echo '<p class="description">Standard-CF7-Feld: <code>' . esc_html($default) . '</code></p>';
+    }
 }
 
 // -- Einstellungsseite rendern --
@@ -211,6 +228,17 @@ function hfx_webhook_settings_page() {
             </form>
 
             <hr />
+            <h3>Abrechnungszentrum-Logik</h3>
+            <div style="background:#f0f0f1; padding:12px 16px; border-left:4px solid #2271b1; margin-bottom:20px;">
+                <p style="margin:0 0 8px 0;"><strong>So werden die CF7-Felder zur API zusammengefuehrt:</strong></p>
+                <ul style="margin:0; padding-left:20px;">
+                    <li><strong>MPartner</strong> = careCapital oder privadis -> API-Feld <code>abrechnungszentrum</code> erhaelt den Wert (z.B. "CareCapital")</li>
+                    <li><strong>AnderesAbrechnungszentrum</strong> = Freitext -> API-Feld <code>abrechnungszentrum</code> erhaelt diesen Wert</li>
+                    <li>Keines gesetzt -> API-Feld <code>abrechnungszentrum</code> = "nein"</li>
+                    <li><strong>MPNummer</strong> wird nur gesendet, wenn MPartner (careCapital/privadis) ausgewaehlt ist</li>
+                </ul>
+            </div>
+
             <h3>CF7 Formular-Vorlage</h3>
             <p>Kopieren Sie folgendes Template in Ihr Contact Form 7 Formular (passen Sie die Feldnamen ggf. an):</p>
             <?php hfx_render_cf7_template(); ?>
@@ -240,9 +268,8 @@ function hfx_webhook_settings_page() {
 
 function hfx_render_cf7_template() {
     $mapping = hfx_get_field_mapping();
-    $required = hfx_required_fields();
     ?>
-    <textarea readonly rows="22" style="width:100%; max-width:700px; font-family:monospace; font-size:12px;">
+    <textarea readonly rows="28" style="width:100%; max-width:700px; font-family:monospace; font-size:12px;">
 <label>Praxisname *
     [text* <?php echo esc_html($mapping['praxis_name']); ?>]</label>
 
@@ -261,11 +288,14 @@ function hfx_render_cf7_template() {
 <label>Mobilnummer
     [tel <?php echo esc_html($mapping['mobilnummer']); ?>]</label>
 
-<label>Nutzen Sie ein Abrechnungszentrum? *
-    [select* <?php echo esc_html($mapping['abrechnungszentrum']); ?> "nein" "CareCapital" "privadis" "anderes"]</label>
+<label>Medizinpartner (careCapital/privadis)
+    [select <?php echo esc_html($mapping['mpartner']); ?> "" "CareCapital" "privadis"]</label>
 
-<label>Medizinpartner-Nummer (falls bekannt)
+<label>MP-Nummer (Kundennummer)
     [text <?php echo esc_html($mapping['mp_nummer']); ?>]</label>
+
+<label>Anderes Abrechnungszentrum
+    [text <?php echo esc_html($mapping['anderes_abrechnungszentrum']); ?>]</label>
 
 <label>Ihre Nachricht
     [textarea <?php echo esc_html($mapping['nachricht']); ?>]</label>
@@ -336,12 +366,33 @@ function hfx_cf7_send_to_api($contact_form, &$abort, $submission) {
     $mapping = hfx_get_field_mapping();
 
     // Wert aus geposteten Daten anhand des konfigurierten Feldnamens lesen
-    $get = function($api_field) use ($posted, $mapping) {
-        $cf7_field = $mapping[$api_field] ?? '';
+    $get = function($field_key) use ($posted, $mapping) {
+        $cf7_field = $mapping[$field_key] ?? '';
         if (empty($cf7_field)) return '';
         $val = $posted[$cf7_field] ?? '';
         return is_array($val) ? ($val[0] ?? '') : $val;
     };
+
+    // -- Abrechnungszentrum-Logik: 3 CF7-Felder -> 1 API-Feld --
+    $mpartner       = sanitize_text_field($get('mpartner'));
+    $anderes_az     = sanitize_text_field($get('anderes_abrechnungszentrum'));
+    $mp_nummer_raw  = sanitize_text_field($get('mp_nummer'));
+
+    // Zusammenfuehrung: MPartner hat Vorrang, dann AnderesAbrechnungszentrum, sonst "nein"
+    $abrechnungszentrum = 'nein';
+    $mp_nummer_final    = null;
+
+    if (!empty($mpartner)) {
+        // careCapital oder privadis ausgewaehlt
+        $abrechnungszentrum = $mpartner;
+        // MP-Nummer nur senden wenn MPartner gesetzt
+        $mp_nummer_final = !empty($mp_nummer_raw) ? $mp_nummer_raw : null;
+    } elseif (!empty($anderes_az)) {
+        // Anderes Abrechnungszentrum (Freitext)
+        $abrechnungszentrum = $anderes_az;
+        // MP-Nummer bei fremdem Zentrum nicht relevant
+        $mp_nummer_final = null;
+    }
 
     $payload = [
         'praxis_name'        => sanitize_text_field($get('praxis_name')),
@@ -350,18 +401,13 @@ function hfx_cf7_send_to_api($contact_form, &$abort, $submission) {
         'email'              => sanitize_email($get('email')),
         'plz'                => sanitize_text_field($get('plz')),
         'mobilnummer'        => sanitize_text_field($get('mobilnummer')),
-        'abrechnungszentrum' => sanitize_text_field($get('abrechnungszentrum')),
-        'mp_nummer'          => sanitize_text_field($get('mp_nummer')),
+        'abrechnungszentrum' => $abrechnungszentrum,
+        'mp_nummer'          => $mp_nummer_final,
         'nachricht'          => sanitize_textarea_field($get('nachricht')),
     ];
 
-    // Standardwert fuer Abrechnungszentrum
-    if (empty($payload['abrechnungszentrum'])) {
-        $payload['abrechnungszentrum'] = 'nein';
-    }
-
     // Leere optionale Felder auf null setzen
-    foreach (['mobilnummer', 'mp_nummer', 'nachricht'] as $optional) {
+    foreach (['mobilnummer', 'nachricht'] as $optional) {
         if (empty($payload[$optional])) {
             $payload[$optional] = null;
         }
@@ -370,6 +416,8 @@ function hfx_cf7_send_to_api($contact_form, &$abort, $submission) {
     $logging = (bool) hfx_get_option('enable_logging', 0);
 
     if ($logging) {
+        error_log('[HFX Webhook] MPartner: "' . $mpartner . '", AnderesAZ: "' . $anderes_az . '", MPNummer: "' . $mp_nummer_raw . '"');
+        error_log('[HFX Webhook] -> abrechnungszentrum: "' . $abrechnungszentrum . '", mp_nummer: "' . ($mp_nummer_final ?? 'null') . '"');
         error_log('[HFX Webhook] Sending payload: ' . wp_json_encode($payload));
     }
 
