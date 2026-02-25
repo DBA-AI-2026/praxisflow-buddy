@@ -48,10 +48,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setTimeout(() => {
             fetchProfile(currentSession.user.id);
           }, 0);
-          // Update last_seen_at on sign in
-          if (event === "SIGNED_IN") {
+        // Update last_seen_at on sign in and token refresh
+          if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
             setTimeout(() => {
-              supabase.from("profiles").update({ last_seen_at: new Date().toISOString() }).eq("user_id", currentSession.user.id);
+              supabase.from("profiles")
+                .update({ last_seen_at: new Date().toISOString() })
+                .eq("user_id", currentSession.user.id)
+                .then(() => {}); // fire and forget
             }, 500);
           }
         } else {

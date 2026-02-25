@@ -23,7 +23,8 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
 
   // Check MFA status
   useEffect(() => {
-    if (!session || authLoading) return;
+    if (authLoading) return;
+    if (!session) { setMfaState("not_enrolled"); return; }
 
     const checkMfa = async () => {
       try {
