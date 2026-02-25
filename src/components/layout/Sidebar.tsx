@@ -61,6 +61,7 @@ const allgemeinNavigation: NavItem[] = [
   { name: "Tickets", href: "/tickets", icon: Ticket, roles: allRoles },
   { name: "HFX EBM Lizenzen", href: "/lizenzen", icon: Key, roles: allRoles },
   { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "regional_lead", "admin"] },
+  { name: "E-Mail-Vorschau", href: "/tools/email-preview", icon: FileText, roles: allRoles },
 ];
 
 const adminNavigation: NavItem[] = [
