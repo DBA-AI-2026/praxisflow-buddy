@@ -1,0 +1,1 @@
+ALTER TABLE public.praxen ADD COLUMN converted_from_lead_id uuid REFERENCES public.leads(id) ON DELETE SET NULL;
