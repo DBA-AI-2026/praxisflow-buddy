@@ -69,18 +69,104 @@ function buildPreviewHtml() {
 </td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="80">&nbsp;</td></tr>
 <tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#444444;"><strong>So funktioniert HFX.GOÄ</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;"><strong>Step 1: Vorbereitung – Daten bereitstellen</strong><br>Patientenverwaltungssystem kurz offline nehmen<br>PAD-Datei aus dem PVS exportieren<br><strong>→ Saubere Ausgangsbasis für die Analyse</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #acacac; padding-top:10px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;"><strong>Step 2: Import – Daten in HFX.GOÄ laden</strong><br>PAD-Datei hochladen<br>Keine Einrichtung notwendig<br><strong>→ Der Import erfolgt in wenigen Sekunden</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #acacac; padding-top:10px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;"><strong>Step 3: Analyse – Abrechnung prüfen lassen</strong><br>Analyse per Klick starten<br>Auffälligkeiten &amp; Potenziale erkennen<br><strong>→ Automatisiert, strukturiert, nachvollziehbar</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #acacac; padding-top:10px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;"><strong>Step 4: Entscheidung – Optimierungen bewerten</strong><br>Vorschläge prüfen<br>Entscheidungen selbst treffen<br>Keine automatischen Änderungen<br><strong>→ Sie behalten jederzeit die Kontrolle</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #acacac; padding-top:10px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;"><strong>Step 5: Abschluss – Optimierte Abrechnung übergeben</strong><br>Neue PAD-Datei speichern<br>Optional wieder ins PVS laden<br>Übergabe an ihr Abrechnungszentrum<br><strong>→ Abrechnung wie gewohnt – nur optimiert</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="30">&nbsp;</td></tr>
-<tr><td align="center" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Alle Schritte erfolgen lokal und nachvollziehbar!<br>Sie behalten jederzeit die volle Kontrolle über Ihre Abrechnungsdaten.</strong></td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="6">&nbsp;</td></tr>
+<tr><td align="center" valign="top" style="color:#888888; font-family:verdana, geneva, sans-serif; font-size:11pt; line-height:16pt;">In 5 einfachen Schritten zu einer optimierten Abrechnung</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="24">&nbsp;</td></tr>
+
+<!-- Step 1 -->
+<tr><td>
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f8f9fa; border-radius:10px; border-left:4px solid #c8a45a; margin-bottom:0;">
+<tr>
+  <td valign="top" width="56" style="padding:16px 0 16px 16px;">
+    <table border="0" cellpadding="0" cellspacing="0"><tr><td align="center" valign="middle" style="width:36px; height:36px; background-color:#c8a45a; border-radius:50%; color:#ffffff; font-family:verdana, geneva, sans-serif; font-size:13pt; font-weight:bold; line-height:36px;">1</td></tr></table>
+  </td>
+  <td valign="top" style="padding:16px 16px 16px 12px;">
+    <p style="margin:0 0 4px 0; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; color:#333333; line-height:16pt;">Vorbereitung – Daten bereitstellen</p>
+    <p style="margin:0 0 8px 0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#666666; line-height:15pt;">Patientenverwaltungssystem kurz offline nehmen · PAD-Datei aus dem PVS exportieren</p>
+    <p style="margin:0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#c8a45a; font-weight:bold; line-height:14pt;">→ Saubere Ausgangsbasis für die Analyse</p>
+  </td>
+</tr>
+</table>
+</td></tr>
+<tr><td height="8">&nbsp;</td></tr>
+
+<!-- Step 2 -->
+<tr><td>
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f8f9fa; border-radius:10px; border-left:4px solid #5a8fc8;">
+<tr>
+  <td valign="top" width="56" style="padding:16px 0 16px 16px;">
+    <table border="0" cellpadding="0" cellspacing="0"><tr><td align="center" valign="middle" style="width:36px; height:36px; background-color:#5a8fc8; border-radius:50%; color:#ffffff; font-family:verdana, geneva, sans-serif; font-size:13pt; font-weight:bold; line-height:36px;">2</td></tr></table>
+  </td>
+  <td valign="top" style="padding:16px 16px 16px 12px;">
+    <p style="margin:0 0 4px 0; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; color:#333333; line-height:16pt;">Import – Daten in HFX.GOÄ laden</p>
+    <p style="margin:0 0 8px 0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#666666; line-height:15pt;">PAD-Datei hochladen · Keine Einrichtung notwendig</p>
+    <p style="margin:0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#5a8fc8; font-weight:bold; line-height:14pt;">→ Der Import erfolgt in wenigen Sekunden</p>
+  </td>
+</tr>
+</table>
+</td></tr>
+<tr><td height="8">&nbsp;</td></tr>
+
+<!-- Step 3 -->
+<tr><td>
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f8f9fa; border-radius:10px; border-left:4px solid #5ac87a;">
+<tr>
+  <td valign="top" width="56" style="padding:16px 0 16px 16px;">
+    <table border="0" cellpadding="0" cellspacing="0"><tr><td align="center" valign="middle" style="width:36px; height:36px; background-color:#5ac87a; border-radius:50%; color:#ffffff; font-family:verdana, geneva, sans-serif; font-size:13pt; font-weight:bold; line-height:36px;">3</td></tr></table>
+  </td>
+  <td valign="top" style="padding:16px 16px 16px 12px;">
+    <p style="margin:0 0 4px 0; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; color:#333333; line-height:16pt;">Analyse – Abrechnung prüfen lassen</p>
+    <p style="margin:0 0 8px 0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#666666; line-height:15pt;">Analyse per Klick starten · Auffälligkeiten &amp; Potenziale erkennen</p>
+    <p style="margin:0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#5ac87a; font-weight:bold; line-height:14pt;">→ Automatisiert, strukturiert, nachvollziehbar</p>
+  </td>
+</tr>
+</table>
+</td></tr>
+<tr><td height="8">&nbsp;</td></tr>
+
+<!-- Step 4 -->
+<tr><td>
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f8f9fa; border-radius:10px; border-left:4px solid #c85a8f;">
+<tr>
+  <td valign="top" width="56" style="padding:16px 0 16px 16px;">
+    <table border="0" cellpadding="0" cellspacing="0"><tr><td align="center" valign="middle" style="width:36px; height:36px; background-color:#c85a8f; border-radius:50%; color:#ffffff; font-family:verdana, geneva, sans-serif; font-size:13pt; font-weight:bold; line-height:36px;">4</td></tr></table>
+  </td>
+  <td valign="top" style="padding:16px 16px 16px 12px;">
+    <p style="margin:0 0 4px 0; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; color:#333333; line-height:16pt;">Entscheidung – Optimierungen bewerten</p>
+    <p style="margin:0 0 8px 0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#666666; line-height:15pt;">Vorschläge prüfen · Entscheidungen selbst treffen · Keine automatischen Änderungen</p>
+    <p style="margin:0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#c85a8f; font-weight:bold; line-height:14pt;">→ Sie behalten jederzeit die Kontrolle</p>
+  </td>
+</tr>
+</table>
+</td></tr>
+<tr><td height="8">&nbsp;</td></tr>
+
+<!-- Step 5 -->
+<tr><td>
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f8f9fa; border-radius:10px; border-left:4px solid #8f5ac8;">
+<tr>
+  <td valign="top" width="56" style="padding:16px 0 16px 16px;">
+    <table border="0" cellpadding="0" cellspacing="0"><tr><td align="center" valign="middle" style="width:36px; height:36px; background-color:#8f5ac8; border-radius:50%; color:#ffffff; font-family:verdana, geneva, sans-serif; font-size:13pt; font-weight:bold; line-height:36px;">5</td></tr></table>
+  </td>
+  <td valign="top" style="padding:16px 16px 16px 12px;">
+    <p style="margin:0 0 4px 0; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; color:#333333; line-height:16pt;">Abschluss – Optimierte Abrechnung übergeben</p>
+    <p style="margin:0 0 8px 0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#666666; line-height:15pt;">Neue PAD-Datei speichern · Optional wieder ins PVS laden · Übergabe an Ihr Abrechnungszentrum</p>
+    <p style="margin:0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#8f5ac8; font-weight:bold; line-height:14pt;">→ Abrechnung wie gewohnt – nur optimiert</p>
+  </td>
+</tr>
+</table>
+</td></tr>
+<tr><td height="24">&nbsp;</td></tr>
+
+<!-- Summary banner -->
+<tr><td>
+<table border="0" cellpadding="16" cellspacing="0" width="100%" style="background-color:#fffbf0; border-radius:10px; border:1px solid #e8d5a0;">
+<tr><td align="center" style="color:#8a6a1a; font-family:verdana, geneva, sans-serif; font-size:11pt; line-height:18pt; font-weight:bold;">
+🔒 Alle Schritte erfolgen lokal und nachvollziehbar!<br>
+<span style="font-weight:normal; color:#a08040;">Sie behalten jederzeit die volle Kontrolle über Ihre Abrechnungsdaten.</span>
+</td></tr>
+</table>
+</td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="60">&nbsp;</td></tr>
 <tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Folgende Daten haben Sie an uns übermittelt:</strong></td></tr>
 <tr><td>
@@ -159,7 +245,7 @@ export default function EmailPreview() {
             srcDoc={html}
             title="Email Preview"
             className="w-full border-0"
-            style={{ height: 1200, minWidth: 600 }}
+            style={{ height: 1500, minWidth: 600 }}
           />
         </div>
       </div>
