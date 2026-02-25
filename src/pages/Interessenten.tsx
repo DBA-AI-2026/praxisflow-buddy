@@ -54,6 +54,7 @@ export default function Interessenten() {
       let query = supabase
         .from("leads")
         .select("*")
+        .neq("status", "kunde")
         .order("created_at", { ascending: false });
 
       if (statusFilter !== "alle") {
@@ -117,7 +118,7 @@ export default function Interessenten() {
               <SelectItem value="kontaktiert">Kontaktiert</SelectItem>
               <SelectItem value="qualifiziert">Qualifiziert</SelectItem>
               <SelectItem value="abgelehnt">Abgelehnt</SelectItem>
-              <SelectItem value="kunde">Kunde</SelectItem>
+              {/* "Kunde" entfernt – konvertierte Leads erscheinen unter Kunden */}
             </SelectContent>
           </Select>
         </div>
