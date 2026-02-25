@@ -474,6 +474,7 @@ export type Database = {
           confirmation_email_sent: boolean
           created_at: string
           email: string
+          generated_password: string | null
           hfx_customer_number: string | null
           honorarplus_synced: boolean
           id: string
@@ -495,6 +496,7 @@ export type Database = {
           confirmation_email_sent?: boolean
           created_at?: string
           email: string
+          generated_password?: string | null
           hfx_customer_number?: string | null
           honorarplus_synced?: boolean
           id?: string
@@ -516,6 +518,7 @@ export type Database = {
           confirmation_email_sent?: boolean
           created_at?: string
           email?: string
+          generated_password?: string | null
           hfx_customer_number?: string | null
           honorarplus_synced?: boolean
           id?: string
