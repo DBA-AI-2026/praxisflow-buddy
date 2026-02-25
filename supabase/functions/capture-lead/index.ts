@@ -56,6 +56,40 @@ function mapCf7Fields(body: Record<string, any>): Record<string, any> {
   };
 }
 
+/**
+ * Generates a secure random password (12 chars: uppercase, lowercase, digits, special).
+ */
+function generatePassword(length = 12): string {
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghjkmnpqrstuvwxyz";
+  const digits = "23456789";
+  const special = "!@#$%&*";
+  const all = upper + lower + digits + special;
+
+  const arr = new Uint8Array(length);
+  crypto.getRandomValues(arr);
+
+  // Ensure at least one of each category
+  const result = [
+    upper[arr[0] % upper.length],
+    lower[arr[1] % lower.length],
+    digits[arr[2] % digits.length],
+    special[arr[3] % special.length],
+  ];
+
+  for (let i = 4; i < length; i++) {
+    result.push(all[arr[i] % all.length]);
+  }
+
+  // Shuffle
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = arr[i] % (i + 1);
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+
+  return result.join("");
+}
+
 function buildConfirmationEmailHtml(fields: {
   praxis_name: string;
   vorname: string;
@@ -66,8 +100,10 @@ function buildConfirmationEmailHtml(fields: {
   abrechnungszentrum: string;
   mp_nummer?: string | null;
   nachricht?: string | null;
+  hfx_customer_number: string;
+  generated_password: string;
 }): string {
-  const { praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht } = fields;
+  const { praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht, hfx_customer_number, generated_password } = fields;
 
   const mpSection = mp_nummer ? `<tr>
     <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Medizinpartner-Nummer (falls bekannt):</td>
@@ -97,7 +133,22 @@ function buildConfirmationEmailHtml(fields: {
 <tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Das erwartet Sie:</strong><br>Einfacher Import Ihrer Abrechnungsdaten<br>Verständliche Analyse statt komplizierter Prüfung<br>Mehr Transparenz und Sicherheit bei der GOÄ-Abrechnung</td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
 <tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Sie nutzen noch kein Abrechnungszentrum?</strong><br>Für die Nutzung von HFX.GOÄ benötigen Sie eine PAD- oder PADnext-Datei. Wenn Ihnen das gerade nichts sagt, kümmern wir uns darum: Ein Mitarbeiter meldet sich zeitnah bei Ihnen und begleitet Sie Schritt für Schritt durch die technischen Voraussetzungen.</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="80">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="30">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Ihre Zugangsdaten für HFX.GOÄ:</strong></td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
+<tr><td>
+<table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8; border-radius:8px; border:1px solid #d0d5dd;">
+<tr>
+<td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;">
+<strong>Benutzername:</strong> ${hfx_customer_number}<br>
+<strong>Passwort:</strong> <code style="background:#fff; padding:2px 8px; border-radius:4px; font-size:13pt; letter-spacing:1px;">${generated_password}</code>
+</td>
+</tr>
+</table>
+</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="color:#888888; font-family:verdana, geneva, sans-serif; font-size:10pt; line-height:14pt;"><em>Bitte bewahren Sie diese Zugangsdaten sicher auf. Sie benötigen sie für die Anmeldung in HFX.GOÄ.</em></td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td></tr>
 <tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#444444;"><strong>Jetzt Testversion downloaden und starten!</strong></td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="5">&nbsp;</td></tr>
 <tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:10pt; line-height:12pt; color:#444444;">Sie benötigen dafür eine PAD/PAD.next-Schnittstelle.</td></tr>
@@ -289,6 +340,9 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Generate password for Qodia access
+    const generatedPassword = generatePassword(12);
+
     // Save to database using service role
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -307,6 +361,7 @@ Deno.serve(async (req) => {
         abrechnungszentrum,
         mp_nummer: mp_nummer?.trim().slice(0, 50) || null,
         nachricht: nachricht?.trim().slice(0, 2000) || null,
+        generated_password: generatedPassword,
       })
       .select("id, hfx_customer_number")
       .single();
@@ -326,7 +381,7 @@ Deno.serve(async (req) => {
       const resendApiKey = Deno.env.get("RESEND_API_KEY");
       if (resendApiKey) {
         const resend = new Resend(resendApiKey);
-        const emailHtml = buildConfirmationEmailHtml({ praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht });
+        const emailHtml = buildConfirmationEmailHtml({ praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht, hfx_customer_number: lead.hfx_customer_number, generated_password: generatedPassword });
 
         await resend.emails.send({
           from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
@@ -388,6 +443,35 @@ Deno.serve(async (req) => {
       }
     } catch (sfErr) {
       console.error("Salesforce sync error:", sfErr);
+    }
+
+    // Sync to Qodia (HFX-Nummer + Passwort)
+    // TODO: Qodia API-Endpoint und Authentifizierung konfigurieren
+    try {
+      // const QODIA_API_URL = Deno.env.get("QODIA_API_URL");
+      // const QODIA_API_KEY = Deno.env.get("QODIA_API_KEY");
+      // if (QODIA_API_URL && QODIA_API_KEY) {
+      //   const qodiaResponse = await fetch(QODIA_API_URL, {
+      //     method: "POST",
+      //     headers: {
+      //       "Authorization": `Bearer ${QODIA_API_KEY}`,
+      //       "Content-Type": "application/json",
+      //     },
+      //     body: JSON.stringify({
+      //       username: lead.hfx_customer_number,
+      //       password: generatedPassword,
+      //     }),
+      //   });
+      //   if (qodiaResponse.ok) {
+      //     await supabase.from("leads").update({ qodia_synced: true }).eq("id", lead.id);
+      //     console.log(`Lead synced to Qodia: ${lead.hfx_customer_number}`);
+      //   } else {
+      //     console.error("Qodia sync failed:", await qodiaResponse.text());
+      //   }
+      // }
+      console.log(`Qodia sync pending – API not yet configured for ${lead.hfx_customer_number}`);
+    } catch (qodiaErr) {
+      console.error("Qodia sync error:", qodiaErr);
     }
 
     return new Response(
