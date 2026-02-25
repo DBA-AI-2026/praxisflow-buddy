@@ -541,6 +541,7 @@ export type Database = {
         Row: {
           adresse: string | null
           buchungs_datum: string | null
+          converted_from_lead_id: string | null
           created_at: string
           email: string | null
           id: string
@@ -558,6 +559,7 @@ export type Database = {
         Insert: {
           adresse?: string | null
           buchungs_datum?: string | null
+          converted_from_lead_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -575,6 +577,7 @@ export type Database = {
         Update: {
           adresse?: string | null
           buchungs_datum?: string | null
+          converted_from_lead_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -589,7 +592,15 @@ export type Database = {
           telefon?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "praxen_converted_from_lead_id_fkey"
+            columns: ["converted_from_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       praxis_reservations: {
         Row: {

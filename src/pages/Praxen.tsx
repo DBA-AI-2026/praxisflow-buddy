@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Download, MoreHorizontal, Pencil, Trash2, RefreshCw, Loader2 } from "lucide-react";
+import { Plus, Search, Download, MoreHorizontal, Pencil, Trash2, RefreshCw, Loader2, UserCheck } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,70 +42,8 @@ interface Praxis {
   preis: number;
   buchungsDatum: string;
   status: "aktiv" | "inaktiv" | "gekündigt";
+  convertedFromLeadId: string | null;
 }
-
-const initialPraxen: Praxis[] = [
-  {
-    id: "1",
-    name: "Dr. med. Hans Müller",
-    adresse: "Hauptstraße 15",
-    plz: "80331",
-    ort: "München",
-    telefon: "+49 89 12345678",
-    email: "praxis@mueller.de",
-    mpNr: "MP-123456",
-    produkt: "HFX GOÄ",
-    module: ["GOÄ-Prüfung", "Live-Check"],
-    preis: 0,
-    buchungsDatum: "2024-12-15",
-    status: "aktiv",
-  },
-  {
-    id: "2",
-    name: "Zahnarztpraxis Schmidt",
-    adresse: "Berliner Allee 42",
-    plz: "10115",
-    ort: "Berlin",
-    telefon: "+49 30 98765432",
-    email: "info@zahnarzt-schmidt.de",
-    mpNr: "MP-789012",
-    produkt: "HFX GOZ Live-Check",
-    module: ["GOZ-Prüfung"],
-    preis: 0,
-    buchungsDatum: "2025-01-10",
-    status: "aktiv",
-  },
-  {
-    id: "3",
-    name: "MVZ Gesundheit GmbH",
-    adresse: "Klinikweg 8",
-    plz: "50667",
-    ort: "Köln",
-    telefon: "+49 221 55443322",
-    email: "verwaltung@mvz-gesundheit.de",
-    mpNr: "MP-345678",
-    produkt: "HFX EBM",
-    module: ["EBM-Prüfung", "Benchmark"],
-    preis: 0,
-    buchungsDatum: "2024-11-20",
-    status: "aktiv",
-  },
-  {
-    id: "4",
-    name: "Praxis Dr. Weber",
-    adresse: "Am Markt 3",
-    plz: "60311",
-    ort: "Frankfurt",
-    telefon: "+49 69 11223344",
-    email: "kontakt@praxis-weber.de",
-    mpNr: "MP-901234",
-    produkt: "HFX Wingmann",
-    module: ["KI-Assistent"],
-    preis: 0,
-    buchungsDatum: "2025-01-05",
-    status: "aktiv",
-  },
-];
 
 const statusColors: Record<string, string> = {
   aktiv: "badge-success",
@@ -114,11 +52,49 @@ const statusColors: Record<string, string> = {
 };
 
 export default function Praxen() {
-  const [praxen, setPraxen] = useState<Praxis[]>(initialPraxen);
+  const [praxen, setPraxen] = useState<Praxis[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const { connection: sfConnection } = useSalesforceConnection();
+
+  const fetchPraxen = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("praxen")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      toast.error("Fehler beim Laden der Kunden");
+      console.error(error);
+    } else if (data) {
+      setPraxen(
+        data.map((p) => ({
+          id: p.id,
+          name: p.name,
+          adresse: p.adresse || "",
+          plz: p.plz || "",
+          ort: p.ort || "",
+          telefon: p.telefon || "",
+          email: p.email || "",
+          mpNr: p.mp_nr || "",
+          produkt: p.produkt || "",
+          module: p.module || [],
+          preis: p.preis || 0,
+          buchungsDatum: p.buchungs_datum || "",
+          status: (p.status as "aktiv" | "inaktiv" | "gekündigt") || "aktiv",
+          convertedFromLeadId: p.converted_from_lead_id,
+        }))
+      );
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchPraxen();
+  }, []);
 
   const syncToSalesforce = async (praxis: Praxis) => {
     if (!sfConnection.isConnected) {
@@ -225,25 +201,26 @@ export default function Praxen() {
                 <DialogTitle>Neuen Kunden anlegen</DialogTitle>
               </DialogHeader>
               <form
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault();
                   const formData = new FormData(e.currentTarget);
-                  const newPraxis: Praxis = {
-                    id: crypto.randomUUID(),
+                  const { error } = await supabase.from("praxen").insert({
                     name: formData.get("name") as string,
                     adresse: formData.get("adresse") as string,
                     plz: formData.get("plz") as string,
                     ort: formData.get("ort") as string,
                     telefon: formData.get("telefon") as string,
                     email: formData.get("email") as string,
-                    mpNr: `MP-${Math.random().toString().slice(2, 8)}`,
                     produkt: formData.get("produkt") as string,
-                    module: [],
-                    preis: 0,
-                    buchungsDatum: new Date().toISOString().split("T")[0],
                     status: "aktiv",
-                  };
-                  setPraxen([newPraxis, ...praxen]);
+                  });
+                  if (error) {
+                    toast.error("Fehler beim Anlegen des Kunden");
+                    console.error(error);
+                  } else {
+                    toast.success("Kunde erfolgreich angelegt");
+                    fetchPraxen();
+                  }
                   setIsDialogOpen(false);
                 }}
                 className="space-y-4"
@@ -327,6 +304,7 @@ export default function Praxen() {
                 <th>Preis/Monat</th>
                 <th>Buchung</th>
                 <th>Status</th>
+                <th>Herkunft</th>
                 <th className="w-12"></th>
               </tr>
             </thead>
@@ -377,6 +355,16 @@ export default function Praxen() {
                     <span className={`badge-status ${statusColors[praxis.status]}`}>
                       {praxis.status}
                     </span>
+                  </td>
+                  <td>
+                    {praxis.convertedFromLeadId ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary">
+                        <UserCheck className="h-3 w-3" />
+                        Lead
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Direkt</span>
+                    )}
                   </td>
                   <td>
                     <DropdownMenu>
