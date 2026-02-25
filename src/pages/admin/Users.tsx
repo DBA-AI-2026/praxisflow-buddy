@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText, UserCog } from "lucide-react";
+import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText, UserCog, Clock } from "lucide-react";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { RegionalAssignmentDialog } from "@/components/admin/RegionalAssignmentDialog";
 import {
@@ -42,7 +42,7 @@ interface UserWithRole {
   full_name: string;
   email: string;
   created_at: string;
-  
+  last_seen_at: string | null;
 }
 
 const roleConfig: Record<AppRole, { label: string; color: string }> = {
@@ -79,7 +79,7 @@ export default function AdminUsers() {
       // Get all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("user_id, full_name, email");
+        .select("user_id, full_name, email, last_seen_at");
 
       if (profilesError) throw profilesError;
 
@@ -92,7 +92,7 @@ export default function AdminUsers() {
           full_name: profile?.full_name || "Unbekannt",
           email: profile?.email || "-",
           created_at: role.created_at,
-          
+          last_seen_at: (profile as { last_seen_at?: string | null } | undefined)?.last_seen_at ?? null,
         };
       });
 
@@ -309,7 +309,7 @@ export default function AdminUsers() {
                 <tr>
                   <th>Benutzer</th>
                   <th>Rolle</th>
-                  
+                  <th>Zuletzt online</th>
                   <th>Erstellt am</th>
                   <th className="w-12"></th>
                 </tr>
@@ -343,6 +343,16 @@ export default function AdminUsers() {
                       >
                         {roleConfig[user.role]?.label || user.role}
                       </Badge>
+                    </td>
+                    <td className="text-muted-foreground">
+                      {user.last_seen_at ? (
+                        <span className="flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5" />
+                          {new Date(user.last_seen_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground/50">–</span>
+                      )}
                     </td>
                     <td className="text-muted-foreground">
                       {new Date(user.created_at).toLocaleDateString("de-DE")}

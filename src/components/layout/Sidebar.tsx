@@ -20,6 +20,7 @@ import {
   FlaskConical,
   BarChart3,
   ClipboardList,
+  ShieldCheck,
 } from "lucide-react";
 import logo from "@/assets/fox-logo.jpeg";
 import { useState } from "react";
@@ -62,6 +63,7 @@ const allgemeinNavigation: NavItem[] = [
   { name: "HFX EBM Lizenzen", href: "/lizenzen", icon: Key, roles: allRoles },
   { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "regional_lead", "admin"] },
   { name: "E-Mail-Vorschau", href: "/tools/email-preview", icon: FileText, roles: allRoles },
+  { name: "Sicherheit (2FA)", href: "/sicherheit", icon: ShieldCheck, roles: allRoles },
 ];
 
 const adminNavigation: NavItem[] = [
