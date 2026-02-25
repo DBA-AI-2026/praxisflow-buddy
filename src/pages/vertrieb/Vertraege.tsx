@@ -119,6 +119,8 @@ interface ContractFormData {
   vertrieb_signature_data: string;
   praxissystem: string;
   stundenaufwand_pro_woche: string;
+  rechnungs_email: string;
+  rechnungs_email_identisch: boolean;
 }
 
 const emptyForm: ContractFormData = {
@@ -168,6 +170,8 @@ const emptyForm: ContractFormData = {
   vertrieb_signature_data: "",
   praxissystem: "",
   stundenaufwand_pro_woche: "",
+  rechnungs_email: "",
+  rechnungs_email_identisch: false,
 };
 
 export default function Vertraege() {
@@ -405,6 +409,7 @@ export default function Vertraege() {
         created_by: user?.id,
         praxissystem: data.praxissystem || null,
         stundenaufwand_pro_woche: data.stundenaufwand_pro_woche || null,
+        rechnungs_email: data.rechnungs_email || null,
         selected_addon_modules: data.selected_modules.length > 0 ? data.selected_modules : [],
         ...(documentUrl ? { document_url: documentUrl, document_name: documentName } : {}),
         ...(leadHfxNumber && !editId ? { hfx_customer_number: leadHfxNumber } : {}),
@@ -629,6 +634,8 @@ export default function Vertraege() {
       vertrieb_signature_data: contract.vertrieb_signature_data || "",
       praxissystem: contract.praxissystem || "",
       stundenaufwand_pro_woche: contract.stundenaufwand_pro_woche || "",
+      rechnungs_email: contract.rechnungs_email || "",
+      rechnungs_email_identisch: false,
     });
     setDialogOpen(true);
   };
@@ -1626,6 +1633,38 @@ export default function Vertraege() {
             )}
 
             {/* Zahlungsmethode */}
+            {/* Rechnungs-E-Mail */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">E-Mail für Rechnungsempfang</h4>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="rechnungs_email_identisch"
+                  checked={form.rechnungs_email_identisch}
+                  onCheckedChange={(checked) => {
+                    const isChecked = checked === true;
+                    set("rechnungs_email_identisch", isChecked);
+                    if (isChecked) {
+                      set("rechnungs_email", form.email);
+                    }
+                  }}
+                />
+                <Label htmlFor="rechnungs_email_identisch" className="cursor-pointer">
+                  Identisch mit E-Mail-Adresse der Praxis
+                </Label>
+              </div>
+              <Input
+                value={form.rechnungs_email}
+                onChange={(e) => {
+                  set("rechnungs_email", e.target.value);
+                  if (form.rechnungs_email_identisch) set("rechnungs_email_identisch", false);
+                }}
+                placeholder="rechnung@example.de"
+                type="email"
+                disabled={form.rechnungs_email_identisch}
+                className={form.rechnungs_email_identisch ? "opacity-60" : ""}
+              />
+            </div>
+
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Zahlungsmethode</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

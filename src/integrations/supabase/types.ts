@@ -103,6 +103,7 @@ export type Database = {
           praxisanschrift: string | null
           praxissystem: string | null
           product_name: string
+          rechnungs_email: string | null
           rechtsform: string | null
           sales_partner_id: string | null
           sales_partner_name: string | null
@@ -164,6 +165,7 @@ export type Database = {
           praxisanschrift?: string | null
           praxissystem?: string | null
           product_name: string
+          rechnungs_email?: string | null
           rechtsform?: string | null
           sales_partner_id?: string | null
           sales_partner_name?: string | null
@@ -225,6 +227,7 @@ export type Database = {
           praxisanschrift?: string | null
           praxissystem?: string | null
           product_name?: string
+          rechnungs_email?: string | null
           rechtsform?: string | null
           sales_partner_id?: string | null
           sales_partner_name?: string | null
