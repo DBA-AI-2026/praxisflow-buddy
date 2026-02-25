@@ -814,6 +814,7 @@ export type Database = {
           email: string | null
           full_name: string
           id: string
+          last_seen_at: string | null
           updated_at: string
           user_id: string
         }
@@ -822,6 +823,7 @@ export type Database = {
           email?: string | null
           full_name: string
           id?: string
+          last_seen_at?: string | null
           updated_at?: string
           user_id: string
         }
@@ -830,6 +832,7 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          last_seen_at?: string | null
           updated_at?: string
           user_id?: string
         }

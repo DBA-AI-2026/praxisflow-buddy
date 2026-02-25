@@ -4,7 +4,9 @@ import { useUserRole, AppRole } from "@/hooks/useUserRole";
 import { canAccessRoute } from "@/config/routePermissions";
 import { logAuditEvent } from "@/hooks/useAuditLog";
 import { Loader2, ShieldX } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { MfaChallenge } from "@/pages/MfaChallenge";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,9 +18,48 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
   const { role, isLoading: roleLoading } = useUserRole();
   const location = useLocation();
   const hasLoggedRef = useRef(false);
+  const [mfaState, setMfaState] = useState<"checking" | "required" | "verified" | "not_enrolled">("checking");
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+
+  // Check MFA status
+  useEffect(() => {
+    if (!session || authLoading) return;
+
+    const checkMfa = async () => {
+      try {
+        const { data: assuranceData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (!assuranceData) { setMfaState("not_enrolled"); return; }
+
+        const { currentLevel, nextLevel, currentAuthenticationMethods } = assuranceData;
+
+        // Check if user has TOTP enrolled
+        const { data: factorsData } = await supabase.auth.mfa.listFactors();
+        const totpFactors = factorsData?.totp?.filter(f => f.status === "verified") ?? [];
+
+        if (totpFactors.length === 0) {
+          // Not enrolled yet – allow access (they should set up via settings)
+          setMfaState("not_enrolled");
+          return;
+        }
+
+        // Has enrolled TOTP but hasn't completed the challenge this session
+        if (currentLevel === "aal1" && nextLevel === "aal2") {
+          setMfaFactorId(totpFactors[0].id);
+          setMfaState("required");
+          return;
+        }
+
+        setMfaState("verified");
+      } catch {
+        setMfaState("not_enrolled");
+      }
+    };
+
+    checkMfa();
+  }, [session, authLoading]);
 
   // Check role-based access
-  const hasAccess = requiredRoles 
+  const hasAccess = requiredRoles
     ? role && requiredRoles.includes(role)
     : canAccessRoute(location.pathname, role);
 
@@ -40,8 +81,8 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
     hasLoggedRef.current = false;
   }, [location.pathname]);
 
-  // Show loading state while checking authentication and role
-  if (authLoading || roleLoading) {
+  // Show loading state
+  if (authLoading || roleLoading || mfaState === "checking") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -49,10 +90,21 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
     );
   }
 
-  // No session means not authenticated - redirect to login
+  // No session – redirect to login
   if (!session || !user) {
     console.log("ProtectedRoute: No session, redirecting to /auth");
     return <Navigate to="/auth" replace />;
+  }
+
+  // MFA challenge required
+  if (mfaState === "required" && mfaFactorId) {
+    return (
+      <MfaChallenge
+        factorId={mfaFactorId}
+        onSuccess={() => setMfaState("verified")}
+        onCancel={async () => { await supabase.auth.signOut(); }}
+      />
+    );
   }
 
   if (!hasAccess) {
