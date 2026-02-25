@@ -303,6 +303,18 @@ export default function Vertraege() {
     },
   });
 
+  const { data: allProfiles = [] } = useQuery({
+    queryKey: ["all-profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .order("full_name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
@@ -1214,7 +1226,24 @@ export default function Vertraege() {
                 </div>
                 <div>
                   <Label>Vertriebspartner</Label>
-                  <Input value={form.sales_partner_name} onChange={(e) => set("sales_partner_name", e.target.value)} />
+                  <Select
+                    value={form.sales_partner_name}
+                    onValueChange={(v) => set("sales_partner_name", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Vertriebspartner auswählen..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allProfiles.map((p: any) => (
+                        <SelectItem key={p.user_id} value={p.full_name}>
+                          <span>{p.full_name}</span>
+                          {p.email && (
+                            <span className="ml-2 text-xs text-muted-foreground">({p.email})</span>
+                          )}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
