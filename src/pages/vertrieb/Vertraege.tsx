@@ -11,6 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -22,6 +25,7 @@ import {
   Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye, CheckCircle,
   FilePen, FileSignature, CircleCheck, CircleOff, ArchiveX, ShieldBan,
 } from "lucide-react";
+// Check and ChevronsUpDown already imported above via combobox imports
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { generateContractPdf } from "@/lib/generateContractPdf";
 import { fillContractTemplate } from "@/lib/fillContractTemplate";
@@ -30,7 +34,7 @@ import { validateIban } from "@/lib/validateIban";
 import { validateBic } from "@/lib/validateBic";
 import { lookupBicFromIban } from "@/lib/lookupBic";
 import { buildStripeLineItems, hasStripeProducts } from "@/lib/stripeProducts";
-import { CreditCard } from "lucide-react";
+import { CreditCard } from "lucide-react"; // CreditCard used for payment section
 import foxLogoUrl from "@/assets/fox-logo.jpeg";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -58,6 +62,68 @@ import { useToast } from "@/hooks/use-toast";
 import { format, addMonths } from "date-fns";
 import { de } from "date-fns/locale";
 import SignaturePad from "signature_pad";
+
+// Searchable combobox for sales partner selection
+function SalesPartnerCombobox({
+  value,
+  onChange,
+  profiles,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  profiles: { user_id: string; full_name: string; email: string | null }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = profiles.find((p) => p.full_name === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          {selected ? (
+            <span>{selected.full_name}</span>
+          ) : (
+            <span className="text-muted-foreground">Vertriebspartner auswählen...</span>
+          )}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Name eingeben..." />
+          <CommandList>
+            <CommandEmpty>Kein Eintrag gefunden.</CommandEmpty>
+            <CommandGroup>
+              {profiles.map((p) => (
+                <CommandItem
+                  key={p.user_id}
+                  value={p.full_name}
+                  onSelect={(currentValue) => {
+                    onChange(currentValue === value ? "" : currentValue);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={`mr-2 h-4 w-4 ${value === p.full_name ? "opacity-100" : "opacity-0"}`}
+                  />
+                  <span>{p.full_name}</span>
+                  {p.email && (
+                    <span className="ml-2 text-xs text-muted-foreground">({p.email})</span>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 const statusConfig: Record<string, { label: string; class: string; icon: typeof FileText }> = {
   entwurf: { label: "Entwurf", class: "bg-muted text-muted-foreground", icon: FilePen },
@@ -1226,24 +1292,11 @@ export default function Vertraege() {
                 </div>
                 <div>
                   <Label>Vertriebspartner</Label>
-                  <Select
+                  <SalesPartnerCombobox
                     value={form.sales_partner_name}
-                    onValueChange={(v) => set("sales_partner_name", v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Vertriebspartner auswählen..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allProfiles.map((p: any) => (
-                        <SelectItem key={p.user_id} value={p.full_name}>
-                          <span>{p.full_name}</span>
-                          {p.email && (
-                            <span className="ml-2 text-xs text-muted-foreground">({p.email})</span>
-                          )}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(v) => set("sales_partner_name", v)}
+                    profiles={allProfiles}
+                  />
                 </div>
               </div>
             </div>
