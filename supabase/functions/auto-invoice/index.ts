@@ -94,10 +94,19 @@ Deno.serve(async (req) => {
         const taxAmount = Math.round(netAmount * taxRate) / 100;
         const grossAmount = Math.round((netAmount + taxAmount) * 100) / 100;
 
-        // Due date = today + 14 days
+        // Due date = today + 3 days (for automatic collection reference only)
         const dueDate = new Date(today);
-        dueDate.setDate(dueDate.getDate() + 14);
+        dueDate.setDate(dueDate.getDate() + 3);
         const dueDateStr = dueDate.toISOString().split("T")[0];
+
+        // Determine payment method
+        const isSepa = !!(contract.iban && contract.iban.trim());
+        const paymentMethodLabel = isSepa
+          ? "SEPA-Lastschrift"
+          : "Stripe (Kreditkarte/SEPA)";
+        const paymentMethodNote = isSepa
+          ? `Der Betrag wird automatisch per SEPA-Lastschrift von Ihrem Konto eingezogen.`
+          : `Der Betrag wird automatisch über Stripe von Ihrem hinterlegten Zahlungsmittel eingezogen.`;
         const todayStr = today.toISOString().split("T")[0];
 
         const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -178,7 +187,10 @@ Deno.serve(async (req) => {
       <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#6b7280;"><span>MwSt. (19%):</span><span>${taxAmount.toFixed(2)} €</span></div>
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #0b367f;margin-top:8px;font-size:16px;"><span><strong>Gesamtbetrag:</strong></span><strong style="color:#0b367f;">${grossAmount.toFixed(2)} €</strong></div>
     </div>
-    <p style="margin-top:20px;font-size:14px;color:#555;"><strong>Zahlungsziel:</strong> ${dueDate.toLocaleDateString("de-DE")}</p>
+    <div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
+      <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug (${paymentMethodLabel})</strong></p>
+      <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">${paymentMethodNote}</p>
+    </div>
     <p style="font-size:12px;color:#9ca3af;margin-top:8px;">Diese Rechnung wurde automatisch generiert.</p>
   </div>
   <div style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
