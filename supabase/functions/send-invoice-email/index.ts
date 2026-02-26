@@ -94,9 +94,19 @@ Deno.serve(async (req) => {
         <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${Number((p.quantity || 1) * (p.unit_price || 0)).toFixed(2)} €</td>
       </tr>`).join("");
 
-    const dueDateStr = invoice.due_date
-      ? new Date(invoice.due_date).toLocaleDateString("de-DE")
-      : "14 Tage nach Rechnungsdatum";
+    // Fetch contract for payment method info
+    let isSepa = false;
+    if (invoice.contract_id) {
+      const { data: contractData } = await supabaseAdmin
+        .from("contracts")
+        .select("iban, payment_interval")
+        .eq("id", invoice.contract_id)
+        .maybeSingle();
+      isSepa = !!(contractData?.iban && contractData.iban.trim());
+    }
+    const paymentMethodNote = isSepa
+      ? "Der Betrag wird automatisch per SEPA-Lastschrift von Ihrem Konto eingezogen."
+      : "Der Betrag wird automatisch über Stripe von Ihrem hinterlegten Zahlungsmittel eingezogen.";
 
     const invoiceHtml = `<!DOCTYPE html>
 <html><head><style>
@@ -137,8 +147,11 @@ Deno.serve(async (req) => {
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #0b367f;margin-top:8px;font-size:18px;"><span><strong>Gesamtbetrag:</strong></span><strong style="color:#0b367f;">${Number(invoice.gross_amount).toFixed(2)} €</strong></div>
     </div>
 
-    <p style="margin-top:20px;"><strong>Zahlungsziel:</strong> ${dueDateStr}</p>
-    ${invoice.notes ? `<p style="color:#6b7280;font-size:14px;">${invoice.notes}</p>` : ""}
+    <div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
+      <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug</strong></p>
+      <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">${paymentMethodNote}</p>
+    </div>
+    ${invoice.notes ? `<p style="color:#6b7280;font-size:14px;margin-top:12px;">${invoice.notes}</p>` : ""}
   </div>
   <div class="footer">
     <p>Diese Rechnung wurde automatisch aus dem HFX Sales Portal erstellt.</p>
