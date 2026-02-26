@@ -52,7 +52,10 @@ import {
   XCircle,
   Search,
   RefreshCw,
+  Download,
 } from "lucide-react";
+import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
+import { openPdfBlob } from "@/lib/openPdfBlob";
 
 interface InvoicePosition {
   description: string;
@@ -271,6 +274,20 @@ export default function Rechnungen() {
     }
   };
 
+  const handleDownloadPdf = async (invoice: Invoice) => {
+    try {
+      let logoBytes: ArrayBuffer | undefined;
+      try {
+        const logoResp = await fetch("/logo.jpeg");
+        if (logoResp.ok) logoBytes = await logoResp.arrayBuffer();
+      } catch { /* no logo */ }
+      const pdfBytes = await generateInvoicePdf(invoice, logoBytes);
+      openPdfBlob(pdfBytes, `Rechnung-${invoice.invoice_number}.pdf`);
+    } catch (e: any) {
+      toast({ title: "PDF-Fehler", description: e.message, variant: "destructive" });
+    }
+  };
+
   const handleStatusChange = async (invoice: Invoice, newStatus: string) => {
     setSavingId(invoice.id);
     const { error } = await supabase.from("invoices").update({ status: newStatus }).eq("id", invoice.id);
@@ -412,6 +429,9 @@ export default function Rechnungen() {
                         <div className="flex justify-end gap-1">
                           <Button variant="ghost" size="icon" onClick={() => setShowDetail(inv)} title="Details">
                             <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDownloadPdf(inv)} title="PDF herunterladen">
+                            <Download className="h-4 w-4" />
                           </Button>
                           {inv.status === "entwurf" && inv.rechnungs_email && (
                             <Button
@@ -662,6 +682,10 @@ export default function Rechnungen() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowDetail(null)}>Schließen</Button>
+              <Button variant="outline" onClick={() => handleDownloadPdf(showDetail)}>
+                <Download className="h-4 w-4 mr-2" />
+                PDF herunterladen
+              </Button>
               {showDetail.rechnungs_email && showDetail.status === "entwurf" && (
                 <Button
                   onClick={() => handleSendEmail(showDetail)}
