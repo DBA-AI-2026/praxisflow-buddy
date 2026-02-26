@@ -1,254 +1,391 @@
+import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Mail, FileText, X } from "lucide-react";
 
-function buildPreviewHtml() {
-  const hfx_customer_number = "HFX-I01019";
-  const generated_password = "Ya&P6*e9vmwL";
-  const praxis_name = "Testpraxis Dr. Müller";
-  const vorname = "Max";
-  const nachname = "Mustermann";
-  const email = "max.mustermann@example.com";
-  const plz = "80331";
-  const mobilnummer = "+49 170 1234567";
-  const abrechnungszentrum = "nein";
+// ─── Mock data ────────────────────────────────────────────────────────────────
+const MOCK = {
+  hfx_customer_number: "HFX-I01019",
+  generated_password: "Ya&P6*e9vmwL",
+  praxis_name: "Testpraxis Dr. Müller",
+  vorname: "Max",
+  nachname: "Mustermann",
+  email: "max.mustermann@example.com",
+  plz: "80331",
+  mobilnummer: "+49 170 1234567",
+  abrechnungszentrum: "nein",
+  invoice_number: "RE-2026-0002",
+  customer_name: "Test GmbH",
+  invoice_date: "26.02.2026",
+  due_date: "12.03.2026",
+  net_amount: "150,00 €",
+  tax_amount: "28,50 €",
+  gross_amount: "178,50 €",
+};
 
-  return `<table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="600">
-<tr><td align="center" valign="top" bgcolor="#ffffff">
-<img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/Mailheader-Neutral-hfx-1200px.png" alt="Honorarfuchs" width="600" height="80" border="0" style="border-width:0px;" />
-</td></tr>
-<tr><td bgcolor="#ffffff" align="center">
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="600"><tbody><tr><td style="width:10px;"></td><td style="width:580px;">
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="580">
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="90">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#444444;">
-<strong>Danke für Ihr Interesse am Honorarfuchs!<br>Entdecken Sie, was KI aus Ihrer Privatabrechnung holt.</strong>
-</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="30">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Mit HFX.GOÄ gewinnen Sie schnell Klarheit über Ihre Abrechnung. Erkennen Sie Optimierungspotenziale, prüfen Sie Ihre Daten strukturiert und verschaffen Sie sich ein besseres Gefühl für Ihre Privatliquidation – ganz ohne Aufwand.</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Das erwartet Sie:</strong><br>Einfacher Import Ihrer Abrechnungsdaten<br>Verständliche Analyse statt komplizierter Prüfung<br>Mehr Transparenz und Sicherheit bei der GOÄ-Abrechnung</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Sie nutzen noch kein Abrechnungszentrum?</strong><br>Für die Nutzung von HFX.GOÄ benötigen Sie eine PAD- oder PADnext-Datei. Wenn Ihnen das gerade nichts sagt, kümmern wir uns darum: Ein Mitarbeiter meldet sich zeitnah bei Ihnen und begleitet Sie Schritt für Schritt durch die technischen Voraussetzungen.</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="30">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Ihre Zugangsdaten für HFX.GOÄ:</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td>
-<table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8; border-radius:8px; border:1px solid #d0d5dd;">
-<tr>
-<td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;">
-<strong>Benutzername:</strong> ${hfx_customer_number}<br>
-<strong>Passwort:</strong> <code style="background:#fff; padding:2px 8px; border-radius:4px; font-size:13pt; letter-spacing:1px;">${generated_password}</code>
-</td>
-</tr>
-</table>
-</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#888888; font-family:verdana, geneva, sans-serif; font-size:10pt; line-height:14pt;"><em>Bitte bewahren Sie diese Zugangsdaten sicher auf. Sie benötigen sie für die Anmeldung in HFX.GOÄ.</em></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td></tr>
-<tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#444444;"><strong>Jetzt Testversion downloaden und starten!</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="5">&nbsp;</td></tr>
-<tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:10pt; line-height:12pt; color:#444444;">Sie benötigen dafür eine PAD/PAD.next-Schnittstelle.</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="15">&nbsp;</td></tr>
-<tr><td>
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="580"><tr>
-<td align="center" valign="top" width="290" style="padding: 10px;">
-<a href="#" style="text-decoration:none; display:block;">
-<table border="0" cellpadding="0" cellspacing="0" style="border: 1px solid #6d6d6d; border-radius: 6px; width: 100%;"><tr><td align="center" style="padding: 15px 10px; height: 65px;">
-<table border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-<td style="padding-right:10px;"><img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/apple-100.png" width="25" alt="MacOS" style="display:block; border:0; width:25px;"></td>
-<td align="left" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; line-height:16pt;">Download MacOS</td>
-</tr></table></td></tr></table></a></td>
-<td align="center" valign="top" width="290" style="padding: 10px;">
-<a href="#" style="text-decoration:none; display:block;">
-<table border="0" cellpadding="0" cellspacing="0" style="border: 1px solid #6d6d6d; border-radius: 6px; width: 100%;"><tr><td align="center" style="padding: 15px 10px; height: 65px;">
-<table border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-<td style="padding-right:10px;"><img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/Windows.png" width="25" alt="Windows" style="display:block; border:0; width:25px;"></td>
-<td align="left" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; line-height:16pt;">Download Windows</td>
-</tr></table></td></tr></table></a></td>
-</tr></table>
-</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="80">&nbsp;</td></tr>
-<tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#444444;"><strong>So funktioniert HFX.GOÄ</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="6">&nbsp;</td></tr>
-<tr><td align="center" valign="top" style="color:#888888; font-family:verdana, geneva, sans-serif; font-size:11pt; line-height:16pt;">In 5 einfachen Schritten zu einer optimierten Abrechnung</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="24">&nbsp;</td></tr>
+// ─── Templates ────────────────────────────────────────────────────────────────
+type TemplateId = "lead-confirmation" | "contract-customer" | "contract-partner" | "invoice";
 
-<!-- Step 1 -->
-<tr><td>
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f8f9fa; border-radius:10px; border-left:4px solid #c8a45a; margin-bottom:0;">
-<tr>
-  <td valign="top" width="56" style="padding:16px 0 16px 16px;">
-    <table border="0" cellpadding="0" cellspacing="0"><tr><td align="center" valign="middle" style="width:36px; height:36px; background-color:#c8a45a; border-radius:50%; color:#ffffff; font-family:verdana, geneva, sans-serif; font-size:13pt; font-weight:bold; line-height:36px;">1</td></tr></table>
-  </td>
-  <td valign="top" style="padding:16px 16px 16px 12px;">
-    <p style="margin:0 0 4px 0; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; color:#333333; line-height:16pt;">Vorbereitung – Daten bereitstellen</p>
-    <p style="margin:0 0 8px 0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#666666; line-height:15pt;">Patientenverwaltungssystem kurz offline nehmen · PAD-Datei aus dem PVS exportieren</p>
-    <p style="margin:0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#c8a45a; font-weight:bold; line-height:14pt;">→ Saubere Ausgangsbasis für die Analyse</p>
-  </td>
-</tr>
-</table>
-</td></tr>
-<tr><td height="8">&nbsp;</td></tr>
-
-<!-- Step 2 -->
-<tr><td>
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f8f9fa; border-radius:10px; border-left:4px solid #5a8fc8;">
-<tr>
-  <td valign="top" width="56" style="padding:16px 0 16px 16px;">
-    <table border="0" cellpadding="0" cellspacing="0"><tr><td align="center" valign="middle" style="width:36px; height:36px; background-color:#5a8fc8; border-radius:50%; color:#ffffff; font-family:verdana, geneva, sans-serif; font-size:13pt; font-weight:bold; line-height:36px;">2</td></tr></table>
-  </td>
-  <td valign="top" style="padding:16px 16px 16px 12px;">
-    <p style="margin:0 0 4px 0; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; color:#333333; line-height:16pt;">Import – Daten in HFX.GOÄ laden</p>
-    <p style="margin:0 0 8px 0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#666666; line-height:15pt;">PAD-Datei hochladen · Keine Einrichtung notwendig</p>
-    <p style="margin:0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#5a8fc8; font-weight:bold; line-height:14pt;">→ Der Import erfolgt in wenigen Sekunden</p>
-  </td>
-</tr>
-</table>
-</td></tr>
-<tr><td height="8">&nbsp;</td></tr>
-
-<!-- Step 3 -->
-<tr><td>
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f8f9fa; border-radius:10px; border-left:4px solid #5ac87a;">
-<tr>
-  <td valign="top" width="56" style="padding:16px 0 16px 16px;">
-    <table border="0" cellpadding="0" cellspacing="0"><tr><td align="center" valign="middle" style="width:36px; height:36px; background-color:#5ac87a; border-radius:50%; color:#ffffff; font-family:verdana, geneva, sans-serif; font-size:13pt; font-weight:bold; line-height:36px;">3</td></tr></table>
-  </td>
-  <td valign="top" style="padding:16px 16px 16px 12px;">
-    <p style="margin:0 0 4px 0; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; color:#333333; line-height:16pt;">Analyse – Abrechnung prüfen lassen</p>
-    <p style="margin:0 0 8px 0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#666666; line-height:15pt;">Analyse per Klick starten · Auffälligkeiten &amp; Potenziale erkennen</p>
-    <p style="margin:0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#5ac87a; font-weight:bold; line-height:14pt;">→ Automatisiert, strukturiert, nachvollziehbar</p>
-  </td>
-</tr>
-</table>
-</td></tr>
-<tr><td height="8">&nbsp;</td></tr>
-
-<!-- Step 4 -->
-<tr><td>
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f8f9fa; border-radius:10px; border-left:4px solid #c85a8f;">
-<tr>
-  <td valign="top" width="56" style="padding:16px 0 16px 16px;">
-    <table border="0" cellpadding="0" cellspacing="0"><tr><td align="center" valign="middle" style="width:36px; height:36px; background-color:#c85a8f; border-radius:50%; color:#ffffff; font-family:verdana, geneva, sans-serif; font-size:13pt; font-weight:bold; line-height:36px;">4</td></tr></table>
-  </td>
-  <td valign="top" style="padding:16px 16px 16px 12px;">
-    <p style="margin:0 0 4px 0; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; color:#333333; line-height:16pt;">Entscheidung – Optimierungen bewerten</p>
-    <p style="margin:0 0 8px 0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#666666; line-height:15pt;">Vorschläge prüfen · Entscheidungen selbst treffen · Keine automatischen Änderungen</p>
-    <p style="margin:0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#c85a8f; font-weight:bold; line-height:14pt;">→ Sie behalten jederzeit die Kontrolle</p>
-  </td>
-</tr>
-</table>
-</td></tr>
-<tr><td height="8">&nbsp;</td></tr>
-
-<!-- Step 5 -->
-<tr><td>
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f8f9fa; border-radius:10px; border-left:4px solid #8f5ac8;">
-<tr>
-  <td valign="top" width="56" style="padding:16px 0 16px 16px;">
-    <table border="0" cellpadding="0" cellspacing="0"><tr><td align="center" valign="middle" style="width:36px; height:36px; background-color:#8f5ac8; border-radius:50%; color:#ffffff; font-family:verdana, geneva, sans-serif; font-size:13pt; font-weight:bold; line-height:36px;">5</td></tr></table>
-  </td>
-  <td valign="top" style="padding:16px 16px 16px 12px;">
-    <p style="margin:0 0 4px 0; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; color:#333333; line-height:16pt;">Abschluss – Optimierte Abrechnung übergeben</p>
-    <p style="margin:0 0 8px 0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#666666; line-height:15pt;">Neue PAD-Datei speichern · Optional wieder ins PVS laden · Übergabe an Ihr Abrechnungszentrum</p>
-    <p style="margin:0; font-family:verdana, geneva, sans-serif; font-size:10pt; color:#8f5ac8; font-weight:bold; line-height:14pt;">→ Abrechnung wie gewohnt – nur optimiert</p>
-  </td>
-</tr>
-</table>
-</td></tr>
-<tr><td height="24">&nbsp;</td></tr>
-
-<!-- Summary banner -->
-<tr><td>
-<table border="0" cellpadding="16" cellspacing="0" width="100%" style="background-color:#fffbf0; border-radius:10px; border:1px solid #e8d5a0;">
-<tr><td align="center" style="color:#8a6a1a; font-family:verdana, geneva, sans-serif; font-size:11pt; line-height:18pt; font-weight:bold;">
-🔒 Alle Schritte erfolgen lokal und nachvollziehbar!<br>
-<span style="font-weight:normal; color:#a08040;">Sie behalten jederzeit die volle Kontrolle über Ihre Abrechnungsdaten.</span>
-</td></tr>
-</table>
-</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="60">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Folgende Daten haben Sie an uns übermittelt:</strong></td></tr>
-<tr><td>
-<table border="0" cellpadding="3" cellspacing="0" width="100%"><tbody>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td></tr>
-<tr>
-<td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"><strong>Praxisdaten</strong></td>
-<td></td>
-</tr>
-<tr>
-<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Praxisname:</td>
-<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${praxis_name}&nbsp;</td>
-</tr>
-<tr>
-<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Vorname:</td>
-<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${vorname}&nbsp;</td>
-</tr>
-<tr>
-<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Nachname:</td>
-<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, gecko, sans-serif; font-size:12pt; line-height:16pt;">${nachname}&nbsp;</td>
-</tr>
-<tr>
-<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">E-Mail:</td>
-<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${email}&nbsp;</td>
-</tr>
-<tr>
-<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">PLZ:</td>
-<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${plz}&nbsp;</td>
-</tr>
-<tr>
-<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Mobilnummer:</td>
-<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${mobilnummer}&nbsp;</td>
-</tr>
-<tr><td height="40">&nbsp;</td><td height="40">&nbsp;</td></tr>
-<tr>
-<td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"><strong>Abrechnungszentrum</strong></td>
-<td></td>
-</tr>
-<tr>
-<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Nutzen Sie ein Abrechnungszentrum?</td>
-<td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${abrechnungszentrum}&nbsp;</td>
-</tr>
-</tbody></table>
-</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="60">&nbsp;</td></tr>
-</table>
-</td><td style="width:10px;"></td></tr></tbody></table>
-</td></tr>
-<tr><td bgcolor="#ffffff" align="center" style="padding:20px 0;">
-<table border="0" cellpadding="0" cellspacing="0" width="580"><tr><td align="center" style="color:#888; font-family:verdana, geneva, sans-serif; font-size:9pt; line-height:14pt;">
-© ${new Date().getFullYear()} Honorarfuchs · Qodia GmbH<br>
-Diese E-Mail wurde automatisch generiert.
-</td></tr></table>
-</td></tr>
-</table>
-</td></tr></table>`;
+interface Template {
+  id: TemplateId;
+  label: string;
+  subject: string;
+  from: string;
+  type: "email" | "pdf";
+  description: string;
 }
 
+const TEMPLATES: Template[] = [
+  {
+    id: "lead-confirmation",
+    label: "Lead-Bestätigung",
+    subject: "Bestätigung Ihrer Anfrage – Honorarfuchs",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "E-Mail an neuen Interessenten mit Zugangsdaten",
+  },
+  {
+    id: "contract-customer",
+    label: "Vertrag (Kunde)",
+    subject: "Ihr Vertrag mit HFX Honorarfuchs",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "Vertragsbestätigung an Kunden nach Aktivierung",
+  },
+  {
+    id: "contract-partner",
+    label: "Vertrag (Vertrieb)",
+    subject: "Neuer Vertrag abgeschlossen – HFX Sales Portal",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "Benachrichtigung an Vertriebspartner",
+  },
+  {
+    id: "invoice",
+    label: "Rechnung",
+    subject: `Rechnung ${MOCK.invoice_number} – ${MOCK.customer_name}`,
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "Rechnungs-E-Mail mit PDF-Anhang",
+  },
+];
+
+// ─── HTML builders ────────────────────────────────────────────────────────────
+function buildLeadConfirmationHtml() {
+  const { hfx_customer_number, generated_password, praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum } = MOCK;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head><body style="margin:0;padding:0;background:#fff;">
+<table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>
+<table align="center" border="0" cellpadding="0" cellspacing="0" width="600">
+<tr><td align="center" bgcolor="#ffffff">
+  <img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/Mailheader-Neutral-hfx-1200px.png" alt="Honorarfuchs" width="600" height="80" border="0"/>
+</td></tr>
+<tr><td bgcolor="#ffffff" align="center">
+<table align="center" border="0" cellpadding="0" cellspacing="0" width="580">
+<tr><td height="40">&nbsp;</td></tr>
+<tr><td style="font-family:verdana,sans-serif;font-size:16pt;line-height:24pt;color:#444;"><strong>Danke für Ihr Interesse am Honorarfuchs!</strong></td></tr>
+<tr><td height="20">&nbsp;</td></tr>
+<tr><td style="color:#444;font-family:verdana,sans-serif;font-size:12pt;line-height:18pt;">Mit HFX.GOÄ gewinnen Sie schnell Klarheit über Ihre Abrechnung.</td></tr>
+<tr><td height="20">&nbsp;</td></tr>
+<tr><td style="color:#444;font-family:verdana,sans-serif;font-size:12pt;line-height:18pt;"><strong>Ihre Zugangsdaten für HFX.GOÄ:</strong></td></tr>
+<tr><td height="10">&nbsp;</td></tr>
+<tr><td>
+  <table border="0" cellpadding="12" cellspacing="0" width="100%" style="background:#f0f4f8;border-radius:8px;border:1px solid #d0d5dd;">
+  <tr><td style="color:#444;font-family:verdana,sans-serif;font-size:12pt;line-height:20pt;">
+    <strong>Benutzername:</strong> ${hfx_customer_number}<br/>
+    <strong>Passwort:</strong> <code style="background:#fff;padding:2px 8px;border-radius:4px;font-size:13pt;">${generated_password}</code>
+  </td></tr></table>
+</td></tr>
+<tr><td height="30">&nbsp;</td></tr>
+<tr><td style="color:#444;font-family:verdana,sans-serif;font-size:12pt;line-height:18pt;"><strong>Folgende Daten haben Sie übermittelt:</strong></td></tr>
+<tr><td height="10">&nbsp;</td></tr>
+<tr><td>
+<table border="0" cellpadding="4" cellspacing="0" width="100%">
+<tr><td style="border-top:1px solid #ddd;padding-top:6px;color:#444;font-family:verdana,sans-serif;font-size:11pt;">Praxisname:</td><td style="border-top:1px solid #ddd;padding-top:6px;color:#444;font-family:verdana,sans-serif;font-size:11pt;">${praxis_name}</td></tr>
+<tr><td style="border-top:1px solid #ddd;padding-top:6px;color:#444;font-family:verdana,sans-serif;font-size:11pt;">Name:</td><td style="border-top:1px solid #ddd;padding-top:6px;color:#444;font-family:verdana,sans-serif;font-size:11pt;">${vorname} ${nachname}</td></tr>
+<tr><td style="border-top:1px solid #ddd;padding-top:6px;color:#444;font-family:verdana,sans-serif;font-size:11pt;">E-Mail:</td><td style="border-top:1px solid #ddd;padding-top:6px;color:#444;font-family:verdana,sans-serif;font-size:11pt;">${email}</td></tr>
+<tr><td style="border-top:1px solid #ddd;padding-top:6px;color:#444;font-family:verdana,sans-serif;font-size:11pt;">PLZ:</td><td style="border-top:1px solid #ddd;padding-top:6px;color:#444;font-family:verdana,sans-serif;font-size:11pt;">${plz}</td></tr>
+<tr><td style="border-top:1px solid #ddd;padding-top:6px;color:#444;font-family:verdana,sans-serif;font-size:11pt;">Mobil:</td><td style="border-top:1px solid #ddd;padding-top:6px;color:#444;font-family:verdana,sans-serif;font-size:11pt;">${mobilnummer}</td></tr>
+<tr><td style="border-top:1px solid #ddd;padding-top:6px;color:#444;font-family:verdana,sans-serif;font-size:11pt;">Abrechnungszentrum:</td><td style="border-top:1px solid #ddd;padding-top:6px;color:#444;font-family:verdana,sans-serif;font-size:11pt;">${abrechnungszentrum}</td></tr>
+</table>
+</td></tr>
+<tr><td height="40">&nbsp;</td></tr>
+<tr><td align="center" style="color:#888;font-family:verdana,sans-serif;font-size:9pt;">© ${new Date().getFullYear()} Honorarfuchs · Qodia GmbH</td></tr>
+<tr><td height="20">&nbsp;</td></tr>
+</table></td></tr></table></td></tr></table>
+</body></html>`;
+}
+
+function buildContractCustomerHtml() {
+  const { customer_name, hfx_customer_number } = MOCK;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head><body style="margin:0;padding:0;background:#fff;">
+<table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>
+<table align="center" border="0" cellpadding="0" cellspacing="0" width="600">
+<tr><td align="center">
+  <div style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:30px 20px;text-align:center;border-radius:8px 8px 0 0;">
+    <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg" alt="HFX Logo" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;"/>
+    <h1 style="color:#fff;margin:0;font-size:22px;font-family:Arial,sans-serif;">Ihr Vertrag ist aktiv!</h1>
+    <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-family:Arial,sans-serif;font-size:14px;">HFX Honorarfuchs – Sales Portal</p>
+  </div>
+</td></tr>
+<tr><td style="background:#f9fafb;padding:30px 20px;border:1px solid #e5e7eb;border-top:none;">
+  <p style="font-family:Arial,sans-serif;font-size:16px;color:#333;">Sehr geehrte Damen und Herren,</p>
+  <p style="font-family:Arial,sans-serif;font-size:14px;color:#555;line-height:1.6;">Ihr Vertrag mit HFX Honorarfuchs wurde erfolgreich aktiviert. Vielen Dank für Ihr Vertrauen!</p>
+  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:20px 0;">
+    <table width="100%" border="0" cellpadding="0" cellspacing="0">
+    <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#666;padding:4px 0;">Kundenname:</td><td style="font-family:Arial,sans-serif;font-size:13px;color:#111;font-weight:bold;padding:4px 0;">${customer_name}</td></tr>
+    <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#666;padding:4px 0;">HFX-Kundennummer:</td><td style="font-family:Arial,sans-serif;font-size:13px;color:#0b367f;font-weight:bold;padding:4px 0;">${hfx_customer_number}</td></tr>
+    <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#666;padding:4px 0;">Produkt:</td><td style="font-family:Arial,sans-serif;font-size:13px;color:#111;padding:4px 0;">HFX EBM Professional</td></tr>
+    <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#666;padding:4px 0;">Startdatum:</td><td style="font-family:Arial,sans-serif;font-size:13px;color:#111;padding:4px 0;">01.03.2026</td></tr>
+    </table>
+  </div>
+  <p style="font-family:Arial,sans-serif;font-size:14px;color:#555;">Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
+  <p style="font-family:Arial,sans-serif;font-size:14px;color:#555;">Mit freundlichen Grüßen,<br/><strong>Das HFX Team</strong></p>
+</td></tr>
+<tr><td style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
+  <p style="font-family:Arial,sans-serif;font-size:11px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} Honorarfuchs – HFX Sales Portal</p>
+</td></tr>
+</table></td></tr></table>
+</body></html>`;
+}
+
+function buildContractPartnerHtml() {
+  const { customer_name, hfx_customer_number } = MOCK;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head><body style="margin:0;padding:0;background:#fff;">
+<table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>
+<table align="center" border="0" cellpadding="0" cellspacing="0" width="600">
+<tr><td align="center">
+  <div style="background:linear-gradient(135deg,#b6193d,#d42050);padding:30px 20px;text-align:center;border-radius:8px 8px 0 0;">
+    <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg" alt="HFX Logo" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;"/>
+    <h1 style="color:#fff;margin:0;font-size:22px;font-family:Arial,sans-serif;">Neuer Vertrag abgeschlossen! 🎉</h1>
+    <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-family:Arial,sans-serif;font-size:14px;">HFX Honorarfuchs – Sales Portal</p>
+  </div>
+</td></tr>
+<tr><td style="background:#f9fafb;padding:30px 20px;border:1px solid #e5e7eb;border-top:none;">
+  <p style="font-family:Arial,sans-serif;font-size:16px;color:#333;">Hallo,</p>
+  <p style="font-family:Arial,sans-serif;font-size:14px;color:#555;line-height:1.6;">Ein neuer Vertrag wurde erfolgreich abgeschlossen und aktiviert.</p>
+  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:20px 0;">
+    <table width="100%" border="0" cellpadding="0" cellspacing="0">
+    <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#666;padding:4px 0;">Kundenname:</td><td style="font-family:Arial,sans-serif;font-size:13px;color:#111;font-weight:bold;padding:4px 0;">${customer_name}</td></tr>
+    <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#666;padding:4px 0;">HFX-Nummer:</td><td style="font-family:Arial,sans-serif;font-size:13px;color:#b6193d;font-weight:bold;padding:4px 0;">${hfx_customer_number}</td></tr>
+    <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#666;padding:4px 0;">Produkt:</td><td style="font-family:Arial,sans-serif;font-size:13px;color:#111;padding:4px 0;">HFX EBM Professional</td></tr>
+    <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#666;padding:4px 0;">Laufzeit:</td><td style="font-family:Arial,sans-serif;font-size:13px;color:#111;padding:4px 0;">12 Monate ab 01.03.2026</td></tr>
+    </table>
+  </div>
+  <p style="font-family:Arial,sans-serif;font-size:14px;color:#555;">Herzlichen Glückwunsch zum Abschluss!</p>
+</td></tr>
+<tr><td style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
+  <p style="font-family:Arial,sans-serif;font-size:11px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} Honorarfuchs – HFX Sales Portal</p>
+</td></tr>
+</table></td></tr></table>
+</body></html>`;
+}
+
+function buildInvoiceHtml() {
+  const { invoice_number, customer_name, invoice_date, due_date, net_amount, tax_amount, gross_amount } = MOCK;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head><body style="margin:0;padding:0;background:#fff;">
+<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;">
+  <div style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:30px 20px;border-radius:8px 8px 0 0;text-align:center;">
+    <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg" alt="HFX Logo" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;"/>
+    <h1 style="color:#fff;margin:0;font-size:22px;">Rechnung ${invoice_number}</h1>
+    <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:13px;">Honorarfuchs – HFX Sales Portal</p>
+  </div>
+  <div style="background:#f9fafb;padding:30px 20px;border:1px solid #e5e7eb;border-top:none;">
+    <p style="font-size:15px;color:#333;">Sehr geehrte Damen und Herren,</p>
+    <p style="font-size:14px;color:#555;line-height:1.6;">anbei erhalten Sie Ihre Rechnung <strong>${invoice_number}</strong> vom <strong>${invoice_date}</strong>.</p>
+    <p style="font-size:14px;color:#555;"><strong>Rechnungsempfänger:</strong> ${customer_name}</p>
+    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;margin-top:20px;">
+      <thead><tr style="background:#0b367f;">
+        <th style="padding:10px 12px;text-align:left;color:#fff;font-size:12px;">Beschreibung</th>
+        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:12px;">Menge</th>
+        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:12px;">Einzelpreis</th>
+        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:12px;">Gesamt</th>
+      </tr></thead>
+      <tbody>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;">HFX EBM Lizenz – Februar 2026</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px;">1</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px;">150,00 €</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px;">150,00 €</td></tr>
+      </tbody>
+    </table>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-top:20px;">
+      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span>Nettobetrag:</span><strong>${net_amount}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#6b7280;"><span>MwSt. (19%):</span><span>${tax_amount}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #0b367f;margin-top:8px;font-size:16px;"><span><strong>Gesamtbetrag:</strong></span><strong style="color:#0b367f;">${gross_amount}</strong></div>
+    </div>
+    <p style="margin-top:20px;font-size:14px;color:#555;"><strong>Zahlungsziel:</strong> ${due_date}</p>
+    <p style="font-size:12px;color:#6b7280;margin-top:4px;">📎 Das PDF dieser Rechnung ist als Anhang beigefügt.</p>
+  </div>
+  <div style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
+    <p style="font-size:11px;color:#9ca3af;margin:0;">Diese Rechnung wurde automatisch erstellt. © Honorarfuchs – HFX Sales Portal</p>
+  </div>
+</div>
+</body></html>`;
+}
+
+function buildInvoicePdfPreviewHtml() {
+  const { invoice_number, customer_name, invoice_date, due_date, net_amount, tax_amount, gross_amount } = MOCK;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+<style>
+  body { font-family: Arial, sans-serif; margin: 0; padding: 24px; background: #f4f6fb; }
+  .page { background: #fff; max-width: 595px; margin: 0 auto; box-shadow: 0 4px 24px rgba(0,0,0,0.12); }
+  .header { background: linear-gradient(135deg, #0b367f, #1a4a9e); color: white; padding: 20px 28px; display: flex; align-items: center; gap: 14px; }
+  .header h1 { margin: 0; font-size: 20px; }
+  .header p { margin: 4px 0 0; font-size: 11px; opacity: 0.85; }
+  .body { padding: 28px; }
+  .meta { display: flex; gap: 24px; margin-bottom: 20px; font-size: 12px; color: #555; }
+  .meta strong { color: #111; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th { background: #0b367f; color: #fff; padding: 8px 10px; text-align: left; }
+  thead th:last-child { text-align: right; }
+  tbody td { padding: 7px 10px; border-bottom: 1px solid #e5e7eb; }
+  tbody td:last-child { text-align: right; }
+  tbody tr:nth-child(even) td { background: #f5f7fa; }
+  .totals { margin-top: 20px; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; font-size: 13px; }
+  .totals .row { display: flex; justify-content: space-between; padding: 3px 0; color: #555; }
+  .totals .total { display: flex; justify-content: space-between; padding: 8px 0; border-top: 2px solid #0b367f; margin-top: 8px; font-size: 15px; color: #0b367f; font-weight: bold; }
+  .footer { background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 12px 28px; font-size: 10px; color: #9ca3af; text-align: center; }
+  .badge { background: rgba(255,255,255,0.2); color: #fff; padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: auto; }
+</style>
+</head><body>
+<div class="page">
+  <div class="header">
+    <div>
+      <h1>Rechnung ${invoice_number}</h1>
+      <p>HFX Honorarfuchs GmbH</p>
+    </div>
+    <span class="badge">ENTWURF</span>
+  </div>
+  <div class="body">
+    <div class="meta">
+      <div><strong>Rechnungsempfänger</strong><br/>${customer_name}</div>
+      <div><strong>Rechnungsnummer</strong><br/>${invoice_number}</div>
+      <div><strong>Datum</strong><br/>${invoice_date}</div>
+      <div><strong>Fällig am</strong><br/>${due_date}</div>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Beschreibung</th>
+        <th style="text-align:right">Menge</th>
+        <th style="text-align:right">Einzelpreis</th>
+        <th style="text-align:right">Gesamt</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td>HFX EBM Lizenz – Februar 2026</td>
+          <td style="text-align:right">1</td>
+          <td style="text-align:right">150,00 €</td>
+          <td style="text-align:right">150,00 €</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="totals">
+      <div class="row"><span>Nettobetrag:</span><span>${net_amount}</span></div>
+      <div class="row"><span>Umsatzsteuer 19%:</span><span>${tax_amount}</span></div>
+      <div class="total"><span>Gesamtbetrag (brutto):</span><span>${gross_amount}</span></div>
+    </div>
+    <p style="margin-top:16px;font-size:12px;color:#555;">Bitte überweisen Sie den Betrag bis zum <strong>${due_date}</strong> auf unser Konto.</p>
+    <p style="font-size:10px;color:#9ca3af;margin-top:4px;">Im ausgewiesenen Betrag sind 28,50 € Umsatzsteuer (19%) enthalten.</p>
+  </div>
+  <div class="footer">HFX Honorarfuchs GmbH · Steuer-Nr: XX/XXX/XXXXX · USt-IdNr: DEXXXXXXXXX · IBAN: DEXX XXXX XXXX XXXX XXXX XX</div>
+</div>
+</body></html>`;
+}
+
+function getHtmlForTemplate(id: TemplateId) {
+  switch (id) {
+    case "lead-confirmation": return buildLeadConfirmationHtml();
+    case "contract-customer": return buildContractCustomerHtml();
+    case "contract-partner": return buildContractPartnerHtml();
+    case "invoice": return buildInvoiceHtml();
+  }
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function EmailPreview() {
-  const html = buildPreviewHtml();
+  const [activeModal, setActiveModal] = useState<{ template: Template; mode: "email" | "pdf" } | null>(null);
 
   return (
-    <MainLayout title="E-Mail Preview" subtitle="Vorschau der Lead-Bestätigungsmail">
-      <div className="flex justify-center">
-        <div 
-          className="bg-white rounded-lg shadow-lg border border-border overflow-hidden"
-          style={{ maxWidth: 640 }}
-        >
-          <div className="bg-muted/50 px-4 py-2 border-b border-border flex items-center gap-2">
-            <span className="text-xs text-muted-foreground font-mono">Von:</span>
-            <span className="text-xs text-foreground">noreply@hfx-honorarfuchs.de</span>
-            <span className="text-xs text-muted-foreground ml-4 font-mono">Betreff:</span>
-            <span className="text-xs text-foreground">Bestätigung Ihrer Anfrage – Honorarfuchs</span>
-          </div>
-          <iframe
-            srcDoc={html}
-            title="Email Preview"
-            className="w-full border-0"
-            style={{ height: 1500, minWidth: 600 }}
-          />
+    <MainLayout title="E-Mail & PDF Vorschau" subtitle="Vorschau aller E-Mail- und PDF-Vorlagen">
+      <div className="max-w-4xl mx-auto space-y-8">
+
+        {/* Header */}
+        <div className="rounded-xl border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold text-foreground mb-1">Vorlagen-Übersicht</h2>
+          <p className="text-sm text-muted-foreground">Klicke auf eine Vorlage, um die Vorschau als E-Mail oder PDF zu öffnen.</p>
+        </div>
+
+        {/* Template cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {TEMPLATES.map((tpl) => (
+            <div key={tpl.id} className="rounded-xl border border-border bg-card p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Mail className="w-4 h-4 text-primary" />
+                  <span className="font-semibold text-foreground">{tpl.label}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">{tpl.description}</p>
+                <p className="text-xs text-muted-foreground mt-1 font-mono truncate">Betreff: {tpl.subject}</p>
+              </div>
+              <div className="flex gap-2 mt-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 gap-1.5"
+                  onClick={() => setActiveModal({ template: tpl, mode: "email" })}
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  E-Mail Vorschau
+                </Button>
+                {tpl.id === "invoice" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 gap-1.5"
+                    onClick={() => setActiveModal({ template: tpl, mode: "pdf" })}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    PDF Vorschau
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
+
+      {/* Preview Modal */}
+      <Dialog open={!!activeModal} onOpenChange={() => setActiveModal(null)}>
+        <DialogContent className="max-w-3xl w-full p-0 gap-0 overflow-hidden" style={{ maxHeight: "90vh" }}>
+          <DialogHeader className="px-5 py-3 border-b border-border bg-muted/40 flex-row items-center justify-between space-y-0">
+            <div className="flex flex-col gap-0.5">
+              <DialogTitle className="text-sm font-semibold">
+                {activeModal?.mode === "pdf" ? "📄 PDF Vorschau" : "✉️ E-Mail Vorschau"} — {activeModal?.template.label}
+              </DialogTitle>
+              {activeModal?.mode === "email" && (
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span><span className="font-mono">Von:</span> {activeModal.template.from}</span>
+                  <span><span className="font-mono">Betreff:</span> {activeModal.template.subject}</span>
+                </div>
+              )}
+            </div>
+          </DialogHeader>
+          <div className="overflow-auto" style={{ maxHeight: "calc(90vh - 64px)" }}>
+            {activeModal && (
+              <iframe
+                srcDoc={
+                  activeModal.mode === "pdf"
+                    ? buildInvoicePdfPreviewHtml()
+                    : getHtmlForTemplate(activeModal.template.id)
+                }
+                title="Preview"
+                className="w-full border-0"
+                style={{ height: 700, minWidth: 0 }}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
