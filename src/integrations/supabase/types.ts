@@ -393,6 +393,33 @@ export type Database = {
         }
         Relationships: []
       }
+      email_template_overrides: {
+        Row: {
+          created_at: string
+          html_content: string
+          id: string
+          template_key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          html_content: string
+          id?: string
+          template_key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          html_content?: string
+          id?: string
+          template_key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       integration_settings: {
         Row: {
           api_key_encrypted: string | null

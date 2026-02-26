@@ -1,9 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, FileText, Pencil, Eye, RotateCcw } from "lucide-react";
+import { Mail, FileText, Pencil, Eye, RotateCcw, Save, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK = {
@@ -310,10 +312,28 @@ export default function EmailPreview() {
   const [activeModal, setActiveModal] = useState<{ template: Template; mode: "email" | "pdf" } | null>(null);
   const [editModal, setEditModal] = useState<{ template: Template; mode: "email" | "pdf" } | null>(null);
 
-  // Persisted custom HTML per template key
+  // Persisted custom HTML per template key (loaded from backend)
   const [customHtml, setCustomHtml] = useState<Record<string, string>>({});
   // Editor buffer
   const [editorValue, setEditorValue] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load saved templates on mount
+  useEffect(() => {
+    async function loadTemplates() {
+      const { data, error } = await supabase
+        .from("email_template_overrides" as any)
+        .select("template_key, html_content");
+      if (!error && data) {
+        const map: Record<string, string> = {};
+        (data as any[]).forEach((row) => { map[row.template_key] = row.html_content; });
+        setCustomHtml(map);
+      }
+      setIsLoading(false);
+    }
+    loadTemplates();
+  }, []);
 
   const getStorageKey = (tpl: Template, mode: "email" | "pdf") =>
     mode === "pdf" ? "invoice-pdf" : tpl.id;
@@ -332,21 +352,39 @@ export default function EmailPreview() {
     setEditModal({ template: tpl, mode });
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editModal) return;
     const key = getStorageKey(editModal.template, editModal.mode);
+    setIsSaving(true);
+    const { error } = await supabase
+      .from("email_template_overrides" as any)
+      .upsert({ template_key: key, html_content: editorValue }, { onConflict: "template_key" });
+    setIsSaving(false);
+    if (error) {
+      toast.error("Fehler beim Speichern: " + error.message);
+      return;
+    }
     setCustomHtml((prev) => ({ ...prev, [key]: editorValue }));
     setEditModal(null);
+    toast.success("Vorlage gespeichert");
   };
 
-  const resetTemplate = (tpl: Template, mode: "email" | "pdf") => {
+  const resetTemplate = async (tpl: Template, mode: "email" | "pdf") => {
     const key = getStorageKey(tpl, mode);
+    const { error } = await supabase
+      .from("email_template_overrides" as any)
+      .delete()
+      .eq("template_key", key);
+    if (error) {
+      toast.error("Fehler beim Zurücksetzen: " + error.message);
+      return;
+    }
     setCustomHtml((prev) => {
       const next = { ...prev };
       delete next[key];
       return next;
     });
-    setEditorValue(getHtmlForTemplate(key as TemplateId));
+    toast.success("Vorlage zurückgesetzt");
   };
 
   const hasCustom = (tpl: Template, mode: "email" | "pdf") => {
@@ -359,9 +397,12 @@ export default function EmailPreview() {
       <div className="max-w-4xl mx-auto space-y-8">
 
         {/* Header */}
-        <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="text-lg font-semibold text-foreground mb-1">Vorlagen-Übersicht</h2>
-          <p className="text-sm text-muted-foreground">Klicke auf eine Vorlage, um die Vorschau zu öffnen oder den Inhalt zu bearbeiten.</p>
+        <div className="rounded-xl border border-border bg-card p-6 flex items-center gap-3">
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-foreground mb-1">Vorlagen-Übersicht</h2>
+            <p className="text-sm text-muted-foreground">Klicke auf eine Vorlage, um die Vorschau zu öffnen oder den Inhalt zu bearbeiten. Änderungen werden dauerhaft gespeichert.</p>
+          </div>
+          {isLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
         </div>
 
         {/* Template cards */}
@@ -373,7 +414,7 @@ export default function EmailPreview() {
                   <Mail className="w-4 h-4 text-primary" />
                   <span className="font-semibold text-foreground">{tpl.label}</span>
                   {(hasCustom(tpl, "email") || (tpl.id === "invoice" && hasCustom(tpl, "pdf"))) && (
-                    <span className="ml-auto text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded">Bearbeitet</span>
+                    <span className="ml-auto text-[10px] font-medium bg-warning/20 text-warning-foreground px-1.5 py-0.5 rounded border border-warning/30">Bearbeitet</span>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">{tpl.description}</p>
@@ -491,7 +532,10 @@ export default function EmailPreview() {
             </DialogTitle>
             <div className="flex gap-2 ml-auto">
               <Button variant="outline" size="sm" onClick={() => setEditModal(null)}>Abbrechen</Button>
-              <Button size="sm" onClick={saveEdit}>Speichern</Button>
+              <Button size="sm" onClick={saveEdit} disabled={isSaving} className="gap-1.5">
+                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                Speichern
+              </Button>
             </div>
           </DialogHeader>
 
