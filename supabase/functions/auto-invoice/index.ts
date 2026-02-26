@@ -8,6 +8,63 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+/** Returns a Set of German public holiday date strings (YYYY-MM-DD) for a given year */
+function getGermanHolidays(year: number): Set<string> {
+  const fmt = (d: Date) => d.toISOString().split("T")[0];
+  const fixed = [
+    `${year}-01-01`, // Neujahr
+    `${year}-05-01`, // Tag der Arbeit
+    `${year}-10-03`, // Tag der deutschen Einheit
+    `${year}-12-25`, // 1. Weihnachtstag
+    `${year}-12-26`, // 2. Weihnachtstag
+  ];
+  // Easter (Gauss algorithm)
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  const easter = new Date(year, month - 1, day);
+
+  const addDays = (base: Date, days: number) => {
+    const d = new Date(base);
+    d.setDate(d.getDate() + days);
+    return d;
+  };
+
+  const movable = [
+    addDays(easter, -2),  // Karfreitag
+    addDays(easter, 1),   // Ostermontag
+    addDays(easter, 39),  // Christi Himmelfahrt
+    addDays(easter, 50),  // Pfingstmontag
+    addDays(easter, 60),  // Fronleichnam (nicht überall, aber bundesweit verbreitet)
+  ];
+
+  return new Set([...fixed, ...movable.map(fmt)]);
+}
+
+/** Returns next business day that is not a weekend or German public holiday */
+function addBusinessDays(from: Date, days: number): Date {
+  const result = new Date(from);
+  const holidays = getGermanHolidays(from.getFullYear());
+  // Also cover year boundary
+  const holidaysNext = getGermanHolidays(from.getFullYear() + 1);
+  const allHolidays = new Set([...holidays, ...holidaysNext]);
+  let added = 0;
+  while (added < days) {
+    result.setDate(result.getDate() + 1);
+    const dow = result.getDay();
+    const dateStr = result.toISOString().split("T")[0];
+    if (dow !== 0 && dow !== 6 && !allHolidays.has(dateStr)) added++;
+  }
+  return result;
+}
+
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -94,14 +151,8 @@ Deno.serve(async (req) => {
         const taxAmount = Math.round(netAmount * taxRate) / 100;
         const grossAmount = Math.round((netAmount + taxAmount) * 100) / 100;
 
-        // Collection date = today + 3 business days (skip weekends)
-        const collectionDate = new Date(today);
-        let businessDaysAdded = 0;
-        while (businessDaysAdded < 3) {
-          collectionDate.setDate(collectionDate.getDate() + 1);
-          const dow = collectionDate.getDay();
-          if (dow !== 0 && dow !== 6) businessDaysAdded++; // skip Sat/Sun
-        }
+        // Collection date = today + 3 business days (skip weekends & German holidays)
+        const collectionDate = addBusinessDays(today, 3);
         const dueDateStr = collectionDate.toISOString().split("T")[0];
         const collectionDateFormatted = collectionDate.toLocaleDateString("de-DE");
 
