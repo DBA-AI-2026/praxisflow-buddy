@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Mail, FileText, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Mail, FileText, Pencil, Eye, RotateCcw } from "lucide-react";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK = {
@@ -25,7 +26,7 @@ const MOCK = {
 };
 
 // ─── Templates ────────────────────────────────────────────────────────────────
-type TemplateId = "lead-confirmation" | "contract-customer" | "contract-partner" | "invoice";
+type TemplateId = "lead-confirmation" | "contract-customer" | "contract-partner" | "invoice" | "invoice-pdf";
 
 interface Template {
   id: TemplateId;
@@ -292,18 +293,66 @@ function buildInvoicePdfPreviewHtml() {
 </body></html>`;
 }
 
+const DEFAULT_HTML: Record<string, () => string> = {
+  "lead-confirmation": buildLeadConfirmationHtml,
+  "contract-customer": buildContractCustomerHtml,
+  "contract-partner": buildContractPartnerHtml,
+  "invoice": buildInvoiceHtml,
+  "invoice-pdf": buildInvoicePdfPreviewHtml,
+};
+
 function getHtmlForTemplate(id: TemplateId) {
-  switch (id) {
-    case "lead-confirmation": return buildLeadConfirmationHtml();
-    case "contract-customer": return buildContractCustomerHtml();
-    case "contract-partner": return buildContractPartnerHtml();
-    case "invoice": return buildInvoiceHtml();
-  }
+  return DEFAULT_HTML[id]?.() ?? "";
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function EmailPreview() {
   const [activeModal, setActiveModal] = useState<{ template: Template; mode: "email" | "pdf" } | null>(null);
+  const [editModal, setEditModal] = useState<{ template: Template; mode: "email" | "pdf" } | null>(null);
+
+  // Persisted custom HTML per template key
+  const [customHtml, setCustomHtml] = useState<Record<string, string>>({});
+  // Editor buffer
+  const [editorValue, setEditorValue] = useState("");
+
+  const getStorageKey = (tpl: Template, mode: "email" | "pdf") =>
+    mode === "pdf" ? "invoice-pdf" : tpl.id;
+
+  const getRenderedHtml = useCallback(
+    (tpl: Template, mode: "email" | "pdf") => {
+      const key = getStorageKey(tpl, mode);
+      return customHtml[key] ?? getHtmlForTemplate(key as TemplateId);
+    },
+    [customHtml]
+  );
+
+  const openEdit = (tpl: Template, mode: "email" | "pdf") => {
+    const key = getStorageKey(tpl, mode);
+    setEditorValue(customHtml[key] ?? getHtmlForTemplate(key as TemplateId));
+    setEditModal({ template: tpl, mode });
+  };
+
+  const saveEdit = () => {
+    if (!editModal) return;
+    const key = getStorageKey(editModal.template, editModal.mode);
+    setCustomHtml((prev) => ({ ...prev, [key]: editorValue }));
+    setEditModal(null);
+  };
+
+  const resetTemplate = (tpl: Template, mode: "email" | "pdf") => {
+    const key = getStorageKey(tpl, mode);
+    setCustomHtml((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+    setEditorValue(getHtmlForTemplate(key as TemplateId));
+  };
+
+  const hasCustom = (tpl: Template, mode: "email" | "pdf") => {
+    const key = getStorageKey(tpl, mode);
+    return !!customHtml[key];
+  };
 
   return (
     <MainLayout title="E-Mail & PDF Vorschau" subtitle="Vorschau aller E-Mail- und PDF-Vorlagen">
@@ -312,7 +361,7 @@ export default function EmailPreview() {
         {/* Header */}
         <div className="rounded-xl border border-border bg-card p-6">
           <h2 className="text-lg font-semibold text-foreground mb-1">Vorlagen-Übersicht</h2>
-          <p className="text-sm text-muted-foreground">Klicke auf eine Vorlage, um die Vorschau als E-Mail oder PDF zu öffnen.</p>
+          <p className="text-sm text-muted-foreground">Klicke auf eine Vorlage, um die Vorschau zu öffnen oder den Inhalt zu bearbeiten.</p>
         </div>
 
         {/* Template cards */}
@@ -323,21 +372,50 @@ export default function EmailPreview() {
                 <div className="flex items-center gap-2 mb-1">
                   <Mail className="w-4 h-4 text-primary" />
                   <span className="font-semibold text-foreground">{tpl.label}</span>
+                  {(hasCustom(tpl, "email") || (tpl.id === "invoice" && hasCustom(tpl, "pdf"))) && (
+                    <span className="ml-auto text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded">Bearbeitet</span>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground">{tpl.description}</p>
                 <p className="text-xs text-muted-foreground mt-1 font-mono truncate">Betreff: {tpl.subject}</p>
               </div>
-              <div className="flex gap-2 mt-auto">
+
+              {/* E-Mail row */}
+              <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   className="flex-1 gap-1.5"
                   onClick={() => setActiveModal({ template: tpl, mode: "email" })}
                 >
-                  <Mail className="w-3.5 h-3.5" />
-                  E-Mail Vorschau
+                  <Eye className="w-3.5 h-3.5" />
+                  E-Mail
                 </Button>
-                {tpl.id === "invoice" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => openEdit(tpl, "email")}
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  Bearbeiten
+                </Button>
+                {hasCustom(tpl, "email") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="px-2 text-muted-foreground"
+                    title="Zurücksetzen"
+                    onClick={() => resetTemplate(tpl, "email")}
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
+
+              {/* PDF row – only for invoice */}
+              {tpl.id === "invoice" && (
+                <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
@@ -345,16 +423,36 @@ export default function EmailPreview() {
                     onClick={() => setActiveModal({ template: tpl, mode: "pdf" })}
                   >
                     <FileText className="w-3.5 h-3.5" />
-                    PDF Vorschau
+                    PDF
                   </Button>
-                )}
-              </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => openEdit(tpl, "pdf")}
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    Bearbeiten
+                  </Button>
+                  {hasCustom(tpl, "pdf") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="px-2 text-muted-foreground"
+                      title="Zurücksetzen"
+                      onClick={() => resetTemplate(tpl, "pdf")}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Preview Modal */}
+      {/* ── Preview Modal ── */}
       <Dialog open={!!activeModal} onOpenChange={() => setActiveModal(null)}>
         <DialogContent className="max-w-3xl w-full p-0 gap-0 overflow-hidden" style={{ maxHeight: "90vh" }}>
           <DialogHeader className="px-5 py-3 border-b border-border bg-muted/40 flex-row items-center justify-between space-y-0">
@@ -373,16 +471,58 @@ export default function EmailPreview() {
           <div className="overflow-auto" style={{ maxHeight: "calc(90vh - 64px)" }}>
             {activeModal && (
               <iframe
-                srcDoc={
-                  activeModal.mode === "pdf"
-                    ? buildInvoicePdfPreviewHtml()
-                    : getHtmlForTemplate(activeModal.template.id)
-                }
+                srcDoc={getRenderedHtml(activeModal.template, activeModal.mode)}
                 title="Preview"
                 className="w-full border-0"
                 style={{ height: 700, minWidth: 0 }}
               />
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Edit Modal ── */}
+      <Dialog open={!!editModal} onOpenChange={() => setEditModal(null)}>
+        <DialogContent className="max-w-6xl w-full p-0 gap-0 overflow-hidden" style={{ maxHeight: "95vh" }}>
+          <DialogHeader className="px-5 py-3 border-b border-border bg-muted/40 flex-row items-center gap-3 space-y-0">
+            <Pencil className="w-4 h-4 text-primary shrink-0" />
+            <DialogTitle className="text-sm font-semibold flex-1">
+              Bearbeiten — {editModal?.template.label} ({editModal?.mode === "pdf" ? "PDF" : "E-Mail"})
+            </DialogTitle>
+            <div className="flex gap-2 ml-auto">
+              <Button variant="outline" size="sm" onClick={() => setEditModal(null)}>Abbrechen</Button>
+              <Button size="sm" onClick={saveEdit}>Speichern</Button>
+            </div>
+          </DialogHeader>
+
+          {/* Split: editor left, live preview right */}
+          <div className="flex overflow-hidden" style={{ height: "calc(95vh - 60px)" }}>
+            {/* Editor */}
+            <div className="w-1/2 flex flex-col border-r border-border">
+              <div className="px-4 py-2 text-xs text-muted-foreground bg-muted/30 border-b border-border font-mono">
+                HTML-Editor
+              </div>
+              <Textarea
+                value={editorValue}
+                onChange={(e) => setEditorValue(e.target.value)}
+                className="flex-1 resize-none rounded-none border-0 font-mono text-xs leading-relaxed focus-visible:ring-0 focus-visible:ring-offset-0"
+                style={{ height: "100%" }}
+                spellCheck={false}
+              />
+            </div>
+
+            {/* Live preview */}
+            <div className="w-1/2 flex flex-col">
+              <div className="px-4 py-2 text-xs text-muted-foreground bg-muted/30 border-b border-border font-mono flex items-center gap-2">
+                <Eye className="w-3 h-3" />
+                Live-Vorschau
+              </div>
+              <iframe
+                srcDoc={editorValue}
+                title="Live Preview"
+                className="flex-1 w-full border-0"
+              />
+            </div>
           </div>
         </DialogContent>
       </Dialog>
