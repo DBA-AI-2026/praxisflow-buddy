@@ -2,10 +2,12 @@ import { useState, useCallback, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Mail, FileText, Pencil, Eye, RotateCcw, Save, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import CodeMirror from "@uiw/react-codemirror";
+import { html } from "@codemirror/lang-html";
+import { oneDark } from "@codemirror/theme-one-dark";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK = {
@@ -542,17 +544,26 @@ export default function EmailPreview() {
           {/* Split: editor left, live preview right */}
           <div className="flex overflow-hidden" style={{ height: "calc(95vh - 60px)" }}>
             {/* Editor */}
-            <div className="w-1/2 flex flex-col border-r border-border">
+             <div className="w-1/2 flex flex-col border-r border-border overflow-hidden">
               <div className="px-4 py-2 text-xs text-muted-foreground bg-muted/30 border-b border-border font-mono">
                 HTML-Editor
               </div>
-              <Textarea
-                value={editorValue}
-                onChange={(e) => setEditorValue(e.target.value)}
-                className="flex-1 resize-none rounded-none border-0 font-mono text-xs leading-relaxed focus-visible:ring-0 focus-visible:ring-offset-0"
-                style={{ height: "100%" }}
-                spellCheck={false}
-              />
+              <div className="flex-1 overflow-auto">
+                <CodeMirror
+                  value={editorValue}
+                  onChange={(val) => setEditorValue(val)}
+                  extensions={[html()]}
+                  theme={oneDark}
+                  height="100%"
+                  style={{ fontSize: 12, height: "100%" }}
+                  basicSetup={{
+                    lineNumbers: true,
+                    foldGutter: true,
+                    autocompletion: true,
+                    bracketMatching: true,
+                  }}
+                />
+              </div>
             </div>
 
             {/* Live preview */}
