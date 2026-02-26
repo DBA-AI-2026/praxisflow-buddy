@@ -35,6 +35,9 @@ export const routePermissions: RoutePermission[] = [
   { path: "/vertrieb/vertraege", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
   { path: "/vertrieb/provisionen", allowedRoles: ["sales_lead", "regional_lead", "admin"] },
   
+  // Rechnungen - Admin only
+  { path: "/rechnungen", allowedRoles: ["admin"] },
+
   // Admin routes - Admin only
   { path: "/admin/access-requests", allowedRoles: ["admin"] },
   { path: "/admin/users", allowedRoles: ["admin"] },
