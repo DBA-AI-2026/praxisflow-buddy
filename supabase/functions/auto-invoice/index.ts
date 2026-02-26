@@ -94,10 +94,16 @@ Deno.serve(async (req) => {
         const taxAmount = Math.round(netAmount * taxRate) / 100;
         const grossAmount = Math.round((netAmount + taxAmount) * 100) / 100;
 
-        // Due date = today + 3 days (for automatic collection reference only)
-        const dueDate = new Date(today);
-        dueDate.setDate(dueDate.getDate() + 3);
-        const dueDateStr = dueDate.toISOString().split("T")[0];
+        // Collection date = today + 3 business days (skip weekends)
+        const collectionDate = new Date(today);
+        let businessDaysAdded = 0;
+        while (businessDaysAdded < 3) {
+          collectionDate.setDate(collectionDate.getDate() + 1);
+          const dow = collectionDate.getDay();
+          if (dow !== 0 && dow !== 6) businessDaysAdded++; // skip Sat/Sun
+        }
+        const dueDateStr = collectionDate.toISOString().split("T")[0];
+        const collectionDateFormatted = collectionDate.toLocaleDateString("de-DE");
 
         // Determine payment method
         const isSepa = !!(contract.iban && contract.iban.trim());
@@ -190,6 +196,7 @@ Deno.serve(async (req) => {
     <div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
       <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug (${paymentMethodLabel})</strong></p>
       <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">${paymentMethodNote}</p>
+      <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">📅 <strong>Einzugsdatum:</strong> ${collectionDateFormatted}</p>
     </div>
     <p style="font-size:12px;color:#9ca3af;margin-top:8px;">Diese Rechnung wurde automatisch generiert.</p>
   </div>

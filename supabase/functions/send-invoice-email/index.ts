@@ -94,6 +94,17 @@ Deno.serve(async (req) => {
         <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${Number((p.quantity || 1) * (p.unit_price || 0)).toFixed(2)} €</td>
       </tr>`).join("");
 
+    // Collection date = invoice_date + 3 business days (skip weekends)
+    const invoiceDateObj = new Date(invoice.invoice_date);
+    const collectionDate = new Date(invoiceDateObj);
+    let businessDaysAdded = 0;
+    while (businessDaysAdded < 3) {
+      collectionDate.setDate(collectionDate.getDate() + 1);
+      const dow = collectionDate.getDay();
+      if (dow !== 0 && dow !== 6) businessDaysAdded++;
+    }
+    const collectionDateFormatted = collectionDate.toLocaleDateString("de-DE");
+
     // Fetch contract for payment method info
     let isSepa = false;
     if (invoice.contract_id) {
@@ -150,6 +161,7 @@ Deno.serve(async (req) => {
     <div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
       <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug</strong></p>
       <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">${paymentMethodNote}</p>
+      <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">📅 <strong>Einzugsdatum:</strong> ${collectionDateFormatted}</p>
     </div>
     ${invoice.notes ? `<p style="color:#6b7280;font-size:14px;margin-top:12px;">${invoice.notes}</p>` : ""}
   </div>
