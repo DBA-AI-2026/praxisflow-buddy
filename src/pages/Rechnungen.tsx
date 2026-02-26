@@ -260,8 +260,24 @@ export default function Rechnungen() {
     }
     setSendingId(invoice.id);
     try {
+      // Generate PDF and convert to base64 for attachment
+      let pdfBase64: string | undefined;
+      try {
+        let logoBytes: ArrayBuffer | undefined;
+        try {
+          const logoResp = await fetch("/logo.jpeg");
+          if (logoResp.ok) logoBytes = await logoResp.arrayBuffer();
+        } catch { /* no logo */ }
+        const pdfBytes = await generateInvoicePdf(invoice, logoBytes);
+        // Convert Uint8Array → base64
+        const binary = Array.from(pdfBytes).map((b) => String.fromCharCode(b)).join("");
+        pdfBase64 = btoa(binary);
+      } catch (pdfErr) {
+        console.warn("PDF generation failed, sending without attachment:", pdfErr);
+      }
+
       const { error } = await supabase.functions.invoke("send-invoice-email", {
-        body: { invoiceId: invoice.id },
+        body: { invoiceId: invoice.id, pdfBase64 },
       });
       if (error) throw error;
       toast({ title: "Rechnung versendet", description: `E-Mail an ${invoice.rechnungs_email} gesendet.` });
