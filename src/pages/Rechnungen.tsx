@@ -85,6 +85,8 @@ interface Invoice {
   exported_to_lexware: boolean;
   notes: string | null;
   created_at: string;
+  // joined from contracts
+  payment_method?: "sepa" | "stripe" | null;
 }
 
 interface Contract {
@@ -151,9 +153,19 @@ export default function Rechnungen() {
     setLoading(true);
     const { data, error } = await supabase
       .from("invoices")
-      .select("*")
+      .select("*, contracts(iban)")
       .order("created_at", { ascending: false });
-    if (!error && data) setInvoices(data.map((r) => ({ ...r, positions: (r.positions as unknown as InvoicePosition[]) || [] })) as Invoice[]);
+    if (!error && data) {
+      setInvoices(data.map((r) => {
+        const contract = r.contracts as { iban: string | null } | null;
+        const hasIban = !!(contract?.iban && contract.iban.trim());
+        return {
+          ...r,
+          positions: (r.positions as unknown as InvoicePosition[]) || [],
+          payment_method: r.contract_id ? (hasIban ? "sepa" : "stripe") : null,
+        } as Invoice;
+      }));
+    }
     setLoading(false);
   };
 
@@ -405,11 +417,12 @@ export default function Rechnungen() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Rechnungsnr.</TableHead>
-                  <TableHead>Kunde</TableHead>
-                  <TableHead>Datum</TableHead>
-                  <TableHead className="text-right">Brutto</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Aktionen</TableHead>
+                   <TableHead>Kunde</TableHead>
+                   <TableHead>Datum</TableHead>
+                   <TableHead className="text-right">Brutto</TableHead>
+                   <TableHead>Zahlung</TableHead>
+                   <TableHead>Status</TableHead>
+                   <TableHead className="text-right">Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -427,15 +440,31 @@ export default function Rechnungen() {
                   const s = STATUS_CONFIG[inv.status] || STATUS_CONFIG.entwurf;
                   const StatusIcon = s.icon;
                   return (
-                    <TableRow key={inv.id}>
+                     <TableRow key={inv.id}>
                       <TableCell className="font-mono font-medium">{inv.invoice_number}</TableCell>
+                      
                       <TableCell>
                         <div>{inv.customer_name}</div>
                         {inv.customer_number && <div className="text-xs text-muted-foreground">{inv.customer_number}</div>}
                       </TableCell>
                       <TableCell>{new Date(inv.invoice_date).toLocaleDateString("de-DE")}</TableCell>
                       <TableCell className="text-right font-medium">{Number(inv.gross_amount).toFixed(2)} €</TableCell>
-                      <TableCell>
+                       <TableCell>
+                         {inv.payment_method === "sepa" && (
+                           <Badge variant="outline" className="gap-1 text-xs border-primary/50 text-primary bg-primary/5">
+                             🏦 SEPA
+                           </Badge>
+                         )}
+                         {inv.payment_method === "stripe" && (
+                           <Badge variant="outline" className="gap-1 text-xs border-accent/50 text-accent-foreground bg-accent/20">
+                             💳 Stripe
+                           </Badge>
+                         )}
+                         {!inv.payment_method && (
+                           <span className="text-xs text-muted-foreground">–</span>
+                         )}
+                       </TableCell>
+                       <TableCell>
                         <Badge variant={s.variant} className="gap-1">
                           <StatusIcon className="h-3 w-3" />
                           {s.label}
