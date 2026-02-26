@@ -1,0 +1,698 @@
+import { useState, useEffect } from "react";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Plus,
+  Send,
+  Trash2,
+  Eye,
+  FileText,
+  Euro,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  Search,
+  RefreshCw,
+} from "lucide-react";
+
+interface InvoicePosition {
+  description: string;
+  quantity: number;
+  unit_price: number;
+}
+
+interface Invoice {
+  id: string;
+  invoice_number: string;
+  contract_id: string | null;
+  customer_name: string;
+  customer_number: string | null;
+  rechnungs_email: string | null;
+  adresse: string | null;
+  plz: string | null;
+  ort: string | null;
+  positions: InvoicePosition[];
+  net_amount: number;
+  tax_rate: number;
+  tax_amount: number;
+  gross_amount: number;
+  invoice_date: string;
+  due_date: string | null;
+  status: string;
+  email_sent_at: string | null;
+  exported_to_lexware: boolean;
+  notes: string | null;
+  created_at: string;
+}
+
+interface Contract {
+  id: string;
+  customer_name: string;
+  hfx_customer_number: string | null;
+  rechnungs_email: string | null;
+  adresse: string | null;
+  plz: string | null;
+  ort: string | null;
+  monthly_price: number;
+  product_name: string;
+  status: string;
+}
+
+const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ComponentType<any> }> = {
+  entwurf: { label: "Entwurf", variant: "outline", icon: FileText },
+  versendet: { label: "Versendet", variant: "secondary", icon: Send },
+  bezahlt: { label: "Bezahlt", variant: "default", icon: CheckCircle2 },
+  storniert: { label: "Storniert", variant: "destructive", icon: XCircle },
+};
+
+const EMPTY_POSITION: InvoicePosition = { description: "", quantity: 1, unit_price: 0 };
+
+function calcAmounts(positions: InvoicePosition[], taxRate: number) {
+  const net = positions.reduce((s, p) => s + p.quantity * p.unit_price, 0);
+  const tax = net * (taxRate / 100);
+  return { net_amount: net, tax_amount: tax, gross_amount: net + tax };
+}
+
+export default function Rechnungen() {
+  const { toast } = useToast();
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [search, setSearch] = useState("");
+
+  // Dialog states
+  const [showCreate, setShowCreate] = useState(false);
+  const [showDetail, setShowDetail] = useState<Invoice | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  // Create form
+  const [form, setForm] = useState({
+    contract_id: "",
+    customer_name: "",
+    customer_number: "",
+    rechnungs_email: "",
+    adresse: "",
+    plz: "",
+    ort: "",
+    invoice_date: new Date().toISOString().split("T")[0],
+    due_date: "",
+    tax_rate: 19,
+    notes: "",
+  });
+  const [positions, setPositions] = useState<InvoicePosition[]>([{ ...EMPTY_POSITION }]);
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchInvoices = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (!error && data) setInvoices(data.map((r) => ({ ...r, positions: (r.positions as unknown as InvoicePosition[]) || [] })) as Invoice[]);
+    setLoading(false);
+  };
+
+  const fetchContracts = async () => {
+    const { data } = await supabase
+      .from("contracts")
+      .select("id, customer_name, hfx_customer_number, rechnungs_email, adresse, plz, ort, monthly_price, product_name, status")
+      .eq("status", "aktiv")
+      .order("customer_name");
+    if (data) setContracts(data as Contract[]);
+  };
+
+  useEffect(() => {
+    fetchInvoices();
+    fetchContracts();
+  }, []);
+
+  const handleContractSelect = (contractId: string) => {
+    const c = contracts.find((x) => x.id === contractId);
+    if (!c) return;
+    setForm((f) => ({
+      ...f,
+      contract_id: contractId,
+      customer_name: c.customer_name,
+      customer_number: c.hfx_customer_number || "",
+      rechnungs_email: c.rechnungs_email || "",
+      adresse: c.adresse || "",
+      plz: c.plz || "",
+      ort: c.ort || "",
+    }));
+    setPositions([{
+      description: `${c.product_name} – Monatliche Lizenzgebühr`,
+      quantity: 1,
+      unit_price: c.monthly_price,
+    }]);
+  };
+
+  const updatePosition = (i: number, field: keyof InvoicePosition, value: string | number) => {
+    setPositions((prev) => prev.map((p, idx) => idx === i ? { ...p, [field]: value } : p));
+  };
+
+  const addPosition = () => setPositions((p) => [...p, { ...EMPTY_POSITION }]);
+  const removePosition = (i: number) => setPositions((p) => p.filter((_, idx) => idx !== i));
+
+  const { net_amount, tax_amount, gross_amount } = calcAmounts(positions, form.tax_rate);
+
+  const handleCreate = async () => {
+    if (!form.customer_name.trim()) {
+      toast({ title: "Fehlende Pflichtfelder", description: "Bitte Kundennamen eingeben.", variant: "destructive" });
+      return;
+    }
+    if (positions.some((p) => !p.description.trim())) {
+      toast({ title: "Fehlende Positionen", description: "Bitte alle Beschreibungen ausfüllen.", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any).from("invoices").insert({
+        contract_id: form.contract_id || null,
+        customer_name: form.customer_name,
+        customer_number: form.customer_number || null,
+        rechnungs_email: form.rechnungs_email || null,
+        adresse: form.adresse || null,
+        plz: form.plz || null,
+        ort: form.ort || null,
+        positions: positions,
+        net_amount,
+        tax_rate: form.tax_rate,
+        tax_amount,
+        gross_amount,
+        invoice_date: form.invoice_date,
+        due_date: form.due_date || null,
+        notes: form.notes || null,
+        created_by: user?.id,
+      });
+      if (error) throw error;
+      toast({ title: "Rechnung erstellt", description: "Die Rechnung wurde erfolgreich gespeichert." });
+      setShowCreate(false);
+      resetForm();
+      fetchInvoices();
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setForm({
+      contract_id: "", customer_name: "", customer_number: "", rechnungs_email: "",
+      adresse: "", plz: "", ort: "",
+      invoice_date: new Date().toISOString().split("T")[0],
+      due_date: "", tax_rate: 19, notes: "",
+    });
+    setPositions([{ ...EMPTY_POSITION }]);
+  };
+
+  const handleSendEmail = async (invoice: Invoice) => {
+    if (!invoice.rechnungs_email) {
+      toast({ title: "Keine E-Mail-Adresse", description: "Bitte zuerst eine Rechnungs-E-Mail hinterlegen.", variant: "destructive" });
+      return;
+    }
+    setSendingId(invoice.id);
+    try {
+      const { error } = await supabase.functions.invoke("send-invoice-email", {
+        body: { invoiceId: invoice.id },
+      });
+      if (error) throw error;
+      toast({ title: "Rechnung versendet", description: `E-Mail an ${invoice.rechnungs_email} gesendet.` });
+      fetchInvoices();
+      if (showDetail?.id === invoice.id) setShowDetail(null);
+    } catch (e: any) {
+      toast({ title: "Versand fehlgeschlagen", description: e.message, variant: "destructive" });
+    } finally {
+      setSendingId(null);
+    }
+  };
+
+  const handleStatusChange = async (invoice: Invoice, newStatus: string) => {
+    setSavingId(invoice.id);
+    const { error } = await supabase.from("invoices").update({ status: newStatus }).eq("id", invoice.id);
+    if (!error) {
+      toast({ title: "Status geändert" });
+      fetchInvoices();
+      if (showDetail) setShowDetail({ ...showDetail, status: newStatus });
+    }
+    setSavingId(null);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.from("invoices").delete().eq("id", deleteTarget.id);
+    if (!error) {
+      toast({ title: "Rechnung gelöscht" });
+      fetchInvoices();
+    }
+    setDeleteTarget(null);
+  };
+
+  const filtered = invoices.filter((inv) =>
+    !search ||
+    inv.invoice_number.toLowerCase().includes(search.toLowerCase()) ||
+    inv.customer_name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const stats = {
+    total: invoices.length,
+    offen: invoices.filter((i) => i.status === "entwurf").length,
+    versendet: invoices.filter((i) => i.status === "versendet").length,
+    bezahlt: invoices.filter((i) => i.status === "bezahlt").length,
+    volumen: invoices.filter((i) => i.status !== "storniert").reduce((s, i) => s + Number(i.gross_amount), 0),
+  };
+
+  return (
+    <MainLayout title="Rechnungen" subtitle="Rechnungen erstellen, versenden und verwalten">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Rechnungen</h1>
+            <p className="text-muted-foreground text-sm mt-1">Rechnungen erstellen, versenden und verwalten</p>
+          </div>
+          <Button onClick={() => setShowCreate(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Neue Rechnung
+          </Button>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold">{stats.total}</div>
+              <div className="text-xs text-muted-foreground mt-1">Gesamt</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold text-amber-600">{stats.offen}</div>
+              <div className="text-xs text-muted-foreground mt-1">Entwürfe</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold text-blue-600">{stats.versendet}</div>
+              <div className="text-xs text-muted-foreground mt-1">Versendet</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold text-primary">{stats.volumen.toFixed(2)} €</div>
+              <div className="text-xs text-muted-foreground mt-1">Gesamtvolumen (brutto)</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Table */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Suchen..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button variant="outline" size="icon" onClick={fetchInvoices}>
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Rechnungsnr.</TableHead>
+                  <TableHead>Kunde</TableHead>
+                  <TableHead>Datum</TableHead>
+                  <TableHead className="text-right">Brutto</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Aktionen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Laden...</TableCell>
+                  </TableRow>
+                ) : filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      {search ? "Keine Rechnungen gefunden." : "Noch keine Rechnungen vorhanden."}
+                    </TableCell>
+                  </TableRow>
+                ) : filtered.map((inv) => {
+                  const s = STATUS_CONFIG[inv.status] || STATUS_CONFIG.entwurf;
+                  const StatusIcon = s.icon;
+                  return (
+                    <TableRow key={inv.id}>
+                      <TableCell className="font-mono font-medium">{inv.invoice_number}</TableCell>
+                      <TableCell>
+                        <div>{inv.customer_name}</div>
+                        {inv.customer_number && <div className="text-xs text-muted-foreground">{inv.customer_number}</div>}
+                      </TableCell>
+                      <TableCell>{new Date(inv.invoice_date).toLocaleDateString("de-DE")}</TableCell>
+                      <TableCell className="text-right font-medium">{Number(inv.gross_amount).toFixed(2)} €</TableCell>
+                      <TableCell>
+                        <Badge variant={s.variant} className="gap-1">
+                          <StatusIcon className="h-3 w-3" />
+                          {s.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => setShowDetail(inv)} title="Details">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {inv.status === "entwurf" && inv.rechnungs_email && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleSendEmail(inv)}
+                              disabled={sendingId === inv.id}
+                              title="Per E-Mail versenden"
+                            >
+                              <Send className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {inv.status === "entwurf" && (
+                            <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(inv)} title="Löschen">
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Create Dialog */}
+      <Dialog open={showCreate} onOpenChange={(o) => { setShowCreate(o); if (!o) resetForm(); }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Neue Rechnung erstellen</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-2">
+            {/* Contract selection */}
+            <div className="space-y-2">
+              <Label>Aus Vertrag übernehmen (optional)</Label>
+              <Select value={form.contract_id} onValueChange={handleContractSelect}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Vertrag auswählen..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {contracts.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.customer_name}{c.hfx_customer_number ? ` – ${c.hfx_customer_number}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Customer */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2 col-span-2 md:col-span-1">
+                <Label>Kundenname *</Label>
+                <Input value={form.customer_name} onChange={(e) => setForm((f) => ({ ...f, customer_name: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Kundennummer</Label>
+                <Input value={form.customer_number} onChange={(e) => setForm((f) => ({ ...f, customer_number: e.target.value }))} />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label>Rechnungs-E-Mail</Label>
+                <Input type="email" value={form.rechnungs_email} onChange={(e) => setForm((f) => ({ ...f, rechnungs_email: e.target.value }))} />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label>Adresse</Label>
+                <Input value={form.adresse} onChange={(e) => setForm((f) => ({ ...f, adresse: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>PLZ</Label>
+                <Input value={form.plz} onChange={(e) => setForm((f) => ({ ...f, plz: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Ort</Label>
+                <Input value={form.ort} onChange={(e) => setForm((f) => ({ ...f, ort: e.target.value }))} />
+              </div>
+            </div>
+
+            {/* Dates */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Rechnungsdatum *</Label>
+                <Input type="date" value={form.invoice_date} onChange={(e) => setForm((f) => ({ ...f, invoice_date: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Fälligkeitsdatum</Label>
+                <Input type="date" value={form.due_date} onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))} />
+              </div>
+            </div>
+
+            {/* Positions */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Positionen</Label>
+                <Button variant="outline" size="sm" onClick={addPosition}>
+                  <Plus className="h-3 w-3 mr-1" /> Position
+                </Button>
+              </div>
+              {positions.map((pos, i) => (
+                <div key={i} className="grid grid-cols-12 gap-2 items-end">
+                  <div className="col-span-6 space-y-1">
+                    {i === 0 && <Label className="text-xs">Beschreibung</Label>}
+                    <Input
+                      placeholder="Beschreibung"
+                      value={pos.description}
+                      onChange={(e) => updatePosition(i, "description", e.target.value)}
+                    />
+                  </div>
+                  <div className="col-span-2 space-y-1">
+                    {i === 0 && <Label className="text-xs">Menge</Label>}
+                    <Input
+                      type="number"
+                      min={1}
+                      value={pos.quantity}
+                      onChange={(e) => updatePosition(i, "quantity", Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="col-span-3 space-y-1">
+                    {i === 0 && <Label className="text-xs">Einzelpreis (€)</Label>}
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={pos.unit_price}
+                      onChange={(e) => updatePosition(i, "unit_price", Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    {positions.length > 1 && (
+                      <Button variant="ghost" size="icon" onClick={() => removePosition(i)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Tax + Totals */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>MwSt. (%)</Label>
+                <Select value={String(form.tax_rate)} onValueChange={(v) => setForm((f) => ({ ...f, tax_rate: Number(v) }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="19">19 %</SelectItem>
+                    <SelectItem value="7">7 %</SelectItem>
+                    <SelectItem value="0">0 % (steuerfrei)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1 text-sm bg-muted rounded-md p-3">
+                <div className="flex justify-between"><span>Netto:</span><span>{net_amount.toFixed(2)} €</span></div>
+                <div className="flex justify-between text-muted-foreground"><span>MwSt. ({form.tax_rate}%):</span><span>{tax_amount.toFixed(2)} €</span></div>
+                <div className="flex justify-between font-bold border-t pt-1 mt-1"><span>Brutto:</span><span>{gross_amount.toFixed(2)} €</span></div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label>Notizen / Zahlungshinweise</Label>
+              <Textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={2} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowCreate(false); resetForm(); }}>Abbrechen</Button>
+            <Button onClick={handleCreate} disabled={submitting}>
+              {submitting ? "Speichern..." : "Rechnung erstellen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Dialog */}
+      {showDetail && (
+        <Dialog open={!!showDetail} onOpenChange={() => setShowDetail(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Rechnung {showDetail.invoice_number}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {/* Customer info */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                <div><span className="text-muted-foreground">Kunde:</span> <span className="font-medium">{showDetail.customer_name}</span></div>
+                {showDetail.customer_number && <div><span className="text-muted-foreground">Nr.:</span> {showDetail.customer_number}</div>}
+                {showDetail.rechnungs_email && <div className="col-span-2"><span className="text-muted-foreground">E-Mail:</span> {showDetail.rechnungs_email}</div>}
+                <div><span className="text-muted-foreground">Datum:</span> {new Date(showDetail.invoice_date).toLocaleDateString("de-DE")}</div>
+                {showDetail.due_date && <div><span className="text-muted-foreground">Fällig:</span> {new Date(showDetail.due_date).toLocaleDateString("de-DE")}</div>}
+              </div>
+
+              {/* Positions table */}
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Beschreibung</TableHead>
+                    <TableHead className="text-right">Menge</TableHead>
+                    <TableHead className="text-right">Einzelpreis</TableHead>
+                    <TableHead className="text-right">Gesamt</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {showDetail.positions.map((p, i) => (
+                    <TableRow key={i}>
+                      <TableCell>{p.description}</TableCell>
+                      <TableCell className="text-right">{p.quantity}</TableCell>
+                      <TableCell className="text-right">{Number(p.unit_price).toFixed(2)} €</TableCell>
+                      <TableCell className="text-right">{(p.quantity * p.unit_price).toFixed(2)} €</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Totals */}
+              <div className="bg-muted rounded-md p-3 text-sm space-y-1">
+                <div className="flex justify-between"><span>Netto:</span><span>{Number(showDetail.net_amount).toFixed(2)} €</span></div>
+                <div className="flex justify-between text-muted-foreground"><span>MwSt. ({showDetail.tax_rate}%):</span><span>{Number(showDetail.tax_amount).toFixed(2)} €</span></div>
+                <div className="flex justify-between font-bold text-base border-t pt-1 mt-1"><span>Brutto:</span><span>{Number(showDetail.gross_amount).toFixed(2)} €</span></div>
+              </div>
+
+              {/* Status change */}
+              <div className="flex items-center gap-3">
+                <Label className="whitespace-nowrap">Status ändern:</Label>
+                <Select
+                  value={showDetail.status}
+                  onValueChange={(v) => handleStatusChange(showDetail, v)}
+                  disabled={savingId === showDetail.id}
+                >
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="entwurf">Entwurf</SelectItem>
+                    <SelectItem value="versendet">Versendet</SelectItem>
+                    <SelectItem value="bezahlt">Bezahlt</SelectItem>
+                    <SelectItem value="storniert">Storniert</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {showDetail.notes && (
+                <div className="text-sm text-muted-foreground border-t pt-3">{showDetail.notes}</div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDetail(null)}>Schließen</Button>
+              {showDetail.rechnungs_email && showDetail.status === "entwurf" && (
+                <Button
+                  onClick={() => handleSendEmail(showDetail)}
+                  disabled={sendingId === showDetail.id}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {sendingId === showDetail.id ? "Wird versendet..." : "Per E-Mail versenden"}
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Delete confirm */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rechnung löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Rechnung <strong>{deleteTarget?.invoice_number}</strong> wird unwiderruflich gelöscht.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </MainLayout>
+  );
+}

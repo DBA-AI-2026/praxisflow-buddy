@@ -471,6 +471,111 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          adresse: string | null
+          contract_id: string | null
+          created_at: string
+          created_by: string | null
+          customer_name: string
+          customer_number: string | null
+          due_date: string | null
+          email_sent_at: string | null
+          email_sent_by: string | null
+          exported_to_lexware: boolean
+          gross_amount: number
+          id: string
+          invoice_date: string
+          invoice_number: string
+          lexware_export_date: string | null
+          lexware_voucher_id: string | null
+          net_amount: number
+          notes: string | null
+          ort: string | null
+          plz: string | null
+          positions: Json
+          rechnungs_email: string | null
+          revenue_id: string | null
+          status: string
+          tax_amount: number
+          tax_rate: number
+          updated_at: string
+        }
+        Insert: {
+          adresse?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_name: string
+          customer_number?: string | null
+          due_date?: string | null
+          email_sent_at?: string | null
+          email_sent_by?: string | null
+          exported_to_lexware?: boolean
+          gross_amount?: number
+          id?: string
+          invoice_date?: string
+          invoice_number: string
+          lexware_export_date?: string | null
+          lexware_voucher_id?: string | null
+          net_amount?: number
+          notes?: string | null
+          ort?: string | null
+          plz?: string | null
+          positions?: Json
+          rechnungs_email?: string | null
+          revenue_id?: string | null
+          status?: string
+          tax_amount?: number
+          tax_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          adresse?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string
+          customer_number?: string | null
+          due_date?: string | null
+          email_sent_at?: string | null
+          email_sent_by?: string | null
+          exported_to_lexware?: boolean
+          gross_amount?: number
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          lexware_export_date?: string | null
+          lexware_voucher_id?: string | null
+          net_amount?: number
+          notes?: string | null
+          ort?: string | null
+          plz?: string | null
+          positions?: Json
+          rechnungs_email?: string | null
+          revenue_id?: string | null
+          status?: string
+          tax_amount?: number
+          tax_rate?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_revenue_id_fkey"
+            columns: ["revenue_id"]
+            isOneToOne: false
+            referencedRelation: "customer_revenues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           abrechnungszentrum: string

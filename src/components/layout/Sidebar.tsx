@@ -21,6 +21,7 @@ import {
   BarChart3,
   ClipboardList,
   ShieldCheck,
+  Receipt,
 } from "lucide-react";
 import logo from "@/assets/fox-logo.jpeg";
 import { useState } from "react";
@@ -70,6 +71,7 @@ const adminNavigation: NavItem[] = [
   { name: "Zugangsanfragen", href: "/admin/access-requests", icon: UserPlus, roles: ["admin"], adminOnly: true },
   { name: "Benutzerverwaltung", href: "/admin/users", icon: Users, roles: ["admin"], adminOnly: true },
   { name: "Produktverwaltung", href: "/admin/products", icon: Package, roles: ["admin"], adminOnly: true },
+  { name: "Rechnungen", href: "/rechnungen", icon: Receipt, roles: ["admin"], adminOnly: true },
   { name: "Datenexport", href: "/export", icon: FileDown, roles: ["admin"], adminOnly: true },
   { name: "Buchhaltung", href: "/integrationen", icon: Link2, roles: ["admin"], adminOnly: true },
   { name: "Audit-Protokoll", href: "/admin/audit-logs", icon: ClipboardList, roles: ["admin"], adminOnly: true },

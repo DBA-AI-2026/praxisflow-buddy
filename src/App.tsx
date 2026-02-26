@@ -17,6 +17,7 @@ import Reservierungen from "./pages/Reservierungen";
 import DemoTracking from "./pages/DemoTracking";
 import Interessenten from "./pages/Interessenten";
 import Provisionen from "./pages/vertrieb/Provisionen";
+import Rechnungen from "./pages/Rechnungen";
 import Vertraege from "./pages/vertrieb/Vertraege";
 import Vertriebler from "./pages/vertrieb/Vertriebler";
 import AdminUsers from "./pages/admin/Users";
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="/vertrieb/vertriebler" element={<ProtectedRoute><Vertriebler /></ProtectedRoute>} />
             <Route path="/vertrieb/vertraege" element={<ProtectedRoute><Vertraege /></ProtectedRoute>} />
             <Route path="/vertrieb/provisionen" element={<ProtectedRoute><Provisionen /></ProtectedRoute>} />
+            <Route path="/rechnungen" element={<ProtectedRoute><Rechnungen /></ProtectedRoute>} />
             <Route path="/admin/access-requests" element={<ProtectedRoute><AccessRequests /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
