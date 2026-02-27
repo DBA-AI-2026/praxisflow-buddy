@@ -1079,6 +1079,7 @@ export default function Vertraege() {
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Partner</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 text-right">Monatspreis</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 text-center">Status</th>
+                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 whitespace-nowrap">Zuletzt geändert</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Dokument</th>
                    <th className="w-10"></th>
                  </tr>
@@ -1146,9 +1147,14 @@ export default function Vertraege() {
                              );
                            })}
                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                      <td>
+                         </DropdownMenu>
+                       </td>
+                       <td className="py-3.5 px-4 text-xs text-muted-foreground whitespace-nowrap">
+                         {c.updated_at
+                           ? format(new Date(c.updated_at), "dd.MM.yy HH:mm", { locale: de })
+                           : "–"}
+                       </td>
+                       <td>
                        <div className="flex flex-col gap-1">
                          <Button
                            variant="outline"
