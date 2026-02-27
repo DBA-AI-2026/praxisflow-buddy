@@ -9,7 +9,7 @@ import {
   ArrowRight, Clock, CheckCircle2, AlertTriangle, Users,
   PlusCircle, Eye, FileSignature, Euro
 } from "lucide-react";
-import { PendingContractApprovals } from "@/components/dashboard/PendingContractApprovals";
+
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -266,12 +266,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Vertragsfreigaben nur für Admin/Vertragsabteilung */}
-        {(isAdmin || isVertragsabteilung) && (
-          <div className="lg:col-span-2">
-            <PendingContractApprovals />
-          </div>
-        )}
       </div>
     </MainLayout>
   );
