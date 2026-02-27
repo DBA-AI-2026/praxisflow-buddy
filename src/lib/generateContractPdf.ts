@@ -229,7 +229,6 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
   sectionHeader("Laufzeit & Kündigung");
   fieldPair("Vertragsbeginn", formatDate(data.start_date), "Vertragsende", formatDate(data.end_date));
   fieldPair("Laufzeit", `${data.duration_months ?? 12} Monate`, "Kündigungsfrist", `${data.cancellation_period_months ?? 3} Monate`);
-  fieldPair("Automatische Verlängerung", data.auto_renewal ? "Ja" : "Nein", "", "");
   divider();
   ensureSpace();
 
