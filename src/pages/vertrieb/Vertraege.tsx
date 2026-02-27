@@ -1645,19 +1645,10 @@ export default function Vertraege() {
             {/* Laufzeit */}
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Laufzeit & Kündigung</h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Vertragsbeginn</Label>
-                  <Input type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Kündigungsfrist</Label>
-                  <div className="flex items-center gap-2">
-                    <Input type="number" min={1} value={form.cancellation_period_months} onChange={(e) => set("cancellation_period_months", Number(e.target.value))} className="w-20" />
-                    <span className="text-sm text-muted-foreground">Monate zum Monatsende</span>
-                  </div>
-                </div>
-              </div>
+              <div>
+                 <Label className="text-xs text-muted-foreground">Vertragsbeginn</Label>
+                 <Input type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} />
+               </div>
             </div>
 
             {/* Preisübersicht (automatisch aus Produktauswahl) */}
