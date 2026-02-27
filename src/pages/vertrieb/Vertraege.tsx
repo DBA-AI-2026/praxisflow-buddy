@@ -250,7 +250,7 @@ export default function Vertraege() {
   const [bicLoading, setBicLoading] = useState(false);
   const [leadHfxNumber, setLeadHfxNumber] = useState<string | null>(null);
   const { user, profile } = useAuth();
-  const { isAdmin } = useUserRole();
+  const { isAdmin, isVertragsabteilung } = useUserRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const location = useLocation();
@@ -718,12 +718,31 @@ export default function Vertraege() {
     setDialogOpen(true);
   };
 
-  const filtered = contracts.filter(
-    (c: any) =>
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+
+  const filtered = contracts.filter((c: any) => {
+    const matchesSearch =
       c.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
       c.product_name?.toLowerCase().includes(search.toLowerCase()) ||
-      c.sales_partner_name?.toLowerCase().includes(search.toLowerCase())
-  );
+      c.sales_partner_name?.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter ? c.status === statusFilter : true;
+    return matchesSearch && matchesStatus;
+  });
+
+  const handleStatusChange = async (contractId: string, newStatus: string) => {
+    const updateData: Record<string, any> = { status: newStatus };
+    if (newStatus === "aktiv") {
+      updateData.approved_by = user?.id;
+      updateData.approved_at = new Date().toISOString();
+    }
+    const { error } = await supabase.from("contracts").update(updateData).eq("id", contractId);
+    if (error) {
+      toast({ title: "Fehler beim Statuswechsel", description: error.message, variant: "destructive" });
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["contracts"] });
+    toast({ title: "Status aktualisiert", description: `Status auf „${statusConfig[newStatus]?.label ?? newStatus}" gesetzt.` });
+  };
 
   const baseRequiredFieldLabels: Record<string, string> = {
     praxis: "Praxis",
@@ -995,30 +1014,48 @@ export default function Vertraege() {
         </div>
       </div>
 
-      {/* Stats */}
-       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-4 mb-6">
+      {/* Stats / Filter-Kacheln */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-4 mb-6">
         {(["entwurf", "gezeichnet", "aktiv", "gekuendigt", "beendet", "gesperrt"] as const).map((s) => {
           const cfg = statusConfig[s];
           const Icon = cfg.icon;
           const count = contracts.filter((c: any) => c.status === s).length;
+          const isActive = statusFilter === s;
           return (
-            <Card key={s} className="overflow-hidden">
-              <CardContent className="p-3 sm:p-4 flex flex-col items-center gap-1.5 text-center">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className={`rounded-full p-2 ${cfg.class} cursor-default`}>
-                      <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>{cfg.label}</TooltipContent>
-                </Tooltip>
-                <p className="text-xl sm:text-2xl font-semibold leading-none">{count}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight hidden sm:block">{cfg.label}</p>
-              </CardContent>
-            </Card>
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStatusFilter(isActive ? null : s)}
+              className={`rounded-lg border transition-all text-center p-3 sm:p-4 flex flex-col items-center gap-1.5 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+                isActive
+                  ? "border-primary bg-primary/5 ring-2 ring-primary/30 shadow-sm"
+                  : "border-border bg-card hover:border-primary/40"
+              }`}
+            >
+              <div className={`rounded-full p-2 ${cfg.class}`}>
+                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+              </div>
+              <p className="text-xl sm:text-2xl font-semibold leading-none">{count}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight hidden sm:block">{cfg.label}</p>
+            </button>
           );
         })}
       </div>
+      {statusFilter && (
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Filter:</span>
+          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${statusConfig[statusFilter]?.class}`}>
+            {statusConfig[statusFilter]?.label}
+          </span>
+          <button
+            type="button"
+            onClick={() => setStatusFilter(null)}
+            className="text-xs text-muted-foreground hover:text-foreground underline"
+          >
+            Filter aufheben
+          </button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="card-elevated overflow-hidden">
@@ -1087,11 +1124,40 @@ export default function Vertraege() {
                         <span className="block text-xs text-success">-{c.discount_percent}%</span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <Badge className={statusConfig[c.status]?.class || ""}>
-                        {statusConfig[c.status]?.label || c.status}
-                      </Badge>
-                    </td>
+                     <td className="py-3.5 px-4 text-center">
+                       <DropdownMenu>
+                         <DropdownMenuTrigger asChild>
+                           <button
+                             type="button"
+                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border border-transparent hover:border-current transition-colors cursor-pointer ${statusConfig[c.status]?.class || ""}`}
+                           >
+                             {(() => { const Icon = statusConfig[c.status]?.icon; return Icon ? <Icon className="h-3 w-3" /> : null; })()}
+                             {statusConfig[c.status]?.label || c.status}
+                             <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                           </button>
+                         </DropdownMenuTrigger>
+                         <DropdownMenuContent align="center" className="min-w-[160px]">
+                           {(["entwurf", "gezeichnet", "aktiv", "gekuendigt", "beendet", "gesperrt"] as const).map((s) => {
+                             const cfg = statusConfig[s];
+                             const Icon = cfg.icon;
+                             return (
+                               <DropdownMenuItem
+                                 key={s}
+                                 disabled={c.status === s || (!isAdmin && !isVertragsabteilung && s === "aktiv")}
+                                 onClick={() => handleStatusChange(c.id, s)}
+                                 className="gap-2"
+                               >
+                                 <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.class}`}>
+                                   <Icon className="h-3 w-3" />
+                                   {cfg.label}
+                                 </span>
+                                 {c.status === s && <Check className="h-3 w-3 ml-auto" />}
+                               </DropdownMenuItem>
+                             );
+                           })}
+                         </DropdownMenuContent>
+                       </DropdownMenu>
+                     </td>
                     <td className="py-3.5 px-4 text-sm text-muted-foreground whitespace-nowrap">
                       {c.approved_at ? (
                         <div className="leading-snug">
