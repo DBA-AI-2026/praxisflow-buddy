@@ -1645,23 +1645,15 @@ export default function Vertraege() {
             {/* Laufzeit */}
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Laufzeit & Kündigung</h4>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Vertragsbeginn *</Label>
-                  <Input type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} required />
+                  <Label className="text-xs text-muted-foreground">Vertragsbeginn</Label>
+                  <Input type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} />
                 </div>
                 <div>
-                  <Label>Laufzeit (Monate)</Label>
-                  <Input type="number" min={1} value={form.duration_months} onChange={(e) => set("duration_months", Number(e.target.value))} />
+                  <Label className="text-xs text-muted-foreground">Kündigungsfrist (Monate)</Label>
+                  <Input type="number" min={1} value={form.cancellation_period_months} onChange={(e) => set("cancellation_period_months", Number(e.target.value))} />
                 </div>
-                <div>
-                  <Label>Kündigungsfrist (Mon.)</Label>
-                  <Input type="number" min={0} value={form.cancellation_period_months} onChange={(e) => set("cancellation_period_months", Number(e.target.value))} />
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Switch checked={form.auto_renewal} onCheckedChange={(v) => set("auto_renewal", v)} />
-                <Label>Automatische Verlängerung</Label>
               </div>
             </div>
 
