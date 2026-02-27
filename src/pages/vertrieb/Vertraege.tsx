@@ -208,7 +208,7 @@ const emptyForm: ContractFormData = {
   license_count: 1,
   start_date: new Date().toISOString().split("T")[0],
   duration_months: 12,
-  cancellation_period_months: 3,
+  cancellation_period_months: 6,
   auto_renewal: true,
   monthly_price: 0,
   one_time_fee: 0,
@@ -1651,8 +1651,11 @@ export default function Vertraege() {
                   <Input type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} />
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">Kündigungsfrist (Monate)</Label>
-                  <Input type="number" min={1} value={form.cancellation_period_months} onChange={(e) => set("cancellation_period_months", Number(e.target.value))} />
+                  <Label className="text-xs text-muted-foreground">Kündigungsfrist</Label>
+                  <div className="flex items-center gap-2">
+                    <Input type="number" min={1} value={form.cancellation_period_months} onChange={(e) => set("cancellation_period_months", Number(e.target.value))} className="w-20" />
+                    <span className="text-sm text-muted-foreground">Monate zum Monatsende</span>
+                  </div>
                 </div>
               </div>
             </div>
