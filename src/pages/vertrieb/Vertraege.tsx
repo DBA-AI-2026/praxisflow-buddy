@@ -1077,10 +1077,8 @@ export default function Vertraege() {
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">MP-Nr.</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 max-w-[220px]">Produkt</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Partner</th>
-                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Laufzeit</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 text-right">Monatspreis</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 text-center">Status</th>
-                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Freigabe</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Dokument</th>
                    <th className="w-10"></th>
                  </tr>
@@ -1107,15 +1105,7 @@ export default function Vertraege() {
                         )}
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-sm text-muted-foreground whitespace-nowrap">{c.sales_partner_name || "–"}</td>
-                    <td className="py-3.5 px-4 text-sm text-muted-foreground whitespace-nowrap">
-                      <div className="leading-snug">
-                        {c.start_date && format(new Date(c.start_date), "dd.MM.yy", { locale: de })}
-                        {" – "}
-                        {c.end_date && format(new Date(c.end_date), "dd.MM.yy", { locale: de })}
-                        <span className="block text-xs text-muted-foreground/70">{c.duration_months} Mon.</span>
-                      </div>
-                    </td>
+                     <td className="py-3.5 px-4 text-sm text-muted-foreground whitespace-nowrap">{c.sales_partner_name || "–"}</td>
                     <td className="py-3.5 px-4 text-right whitespace-nowrap">
                       <span className="font-semibold text-foreground tabular-nums">
                         {Number(c.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
@@ -1156,21 +1146,9 @@ export default function Vertraege() {
                              );
                            })}
                          </DropdownMenuContent>
-                       </DropdownMenu>
-                     </td>
-                    <td className="py-3.5 px-4 text-sm text-muted-foreground whitespace-nowrap">
-                      {c.approved_at ? (
-                        <div className="leading-snug">
-                          <span className="text-foreground font-medium">{profilesMap[(c as any).approved_by] || "–"}</span>
-                          <span className="block text-xs text-muted-foreground/70">
-                            {format(new Date(c.approved_at), "dd.MM.yy HH:mm", { locale: de })}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground/50">–</span>
-                      )}
-                    </td>
-                     <td>
+                        </DropdownMenu>
+                      </td>
+                      <td>
                        <div className="flex flex-col gap-1">
                          <Button
                            variant="outline"
