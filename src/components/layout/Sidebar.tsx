@@ -78,7 +78,7 @@ const adminNavigation: NavItem[] = [
   { name: "Produktverwaltung", href: "/admin/products", icon: Package, roles: ["admin"], adminOnly: true },
   { name: "Tipp-Leads", href: "/admin/tipp-leads", icon: Lightbulb, roles: ["admin", "sales_lead"], adminOnly: false },
   { name: "Rechnungen", href: "/rechnungen", icon: Receipt, roles: ["admin"], adminOnly: true },
-  { name: "Buchhaltung", href: "/buchhaltung", icon: TrendingUp, roles: ["admin"], adminOnly: true },
+  { name: "FiBu-Integrationen", href: "/buchhaltung", icon: TrendingUp, roles: ["admin"], adminOnly: true },
   { name: "Datenexport", href: "/export", icon: FileDown, roles: ["admin"], adminOnly: true },
   { name: "Integrationen", href: "/integrationen", icon: Link2, roles: ["admin"], adminOnly: true },
   { name: "Audit-Protokoll", href: "/admin/audit-logs", icon: ClipboardList, roles: ["admin"], adminOnly: true },
