@@ -32,6 +32,7 @@ Deno.serve(async (req) => {
       .select("*")
       .eq("test_phase_end", dateStr)
       .eq("status", "testphase")
+      .is("reminder_sent_at", null)
       .not("email", "is", null);
 
     if (error) throw error;
@@ -121,6 +122,11 @@ Deno.serve(async (req) => {
       if (res.ok) {
         sent++;
         console.log(`Reminder sent to ${demo.email} for demo ${demo.id}`);
+        // Mark as sent to prevent duplicates
+        await supabase
+          .from("demo_downloads")
+          .update({ reminder_sent_at: new Date().toISOString() })
+          .eq("id", demo.id);
       } else {
         failed++;
         const err = await res.text();
