@@ -19,3 +19,5 @@ project_id = "gvsxentbbzuyanqbqvea"
     verify_jwt = false
   [functions.capture-lead]
     verify_jwt = false
+  [functions.submit-tipp-lead]
+    verify_jwt = false
