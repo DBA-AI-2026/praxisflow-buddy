@@ -48,9 +48,10 @@ interface UserWithRole {
 const roleConfig: Record<AppRole, { label: string; color: string }> = {
   admin: { label: "Admin", color: "bg-primary/10 text-primary" },
   vertragsabteilung: { label: "Vertragsabteilung", color: "bg-emerald-100 text-emerald-800" },
-  sales_lead: { label: "Vertriebsleitung", color: "bg-purple-100 text-purple-800" },
+  sales_lead: { label: "Vertriebsleitung", color: "bg-violet-100 text-violet-800" },
   regional_lead: { label: "Regionalleiter", color: "bg-orange-100 text-orange-800" },
   sales_partner: { label: "Vertriebspartner", color: "bg-blue-100 text-blue-800" },
+  tippgeber: { label: "Tippgeber", color: "bg-yellow-100 text-yellow-800" },
   user: { label: "Benutzer", color: "bg-secondary text-secondary-foreground" },
 };
 

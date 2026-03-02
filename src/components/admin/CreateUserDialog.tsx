@@ -229,6 +229,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
                     <SelectItem value="regional_lead">Regionalleiter</SelectItem>
                     <SelectItem value="sales_lead">Vertriebsleitung</SelectItem>
                     <SelectItem value="vertragsabteilung">Vertragsabteilung</SelectItem>
+                    <SelectItem value="tippgeber">Tippgeber</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
