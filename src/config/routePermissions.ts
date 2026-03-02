@@ -10,7 +10,7 @@ export interface RoutePermission {
 // Define which roles can access each route
 export const routePermissions: RoutePermission[] = [
   // Base routes - accessible by all authenticated users
-  { path: "/", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
+  { path: "/", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "tippgeber", "admin"] },
   { path: "/praxen", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
   { path: "/tickets", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
   { path: "/lizenzen", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
