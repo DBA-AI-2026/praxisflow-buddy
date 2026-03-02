@@ -23,6 +23,7 @@ import Vertriebler from "./pages/vertrieb/Vertriebler";
 import AdminUsers from "./pages/admin/Users";
 import AdminSettings from "./pages/admin/Settings";
 import AdminProducts from "./pages/admin/Products";
+import AdminTippLeads from "./pages/admin/TippLeads";
 import AccessRequests from "./pages/admin/AccessRequests";
 import AuditLogs from "./pages/admin/AuditLogs";
 import Auth from "./pages/Auth";
@@ -67,6 +68,7 @@ const App = () => (
             <Route path="/admin/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
             <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
+            <Route path="/admin/tipp-leads" element={<ProtectedRoute><AdminTippLeads /></ProtectedRoute>} />
             <Route path="/tools/pdf-coordinates" element={<ProtectedRoute><PdfCoordinateFinder /></ProtectedRoute>} />
             <Route path="/tools/email-preview" element={<ProtectedRoute><EmailPreview /></ProtectedRoute>} />
             <Route path="/sicherheit" element={<ProtectedRoute><Sicherheit /></ProtectedRoute>} />
