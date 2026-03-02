@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_costs: {
+        Row: {
+          category: string
+          cost_date: string
+          created_at: string
+          created_by: string | null
+          customer_name: string
+          description: string | null
+          gross_amount: number
+          hfx_customer_number: string | null
+          id: string
+          invoice_reference: string | null
+          net_amount: number
+          product_name: string | null
+          supplier: string
+          tax_amount: number
+          tax_rate: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          cost_date?: string
+          created_at?: string
+          created_by?: string | null
+          customer_name: string
+          description?: string | null
+          gross_amount?: number
+          hfx_customer_number?: string | null
+          id?: string
+          invoice_reference?: string | null
+          net_amount?: number
+          product_name?: string | null
+          supplier: string
+          tax_amount?: number
+          tax_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          cost_date?: string
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string
+          description?: string | null
+          gross_amount?: number
+          hfx_customer_number?: string | null
+          id?: string
+          invoice_reference?: string | null
+          net_amount?: number
+          product_name?: string | null
+          supplier?: string
+          tax_amount?: number
+          tax_rate?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string

@@ -61,6 +61,9 @@ export const routePermissions: RoutePermission[] = [
   // Systemdokumentation
   { path: "/admin/documentation", allowedRoles: ["admin"] },
 
+  // Buchhaltung
+  { path: "/buchhaltung", allowedRoles: ["admin"] },
+
 ];
 
 export function getRoutePermission(path: string): RoutePermission | undefined {
