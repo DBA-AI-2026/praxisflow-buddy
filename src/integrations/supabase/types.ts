@@ -354,6 +354,7 @@ export type Database = {
           id: string
           notes: string | null
           product_name: string | null
+          reminder_sent_at: string | null
           status: string
           telefon: string | null
           test_phase_end: string | null
@@ -370,6 +371,7 @@ export type Database = {
           id?: string
           notes?: string | null
           product_name?: string | null
+          reminder_sent_at?: string | null
           status?: string
           telefon?: string | null
           test_phase_end?: string | null
@@ -386,6 +388,7 @@ export type Database = {
           id?: string
           notes?: string | null
           product_name?: string | null
+          reminder_sent_at?: string | null
           status?: string
           telefon?: string | null
           test_phase_end?: string | null
