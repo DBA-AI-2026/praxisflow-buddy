@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText, UserCog, Clock } from "lucide-react";
+import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText, UserCog, Clock, Upload, Download, CheckCircle } from "lucide-react";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { RegionalAssignmentDialog } from "@/components/admin/RegionalAssignmentDialog";
 import {
@@ -61,8 +61,11 @@ export default function AdminUsers() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [agreementDialogOpen, setAgreementDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [selectedRole, setSelectedRole] = useState<AppRole>("user");
+  const [uploadingAgreement, setUploadingAgreement] = useState(false);
+  const agreementInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -184,6 +187,38 @@ export default function AdminUsers() {
   const handleAssignClick = (user: UserWithRole) => {
     setSelectedUser(user);
     setAssignDialogOpen(true);
+  };
+
+  const handleAgreementClick = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setAgreementDialogOpen(true);
+  };
+
+  const handleAgreementUpload = async (file: File) => {
+    if (!selectedUser) return;
+    setUploadingAgreement(true);
+    try {
+      const filePath = `${selectedUser.user_id}/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("tippgeber-agreements")
+        .upload(filePath, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { error: dbError } = await supabase.from("tippgeber_agreements" as any).insert({
+        user_id: selectedUser.user_id,
+        file_name: file.name,
+        file_path: filePath,
+        uploaded_by: (await supabase.auth.getUser()).data.user?.id,
+      });
+      if (dbError) throw dbError;
+
+      toast({ title: "Vereinbarung hochgeladen", description: `${file.name} wurde erfolgreich gespeichert.` });
+      setAgreementDialogOpen(false);
+    } catch (e: unknown) {
+      toast({ title: "Fehler", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setUploadingAgreement(false);
+    }
   };
 
   return (
@@ -376,6 +411,12 @@ export default function AdminUsers() {
                                Team zuordnen
                              </DropdownMenuItem>
                            )}
+                           {user.role === "tippgeber" && (
+                             <DropdownMenuItem onClick={() => handleAgreementClick(user)}>
+                               <Upload className="h-4 w-4 mr-2" />
+                               Vereinbarung hochladen
+                             </DropdownMenuItem>
+                           )}
                            <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-destructive"
@@ -512,6 +553,66 @@ export default function AdminUsers() {
         onOpenChange={setAssignDialogOpen}
         regionalLead={selectedUser}
       />
+
+      {/* Tippgebervereinbarung Upload Dialog */}
+      <Dialog open={agreementDialogOpen} onOpenChange={setAgreementDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-primary" />
+              Tippgebervereinbarung hochladen
+            </DialogTitle>
+            <DialogDescription>
+              Laden Sie die unterzeichnete Vereinbarung für diesen Tippgeber hoch (PDF, max. 10 MB).
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedUser && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="font-medium">{selectedUser.full_name}</p>
+                <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+              </div>
+
+              <div
+                className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:bg-muted/40 transition-colors"
+                onClick={() => agreementInputRef.current?.click()}
+              >
+                {uploadingAgreement ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground">Wird hochgeladen…</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <FileText className="h-10 w-10 text-muted-foreground/50" />
+                    <p className="text-sm font-medium text-foreground">Datei auswählen oder hierher ziehen</p>
+                    <p className="text-xs text-muted-foreground">PDF, DOCX – max. 10 MB</p>
+                  </div>
+                )}
+                <input
+                  ref={agreementInputRef}
+                  type="file"
+                  accept=".pdf,.docx,.doc"
+                  className="hidden"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) handleAgreementUpload(file);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAgreementDialogOpen(false)}>
+              Schließen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
+

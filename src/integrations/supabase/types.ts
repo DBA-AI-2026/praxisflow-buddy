@@ -1103,6 +1103,8 @@ export type Database = {
       }
       tipp_leads: {
         Row: {
+          ad_email: string | null
+          ad_telefon: string | null
           arzt_name: string
           created_at: string
           created_by: string
@@ -1113,11 +1115,16 @@ export type Database = {
           notes: string | null
           plz: string
           praxis_name: string
+          reservation_until: string | null
+          salesforce_id: string | null
+          salesforce_synced: boolean
           status: string
           telefon: string | null
           updated_at: string
         }
         Insert: {
+          ad_email?: string | null
+          ad_telefon?: string | null
           arzt_name: string
           created_at?: string
           created_by: string
@@ -1128,11 +1135,16 @@ export type Database = {
           notes?: string | null
           plz: string
           praxis_name: string
+          reservation_until?: string | null
+          salesforce_id?: string | null
+          salesforce_synced?: boolean
           status?: string
           telefon?: string | null
           updated_at?: string
         }
         Update: {
+          ad_email?: string | null
+          ad_telefon?: string | null
           arzt_name?: string
           created_at?: string
           created_by?: string
@@ -1143,9 +1155,39 @@ export type Database = {
           notes?: string | null
           plz?: string
           praxis_name?: string
+          reservation_until?: string | null
+          salesforce_id?: string | null
+          salesforce_synced?: boolean
           status?: string
           telefon?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      tippgeber_agreements: {
+        Row: {
+          file_name: string
+          file_path: string
+          id: string
+          uploaded_at: string
+          uploaded_by: string | null
+          user_id: string
+        }
+        Insert: {
+          file_name: string
+          file_path: string
+          id?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          user_id: string
+        }
+        Update: {
+          file_name?: string
+          file_path?: string
+          id?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          user_id?: string
         }
         Relationships: []
       }
