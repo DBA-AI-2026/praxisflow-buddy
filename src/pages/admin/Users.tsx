@@ -171,6 +171,7 @@ export default function AdminUsers() {
   const salesLeadCount = users.filter((u) => u.role === "sales_lead").length;
   const regionalLeadCount = users.filter((u) => u.role === "regional_lead").length;
   const salesPartnerCount = users.filter((u) => u.role === "sales_partner").length;
+  const tippgeberCount = users.filter((u) => u.role === "tippgeber").length;
   const userCount = users.filter((u) => u.role === "user").length;
 
   const handleEditClick = (user: UserWithRole) => {
@@ -223,92 +224,30 @@ export default function AdminUsers() {
 
   return (
     <MainLayout title="Benutzerverwaltung" subtitle="Benutzer und Rollen verwalten">
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-        <div className="stat-card">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="rounded-lg p-3 bg-primary/10">
-              <Shield className="h-5 w-5 text-primary" />
+      {/* Rollenübersicht */}
+      <div className="grid grid-cols-1 gap-3 mb-6">
+        {[
+          { icon: Shield, label: "Admin", count: adminCount, iconBg: "bg-primary/10", iconColor: "text-primary", desc: "Vollzugriff auf alle Bereiche: Benutzerverwaltung, Systemeinstellungen, Audit-Logs, Rechnungen, Produkt- & Preiskonfiguration. Kann Rollen zuweisen, Benutzer anlegen/entfernen und alle Daten aller Nutzer einsehen." },
+          { icon: FileText, label: "Vertragsabteilung", count: vertragsabteilungCount, iconBg: "bg-emerald-100", iconColor: "text-emerald-700", desc: "Verträge einsehen, prüfen und freigeben. Zugriff auf Kunden, Lizenzen, Umsätze und Vertragsdokumente. Kein Zugriff auf Benutzerverwaltung oder Systemeinstellungen." },
+          { icon: Users, label: "Vertriebsleitung", count: salesLeadCount, iconBg: "bg-violet-100", iconColor: "text-violet-700", desc: "Sieht alle Daten aller Vertriebspartner und Regionalleiter: Dashboard, Reservierungen, Kunden, Umsätze, Provisionen, Vertriebler-Übersicht, Kalender, Export und Integrationen. Kein Zugriff auf Administration." },
+          { icon: Users, label: "Regionalleiter", count: regionalLeadCount, iconBg: "bg-orange-100", iconColor: "text-orange-700", desc: "Sieht eigene Daten sowie die Daten zugeordneter Teammitglieder (Vertriebspartner). Kann Reservierungen, Interessenten, Demo-Tracking, Vertriebler und Provisionen für sein Team verwalten." },
+          { icon: Users, label: "Vertriebspartner", count: salesPartnerCount, iconBg: "bg-blue-100", iconColor: "text-blue-700", desc: "Eigene Reservierungen erstellen und verwalten, Interessenten und Demo-Downloads pflegen. Sieht eigene Kunden, Tickets, Lizenzen und Umsätze. Kein Zugriff auf Daten anderer Vertriebspartner." },
+          { icon: Users, label: "Tippgeber", count: tippgeberCount, iconBg: "bg-yellow-100", iconColor: "text-yellow-700", desc: "Kann Empfehlungen (Tipps) für potenzielle Kunden einreichen. Sieht den Status und die 30-Tage-Reservierung seiner eigenen Tipps. Erhält Benachrichtigungen bei Statusänderungen. Kein Zugriff auf andere Vertriebsdaten." },
+          { icon: Users, label: "Benutzer", count: userCount, iconBg: "bg-secondary", iconColor: "text-secondary-foreground", desc: "Basiszugang: Dashboard, eigene Kunden, Tickets, Lizenzen und Umsätze einsehen. Kann Verträge ansehen. Kein Zugriff auf Reservierungen, Interessenten oder Vertriebsfunktionen." },
+        ].map((r) => (
+          <div key={r.label} className="stat-card flex items-start gap-4">
+            <div className={`rounded-lg p-3 ${r.iconBg} shrink-0`}>
+              <r.icon className={`h-5 w-5 ${r.iconColor}`} />
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Admins</p>
-              <p className="text-2xl font-semibold text-foreground">{adminCount}</p>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Vollzugriff: Benutzerverwaltung, Einstellungen, Audit-Logs, Salesforce, Preise ändern, Reservierungsdaten anpassen.
-          </p>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="rounded-lg p-3 bg-emerald-100">
-              <FileText className="h-5 w-5 text-emerald-700" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Vertragsabteilung</p>
-              <p className="text-2xl font-semibold text-foreground">{vertragsabteilungCount}</p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 mb-1">
+                <p className="text-sm font-medium text-foreground">{r.label}</p>
+                <span className="text-xl font-semibold text-foreground">{r.count}</span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">{r.desc}</p>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Verträge einsehen, freigeben und verwalten. Zugriff auf Kunden, Lizenzen und Umsätze.
-          </p>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="rounded-lg p-3 bg-purple-100">
-              <Users className="h-5 w-5 text-purple-700" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Vertriebsleitung</p>
-              <p className="text-2xl font-semibold text-foreground">{salesLeadCount}</p>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Sieht alle Daten aller Vertriebspartner (Dashboard, Reservierungen, Kunden, Umsätze). Kein Zugriff auf Administration.
-          </p>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="rounded-lg p-3 bg-orange-100">
-              <Users className="h-5 w-5 text-orange-700" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Regionalleiter</p>
-              <p className="text-2xl font-semibold text-foreground">{regionalLeadCount}</p>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Sieht eigene und zugeordnete Team-Daten. Kann Vertriebler und Provisionen verwalten.
-          </p>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="rounded-lg p-3 bg-blue-100">
-              <Users className="h-5 w-5 text-blue-700" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Vertriebspartner</p>
-              <p className="text-2xl font-semibold text-foreground">{salesPartnerCount}</p>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Eigene Reservierungen erstellen & verwalten, Kunden & Tickets einsehen, eigene Umsätze & Lizenzen sehen.
-          </p>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="rounded-lg p-3 bg-secondary">
-              <Users className="h-5 w-5 text-secondary-foreground" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Benutzer</p>
-              <p className="text-2xl font-semibold text-foreground">{userCount}</p>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Basiszugang: Dashboard, eigene Reservierungen, Kunden, Tickets, Lizenzen und Umsätze einsehen.
-          </p>
-        </div>
+        ))}
       </div>
 
       {/* Search and Actions */}
