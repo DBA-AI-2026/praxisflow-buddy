@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
 
     // Auth: get calling user
     const authHeader = req.headers.get("authorization") ?? "";
-    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, {
+    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { authorization: authHeader } },
     });
     const { data: { user }, error: authError } = await userClient.auth.getUser();
