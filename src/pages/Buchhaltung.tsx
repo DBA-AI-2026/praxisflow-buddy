@@ -1,14 +1,16 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -21,6 +23,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
   Download,
   TrendingUp,
   Users,
@@ -29,11 +40,22 @@ import {
   Loader2,
   Upload,
   CalendarDays,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  FileSpreadsheet,
+  Building2,
   Euro,
+  Settings2,
+  RefreshCw,
+  Eye,
+  FileCheck,
+  Link2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useLexwareIntegration } from "@/hooks/useLexwareIntegration";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -44,6 +66,10 @@ const fmtEur = (n: number) =>
 
 const fmtDate = (s: string) =>
   format(new Date(s + (s.length === 10 ? "T00:00:00" : "")), "dd.MM.yyyy", { locale: de });
+
+const fmtDateTime = (s: string) => {
+  try { return format(new Date(s), "dd.MM.yyyy HH:mm", { locale: de }); } catch { return s; }
+};
 
 function downloadCsv(rows: string[][], filename: string) {
   const bom = "\uFEFF";
@@ -63,12 +89,12 @@ const COMMISSION_HEADERS = ["Datum", "Belegnummer", "Buchungstext", "Vertriebler
 const COST_HEADERS = ["Datum", "Belegnummer", "Buchungstext", "Lieferant", "Kostenkategorie", "Kunde", "HFX-Nr", "Produkt", "Konto", "Gegenkonto", "Nettobetrag", "USt-Satz %", "USt-Betrag", "Bruttobetrag"];
 
 // Lexware Kontenrahmen (SKR03)
-const REVENUE_ACCOUNT = "8400"; // Erlöse 19% USt
-const REVENUE_CONTRA = "1400";  // Forderungen
-const COMMISSION_ACCOUNT = "4940"; // Provisionen
-const COMMISSION_CONTRA = "1600"; // Verbindlichkeiten
-const COST_ACCOUNT = "3300"; // Bezogene Waren
-const COST_CONTRA = "1600"; // Verbindlichkeiten
+const REVENUE_ACCOUNT = "8400";
+const REVENUE_CONTRA = "1400";
+const COMMISSION_ACCOUNT = "4940";
+const COMMISSION_CONTRA = "1600";
+const COST_ACCOUNT = "3300";
+const COST_CONTRA = "1600";
 
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => {
   const d = subMonths(new Date(), i);
@@ -76,6 +102,18 @@ const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => {
 });
 
 const COST_CATEGORIES = ["Lizenzkosten", "Servicegebühr", "Support", "White-Label", "Sonstige"];
+
+interface PreviewRevenue {
+  id: string;
+  customer_name: string;
+  invoice_number: string;
+  invoice_date: string;
+  product_name: string;
+  quantity: number;
+  net_amount: number;
+  tax_amount: number;
+  gross_amount: number;
+}
 
 // ─── main component ──────────────────────────────────────────────────────────
 
@@ -91,12 +129,101 @@ export default function Buchhaltung() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const effectiveFrom = periodMode === "month"
-    ? `${selectedMonth}-01`
-    : dateFrom;
+  const effectiveFrom = periodMode === "month" ? `${selectedMonth}-01` : dateFrom;
   const effectiveTo = periodMode === "month"
     ? format(endOfMonth(new Date(selectedMonth + "-01")), "yyyy-MM-dd")
     : dateTo;
+
+  // ── Lexware Integration ──
+  const {
+    settings,
+    syncLogs,
+    isLoading: lexLoading,
+    isConnecting,
+    isExporting,
+    connect,
+    disconnect,
+    exportData,
+    updateSettings,
+    refresh: refreshLex,
+  } = useLexwareIntegration();
+
+  const [lexwareApiKey, setLexwareApiKey] = useState("");
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
+  const [syncInterval, setSyncInterval] = useState("daily");
+  const [syncTime, setSyncTime] = useState("14:00");
+  const [exportType, setExportType] = useState<"umsaetze" | "rechnungen" | "provisionen">("umsaetze");
+  const [exportDateFrom, setExportDateFrom] = useState("");
+  const [exportDateTo, setExportDateTo] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewData, setPreviewData] = useState<PreviewRevenue[]>([]);
+
+  useEffect(() => {
+    if (settings) {
+      setAutoSyncEnabled(settings.auto_sync_enabled);
+      setSyncInterval(settings.sync_interval);
+      setSyncTime(settings.sync_time);
+    }
+  }, [settings]);
+
+  const isConnected = settings?.is_connected ?? false;
+
+  const handleConnect = async () => {
+    const success = await connect(lexwareApiKey);
+    if (success) setLexwareApiKey("");
+  };
+
+  const handleShowPreview = async () => {
+    setPreviewLoading(true);
+    setPreviewOpen(true);
+    try {
+      let query = supabase
+        .from("customer_revenues")
+        .select("id, customer_name, invoice_number, invoice_date, product_name, quantity, net_amount, tax_amount, gross_amount")
+        .eq("exported_to_lexware", false)
+        .order("invoice_date", { ascending: true });
+      if (exportDateFrom) query = query.gte("invoice_date", exportDateFrom);
+      if (exportDateTo) query = query.lte("invoice_date", exportDateTo);
+      const { data, error } = await query;
+      if (error) throw error;
+      setPreviewData((data as PreviewRevenue[]) || []);
+    } catch (error) {
+      console.error(error);
+      setPreviewData([]);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const handleExport = async () => {
+    setPreviewOpen(false);
+    await exportData(exportType, exportDateFrom, exportDateTo);
+  };
+
+  const previewTotals = {
+    count: previewData.length,
+    netTotal: previewData.reduce((sum, r) => sum + Number(r.net_amount), 0),
+    taxTotal: previewData.reduce((sum, r) => sum + Number(r.tax_amount), 0),
+    grossTotal: previewData.reduce((sum, r) => sum + Number(r.gross_amount), 0),
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "success": return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+      case "error": return <AlertCircle className="h-4 w-4 text-destructive" />;
+      default: return <Clock className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "success": return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">Erfolgreich</Badge>;
+      case "error": return <Badge variant="destructive">Fehler</Badge>;
+      case "pending": return <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">Ausstehend</Badge>;
+      default: return <Badge variant="outline">Unbekannt</Badge>;
+    }
+  };
 
   // ── queries ──
   const { data: revenues = [], isLoading: revLoading } = useQuery({
@@ -114,7 +241,7 @@ export default function Buchhaltung() {
   });
 
   const { data: contracts = [] } = useQuery({
-    queryKey: ["accounting-contracts", effectiveFrom, effectiveTo],
+    queryKey: ["accounting-contracts"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contracts")
@@ -155,21 +282,13 @@ export default function Buchhaltung() {
     let amount = 0;
     let rate = "–";
     if (pc) {
-      if (pc.commission_type === "prozent") {
-        amount = (c.monthly_price * pc.commission_value) / 100;
-        rate = `${pc.commission_value}%`;
-      } else if (pc.commission_type === "festbetrag") {
-        amount = pc.commission_value;
-        rate = fmtEur(pc.commission_value);
-      } else {
-        amount = pc.commission_value;
-        rate = `${fmtEur(pc.commission_value)}/Monat`;
-      }
+      if (pc.commission_type === "prozent") { amount = (c.monthly_price * pc.commission_value) / 100; rate = `${pc.commission_value}%`; }
+      else if (pc.commission_type === "festbetrag") { amount = pc.commission_value; rate = fmtEur(pc.commission_value); }
+      else { amount = pc.commission_value; rate = `${fmtEur(pc.commission_value)}/Monat`; }
     }
     return { ...c, commission_amount: amount, commission_rate: rate };
   }).filter((c: any) => c.commission_amount > 0 && c.sales_partner_name);
 
-  // ── summary numbers ──
   const totalRevenue = revenues.reduce((s: number, r: any) => s + (r.gross_amount ?? 0), 0);
   const totalCommission = commissions.reduce((s: number, c: any) => s + c.commission_amount, 0);
   const totalCosts = costs.reduce((s: number, c: any) => s + (c.gross_amount ?? 0), 0);
@@ -179,8 +298,7 @@ export default function Buchhaltung() {
     const rows = [REVENUE_HEADERS, ...revenues.map((r: any) => [
       fmtDate(r.invoice_date), r.invoice_number, `Rechnung ${r.customer_name}`,
       REVENUE_ACCOUNT, REVENUE_CONTRA,
-      r.net_amount?.toFixed(2), r.tax_rate?.toFixed(0), r.tax_amount?.toFixed(2), r.gross_amount?.toFixed(2),
-      "", "SEPA"
+      r.net_amount?.toFixed(2), r.tax_rate?.toFixed(0), r.tax_amount?.toFixed(2), r.gross_amount?.toFixed(2), "", "SEPA"
     ])];
     const label = periodMode === "month" ? selectedMonth : `${effectiveFrom}_${effectiveTo}`;
     downloadCsv(rows, `HFX_Erlöse_${label}.csv`);
@@ -190,8 +308,7 @@ export default function Buchhaltung() {
   const exportCommissions = () => {
     const rows = [COMMISSION_HEADERS, ...commissions.map((c: any) => [
       fmtDate(c.start_date), `PROV-${c.id.slice(0, 8).toUpperCase()}`, `Provision ${c.product_name}`,
-      c.sales_partner_name, c.product_name,
-      COMMISSION_ACCOUNT, COMMISSION_CONTRA,
+      c.sales_partner_name, c.product_name, COMMISSION_ACCOUNT, COMMISSION_CONTRA,
       c.commission_amount.toFixed(2), c.commission_rate, c.commission_amount.toFixed(2)
     ])];
     const label = periodMode === "month" ? selectedMonth : `${effectiveFrom}_${effectiveTo}`;
@@ -212,108 +329,153 @@ export default function Buchhaltung() {
     toast({ title: "Export erfolgreich", description: `${costs.length} Kostenbuchungen exportiert.` });
   };
 
-  const exportAll = () => {
-    exportRevenues();
-    exportCommissions();
-    exportCosts();
-  };
+  const exportAll = () => { exportRevenues(); exportCommissions(); exportCosts(); };
 
   return (
-    <MainLayout title="Buchhaltung" subtitle="Lexware-kompatible Buchungssätze für die Finanzbuchhaltung">
-      {/* Period selector */}
-      <div className="card-elevated p-4 mb-6 flex flex-wrap gap-4 items-end">
-        <div className="flex gap-2">
-          <Button
-            variant={periodMode === "month" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setPeriodMode("month")}
-          >
-            <CalendarDays className="h-4 w-4 mr-2" />
-            Monat
-          </Button>
-          <Button
-            variant={periodMode === "custom" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setPeriodMode("custom")}
-          >
-            Freie Auswahl
-          </Button>
-        </div>
-
-        {periodMode === "month" ? (
-          <div>
-            <Label className="text-xs text-muted-foreground mb-1 block">Monat</Label>
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-52">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MONTH_OPTIONS.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+    <MainLayout title="Buchhaltung" subtitle="Buchungssätze, Lexware- & DATEV-Integration für die Finanzbuchhaltung">
+      {/* Export Preview Dialog */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Eye className="h-5 w-5" />Export-Vorschau</DialogTitle>
+            <DialogDescription>Diese Umsätze werden nach Lexware übertragen.</DialogDescription>
+          </DialogHeader>
+          {previewLoading ? (
+            <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+          ) : previewData.length === 0 ? (
+            <div className="text-center py-12">
+              <FileCheck className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <p className="text-lg font-medium text-foreground">Keine Daten zum Exportieren</p>
+              <p className="text-sm text-muted-foreground mt-1">Alle Umsätze wurden bereits exportiert oder es gibt keine Umsätze im gewählten Zeitraum.</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                {[
+                  { label: "Anzahl", value: `${previewTotals.count} Positionen` },
+                  { label: "Netto", value: fmtEur(previewTotals.netTotal) },
+                  { label: "MwSt.", value: fmtEur(previewTotals.taxTotal) },
+                  { label: "Brutto", value: fmtEur(previewTotals.grossTotal), highlight: true },
+                ].map((item) => (
+                  <div key={item.label} className={`p-3 rounded-lg ${item.highlight ? "bg-primary/10" : "bg-muted/50"}`}>
+                    <p className="text-xs text-muted-foreground">{item.label}</p>
+                    <p className={`text-lg font-semibold ${item.highlight ? "text-primary" : ""}`}>{item.value}</p>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ) : (
-          <div className="flex gap-3">
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1 block">Von</Label>
-              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-40" />
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1 block">Bis</Label>
-              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-40" />
-            </div>
-          </div>
-        )}
+              </div>
+              <ScrollArea className="h-[400px] rounded-md border">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background">
+                    <TableRow>
+                      <TableHead>Rechnungsnr.</TableHead><TableHead>Kunde</TableHead>
+                      <TableHead>Produkt</TableHead><TableHead>Datum</TableHead>
+                      <TableHead className="text-right">Menge</TableHead>
+                      <TableHead className="text-right">Netto</TableHead>
+                      <TableHead className="text-right">Brutto</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {previewData.map((revenue) => (
+                      <TableRow key={revenue.id}>
+                        <TableCell className="font-medium">{revenue.invoice_number}</TableCell>
+                        <TableCell>{revenue.customer_name}</TableCell>
+                        <TableCell>{revenue.product_name}</TableCell>
+                        <TableCell>{fmtDate(revenue.invoice_date)}</TableCell>
+                        <TableCell className="text-right">{revenue.quantity}</TableCell>
+                        <TableCell className="text-right">{fmtEur(Number(revenue.net_amount))}</TableCell>
+                        <TableCell className="text-right font-medium">{fmtEur(Number(revenue.gross_amount))}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPreviewOpen(false)}>Abbrechen</Button>
+            <Button onClick={handleExport} disabled={previewData.length === 0 || isExporting}>
+              {isExporting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Exportiere...</> : <><Upload className="h-4 w-4 mr-2" />{previewTotals.count} Positionen exportieren</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        <div className="ml-auto">
-          <Button onClick={exportAll} className="gap-2">
-            <Download className="h-4 w-4" />
-            Alle 3 CSV exportieren
-          </Button>
+      {/* Period selector (only for FiBu tabs) */}
+      {tab !== "integrationen" && (
+        <div className="card-elevated p-4 mb-6 flex flex-wrap gap-4 items-end">
+          <div className="flex gap-2">
+            <Button variant={periodMode === "month" ? "default" : "outline"} size="sm" onClick={() => setPeriodMode("month")}>
+              <CalendarDays className="h-4 w-4 mr-2" />Monat
+            </Button>
+            <Button variant={periodMode === "custom" ? "default" : "outline"} size="sm" onClick={() => setPeriodMode("custom")}>
+              Freie Auswahl
+            </Button>
+          </div>
+          {periodMode === "month" ? (
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">Monat</Label>
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {MONTH_OPTIONS.map((m) => (<SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <div className="flex gap-3">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Von</Label>
+                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-40" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Bis</Label>
+                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-40" />
+              </div>
+            </div>
+          )}
+          <div className="ml-auto">
+            <Button onClick={exportAll} className="gap-2">
+              <Download className="h-4 w-4" />Alle 3 CSV exportieren
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg p-3 bg-green-500/10">
-              <TrendingUp className="h-5 w-5 text-green-600" />
+      {/* Summary cards (only for FiBu tabs) */}
+      {tab !== "integrationen" && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div className="stat-card">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg p-3 bg-green-500/10"><TrendingUp className="h-5 w-5 text-green-600" /></div>
+              <div>
+                <p className="text-sm text-muted-foreground">Erlöse (Brutto)</p>
+                <p className="text-xl font-semibold text-foreground">{fmtEur(totalRevenue)}</p>
+                <p className="text-xs text-muted-foreground">{revenues.length} Rechnungen</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Erlöse (Brutto)</p>
-              <p className="text-xl font-semibold text-foreground">{fmtEur(totalRevenue)}</p>
-              <p className="text-xs text-muted-foreground">{revenues.length} Rechnungen</p>
+          </div>
+          <div className="stat-card">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg p-3 bg-primary/10"><Users className="h-5 w-5 text-primary" /></div>
+              <div>
+                <p className="text-sm text-muted-foreground">Provisionen</p>
+                <p className="text-xl font-semibold text-foreground">{fmtEur(totalCommission)}</p>
+                <p className="text-xs text-muted-foreground">{commissions.length} Vertriebler</p>
+              </div>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg p-3 bg-amber-500/10"><Receipt className="h-5 w-5 text-amber-600" /></div>
+              <div>
+                <p className="text-sm text-muted-foreground">Kosten (Brutto)</p>
+                <p className="text-xl font-semibold text-foreground">{fmtEur(totalCosts)}</p>
+                <p className="text-xs text-muted-foreground">{costs.length} Belege</p>
+              </div>
             </div>
           </div>
         </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg p-3 bg-primary/10">
-              <Users className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Provisionen</p>
-              <p className="text-xl font-semibold text-foreground">{fmtEur(totalCommission)}</p>
-              <p className="text-xs text-muted-foreground">{commissions.length} Vertriebler</p>
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg p-3 bg-amber-500/10">
-              <Receipt className="h-5 w-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Kosten (Brutto)</p>
-              <p className="text-xl font-semibold text-foreground">{fmtEur(totalCosts)}</p>
-              <p className="text-xs text-muted-foreground">{costs.length} Belege</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
@@ -321,6 +483,9 @@ export default function Buchhaltung() {
           <TabsTrigger value="erlöse">Erlöse ({revenues.length})</TabsTrigger>
           <TabsTrigger value="provisionen">Provisionen ({commissions.length})</TabsTrigger>
           <TabsTrigger value="kosten">Kosten ({costs.length})</TabsTrigger>
+          <TabsTrigger value="integrationen" className="flex items-center gap-1.5">
+            <Link2 className="h-3.5 w-3.5" />Integrationen
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Erlöse ── */}
@@ -340,10 +505,7 @@ export default function Buchhaltung() {
               ) : (
                 <table className="data-table">
                   <thead className="bg-muted/50">
-                    <tr>
-                      <th>Datum</th><th>Belegnummer</th><th>Kunde</th><th>Konto</th>
-                      <th>Netto</th><th>USt %</th><th>USt</th><th>Brutto</th>
-                    </tr>
+                    <tr><th>Datum</th><th>Belegnummer</th><th>Kunde</th><th>Konto</th><th>Netto</th><th>USt %</th><th>USt</th><th>Brutto</th></tr>
                   </thead>
                   <tbody>
                     {revenues.map((r: any) => (
@@ -380,10 +542,7 @@ export default function Buchhaltung() {
               ) : (
                 <table className="data-table">
                   <thead className="bg-muted/50">
-                    <tr>
-                      <th>Vertriebler</th><th>Produkt</th><th>Kunde</th>
-                      <th>Konto</th><th>Satz</th><th>Betrag</th>
-                    </tr>
+                    <tr><th>Vertriebler</th><th>Produkt</th><th>Kunde</th><th>Konto</th><th>Satz</th><th>Betrag</th></tr>
                   </thead>
                   <tbody>
                     {commissions.map((c: any) => (
@@ -428,10 +587,7 @@ export default function Buchhaltung() {
               ) : (
                 <table className="data-table">
                   <thead className="bg-muted/50">
-                    <tr>
-                      <th>Datum</th><th>Lieferant</th><th>Kategorie</th><th>Kunde</th>
-                      <th>Produkt</th><th>Konto</th><th>Netto</th><th>USt %</th><th>Brutto</th>
-                    </tr>
+                    <tr><th>Datum</th><th>Lieferant</th><th>Kategorie</th><th>Kunde</th><th>Produkt</th><th>Konto</th><th>Netto</th><th>USt %</th><th>Brutto</th></tr>
                   </thead>
                   <tbody>
                     {costs.map((c: any) => (
@@ -452,6 +608,190 @@ export default function Buchhaltung() {
               )}
             </div>
           </div>
+        </TabsContent>
+
+        {/* ── Integrationen (Lexware / DATEV) ── */}
+        <TabsContent value="integrationen" className="mt-4 space-y-6">
+          {lexLoading ? (
+            <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+          ) : (
+            <Tabs defaultValue="lexware" className="space-y-6">
+              <TabsList className="grid w-full max-w-md grid-cols-2">
+                <TabsTrigger value="lexware" className="flex items-center gap-2">
+                  <FileSpreadsheet className="h-4 w-4" />Lexware
+                </TabsTrigger>
+                <TabsTrigger value="datev" className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />DATEV
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Lexware */}
+              <TabsContent value="lexware" className="space-y-6">
+                <div className="grid gap-6 lg:grid-cols-3">
+                  <div className="lg:col-span-1 space-y-6">
+                    {/* Connection */}
+                    <div className="card-elevated p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-semibold text-foreground">Verbindung</h2>
+                        {isConnected ? (
+                          <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20"><CheckCircle2 className="h-3 w-3 mr-1" />Verbunden</Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-muted text-muted-foreground">Nicht verbunden</Badge>
+                        )}
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="lexware-api-key">API-Key</Label>
+                          <Input id="lexware-api-key" type="password" placeholder={isConnected ? "****" : "Ihr Lexware API-Key"} value={lexwareApiKey} onChange={(e) => setLexwareApiKey(e.target.value)} disabled={isConnected || isConnecting} className="mt-1" />
+                          <p className="text-xs text-muted-foreground mt-1">Generieren Sie Ihren API-Key unter app.lexware.de/addons/public-api</p>
+                        </div>
+                        {isConnected ? (
+                          <Button variant="outline" onClick={disconnect} className="w-full">Verbindung trennen</Button>
+                        ) : (
+                          <Button onClick={handleConnect} className="w-full" disabled={isConnecting || !lexwareApiKey}>
+                            {isConnecting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Verbinde...</> : "Verbinden"}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Auto-Sync */}
+                    <div className="card-elevated p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Settings2 className="h-5 w-5 text-muted-foreground" />
+                        <h2 className="text-lg font-semibold text-foreground">Auto-Sync</h2>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label>Automatische Synchronisierung</Label>
+                            <p className="text-xs text-muted-foreground">Umsätze automatisch übertragen</p>
+                          </div>
+                          <Switch checked={autoSyncEnabled} onCheckedChange={setAutoSyncEnabled} disabled={!isConnected} />
+                        </div>
+                        {autoSyncEnabled && (
+                          <>
+                            <div>
+                              <Label>Intervall</Label>
+                              <Select value={syncInterval} onValueChange={setSyncInterval}>
+                                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="daily">Täglich</SelectItem>
+                                  <SelectItem value="weekly">Wöchentlich</SelectItem>
+                                  <SelectItem value="monthly">Monatlich</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label>Uhrzeit</Label>
+                              <Input type="time" value={syncTime} onChange={(e) => setSyncTime(e.target.value)} className="mt-1" />
+                            </div>
+                          </>
+                        )}
+                        <Button variant="outline" onClick={() => updateSettings(autoSyncEnabled, syncInterval, syncTime)} disabled={!isConnected} className="w-full">
+                          Einstellungen speichern
+                        </Button>
+                        {settings?.last_sync_at && (
+                          <p className="text-xs text-muted-foreground text-center">Letzter Sync: {fmtDateTime(settings.last_sync_at)}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-2 space-y-6">
+                    {/* Manual Export */}
+                    <div className="card-elevated p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Upload className="h-5 w-5 text-muted-foreground" />
+                        <h2 className="text-lg font-semibold text-foreground">Manueller Export nach Lexware</h2>
+                      </div>
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                          <Label>Datentyp</Label>
+                          <Select value={exportType} onValueChange={(v) => setExportType(v as typeof exportType)}>
+                            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="umsaetze"><div className="flex items-center gap-2"><Euro className="h-4 w-4" />Umsätze pro Kunde</div></SelectItem>
+                              <SelectItem value="rechnungen"><div className="flex items-center gap-2"><FileSpreadsheet className="h-4 w-4" />Rechnungen</div></SelectItem>
+                              <SelectItem value="provisionen"><div className="flex items-center gap-2"><Euro className="h-4 w-4" />Provisionen</div></SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Von</Label>
+                          <Input type="date" value={exportDateFrom} onChange={(e) => setExportDateFrom(e.target.value)} className="mt-1" />
+                        </div>
+                        <div>
+                          <Label>Bis</Label>
+                          <Input type="date" value={exportDateTo} onChange={(e) => setExportDateTo(e.target.value)} className="mt-1" />
+                        </div>
+                        <div className="flex items-end">
+                          <Button variant="outline" onClick={handleShowPreview} disabled={!isConnected} className="w-full">
+                            <Eye className="h-4 w-4 mr-2" />Vorschau
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <Button onClick={handleShowPreview} disabled={!isConnected || isExporting} className="w-full">
+                          {isExporting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Übertrage...</> : <><Upload className="h-4 w-4 mr-2" />Vorschau & Export nach Lexware</>}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Sync History */}
+                    <div className="card-elevated p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-semibold text-foreground">Übertragungshistorie</h2>
+                        <Button variant="ghost" size="sm" onClick={refreshLex}><RefreshCw className="h-4 w-4 mr-2" />Aktualisieren</Button>
+                      </div>
+                      <div className="space-y-3">
+                        {syncLogs.map((log) => (
+                          <div key={log.id} className="flex items-center gap-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                            {getStatusIcon(log.status)}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">{log.message}</p>
+                              <p className="text-xs text-muted-foreground">{fmtDateTime(log.created_at)}</p>
+                            </div>
+                            {getStatusBadge(log.status)}
+                          </div>
+                        ))}
+                        {syncLogs.length === 0 && (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p>Noch keine Übertragungen durchgeführt</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* DATEV */}
+              <TabsContent value="datev" className="space-y-6">
+                <div className="card-elevated p-8 text-center">
+                  <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h2 className="text-xl font-semibold text-foreground mb-2">DATEV-Integration</h2>
+                  <p className="text-muted-foreground max-w-md mx-auto mb-4">
+                    Die DATEV-Schnittstelle befindet sich in Entwicklung. DATEV verwendet ein komplexeres Authentifizierungsverfahren (OAuth 2.0 mit SmartCard) und Batch-basierte Datenübertragung im DATEV-ASCII-Format.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20"><Clock className="h-3 w-3 mr-1" />In Entwicklung</Badge>
+                    <Badge variant="outline">Geplant: Q2 2024</Badge>
+                  </div>
+                  <div className="mt-6 p-4 rounded-lg bg-muted/50 text-left max-w-lg mx-auto">
+                    <p className="text-sm font-medium text-foreground mb-2">Geplante Features:</p>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      <li>• Export im DATEV-ASCII-Format (EXTF)</li>
+                      <li>• OAuth 2.0 Authentifizierung</li>
+                      <li>• Automatischer Upload zu DATEV Unternehmen Online</li>
+                      <li>• Mandanten-Zuordnung</li>
+                    </ul>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -475,19 +815,11 @@ function CostDialog({ open, onOpenChange, userId, onSuccess }: { open: boolean; 
   const mutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("accounting_costs").insert({
-        cost_date: form.cost_date,
-        supplier: form.supplier,
-        customer_name: form.customer_name,
-        hfx_customer_number: form.hfx_customer_number || null,
-        product_name: form.product_name || null,
-        category: form.category,
-        description: form.description || null,
-        net_amount: net,
-        tax_rate: rate,
-        tax_amount: parseFloat(tax.toFixed(2)),
-        gross_amount: parseFloat(gross.toFixed(2)),
-        invoice_reference: form.invoice_reference || null,
-        created_by: userId,
+        cost_date: form.cost_date, supplier: form.supplier, customer_name: form.customer_name,
+        hfx_customer_number: form.hfx_customer_number || null, product_name: form.product_name || null,
+        category: form.category, description: form.description || null, net_amount: net, tax_rate: rate,
+        tax_amount: parseFloat(tax.toFixed(2)), gross_amount: parseFloat(gross.toFixed(2)),
+        invoice_reference: form.invoice_reference || null, created_by: userId,
       } as any);
       if (error) throw error;
     },
@@ -599,8 +931,7 @@ function CsvCostImportDialog({ open, onOpenChange, userId, onSuccess }: { open: 
           product_name: r["produkt"] || r["product_name"] || null,
           category: r["kategorie"] || r["category"] || "Sonstige",
           description: r["beschreibung"] || r["description"] || null,
-          net_amount: net,
-          tax_rate: rate,
+          net_amount: net, tax_rate: rate,
           tax_amount: parseFloat(tax.toFixed(2)),
           gross_amount: parseFloat((net + tax).toFixed(2)),
           invoice_reference: r["beleg"] || r["invoice_reference"] || null,
