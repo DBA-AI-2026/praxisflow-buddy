@@ -54,6 +54,13 @@ export const routePermissions: RoutePermission[] = [
 
   // Tippgeber
   { path: "/tippgeber", allowedRoles: ["tippgeber", "admin"] },
+
+  // Admin Tipp-Leads
+  { path: "/admin/tipp-leads", allowedRoles: ["admin", "sales_lead"] },
+
+  // Systemdokumentation
+  { path: "/admin/documentation", allowedRoles: ["admin"] },
+
 ];
 
 export function getRoutePermission(path: string): RoutePermission | undefined {
