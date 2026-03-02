@@ -32,6 +32,7 @@ import Sicherheit from "./pages/Sicherheit";
 import PdfCoordinateFinder from "./pages/tools/PdfCoordinateFinder";
 import EmailPreview from "./pages/tools/EmailPreview";
 import { PdfViewerOverlay } from "@/components/PdfViewerOverlay";
+import TippgeberPage from "./pages/Tippgeber";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,7 @@ const App = () => (
             <Route path="/tools/pdf-coordinates" element={<ProtectedRoute><PdfCoordinateFinder /></ProtectedRoute>} />
             <Route path="/tools/email-preview" element={<ProtectedRoute><EmailPreview /></ProtectedRoute>} />
             <Route path="/sicherheit" element={<ProtectedRoute><Sicherheit /></ProtectedRoute>} />
+            <Route path="/tippgeber" element={<ProtectedRoute><TippgeberPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

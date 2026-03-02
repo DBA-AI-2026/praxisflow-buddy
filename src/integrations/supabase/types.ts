@@ -1101,6 +1101,54 @@ export type Database = {
           },
         ]
       }
+      tipp_leads: {
+        Row: {
+          arzt_name: string
+          created_at: string
+          created_by: string
+          email: string | null
+          geschaeftsbereich: string
+          gewuenschte_dienstleistung: string
+          id: string
+          notes: string | null
+          plz: string
+          praxis_name: string
+          status: string
+          telefon: string | null
+          updated_at: string
+        }
+        Insert: {
+          arzt_name: string
+          created_at?: string
+          created_by: string
+          email?: string | null
+          geschaeftsbereich: string
+          gewuenschte_dienstleistung: string
+          id?: string
+          notes?: string | null
+          plz: string
+          praxis_name: string
+          status?: string
+          telefon?: string | null
+          updated_at?: string
+        }
+        Update: {
+          arzt_name?: string
+          created_at?: string
+          created_by?: string
+          email?: string | null
+          geschaeftsbereich?: string
+          gewuenschte_dienstleistung?: string
+          id?: string
+          notes?: string | null
+          plz?: string
+          praxis_name?: string
+          status?: string
+          telefon?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_regional_assignments: {
         Row: {
           created_at: string
@@ -1164,6 +1212,7 @@ export type Database = {
         | "sales_lead"
         | "vertragsabteilung"
         | "regional_lead"
+        | "tippgeber"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1298,6 +1347,7 @@ export const Constants = {
         "sales_lead",
         "vertragsabteilung",
         "regional_lead",
+        "tippgeber",
       ],
     },
   },

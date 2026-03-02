@@ -50,7 +50,10 @@ export const routePermissions: RoutePermission[] = [
   { path: "/tools/email-preview", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
   
   // Sicherheit (2FA) - alle eingeloggten Benutzer
-  { path: "/sicherheit", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
+  { path: "/sicherheit", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "tippgeber", "admin"] },
+
+  // Tippgeber
+  { path: "/tippgeber", allowedRoles: ["tippgeber", "admin"] },
 ];
 
 export function getRoutePermission(path: string): RoutePermission | undefined {

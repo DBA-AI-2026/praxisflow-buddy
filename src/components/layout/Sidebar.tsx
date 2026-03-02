@@ -22,6 +22,7 @@ import {
   ClipboardList,
   ShieldCheck,
   Receipt,
+  Lightbulb,
 } from "lucide-react";
 import logo from "@/assets/fox-logo.jpeg";
 import { useState } from "react";
@@ -31,7 +32,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole, AppRole } from "@/hooks/useUserRole";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-const allRoles: AppRole[] = ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"];
+const allRoles: AppRole[] = ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "tippgeber", "admin"];
 
 interface NavItem {
   name: string;
@@ -57,6 +58,10 @@ const vertriebNavigation: NavItem[] = [
   { name: "Umsätze", href: "/umsaetze", icon: TrendingUp, roles: allRoles },
   { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users, roles: ["sales_lead", "regional_lead", "admin"] },
   { name: "Provisionen", href: "/vertrieb/provisionen", icon: BarChart3, roles: ["sales_lead", "regional_lead", "admin"] },
+];
+
+const tippgeberNavigation: NavItem[] = [
+  { name: "Meine Tipps", href: "/tippgeber", icon: Lightbulb, roles: ["tippgeber", "admin"] },
 ];
 
 const allgemeinNavigation: NavItem[] = [
@@ -184,6 +189,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <NavSection label="Kunden" items={kundenNavigation} {...sectionProps} />
         <NavSection label="Vertrieb" items={vertriebNavigation} {...sectionProps} />
         <NavSection label="Allgemein" items={allgemeinNavigation} {...sectionProps} />
+        <NavSection label="Meine Tipps" items={tippgeberNavigation} {...sectionProps} />
         <NavSection label="Administration" items={adminNavigation} {...sectionProps} />
       </nav>
 

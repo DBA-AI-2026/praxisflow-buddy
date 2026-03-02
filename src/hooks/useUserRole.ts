@@ -14,6 +14,7 @@ interface UseUserRoleResult {
   isRegionalLead: boolean;
   isSalesPartner: boolean;
   isUser: boolean;
+  isTippgeber: boolean;
 }
 
 export function useUserRole(): UseUserRoleResult & { isRegionalLead: boolean } {
@@ -61,7 +62,8 @@ export function useUserRole(): UseUserRoleResult & { isRegionalLead: boolean } {
     isVertragsabteilung: role === "vertragsabteilung",
     isSalesLead: role === "sales_lead",
     isRegionalLead: role === "regional_lead",
-    isSalesPartner: role === "sales_partner",
-    isUser: role === "user",
+  isSalesPartner: role === "sales_partner",
+  isUser: role === "user",
+  isTippgeber: role === "tippgeber",
   };
 }
