@@ -82,6 +82,7 @@ const adminNavigation: NavItem[] = [
   { name: "Buchhaltung", href: "/integrationen", icon: Link2, roles: ["admin"], adminOnly: true },
   { name: "Audit-Protokoll", href: "/admin/audit-logs", icon: ClipboardList, roles: ["admin"], adminOnly: true },
   { name: "Einstellungen", href: "/admin/settings", icon: Settings, roles: ["admin"], adminOnly: true },
+  { name: "Dokumentation", href: "/admin/documentation", icon: FileText, roles: ["admin"], adminOnly: true },
 ];
 
 interface NavSectionProps {
