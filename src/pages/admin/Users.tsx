@@ -225,24 +225,24 @@ export default function AdminUsers() {
   return (
     <MainLayout title="Benutzerverwaltung" subtitle="Benutzer und Rollen verwalten">
       {/* Rollenübersicht */}
-      <div className="grid grid-cols-1 gap-3 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mb-6">
         {[
-          { icon: Shield, label: "Admin", count: adminCount, iconBg: "bg-primary/10", iconColor: "text-primary", desc: "Vollzugriff auf alle Bereiche: Benutzerverwaltung, Systemeinstellungen, Audit-Logs, Rechnungen, Produkt- & Preiskonfiguration. Kann Rollen zuweisen, Benutzer anlegen/entfernen und alle Daten aller Nutzer einsehen." },
-          { icon: FileText, label: "Vertragsabteilung", count: vertragsabteilungCount, iconBg: "bg-emerald-100", iconColor: "text-emerald-700", desc: "Verträge einsehen, prüfen und freigeben. Zugriff auf Kunden, Lizenzen, Umsätze und Vertragsdokumente. Kein Zugriff auf Benutzerverwaltung oder Systemeinstellungen." },
-          { icon: Users, label: "Vertriebsleitung", count: salesLeadCount, iconBg: "bg-violet-100", iconColor: "text-violet-700", desc: "Sieht alle Daten aller Vertriebspartner und Regionalleiter: Dashboard, Reservierungen, Kunden, Umsätze, Provisionen, Vertriebler-Übersicht, Kalender, Export und Integrationen. Kein Zugriff auf Administration." },
-          { icon: Users, label: "Regionalleiter", count: regionalLeadCount, iconBg: "bg-orange-100", iconColor: "text-orange-700", desc: "Sieht eigene Daten sowie die Daten zugeordneter Teammitglieder (Vertriebspartner). Kann Reservierungen, Interessenten, Demo-Tracking, Vertriebler und Provisionen für sein Team verwalten." },
-          { icon: Users, label: "Vertriebspartner", count: salesPartnerCount, iconBg: "bg-blue-100", iconColor: "text-blue-700", desc: "Eigene Reservierungen erstellen und verwalten, Interessenten und Demo-Downloads pflegen. Sieht eigene Kunden, Tickets, Lizenzen und Umsätze. Kein Zugriff auf Daten anderer Vertriebspartner." },
-          { icon: Users, label: "Tippgeber", count: tippgeberCount, iconBg: "bg-yellow-100", iconColor: "text-yellow-700", desc: "Kann Empfehlungen (Tipps) für potenzielle Kunden einreichen. Sieht den Status und die 30-Tage-Reservierung seiner eigenen Tipps. Erhält Benachrichtigungen bei Statusänderungen. Kein Zugriff auf andere Vertriebsdaten." },
-          { icon: Users, label: "Benutzer", count: userCount, iconBg: "bg-secondary", iconColor: "text-secondary-foreground", desc: "Basiszugang: Dashboard, eigene Kunden, Tickets, Lizenzen und Umsätze einsehen. Kann Verträge ansehen. Kein Zugriff auf Reservierungen, Interessenten oder Vertriebsfunktionen." },
+          { icon: Shield, label: "Admin", count: adminCount, iconBg: "bg-primary/10", iconColor: "text-primary", badge: "bg-primary/10 text-primary", desc: "Vollzugriff: Benutzerverwaltung, Einstellungen, Rechnungen, Audit-Logs, Produkt- & Preiskonfiguration." },
+          { icon: FileText, label: "Vertragsabteilung", count: vertragsabteilungCount, iconBg: "bg-emerald-100", iconColor: "text-emerald-700", badge: "bg-emerald-100 text-emerald-800", desc: "Verträge einsehen, prüfen und freigeben. Zugriff auf Kunden, Lizenzen und Umsätze." },
+          { icon: Users, label: "Vertriebsleitung", count: salesLeadCount, iconBg: "bg-violet-100", iconColor: "text-violet-700", badge: "bg-violet-100 text-violet-800", desc: "Sieht alle Daten aller Partner & Regionalleiter. Zugriff auf Provisionen, Kalender, Export, Integrationen." },
+          { icon: Users, label: "Regionalleiter", count: regionalLeadCount, iconBg: "bg-orange-100", iconColor: "text-orange-700", badge: "bg-orange-100 text-orange-800", desc: "Sieht eigene und Team-Daten. Verwaltet Reservierungen, Interessenten und Provisionen des Teams." },
+          { icon: Users, label: "Vertriebspartner", count: salesPartnerCount, iconBg: "bg-blue-100", iconColor: "text-blue-700", badge: "bg-blue-100 text-blue-800", desc: "Eigene Reservierungen, Interessenten, Demo-Downloads. Sieht nur eigene Kunden, Tickets, Umsätze." },
+          { icon: Users, label: "Tippgeber", count: tippgeberCount, iconBg: "bg-yellow-100", iconColor: "text-yellow-700", badge: "bg-yellow-100 text-yellow-800", desc: "Reicht Empfehlungen ein. Sieht eigene Tipps mit 30-Tage-Reservierung. Kein Zugriff auf Vertriebsdaten." },
+          { icon: Users, label: "Benutzer", count: userCount, iconBg: "bg-secondary", iconColor: "text-secondary-foreground", badge: "bg-secondary text-secondary-foreground", desc: "Basiszugang: Dashboard, Kunden, Tickets, Lizenzen, Umsätze und Verträge einsehen." },
         ].map((r) => (
-          <div key={r.label} className="stat-card flex items-start gap-4">
-            <div className={`rounded-lg p-3 ${r.iconBg} shrink-0`}>
-              <r.icon className={`h-5 w-5 ${r.iconColor}`} />
+          <div key={r.label} className="stat-card flex items-start gap-3 py-3">
+            <div className={`rounded-lg p-2.5 ${r.iconBg} shrink-0 mt-0.5`}>
+              <r.icon className={`h-4 w-4 ${r.iconColor}`} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 mb-1">
-                <p className="text-sm font-medium text-foreground">{r.label}</p>
-                <span className="text-xl font-semibold text-foreground">{r.count}</span>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm font-semibold text-foreground">{r.label}</span>
+                <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${r.badge}`}>{r.count}</span>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">{r.desc}</p>
             </div>
