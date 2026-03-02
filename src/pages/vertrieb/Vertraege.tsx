@@ -23,7 +23,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import {
   Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye, CheckCircle,
-  FilePen, FileSignature, CircleCheck, CircleOff, ArchiveX, ShieldBan,
+  FilePen, FileSignature, CircleCheck, CircleOff, ArchiveX, ShieldBan, ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
 // Check and ChevronsUpDown already imported above via combobox imports
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -719,15 +719,32 @@ export default function Vertraege() {
   };
 
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<"created_at" | "updated_at">("created_at");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  const filtered = contracts.filter((c: any) => {
-    const matchesSearch =
-      c.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
-      c.product_name?.toLowerCase().includes(search.toLowerCase()) ||
-      c.sales_partner_name?.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter ? c.status === statusFilter : true;
-    return matchesSearch && matchesStatus;
-  });
+  const handleSort = (field: "created_at" | "updated_at") => {
+    if (sortField === field) {
+      setSortDir(d => d === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDir("desc");
+    }
+  };
+
+  const filtered = contracts
+    .filter((c: any) => {
+      const matchesSearch =
+        c.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
+        c.product_name?.toLowerCase().includes(search.toLowerCase()) ||
+        c.sales_partner_name?.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter ? c.status === statusFilter : true;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a: any, b: any) => {
+      const aVal = new Date(a[sortField] || 0).getTime();
+      const bVal = new Date(b[sortField] || 0).getTime();
+      return sortDir === "asc" ? aVal - bVal : bVal - aVal;
+    });
 
   const handleStatusChange = async (contractId: string, newStatus: string) => {
     const updateData: Record<string, any> = { status: newStatus };
@@ -1079,7 +1096,18 @@ export default function Vertraege() {
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Partner</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 text-right">Monatspreis</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 text-center">Status</th>
-                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 whitespace-nowrap">Zuletzt geändert</th>
+                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 whitespace-nowrap">
+                     <button type="button" onClick={() => handleSort("created_at")} className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
+                       Erfasst
+                       {sortField === "created_at" ? (sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                     </button>
+                   </th>
+                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 whitespace-nowrap">
+                     <button type="button" onClick={() => handleSort("updated_at")} className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
+                       Zuletzt geändert
+                       {sortField === "updated_at" ? (sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                     </button>
+                   </th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Dokument</th>
                    <th className="w-10"></th>
                  </tr>
@@ -1149,11 +1177,16 @@ export default function Vertraege() {
                          </DropdownMenuContent>
                          </DropdownMenu>
                        </td>
-                       <td className="py-3.5 px-4 text-xs text-muted-foreground whitespace-nowrap">
-                         {c.updated_at
-                           ? format(new Date(c.updated_at), "dd.MM.yy HH:mm", { locale: de })
-                           : "–"}
-                       </td>
+                        <td className="py-3.5 px-4 text-xs text-muted-foreground whitespace-nowrap">
+                          {c.created_at
+                            ? format(new Date(c.created_at), "dd.MM.yy HH:mm", { locale: de })
+                            : "–"}
+                        </td>
+                        <td className="py-3.5 px-4 text-xs text-muted-foreground whitespace-nowrap">
+                          {c.updated_at
+                            ? format(new Date(c.updated_at), "dd.MM.yy HH:mm", { locale: de })
+                            : "–"}
+                        </td>
                        <td>
                        <div className="flex flex-col gap-1">
                          <Button
