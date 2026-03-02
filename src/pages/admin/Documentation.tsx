@@ -3,7 +3,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
-  Users, Lightbulb, FileText, Receipt, UserCheck, Link2, Shield,
+  Users, Lightbulb, FileText, Receipt, UserCheck, Link2, Shield, FlaskConical,
   ChevronDown, ChevronRight
 } from "lucide-react";
 
@@ -145,6 +145,31 @@ const flows: Flow[] = [
       { from: "a4", to: "a5" }, { from: "a5", to: "a6" },
       { from: "a6", to: "a7" }, { from: "a7", to: "a8", label: "ja" },
       { from: "a7", to: "a9", label: "nein" }, { from: "a8", to: "a9" },
+    ],
+  },
+  {
+    id: "demo",
+    title: "Demo-Tracking-Flow",
+    subtitle: "Von der Demo-Anfrage bis zum Kaufabschluss",
+    icon: FlaskConical,
+    color: "bg-teal-500/10 text-teal-600 border-teal-500/20",
+    steps: [
+      { id: "d1", label: "Demo-Anfrage", description: "Interessent oder Admin legt Demo-Download-Eintrag an (manuell oder via CSV-Import / REST-API mit x-api-key)", type: "start" },
+      { id: "d2", label: "Datenbank: demo_downloads", description: "Eintrag mit HFX-D Kundennummer, Produkt, Kontaktdaten, Status 'demo' und Download-Datum angelegt", type: "process" },
+      { id: "d3", label: "Testphase startet", description: "test_phase_end Datum gesetzt (z. B. HFX Praxismanagement: 1 Woche, max. 6 Std. à 45 €/Std.)", type: "action" },
+      { id: "d4", label: "Produkt übergeben", description: "Demo-Version des Produkts (z. B. HFX GOÄ, HFX EBM, HFX Doku/THOKX, HFX Wingmann, etc.) bereitgestellt", type: "process" },
+      { id: "d5", label: "Begleitung & Nachverfolgung", description: "Sales kontaktiert Interessenten während der Testphase – Ticket oder Termin über Ticketing-System buchbar", type: "action" },
+      { id: "d6", label: "Testphase endet", description: "test_phase_end überschritten – Status wird geprüft", type: "decision" },
+      { id: "d7", label: "Status: converted", description: "Interessent entscheidet sich für Kauf – Vertrag wird erstellt (Vertrags-Flow)", type: "process" },
+      { id: "d8", label: "Status: expired", description: "Keine Kaufentscheidung – Demo abgelaufen, Eintrag archiviert", type: "end" },
+      { id: "d9", label: "Vertrag erstellt", description: "Aus Demo wird qualifizierter Vertrag erzeugt (Produkt, Laufzeit, Module, Preis gemäß Preismodell)", type: "action" },
+      { id: "d10", label: "Kunde aktiv", description: "Eintrag in 'praxen'-Tabelle, Lizenz aktiv, Rechnungs-Flow startet", type: "end" },
+    ],
+    edges: [
+      { from: "d1", to: "d2" }, { from: "d2", to: "d3" }, { from: "d3", to: "d4" },
+      { from: "d4", to: "d5" }, { from: "d5", to: "d6" },
+      { from: "d6", to: "d7", label: "Kauf" }, { from: "d6", to: "d8", label: "abgelaufen" },
+      { from: "d7", to: "d9" }, { from: "d9", to: "d10" },
     ],
   },
   {
