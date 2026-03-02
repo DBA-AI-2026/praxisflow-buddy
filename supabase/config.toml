@@ -23,3 +23,5 @@ project_id = "gvsxentbbzuyanqbqvea"
     verify_jwt = false
   [functions.notify-tipp-status]
     verify_jwt = false
+  [functions.demo-reminder]
+    verify_jwt = false
