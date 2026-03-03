@@ -342,14 +342,70 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generate password for Qodia access
-    const generatedPassword = generatePassword(12);
-
     // Save to database using service role
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // Check if email already exists
+    const normalizedEmail = email.trim().toLowerCase();
+    const { data: existingLead } = await supabase
+      .from("leads")
+      .select("id, hfx_customer_number, generated_password, praxis_name, vorname, nachname")
+      .eq("email", normalizedEmail)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingLead) {
+      console.log(`Duplicate registration attempt for ${normalizedEmail}, resending credentials for ${existingLead.hfx_customer_number}`);
+
+      // Resend existing credentials
+      try {
+        const resendApiKey = Deno.env.get("RESEND_API_KEY");
+        if (resendApiKey) {
+          const resend = new Resend(resendApiKey);
+          const existingPassword = existingLead.generated_password || "(gespeichertes Passwort nicht verfügbar)";
+          const emailHtml = buildConfirmationEmailHtml({
+            praxis_name: existingLead.praxis_name,
+            vorname: existingLead.vorname,
+            nachname: existingLead.nachname,
+            email: normalizedEmail,
+            plz,
+            mobilnummer,
+            abrechnungszentrum,
+            mp_nummer,
+            nachricht,
+            hfx_customer_number: existingLead.hfx_customer_number,
+            generated_password: existingPassword,
+          });
+
+          await resend.emails.send({
+            from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+            to: [normalizedEmail],
+            subject: `Ihre bestehenden Zugangsdaten – Honorarfuchs`,
+            html: emailHtml,
+          });
+          console.log(`Existing credentials resent to ${normalizedEmail}`);
+        }
+      } catch (emailErr) {
+        console.error("Error resending credentials:", emailErr);
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          duplicate: true,
+          hfx_customer_number: existingLead.hfx_customer_number,
+          message: "Ein Konto mit dieser E-Mail-Adresse existiert bereits. Ihre Zugangsdaten wurden erneut zugesendet.",
+        }),
+        { status: 200, headers: { ...headers, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Generate password for Qodia access
+    const generatedPassword = generatePassword(12);
 
     const { data: lead, error: insertError } = await supabase
       .from("leads")
