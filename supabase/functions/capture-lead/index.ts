@@ -448,30 +448,26 @@ Deno.serve(async (req) => {
     }
 
     // Sync to Qodia (HFX-Nummer + Passwort)
-    // TODO: Qodia API-Endpoint und Authentifizierung konfigurieren
     try {
-      // const QODIA_API_URL = Deno.env.get("QODIA_API_URL");
-      // const QODIA_API_KEY = Deno.env.get("QODIA_API_KEY");
-      // if (QODIA_API_URL && QODIA_API_KEY) {
-      //   const qodiaResponse = await fetch(QODIA_API_URL, {
-      //     method: "POST",
-      //     headers: {
-      //       "Authorization": `Bearer ${QODIA_API_KEY}`,
-      //       "Content-Type": "application/json",
-      //     },
-      //     body: JSON.stringify({
-      //       username: lead.hfx_customer_number,
-      //       password: generatedPassword,
-      //     }),
-      //   });
-      //   if (qodiaResponse.ok) {
-      //     await supabase.from("leads").update({ qodia_synced: true }).eq("id", lead.id);
-      //     console.log(`Lead synced to Qodia: ${lead.hfx_customer_number}`);
-      //   } else {
-      //     console.error("Qodia sync failed:", await qodiaResponse.text());
-      //   }
-      // }
-      console.log(`Qodia sync pending – API not yet configured for ${lead.hfx_customer_number}`);
+      const QODIA_SIGNUP_URL = "https://auth.qodia.de/api/external/sign-up";
+      const qodiaResponse = await fetch(QODIA_SIGNUP_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: lead.hfx_customer_number,
+          password: generatedPassword,
+        }),
+      });
+
+      if (qodiaResponse.ok) {
+        await supabase.from("leads").update({ qodia_synced: true }).eq("id", lead.id);
+        console.log(`Lead synced to Qodia: ${lead.hfx_customer_number}`);
+      } else {
+        const errText = await qodiaResponse.text();
+        console.error(`Qodia sync failed (${qodiaResponse.status}):`, errText);
+      }
     } catch (qodiaErr) {
       console.error("Qodia sync error:", qodiaErr);
     }
