@@ -680,6 +680,7 @@ export type Database = {
           plz: string
           praxis_name: string
           qodia_synced: boolean
+          registration_attempts: number
           salesforce_id: string | null
           salesforce_synced: boolean
           status: string
@@ -702,6 +703,7 @@ export type Database = {
           plz: string
           praxis_name: string
           qodia_synced?: boolean
+          registration_attempts?: number
           salesforce_id?: string | null
           salesforce_synced?: boolean
           status?: string
@@ -724,6 +726,7 @@ export type Database = {
           plz?: string
           praxis_name?: string
           qodia_synced?: boolean
+          registration_attempts?: number
           salesforce_id?: string | null
           salesforce_synced?: boolean
           status?: string

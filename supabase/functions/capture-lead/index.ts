@@ -393,6 +393,12 @@ Deno.serve(async (req) => {
         console.error("Error resending credentials:", emailErr);
       }
 
+      // Increment registration_attempts counter
+      await supabase
+        .from("leads")
+        .update({ registration_attempts: (existingLead.registration_attempts ?? 1) + 1 })
+        .eq("id", existingLead.id);
+
       return new Response(
         JSON.stringify({
           success: true,
