@@ -176,7 +176,77 @@ Deno.serve(async (req) => {
       ad_telefon: adTelefon,
     }).eq("id", tippLeadId);
 
-    // ── 3. Confirmation email to Tippgeber ─────────────────────────────────
+    // ── 3. Notification email to AD ────────────────────────────────────────
+    if (adEmail && RESEND_API_KEY) {
+      const adEmailHtml = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07);">
+      <!-- Header -->
+      <tr><td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:32px 24px;text-align:center;">
+        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Neuer Lead-Tipp eingegangen 🎯</h1>
+        <p style="margin:8px 0 0;color:#c7d7f5;font-size:14px;">Tippgeber: ${tippgeberName}</p>
+      </td></tr>
+      <!-- Body -->
+      <tr><td style="padding:28px 24px;">
+        <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hallo,</p>
+        <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
+          Ein neuer Lead-Tipp wurde durch einen Tippgeber eingereicht und Ihnen zugeordnet.
+        </p>
+        <!-- Lead details -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+          <tr><td style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Lead-Details</p>
+          </td></tr>
+          <tr><td style="padding:16px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;width:160px;">Arzt / Ärztin</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">${tip.arzt_name}</td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Praxis</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">${tip.praxis_name}</td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">PLZ</td><td style="padding:4px 0;font-size:13px;color:#111827;">${tip.plz}</td></tr>
+              ${tip.email ? `<tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">E-Mail Praxis</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="mailto:${tip.email}" style="color:#0b367f;">${tip.email}</a></td></tr>` : ""}
+              ${tip.telefon ? `<tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Telefon Praxis</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="tel:${tip.telefon}" style="color:#0b367f;">${tip.telefon}</a></td></tr>` : ""}
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Geschäftsbereich</td><td style="padding:4px 0;font-size:13px;color:#111827;">${tip.geschaeftsbereich}</td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;vertical-align:top;">Dienstleistung</td><td style="padding:4px 0;font-size:13px;color:#111827;">${tip.gewuenschte_dienstleistung}</td></tr>
+            </table>
+          </td></tr>
+        </table>
+        <!-- Tippgeber details -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+          <tr><td style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Empfohlen von</p>
+          </td></tr>
+          <tr><td style="padding:16px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;width:160px;">Tippgeber</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">${tippgeberName}</td></tr>
+              ${tippgeberEmail ? `<tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Kontakt</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="mailto:${tippgeberEmail}" style="color:#0b367f;">${tippgeberEmail}</a></td></tr>` : ""}
+            </table>
+          </td></tr>
+        </table>
+      </td></tr>
+      <!-- Footer -->
+      <tr><td style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#9ca3af;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${new Date().getFullYear()} HFX Honorarfuchs GmbH</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "noreply@hfx-honorarfuchs.de",
+          to: [adEmail],
+          subject: `Neuer Lead-Tipp: ${tip.praxis_name} (PLZ ${tip.plz})`,
+          html: adEmailHtml,
+        }),
+      });
+    }
+
+    // ── 4. Confirmation email to Tippgeber ─────────────────────────────────
     if (tippgeberEmail && RESEND_API_KEY) {
       const reservationDate = new Date(tip.reservation_until ?? Date.now() + 30 * 86400000);
       const formattedDate = reservationDate.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
