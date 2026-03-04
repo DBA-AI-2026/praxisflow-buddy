@@ -2,12 +2,13 @@ import { useState, useCallback, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Mail, FileText, Pencil, Eye, RotateCcw, Save, Loader2 } from "lucide-react";
+import { Mail, FileText, Pencil, Eye, RotateCcw, Save, Loader2, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import CodeMirror from "@uiw/react-codemirror";
 import { html } from "@codemirror/lang-html";
 import { oneDark } from "@codemirror/theme-one-dark";
+import { useUserRole } from "@/hooks/useUserRole";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK = {
@@ -437,6 +438,7 @@ function getHtmlForTemplate(id: TemplateId) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function EmailPreview() {
+  const { isAdmin } = useUserRole();
   const [activeModal, setActiveModal] = useState<{ template: Template; mode: "email" | "pdf" } | null>(null);
   const [editModal, setEditModal] = useState<{ template: Template; mode: "email" | "pdf" } | null>(null);
 
@@ -521,16 +523,21 @@ export default function EmailPreview() {
   };
 
   return (
-    <MainLayout title="E-Mail & PDF Vorschau" subtitle="Vorschau aller E-Mail- und PDF-Vorlagen">
+    <MainLayout title="E-Mail & PDF Vorschau" subtitle={isAdmin ? "Vorschau aller E-Mail- und PDF-Vorlagen" : "Nur-Lese-Ansicht – Bearbeitung nur für Admins"}>
       <div className="max-w-4xl mx-auto space-y-8">
 
         {/* Header */}
         <div className="rounded-xl border border-border bg-card p-6 flex items-center gap-3">
           <div className="flex-1">
             <h2 className="text-lg font-semibold text-foreground mb-1">Vorlagen-Übersicht</h2>
-            <p className="text-sm text-muted-foreground">Klicke auf eine Vorlage, um die Vorschau zu öffnen oder den Inhalt zu bearbeiten. Änderungen werden dauerhaft gespeichert.</p>
+            <p className="text-sm text-muted-foreground">
+              {isAdmin
+                ? "Klicke auf eine Vorlage, um die Vorschau zu öffnen oder den Inhalt zu bearbeiten. Änderungen werden dauerhaft gespeichert."
+                : "Klicke auf eine Vorlage, um die Vorschau zu öffnen. Das Bearbeiten ist nur Administratoren vorbehalten."}
+            </p>
           </div>
           {isLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+          {!isAdmin && <Lock className="w-4 h-4 text-muted-foreground" />}
         </div>
 
         {/* Template cards */}
@@ -560,25 +567,29 @@ export default function EmailPreview() {
                   <Eye className="w-3.5 h-3.5" />
                   E-Mail
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => openEdit(tpl, "email")}
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  Bearbeiten
-                </Button>
-                {hasCustom(tpl, "email") && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="px-2 text-muted-foreground"
-                    title="Zurücksetzen"
-                    onClick={() => resetTemplate(tpl, "email")}
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                  </Button>
+                {isAdmin && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => openEdit(tpl, "email")}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      Bearbeiten
+                    </Button>
+                    {hasCustom(tpl, "email") && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="px-2 text-muted-foreground"
+                        title="Zurücksetzen"
+                        onClick={() => resetTemplate(tpl, "email")}
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -594,25 +605,29 @@ export default function EmailPreview() {
                     <FileText className="w-3.5 h-3.5" />
                     PDF
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => openEdit(tpl, "pdf")}
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                    Bearbeiten
-                  </Button>
-                  {hasCustom(tpl, "pdf") && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="px-2 text-muted-foreground"
-                      title="Zurücksetzen"
-                      onClick={() => resetTemplate(tpl, "pdf")}
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                    </Button>
+                  {isAdmin && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => openEdit(tpl, "pdf")}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        Bearbeiten
+                      </Button>
+                      {hasCustom(tpl, "pdf") && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="px-2 text-muted-foreground"
+                          title="Zurücksetzen"
+                          onClick={() => resetTemplate(tpl, "pdf")}
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
               )}
