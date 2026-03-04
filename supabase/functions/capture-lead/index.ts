@@ -548,10 +548,9 @@ Deno.serve(async (req) => {
           ...(qodiaApiKey ? { "x-api-key": qodiaApiKey } : {}),
         },
         body: JSON.stringify({
-          username: lead.hfx_customer_number,
           email: email,
           password: generatedPassword,
-          name: `${vorname} ${nachname}`,
+          name: lead.hfx_customer_number,
         }),
       });
 
