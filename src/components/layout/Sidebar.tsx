@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Receipt,
   Lightbulb,
+  MapPin,
 } from "lucide-react";
 import logo from "@/assets/fox-logo.jpeg";
 import { useState } from "react";
@@ -81,6 +82,7 @@ const adminNavigation: NavItem[] = [
   { name: "Datenexport", href: "/export", icon: FileDown, roles: ["admin"], adminOnly: true },
   { name: "Audit-Protokoll", href: "/admin/audit-logs", icon: ClipboardList, roles: ["admin"], adminOnly: true },
   { name: "Einstellungen", href: "/admin/settings", icon: Settings, roles: ["admin"], adminOnly: true },
+  { name: "PLZ-Zuordnung", href: "/admin/plz-mapping", icon: MapPin, roles: ["admin", "sales_lead"], adminOnly: false },
   { name: "Dokumentation", href: "/admin/documentation", icon: FileText, roles: ["admin"], adminOnly: true },
 ];
 
