@@ -17,13 +17,13 @@ export const routePermissions: RoutePermission[] = [
   { path: "/umsaetze", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
   
   // Reservierungen
-  { path: "/reservierungen", allowedRoles: ["sales_partner", "regional_lead", "admin"] },
+  { path: "/reservierungen", allowedRoles: ["user", "sales_partner", "regional_lead", "admin"] },
   
   // Interessenten
-  { path: "/interessenten", allowedRoles: ["sales_partner", "sales_lead", "regional_lead", "admin"] },
+  { path: "/interessenten", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
   
   // Demo-Tracking
-  { path: "/demo-tracking", allowedRoles: ["sales_partner", "sales_lead", "regional_lead", "admin"] },
+  { path: "/demo-tracking", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
   
   // Sales Lead, Regional Lead and Admin routes
   { path: "/kalender", allowedRoles: ["sales_lead", "regional_lead", "admin"] },
@@ -33,7 +33,7 @@ export const routePermissions: RoutePermission[] = [
   // Vertrieb routes
   { path: "/vertrieb/vertriebler", allowedRoles: ["sales_lead", "regional_lead", "admin"] },
   { path: "/vertrieb/vertraege", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
-  { path: "/vertrieb/provisionen", allowedRoles: ["sales_lead", "regional_lead", "admin"] },
+  { path: "/vertrieb/provisionen", allowedRoles: ["user", "sales_lead", "regional_lead", "admin"] },
   
   // Rechnungen - Admin only
   { path: "/rechnungen", allowedRoles: ["admin"] },
