@@ -35,6 +35,7 @@ import EmailPreview from "./pages/tools/EmailPreview";
 import { PdfViewerOverlay } from "@/components/PdfViewerOverlay";
 import TippgeberPage from "./pages/Tippgeber";
 import Documentation from "./pages/admin/Documentation";
+import PlzMapping from "./pages/admin/PlzMapping";
 import Buchhaltung from "./pages/Buchhaltung";
 
 const queryClient = new QueryClient();
@@ -76,6 +77,7 @@ const App = () => (
             <Route path="/sicherheit" element={<ProtectedRoute><Sicherheit /></ProtectedRoute>} />
              <Route path="/tippgeber" element={<ProtectedRoute><TippgeberPage /></ProtectedRoute>} />
             <Route path="/admin/documentation" element={<ProtectedRoute><Documentation /></ProtectedRoute>} />
+            <Route path="/admin/plz-mapping" element={<ProtectedRoute><PlzMapping /></ProtectedRoute>} />
             <Route path="/buchhaltung" element={<ProtectedRoute><Buchhaltung /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

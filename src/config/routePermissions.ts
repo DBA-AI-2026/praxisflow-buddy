@@ -58,6 +58,9 @@ export const routePermissions: RoutePermission[] = [
   // Admin Tipp-Leads
   { path: "/admin/tipp-leads", allowedRoles: ["admin", "sales_lead"] },
 
+  // PLZ-Mapping Verwaltung
+  { path: "/admin/plz-mapping", allowedRoles: ["admin", "sales_lead"] },
+
   // Systemdokumentation
   { path: "/admin/documentation", allowedRoles: ["admin"] },
 
