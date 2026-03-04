@@ -622,36 +622,39 @@ export default function AdminUsers() {
                   <Eye className="h-4 w-4 text-muted-foreground" />
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">E-Mail-Vorschau</span>
                 </div>
-                <div className="p-4 bg-[#f9fafb]">
-                  {/* Simulated email */}
-                  <div style={{ fontFamily: "Arial, sans-serif", maxWidth: "500px", margin: "0 auto" }}>
-                    <div style={{ background: "linear-gradient(135deg, #f97316, #ea580c)", color: "white", padding: "24px 20px", borderRadius: "8px 8px 0 0", textAlign: "center" }}>
-                      <div style={{ fontSize: "24px", fontWeight: "bold", margin: 0 }}>🦊 Willkommen!</div>
-                      <div style={{ margin: "8px 0 0 0", opacity: 0.9, fontSize: "14px" }}>HFX Sales Portal</div>
+                <div className="p-4 bg-[#f5f5f5]">
+                  <div style={{ fontFamily: "verdana, geneva, sans-serif", maxWidth: "500px", margin: "0 auto", backgroundColor: "#ffffff", borderRadius: "8px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+                    {/* Header */}
+                    <div style={{ backgroundColor: "#0b367f", padding: "24px 32px", textAlign: "center" }}>
+                      <div style={{ color: "#ffffff", fontSize: "20px", fontWeight: "bold", margin: 0 }}>🦊 Willkommen!</div>
+                      <div style={{ color: "#c8d8f0", fontSize: "12px", marginTop: "6px" }}>HFX Sales Portal · das Portal für den Vertrieb</div>
                     </div>
-                    <div style={{ background: "white", padding: "24px 20px", border: "1px solid #e5e7eb", borderTop: "none" }}>
-                      <p style={{ margin: "0 0 12px 0", fontSize: "14px" }}>Hallo <strong>{selectedUser.full_name}</strong>,</p>
-                      <p style={{ margin: "0 0 16px 0", fontSize: "13px", color: "#555" }}>Ihr Benutzerkonto wurde erfolgreich erstellt. Sie wurden als <strong>{roleConfig[selectedUser.role]?.label}</strong> registriert.</p>
-                      <div style={{ background: "#f3f4f6", borderRadius: "8px", border: "1px solid #e5e7eb", padding: "16px", marginBottom: "16px" }}>
-                        <div style={{ fontWeight: "bold", color: "#374151", marginBottom: "12px", fontSize: "13px" }}>Ihre Zugangsdaten</div>
-                        <div style={{ marginBottom: "10px" }}>
-                          <div style={{ fontSize: "11px", fontWeight: "bold", color: "#6b7280", textTransform: "uppercase", marginBottom: "4px" }}>Registrierte E-Mail-Adresse</div>
-                          <div style={{ fontSize: "13px", background: "white", padding: "8px 10px", borderRadius: "6px", fontFamily: "monospace", border: "1px solid #e5e7eb" }}>{selectedUser.email}</div>
+                    {/* Body */}
+                    <div style={{ padding: "24px 32px" }}>
+                      <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#333" }}>Hallo <strong>{selectedUser.full_name}</strong>,</p>
+                      <p style={{ margin: "0 0 18px 0", fontSize: "12px", color: "#555" }}>Ihr Benutzerkonto wurde erfolgreich erstellt. Sie wurden als <strong>{roleConfig[selectedUser.role]?.label}</strong> registriert.</p>
+                      {/* Credentials Box */}
+                      <div style={{ backgroundColor: "#f0f4f8", borderRadius: "8px", border: "1px solid #d0d5dd", padding: "14px 16px", marginBottom: "18px", lineHeight: "22px" }}>
+                        <div style={{ fontSize: "10px", fontWeight: "bold", color: "#0b367f", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "10px" }}>Ihre Zugangsdaten</div>
+                        <div style={{ fontSize: "12px", color: "#444" }}>
+                          <strong>Registrierte E-Mail-Adresse:</strong> {selectedUser.email}
                         </div>
-                        <div>
-                          <div style={{ fontSize: "11px", fontWeight: "bold", color: "#6b7280", textTransform: "uppercase", marginBottom: "4px" }}>Temporäres Passwort</div>
-                          <div style={{ fontSize: "13px", background: "white", padding: "8px 10px", borderRadius: "6px", fontFamily: "monospace", border: "1px dashed #d1d5db", color: "#9ca3af" }}>wird beim Versand generiert</div>
+                        <div style={{ fontSize: "12px", color: "#444", marginTop: "6px" }}>
+                          <strong>Temporäres Passwort:</strong> <span style={{ background: "#fff", padding: "1px 8px", borderRadius: "4px", fontFamily: "monospace", fontSize: "13px", border: "1px solid #e5e7eb", color: "#9ca3af" }}>wird beim Versand generiert</span>
                         </div>
                       </div>
+                      {/* Button */}
                       <div style={{ textAlign: "center", marginBottom: "16px" }}>
-                        <div style={{ display: "inline-block", background: "#f97316", color: "white", padding: "10px 24px", borderRadius: "6px", fontWeight: "bold", fontSize: "13px" }}>Zum Portal anmelden</div>
+                        <div style={{ display: "inline-block", backgroundColor: "#0b367f", color: "white", padding: "10px 28px", borderRadius: "6px", fontWeight: "bold", fontSize: "12px" }}>Zum Portal anmelden</div>
                       </div>
-                      <div style={{ background: "#fef3c7", border: "1px solid #f59e0b", padding: "10px 12px", borderRadius: "6px", fontSize: "12px", color: "#92400e" }}>
-                        ⚠️ <strong>Wichtig:</strong> Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung.
+                      {/* Warning */}
+                      <div style={{ background: "#fff8e1", border: "1px solid #f59e0b", padding: "10px 12px", borderRadius: "6px", fontSize: "11px", color: "#92400e" }}>
+                        ⚠️ <strong>Wichtig:</strong> Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung unter Einstellungen → Sicherheit.
                       </div>
                     </div>
-                    <div style={{ background: "#f9fafb", padding: "14px 20px", border: "1px solid #e5e7eb", borderTop: "none", borderRadius: "0 0 8px 8px", fontSize: "12px", color: "#6b7280", textAlign: "center" }}>
-                      Bei Fragen wenden Sie sich bitte an Ihren Administrator.
+                    {/* Footer */}
+                    <div style={{ backgroundColor: "#f8f8f8", padding: "12px 32px", borderTop: "1px solid #eeeeee", textAlign: "center", fontSize: "11px", color: "#aaaaaa" }}>
+                      © Honorarfuchs GmbH · Bei Fragen: info@honorarfuchs.de
                     </div>
                   </div>
                 </div>

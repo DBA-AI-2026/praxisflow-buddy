@@ -129,53 +129,44 @@ Deno.serve(async (req) => {
         try {
           const portalUrl = "https://praxisflow-buddy.lovable.app";
           await resend.emails.send({
-            from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+            from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
             to: [email],
-            subject: "Ihr Passwort wurde zurückgesetzt - HFX Sales Portal",
-            html: `
-              <!DOCTYPE html>
-              <html>
-              <head>
-                <style>
-                  body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-                  .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                  .header { background: linear-gradient(135deg, #f97316, #ea580c); color: white; padding: 30px 20px; border-radius: 8px 8px 0 0; text-align: center; }
-                  .content { background: #f9fafb; padding: 30px 20px; border: 1px solid #e5e7eb; border-top: none; }
-                  .info-box { background: #fef3c7; border: 1px solid #f59e0b; padding: 16px; border-radius: 8px; margin: 20px 0; }
-                  .button { display: inline-block; background: #f97316; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 10px; }
-                  .footer { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; font-size: 14px; color: #6b7280; }
-                </style>
-              </head>
-              <body>
-                <div class="container">
-                  <div class="header">
-                    <h1 style="margin: 0; font-size: 28px;">🔐 Passwort zurückgesetzt</h1>
-                    <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">HFX Sales Portal</p>
-                  </div>
-                  <div class="content">
-                    <p style="font-size: 16px;">Hallo <strong>${existingUser?.user_metadata?.full_name || fullName}</strong>,</p>
-                    <p>Ihr Passwort für das HFX Sales Portal wurde von einem Administrator zurückgesetzt.</p>
-                    
-                    <div class="info-box">
-                      <p style="margin: 0; color: #92400e;">
-                        <strong>⚠️ Wichtig:</strong> Sie erhalten in Kürze eine weitere E-Mail mit Ihren neuen Zugangsdaten.
-                      </p>
-                    </div>
-                    
-                    <p>Falls Sie diese Änderung nicht angefordert haben, kontaktieren Sie bitte umgehend Ihren Administrator.</p>
-                    
-                    <div style="text-align: center; margin: 25px 0;">
-                      <a href="${portalUrl}" class="button" style="color: white;">Zum Portal</a>
-                    </div>
-                  </div>
-                  <div class="footer">
-                    <p style="margin: 0;">Bei Fragen wenden Sie sich bitte an Ihren Administrator.</p>
-                    <p style="margin: 10px 0 0 0; font-size: 12px;">© Honorarfuchs - HFX Sales Portal</p>
-                  </div>
-                </div>
-              </body>
-              </html>
-            `,
+            subject: "Ihr Passwort wurde zurückgesetzt – HFX Sales Portal",
+            html: `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:verdana,geneva,sans-serif;">
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f5f5f5;padding:20px 0;">
+<tr><td align="center">
+<table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+  <tr>
+    <td style="background-color:#0b367f;padding:30px 40px;text-align:center;">
+      <h1 style="color:#ffffff;font-size:22pt;margin:0;font-family:verdana,geneva,sans-serif;">🦊 HFX Sales Portal</h1>
+      <p style="color:#c8d8f0;font-size:11pt;margin:8px 0 0 0;">Passwort zurückgesetzt</p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:32px 40px;">
+      <p style="font-size:12pt;color:#333333;margin:0 0 16px 0;">Hallo <strong>${existingUser?.user_metadata?.full_name || fullName}</strong>,</p>
+      <p style="font-size:11pt;color:#555555;margin:0 0 24px 0;">Ihr Passwort für das HFX Sales Portal wurde von einem Administrator zurückgesetzt.</p>
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#fff8e1;border-radius:8px;border:1px solid #f59e0b;margin-bottom:24px;">
+        <tr><td style="padding:16px 20px;font-size:11pt;color:#92400e;">
+          <strong>⚠️ Wichtig:</strong> Sie erhalten in Kürze eine weitere E-Mail mit Ihren neuen Zugangsdaten.
+        </td></tr>
+      </table>
+      <p style="font-size:10pt;color:#888888;margin:0 0 8px 0;">Falls Sie diese Änderung nicht angefordert haben, kontaktieren Sie bitte umgehend Ihren Administrator.</p>
+    </td>
+  </tr>
+  <tr>
+    <td style="background-color:#f8f8f8;padding:16px 40px;border-top:1px solid #eeeeee;text-align:center;">
+      <p style="font-size:9pt;color:#aaaaaa;margin:0;">© Honorarfuchs GmbH · Bei Fragen: info@honorarfuchs.de</p>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`,
           });
           console.log("Password reset notification sent to:", email);
         } catch (notifyError) {
@@ -260,65 +251,55 @@ Deno.serve(async (req) => {
         const roleLabel = roleLabels[role] || role;
 
         const emailResponse = await resend.emails.send({
-          from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+          from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
           to: [email],
           subject: "Ihre Zugangsdaten für das HFX Sales Portal",
-          html: `
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: linear-gradient(135deg, #f97316, #ea580c); color: white; padding: 30px 20px; border-radius: 8px 8px 0 0; text-align: center; }
-                .content { background: #f9fafb; padding: 30px 20px; border: 1px solid #e5e7eb; border-top: none; }
-                .credentials { background: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin: 20px 0; }
-                .field { margin-bottom: 15px; }
-                .label { font-weight: bold; color: #6b7280; font-size: 12px; text-transform: uppercase; margin-bottom: 4px; }
-                .value { font-size: 16px; background: #f3f4f6; padding: 10px 12px; border-radius: 6px; font-family: monospace; }
-                .button { display: inline-block; background: #f97316; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 10px; }
-                .footer { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; font-size: 14px; color: #6b7280; }
-                .warning { background: #fef3c7; border: 1px solid #f59e0b; padding: 12px; border-radius: 6px; margin-top: 15px; font-size: 14px; color: #92400e; }
-              </style>
-            </head>
-            <body>
-              <div class="container">
-                <div class="header">
-                  <h1 style="margin: 0; font-size: 28px;">🦊 Willkommen!</h1>
-                  <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">HFX Sales Portal</p>
-                </div>
-                <div class="content">
-                  <p style="font-size: 16px;">Hallo <strong>${fullName}</strong>,</p>
-                  <p>Ihr Benutzerkonto wurde erfolgreich erstellt. Sie wurden als <strong>${roleLabel}</strong> registriert.</p>
-                  
-                  <div class="credentials">
-                    <h3 style="margin-top: 0; color: #374151;">Ihre Zugangsdaten</h3>
-                    <div class="field">
-                      <div class="label">E-Mail</div>
-                      <div class="value">${email}</div>
-                    </div>
-                    <div class="field">
-                      <div class="label">Temporäres Passwort</div>
-                      <div class="value">${password}</div>
-                    </div>
-                  </div>
-                  
-                  <div style="text-align: center; margin: 25px 0;">
-                    <a href="${portalUrl}" class="button" style="color: white;">Zum Portal anmelden</a>
-                  </div>
-                  
-                  <div class="warning">
-                    ⚠️ <strong>Wichtig:</strong> Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung.
-                  </div>
-                </div>
-                <div class="footer">
-                  <p style="margin: 0;">Bei Fragen wenden Sie sich bitte an Ihren Administrator.</p>
-                  <p style="margin: 10px 0 0 0; font-size: 12px;">© Honorarfuchs - HFX Sales Portal</p>
-                </div>
-              </div>
-            </body>
-            </html>
-          `,
+          html: `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:verdana,geneva,sans-serif;">
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f5f5f5;padding:20px 0;">
+<tr><td align="center">
+<table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+  <tr>
+    <td style="background-color:#0b367f;padding:30px 40px;text-align:center;">
+      <h1 style="color:#ffffff;font-size:22pt;margin:0;font-family:verdana,geneva,sans-serif;">🦊 Willkommen!</h1>
+      <p style="color:#c8d8f0;font-size:11pt;margin:8px 0 0 0;">HFX Sales Portal · das Portal für den Vertrieb</p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:32px 40px;">
+      <p style="font-size:12pt;color:#333333;margin:0 0 12px 0;">Hallo <strong>${fullName}</strong>,</p>
+      <p style="font-size:11pt;color:#555555;margin:0 0 24px 0;">Ihr Benutzerkonto wurde erfolgreich erstellt. Sie wurden als <strong>${roleLabel}</strong> registriert.</p>
+      <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8;border-radius:8px;border:1px solid #d0d5dd;margin-bottom:24px;">
+        <tr><td align="left" valign="top" style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:20pt;">
+          <strong style="font-size:10pt;color:#0b367f;text-transform:uppercase;letter-spacing:0.5px;">Ihre Zugangsdaten</strong><br><br>
+          <strong>Registrierte E-Mail-Adresse:</strong> ${email}<br>
+          <strong>Temporäres Passwort:</strong> <code style="background:#fff;padding:2px 8px;border-radius:4px;font-size:13pt;letter-spacing:1px;">${password}</code>
+        </td></tr>
+      </table>
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">
+        <tr><td align="center">
+          <a href="${portalUrl}" style="display:inline-block;background-color:#0b367f;color:#ffffff;font-family:verdana,geneva,sans-serif;font-size:12pt;font-weight:bold;padding:12px 32px;border-radius:6px;text-decoration:none;">Zum Portal anmelden</a>
+        </td></tr>
+      </table>
+      <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background:#fff8e1;border-radius:6px;border:1px solid #f59e0b;">
+        <tr><td style="font-size:10pt;color:#92400e;font-family:verdana,geneva,sans-serif;">
+          ⚠️ <strong>Wichtig:</strong> Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung unter Einstellungen → Sicherheit.
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="background-color:#f8f8f8;padding:16px 40px;border-top:1px solid #eeeeee;text-align:center;">
+      <p style="font-size:9pt;color:#aaaaaa;margin:0;">© Honorarfuchs GmbH · Bei Fragen: info@honorarfuchs.de</p>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`,
         });
 
         console.log("Welcome email sent successfully:", emailResponse);
