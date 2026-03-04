@@ -29,7 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Eye, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, Send, UserCheck } from "lucide-react";
+import { Search, Eye, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, Send, UserCheck, FilePlus } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -43,6 +43,7 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   neu: { label: "Neu", variant: "default" },
   kontaktiert: { label: "Kontaktiert", variant: "secondary" },
   qualifiziert: { label: "Qualifiziert", variant: "outline" },
+  vertrag: { label: "Vertrag", variant: "outline" },
   abgelehnt: { label: "Abgelehnt", variant: "destructive" },
   kunde: { label: "Kunde", variant: "default" },
 };
@@ -183,6 +184,7 @@ export default function Interessenten() {
               <SelectItem value="neu">Neu</SelectItem>
               <SelectItem value="kontaktiert">Kontaktiert</SelectItem>
               <SelectItem value="qualifiziert">Qualifiziert</SelectItem>
+              <SelectItem value="vertrag">Vertrag</SelectItem>
               <SelectItem value="abgelehnt">Abgelehnt</SelectItem>
             </SelectContent>
           </Select>
@@ -281,9 +283,11 @@ export default function Interessenten() {
                             <Badge variant={sc.variant} className="text-xs">{sc.label}</Badge>
                           </SelectTrigger>
                           <SelectContent>
-                            {Object.entries(statusConfig).map(([key, cfg]) => (
-                              <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
-                            ))}
+                            {Object.entries(statusConfig)
+                              .filter(([key]) => key !== "kunde") // "kunde" is set automatically
+                              .map(([key, cfg]) => (
+                                <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
                       </TableCell>
@@ -329,9 +333,45 @@ export default function Interessenten() {
                         {format(new Date(lead.created_at), "dd.MM.yy HH:mm", { locale: de })}
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => setSelectedLead(lead)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => setSelectedLead(lead)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {lead.status !== "kunde" && lead.status !== "abgelehnt" && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-primary hover:text-primary"
+                                    onClick={() => {
+                                      updateStatusMutation.mutate({ id: lead.id, status: "vertrag" });
+                                      navigate("/vertrieb/vertraege", {
+                                        state: {
+                                          fromLead: {
+                                            lead_id: lead.id,
+                                            hfx_customer_number: lead.hfx_customer_number,
+                                            praxis: lead.praxis_name,
+                                            vorname: lead.vorname,
+                                            nachname: lead.nachname,
+                                            email: lead.email,
+                                            plz: lead.plz,
+                                            telefon: lead.mobilnummer,
+                                            mp_nr: lead.mp_nummer || "",
+                                          },
+                                        },
+                                      });
+                                    }}
+                                  >
+                                    <FilePlus className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Vertrag erstellen</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -429,10 +469,11 @@ export default function Interessenten() {
                   onClick={() => {
                     const lead = selectedLead;
                     setSelectedLead(null);
-                    updateStatusMutation.mutate({ id: lead.id, status: "kunde" });
+                    updateStatusMutation.mutate({ id: lead.id, status: "vertrag" });
                     navigate("/vertrieb/vertraege", {
                       state: {
                         fromLead: {
+                          lead_id: lead.id,
                           hfx_customer_number: lead.hfx_customer_number,
                           praxis: lead.praxis_name,
                           vorname: lead.vorname,
@@ -446,8 +487,8 @@ export default function Interessenten() {
                     });
                   }}
                 >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Zum Vertrag konvertieren
+                  <FilePlus className="h-4 w-4 mr-2" />
+                  Vertrag erstellen
                 </Button>
               </div>
             </div>

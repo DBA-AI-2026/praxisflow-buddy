@@ -308,12 +308,16 @@ export default function Vertraege() {
     return () => clearTimeout(timer);
   }, [dialogOpen, form.signature_data, form.vertrieb_signature_data]);
 
+  // Also store lead_id for back-linking
+  const [fromLeadId, setFromLeadId] = useState<string | null>(null);
+
   // Auto-open form when navigating from lead conversion
   useEffect(() => {
     const state = location.state as { fromLead?: Record<string, string> } | null;
     if (state?.fromLead) {
       const lead = state.fromLead;
       setLeadHfxNumber(lead.hfx_customer_number || null);
+      setFromLeadId(lead.lead_id || null);
       setForm({
         ...emptyForm,
         praxis: lead.praxis || "",
@@ -659,6 +663,7 @@ export default function Vertraege() {
     setDialogOpen(false);
     setEditId(null);
     setLeadHfxNumber(null);
+    setFromLeadId(null);
     setForm(emptyForm);
     setFile(null);
   };
@@ -757,6 +762,49 @@ export default function Vertraege() {
       toast({ title: "Fehler beim Statuswechsel", description: error.message, variant: "destructive" });
       return;
     }
+
+    // When contract is signed/activated: convert linked lead to "kunde" and add to Kunden
+    if (newStatus === "aktiv" || newStatus === "gezeichnet") {
+      // Find the contract to get the hfx_customer_number
+      const contract = contracts.find((c: any) => c.id === contractId);
+      if (contract?.hfx_customer_number) {
+        // Update lead status to "kunde"
+        await supabase
+          .from("leads")
+          .update({ status: "kunde" })
+          .eq("hfx_customer_number", contract.hfx_customer_number);
+
+        // If activating (final step), create/upsert praxen entry
+        if (newStatus === "aktiv") {
+          const { data: existingPraxis } = await supabase
+            .from("praxen")
+            .select("id")
+            .eq("mp_nr", contract.hfx_customer_number)
+            .maybeSingle();
+
+          if (!existingPraxis) {
+            await supabase.from("praxen").insert({
+              name: contract.praxis || contract.customer_name,
+              adresse: contract.adresse || null,
+              plz: contract.plz || null,
+              ort: contract.ort || null,
+              telefon: contract.telefon || null,
+              email: contract.email || null,
+              mp_nr: contract.mp_nr || null,
+              produkt: contract.product_name || null,
+              module: contract.modules || [],
+              preis: contract.monthly_price || 0,
+              buchungs_datum: new Date().toISOString().split("T")[0],
+              status: "aktiv",
+            });
+            queryClient.invalidateQueries({ queryKey: ["praxen"] });
+            toast({ title: "Kunde angelegt", description: `${contract.praxis || contract.customer_name} wurde zu den Kunden hinzugefügt.` });
+          }
+        }
+        queryClient.invalidateQueries({ queryKey: ["leads"] });
+      }
+    }
+
     queryClient.invalidateQueries({ queryKey: ["contracts"] });
     toast({ title: "Status aktualisiert", description: `Status auf „${statusConfig[newStatus]?.label ?? newStatus}" gesetzt.` });
   };
