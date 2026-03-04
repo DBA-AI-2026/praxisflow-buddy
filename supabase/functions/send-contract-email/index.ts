@@ -54,6 +54,19 @@ Deno.serve(async (req) => {
 
     const { email, salesPartnerEmail, customerName, pdfBase64, products, startDate, hfxNumber } = await req.json();
 
+    // Check email notification settings
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    const { data: emailSettings } = await supabaseAdmin
+      .from("email_notification_settings")
+      .select("setting_key, is_enabled")
+      .in("setting_key", ["contract_email_customer", "contract_email_partner"]);
+    const settingsMap = Object.fromEntries((emailSettings ?? []).map((s: any) => [s.setting_key, s.is_enabled]));
+    const customerEmailEnabled = settingsMap["contract_email_customer"] !== false;
+    const partnerEmailEnabled = settingsMap["contract_email_partner"] !== false;
+
     if (!email && !salesPartnerEmail) {
       return new Response(
         JSON.stringify({ error: "At least one email address is required" }),
@@ -83,7 +96,7 @@ Deno.serve(async (req) => {
     const results: Record<string, any> = {};
 
     // --- Customer email ---
-    if (email) {
+    if (email && customerEmailEnabled) {
       const customerHtml = `<!DOCTYPE html><html><head><style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -119,7 +132,7 @@ Deno.serve(async (req) => {
     }
 
     // --- Sales partner email ---
-    if (salesPartnerEmail) {
+    if (salesPartnerEmail && partnerEmailEnabled) {
       const partnerHtml = `<!DOCTYPE html><html><head><style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }

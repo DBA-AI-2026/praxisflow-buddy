@@ -90,9 +90,17 @@ Deno.serve(async (req) => {
     const tippgeberEmail = profile?.email ?? null;
     const tippgeberName = profile?.full_name ?? "Tippgeber";
 
-    if (!tippgeberEmail || !RESEND_API_KEY) {
+    // Check email notification settings
+    const { data: emailSettings } = await supabase
+      .from("email_notification_settings")
+      .select("setting_key, is_enabled")
+      .eq("setting_key", "tipp_status_notification");
+    const tippStatusEnabled = (emailSettings?.[0]?.is_enabled) !== false;
+
+    if (!tippgeberEmail || !RESEND_API_KEY || !tippStatusEnabled) {
+      const reason = !tippStatusEnabled ? "E-Mail-Benachrichtigung deaktiviert" : "Keine E-Mail-Adresse hinterlegt";
       return new Response(
-        JSON.stringify({ success: true, email_sent: false, reason: "Keine E-Mail-Adresse hinterlegt" }),
+        JSON.stringify({ success: true, email_sent: false, reason }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

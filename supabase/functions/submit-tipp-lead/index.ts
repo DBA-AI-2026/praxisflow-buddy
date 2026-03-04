@@ -176,8 +176,17 @@ Deno.serve(async (req) => {
       ad_telefon: adTelefon,
     }).eq("id", tippLeadId);
 
-    // ── 3. Notification email to AD ────────────────────────────────────────
-    if (adEmail && RESEND_API_KEY) {
+    // ── 3. Load email notification settings ───────────────────────────────
+    const { data: emailSettings } = await supabase
+      .from("email_notification_settings")
+      .select("setting_key, is_enabled")
+      .in("setting_key", ["tipp_lead_ad_notification", "tipp_lead_tippgeber_confirmation"]);
+    const settingsMap = Object.fromEntries((emailSettings ?? []).map((s: any) => [s.setting_key, s.is_enabled]));
+    const adNotifEnabled = settingsMap["tipp_lead_ad_notification"] !== false;
+    const tippgeberConfirmEnabled = settingsMap["tipp_lead_tippgeber_confirmation"] !== false;
+
+    // ── 4. Notification email to AD ────────────────────────────────────────
+    if (adEmail && RESEND_API_KEY && adNotifEnabled) {
       const adEmailHtml = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
@@ -246,8 +255,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── 4. Confirmation email to Tippgeber ─────────────────────────────────
-    if (tippgeberEmail && RESEND_API_KEY) {
+    // ── 5. Confirmation email to Tippgeber ─────────────────────────────────
+    if (tippgeberEmail && RESEND_API_KEY && tippgeberConfirmEnabled) {
       const reservationDate = new Date(tip.reservation_until ?? Date.now() + 30 * 86400000);
       const formattedDate = reservationDate.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
 

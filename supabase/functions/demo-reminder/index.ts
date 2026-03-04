@@ -37,6 +37,15 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
+    // Load email notification settings
+    const { data: emailSettings } = await supabase
+      .from("email_notification_settings")
+      .select("setting_key, is_enabled")
+      .in("setting_key", ["demo_expiry_customer_reminder", "demo_expiry_ad_notification"]);
+    const settingsMap = Object.fromEntries((emailSettings ?? []).map((s: any) => [s.setting_key, s.is_enabled]));
+    const customerReminderEnabled = settingsMap["demo_expiry_customer_reminder"] !== false;
+    const adNotifEnabled = settingsMap["demo_expiry_ad_notification"] !== false;
+
     console.log(`Found ${demos?.length ?? 0} demos expiring on ${dateStr}`);
 
     let sent = 0;
@@ -105,7 +114,11 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
-      const res = await fetch("https://api.resend.com/emails", {
+      if (!customerReminderEnabled) {
+        console.log(`Customer reminder disabled, skipping customer email for ${demo.email}`);
+      }
+
+      const res = customerReminderEnabled ? await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -117,10 +130,10 @@ Deno.serve(async (req) => {
           subject: `⏰ Erinnerung: Ihre Testphase endet am ${testEndFormatted}`,
           html,
         }),
-      });
+      }) : { ok: true };
 
       if (res.ok) {
-        sent++;
+        if (customerReminderEnabled) sent++;
         console.log(`Reminder sent to ${demo.email} for demo ${demo.id}`);
         // Mark as sent to prevent duplicates
         await supabase
@@ -206,6 +219,7 @@ Deno.serve(async (req) => {
 </table>
 </body></html>`;
 
+          if (adNotifEnabled) {
           await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
@@ -217,6 +231,7 @@ Deno.serve(async (req) => {
             }),
           });
           console.log(`AD reminder sent to ${adEmail} for demo ${demo.id}`);
+          } // end adNotifEnabled
         }
       } else {
         failed++;
