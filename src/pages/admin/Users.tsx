@@ -52,7 +52,7 @@ const roleConfig: Record<AppRole, { label: string; color: string }> = {
   regional_lead: { label: "Regionalleiter", color: "bg-orange-100 text-orange-800" },
   sales_partner: { label: "Vertriebspartner", color: "bg-blue-100 text-blue-800" },
   tippgeber: { label: "Tippgeber", color: "bg-yellow-100 text-yellow-800" },
-  user: { label: "Benutzer", color: "bg-secondary text-secondary-foreground" },
+  user: { label: "Gebietsleiter", color: "bg-secondary text-secondary-foreground" },
 };
 
 export default function AdminUsers() {
@@ -233,7 +233,7 @@ export default function AdminUsers() {
           { icon: Users, label: "Regionalleiter", count: regionalLeadCount, iconBg: "bg-orange-100", iconColor: "text-orange-700", badge: "bg-orange-100 text-orange-800", desc: "Sieht eigene und Team-Daten. Verwaltet Reservierungen, Interessenten und Provisionen des Teams." },
           { icon: Users, label: "Vertriebspartner", count: salesPartnerCount, iconBg: "bg-blue-100", iconColor: "text-blue-700", badge: "bg-blue-100 text-blue-800", desc: "Eigene Reservierungen, Interessenten, Demo-Downloads. Sieht nur eigene Kunden, Tickets, Umsätze." },
           { icon: Users, label: "Tippgeber", count: tippgeberCount, iconBg: "bg-yellow-100", iconColor: "text-yellow-700", badge: "bg-yellow-100 text-yellow-800", desc: "Reicht Empfehlungen ein. Sieht eigene Tipps mit 30-Tage-Reservierung. Kein Zugriff auf Vertriebsdaten." },
-          { icon: Users, label: "Benutzer", count: userCount, iconBg: "bg-secondary", iconColor: "text-secondary-foreground", badge: "bg-secondary text-secondary-foreground", desc: "Basiszugang: Dashboard, Kunden, Tickets, Lizenzen, Umsätze und Verträge einsehen." },
+          { icon: Users, label: "Gebietsleiter", count: userCount, iconBg: "bg-secondary", iconColor: "text-secondary-foreground", badge: "bg-secondary text-secondary-foreground", desc: "Basiszugang: Dashboard, Kunden, Tickets, Lizenzen, Umsätze und Verträge einsehen." },
         ].map((r) => (
           <div key={r.label} className="stat-card flex items-start gap-3 py-3">
             <div className={`rounded-lg p-2.5 ${r.iconBg} shrink-0 mt-0.5`}>
@@ -399,7 +399,7 @@ export default function AdminUsers() {
                     <SelectValue />
                   </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="user">Benutzer</SelectItem>
+                    <SelectItem value="user">Gebietsleiter</SelectItem>
                     <SelectItem value="sales_partner">Vertriebspartner</SelectItem>
                     <SelectItem value="regional_lead">Regionalleiter</SelectItem>
                     <SelectItem value="sales_lead">Vertriebsleitung</SelectItem>

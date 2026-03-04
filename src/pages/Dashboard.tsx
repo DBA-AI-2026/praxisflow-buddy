@@ -27,7 +27,7 @@ function getRoleLabel(role: string | null): string {
     sales_lead: "Sales Lead",
     vertragsabteilung: "Vertragsabteilung",
     regional_lead: "Regional Lead",
-    user: "Benutzer",
+    user: "Gebietsleiter",
   };
   return role ? labels[role] ?? role : "";
 }

@@ -348,7 +348,7 @@ export default function AccessRequests() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="user">Benutzer</SelectItem>
+                    <SelectItem value="user">Gebietsleiter</SelectItem>
                     <SelectItem value="sales_partner">Vertriebspartner</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>

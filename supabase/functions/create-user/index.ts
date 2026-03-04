@@ -12,7 +12,7 @@ const roleLabels: Record<string, string> = {
   admin: "Administrator",
   sales_partner: "Vertriebspartner",
   sales_lead: "Vertriebsleitung",
-  user: "Benutzer",
+  user: "Gebietsleiter",
 };
 
 Deno.serve(async (req) => {

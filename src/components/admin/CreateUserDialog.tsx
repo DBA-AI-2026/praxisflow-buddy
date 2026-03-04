@@ -224,7 +224,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="user">Benutzer</SelectItem>
+                    <SelectItem value="user">Gebietsleiter</SelectItem>
                     <SelectItem value="sales_partner">Vertriebspartner</SelectItem>
                     <SelectItem value="regional_lead">Regionalleiter</SelectItem>
                     <SelectItem value="sales_lead">Vertriebsleitung</SelectItem>
