@@ -64,19 +64,22 @@ const allgemeinNavigation: NavItem[] = [
   { name: "Sicherheit (2FA)", href: "/sicherheit", icon: ShieldCheck, roles: allRoles },
 ];
 
+const vertriebsAdminNavigation: NavItem[] = [
+  { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users, roles: ["sales_lead", "regional_lead", "admin"] },
+  { name: "Provisionen", href: "/vertrieb/provisionen", icon: BarChart3, roles: ["user", "sales_lead", "regional_lead", "admin"] },
+  { name: "Tipp-Leads", href: "/admin/tipp-leads", icon: Lightbulb, roles: ["admin", "sales_lead"] },
+  { name: "PLZ-Zuordnung", href: "/admin/plz-mapping", icon: MapPin, roles: ["admin", "sales_lead"] },
+];
+
 const adminNavigation: NavItem[] = [
   { name: "Zugangsanfragen", href: "/admin/access-requests", icon: UserPlus, roles: ["admin"], adminOnly: true },
   { name: "Benutzerverwaltung", href: "/admin/users", icon: Users, roles: ["admin"], adminOnly: true },
-  { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users, roles: ["sales_lead", "regional_lead", "admin"] },
-  { name: "Provisionen", href: "/vertrieb/provisionen", icon: BarChart3, roles: ["user", "sales_lead", "regional_lead", "admin"] },
   { name: "Produktverwaltung", href: "/admin/products", icon: Package, roles: ["admin"], adminOnly: true },
-  { name: "Tipp-Leads", href: "/admin/tipp-leads", icon: Lightbulb, roles: ["admin", "sales_lead"], adminOnly: false },
   { name: "Rechnungen", href: "/rechnungen", icon: Receipt, roles: ["admin"], adminOnly: true },
   { name: "Buchhaltung", href: "/buchhaltung", icon: TrendingUp, roles: ["admin"], adminOnly: true },
   { name: "Datenexport", href: "/export", icon: FileDown, roles: ["admin"], adminOnly: true },
   { name: "Audit-Protokoll", href: "/admin/audit-logs", icon: ClipboardList, roles: ["admin"], adminOnly: true },
   { name: "Einstellungen", href: "/admin/settings", icon: Settings, roles: ["admin"], adminOnly: true },
-  { name: "PLZ-Zuordnung", href: "/admin/plz-mapping", icon: MapPin, roles: ["admin", "sales_lead"], adminOnly: false },
   { name: "Dokumentation", href: "/admin/documentation", icon: FileText, roles: ["admin"], adminOnly: true },
 ];
 
@@ -185,6 +188,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <NavSection label="Übersicht" items={dashboardNav} {...sectionProps} />
         <NavSection label="Vertrieb" items={vertriebNavigation} {...sectionProps} />
         <NavSection label="Allgemein" items={allgemeinNavigation} {...sectionProps} />
+        <NavSection label="Vertriebs-Admin" items={vertriebsAdminNavigation} {...sectionProps} />
         <NavSection label="Administration" items={adminNavigation} {...sectionProps} />
       </nav>
 
