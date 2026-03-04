@@ -312,9 +312,10 @@ export default function Vertraege() {
   const [fromLeadId, setFromLeadId] = useState<string | null>(null);
 
   // Auto-open form when navigating from lead conversion
+  // Wait for user to be loaded to avoid RLS failures (created_by = null)
   useEffect(() => {
     const state = location.state as { fromLead?: Record<string, string> } | null;
-    if (state?.fromLead) {
+    if (state?.fromLead && user?.id) {
       const lead = state.fromLead;
       setLeadHfxNumber(lead.hfx_customer_number || null);
       setFromLeadId(lead.lead_id || null);
@@ -334,7 +335,7 @@ export default function Vertraege() {
       setDialogOpen(true);
       window.history.replaceState({}, document.title);
     }
-  }, [location.state, profile?.full_name]);
+  }, [location.state, user?.id, profile?.full_name]);
 
   const clearSignature = useCallback(() => {
     signaturePadRef.current?.clear();
@@ -419,6 +420,7 @@ export default function Vertraege() {
 
   const upsertMutation = useMutation({
     mutationFn: async (data: ContractFormData): Promise<string | null> => {
+      if (!user?.id) throw new Error("Nicht authentifiziert – bitte neu einloggen.");
       const endDate = addMonths(new Date(data.start_date), data.duration_months);
       let documentUrl: string | undefined;
       let documentName: string | undefined;
@@ -619,7 +621,8 @@ export default function Vertraege() {
       closeDialog();
     },
     onError: (err: Error) => {
-      toast({ title: "Fehler", description: err.message, variant: "destructive" });
+      console.error("upsertMutation error:", err);
+      toast({ title: "Fehler beim Speichern", description: err.message || "Unbekannter Fehler – bitte erneut versuchen.", variant: "destructive" });
     },
   });
 
