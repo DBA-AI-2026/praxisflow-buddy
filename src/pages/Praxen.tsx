@@ -17,7 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Download, MoreHorizontal, Pencil, Trash2, RefreshCw, Loader2, UserCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Search, Download, MoreHorizontal, Pencil, Trash2, RefreshCw, Loader2, UserCheck, FileText } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +44,7 @@ interface Praxis {
   buchungsDatum: string;
   status: "aktiv" | "inaktiv" | "gekündigt";
   convertedFromLeadId: string | null;
+  source: "praxen" | "contract";
 }
 
 const statusColors: Record<string, string> = {
@@ -61,34 +63,74 @@ export default function Praxen() {
 
   const fetchPraxen = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+
+    // Fetch from praxen table
+    const { data: praxenData, error: praxenError } = await supabase
       .from("praxen")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) {
+    if (praxenError) {
       toast.error("Fehler beim Laden der Kunden");
-      console.error(error);
-    } else if (data) {
-      setPraxen(
-        data.map((p) => ({
-          id: p.id,
-          name: p.name,
-          adresse: p.adresse || "",
-          plz: p.plz || "",
-          ort: p.ort || "",
-          telefon: p.telefon || "",
-          email: p.email || "",
-          mpNr: p.mp_nr || "",
-          produkt: p.produkt || "",
-          module: p.module || [],
-          preis: p.preis || 0,
-          buchungsDatum: p.buchungs_datum || "",
-          status: (p.status as "aktiv" | "inaktiv" | "gekündigt") || "aktiv",
-          convertedFromLeadId: p.converted_from_lead_id,
-        }))
-      );
+      console.error(praxenError);
     }
+
+    // Fetch active contracts not yet in praxen
+    const { data: contractsData } = await supabase
+      .from("contracts")
+      .select("*")
+      .eq("status", "aktiv")
+      .order("created_at", { ascending: false });
+
+    const praxenList: Praxis[] = (praxenData || []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      adresse: p.adresse || "",
+      plz: p.plz || "",
+      ort: p.ort || "",
+      telefon: p.telefon || "",
+      email: p.email || "",
+      mpNr: p.mp_nr || "",
+      produkt: p.produkt || "",
+      module: p.module || [],
+      preis: p.preis || 0,
+      buchungsDatum: p.buchungs_datum || "",
+      status: (p.status as "aktiv" | "inaktiv" | "gekündigt") || "aktiv",
+      convertedFromLeadId: p.converted_from_lead_id,
+      source: "praxen" as const,
+    }));
+
+    // Add active contracts that are not already in praxen (by hfx_customer_number or email)
+    const existingKeys = new Set([
+      ...praxenList.map((p) => p.mpNr).filter(Boolean),
+      ...praxenList.map((p) => p.email.toLowerCase()).filter(Boolean),
+    ]);
+
+    const contractEntries: Praxis[] = (contractsData || [])
+      .filter((c) => {
+        const hfx = c.hfx_customer_number || c.mp_nr || "";
+        const email = (c.email || "").toLowerCase();
+        return !existingKeys.has(hfx) && !existingKeys.has(email);
+      })
+      .map((c) => ({
+        id: c.id,
+        name: c.praxis || `${c.vorname || ""} ${c.nachname || ""}`.trim() || c.customer_name,
+        adresse: c.praxisanschrift || c.adresse || "",
+        plz: c.plz || "",
+        ort: c.ort || "",
+        telefon: c.telefon || "",
+        email: c.email || "",
+        mpNr: c.hfx_customer_number || c.mp_nr || "",
+        produkt: c.product_name || "",
+        module: c.modules || [],
+        preis: c.monthly_price || 0,
+        buchungsDatum: c.start_date || c.created_at?.split("T")[0] || "",
+        status: "aktiv" as const,
+        convertedFromLeadId: null,
+        source: "contract" as const,
+      }));
+
+    setPraxen([...praxenList, ...contractEntries]);
     setLoading(false);
   };
 
@@ -127,37 +169,19 @@ export default function Praxen() {
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.mpNr.toLowerCase().includes(search.toLowerCase()) ||
-      p.ort.toLowerCase().includes(search.toLowerCase())
+      p.ort.toLowerCase().includes(search.toLowerCase()) ||
+      p.email.toLowerCase().includes(search.toLowerCase())
   );
 
   const exportCSV = () => {
     const headers = [
-      "Name",
-      "Adresse",
-      "PLZ",
-      "Ort",
-      "Telefon",
-      "E-Mail",
-      "MP-Nr",
-      "Produkt",
-      "Module",
-      "Preis",
-      "Buchungsdatum",
-      "Status",
+      "Name", "Adresse", "PLZ", "Ort", "Telefon", "E-Mail",
+      "MP-Nr", "Produkt", "Module", "Preis", "Buchungsdatum", "Status",
     ];
     const rows = praxen.map((p) => [
-      p.name,
-      p.adresse,
-      p.plz,
-      p.ort,
-      p.telefon,
-      p.email,
-      p.mpNr,
-      p.produkt,
-      p.module.join("; "),
-      `${p.preis} €`,
-      p.buchungsDatum,
-      p.status,
+      p.name, p.adresse, p.plz, p.ort, p.telefon, p.email,
+      p.mpNr, p.produkt, p.module.join("; "), `${p.preis} €`,
+      p.buchungsDatum, p.status,
     ]);
 
     const csvContent = [headers, ...rows]
@@ -178,7 +202,7 @@ export default function Praxen() {
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Suche nach Name, MP-Nr oder Ort..."
+            placeholder="Suche nach Name, MP-Nr, Ort oder E-Mail..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -248,13 +272,7 @@ export default function Praxen() {
                   </div>
                   <div>
                     <Label htmlFor="email">E-Mail</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      required
-                      className="mt-1"
-                    />
+                    <Input id="email" name="email" type="email" required className="mt-1" />
                   </div>
                   <div className="col-span-2">
                     <Label htmlFor="produkt">Produkt</Label>
@@ -276,11 +294,7 @@ export default function Praxen() {
                   </div>
                 </div>
                 <div className="flex justify-end gap-2 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsDialogOpen(false)}
-                  >
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Abbrechen
                   </Button>
                   <Button type="submit">Kunde anlegen</Button>
@@ -309,95 +323,100 @@ export default function Praxen() {
               </tr>
             </thead>
             <tbody>
-              {filteredPraxen.map((praxis) => (
-                <tr key={praxis.id}>
-                  <td>
-                    <div>
-                      <span className="font-medium text-foreground">
-                        {praxis.name}
-                      </span>
-                      <span className="block text-xs text-muted-foreground">
-                        {praxis.email}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="font-mono text-xs text-muted-foreground">
-                    {praxis.mpNr}
-                  </td>
-                  <td className="text-muted-foreground">
-                    {praxis.plz} {praxis.ort}
-                  </td>
-                  <td>
-                    <span className="text-foreground">{praxis.produkt}</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {praxis.module.slice(0, 2).map((mod) => (
-                        <span
-                          key={mod}
-                          className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-secondary text-secondary-foreground"
-                        >
-                          {mod}
-                        </span>
-                      ))}
-                      {praxis.module.length > 2 && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-secondary text-secondary-foreground">
-                          +{praxis.module.length - 2}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="font-medium text-foreground">
-                    {praxis.preis} €
-                  </td>
-                  <td className="text-muted-foreground">
-                    {new Date(praxis.buchungsDatum).toLocaleDateString("de-DE")}
-                  </td>
-                  <td>
-                    <span className={`badge-status ${statusColors[praxis.status]}`}>
-                      {praxis.status}
-                    </span>
-                  </td>
-                  <td>
-                    {praxis.convertedFromLeadId ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary">
-                        <UserCheck className="h-3 w-3" />
-                        Lead
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Direkt</span>
-                    )}
-                  </td>
-                  <td>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => syncToSalesforce(praxis)}
-                          disabled={syncingId === praxis.id || !sfConnection.isConnected}
-                        >
-                          {syncingId === praxis.id ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                          )}
-                          Zu Salesforce syncen
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Bearbeiten
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Löschen
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {loading ? (
+                <tr>
+                  <td colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                    Lade Kunden...
                   </td>
                 </tr>
-              ))}
+              ) : filteredPraxen.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="text-center py-8 text-muted-foreground">
+                    Keine Kunden gefunden
+                  </td>
+                </tr>
+              ) : (
+                filteredPraxen.map((praxis) => (
+                  <tr key={`${praxis.source}-${praxis.id}`}>
+                    <td>
+                      <div>
+                        <span className="font-medium text-foreground">{praxis.name}</span>
+                        <span className="block text-xs text-muted-foreground">{praxis.email}</span>
+                      </div>
+                    </td>
+                    <td className="font-mono text-xs text-muted-foreground">{praxis.mpNr}</td>
+                    <td className="text-muted-foreground">{praxis.plz} {praxis.ort}</td>
+                    <td>
+                      <span className="text-foreground">{praxis.produkt}</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {praxis.module.slice(0, 2).map((mod) => (
+                          <span key={mod} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-secondary text-secondary-foreground">
+                            {mod}
+                          </span>
+                        ))}
+                        {praxis.module.length > 2 && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-secondary text-secondary-foreground">
+                            +{praxis.module.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="font-medium text-foreground">{praxis.preis} €</td>
+                    <td className="text-muted-foreground">
+                      {praxis.buchungsDatum ? new Date(praxis.buchungsDatum).toLocaleDateString("de-DE") : "–"}
+                    </td>
+                    <td>
+                      <span className={`badge-status ${statusColors[praxis.status]}`}>{praxis.status}</span>
+                    </td>
+                    <td>
+                      {praxis.source === "contract" ? (
+                        <Badge variant="outline" className="text-[11px] gap-1">
+                          <FileText className="h-3 w-3" />
+                          Vertrag
+                        </Badge>
+                      ) : praxis.convertedFromLeadId ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary">
+                          <UserCheck className="h-3 w-3" />
+                          Lead
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Direkt</span>
+                      )}
+                    </td>
+                    <td>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => syncToSalesforce(praxis)}
+                            disabled={syncingId === praxis.id || !sfConnection.isConnected}
+                          >
+                            {syncingId === praxis.id ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                            )}
+                            Zu Salesforce syncen
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Bearbeiten
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Löschen
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

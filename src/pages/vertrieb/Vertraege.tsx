@@ -231,7 +231,7 @@ const emptyForm: ContractFormData = {
   weitere_lanr: "",
   ort: "",
   notes: "",
-  status: "gezeichnet",
+  status: "aktiv",
   signature_data: "",
   vertrieb_signature_data: "",
   praxissystem: "",
@@ -559,6 +559,46 @@ export default function Vertraege() {
     onSuccess: async (contractId, variables) => {
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
       toast({ title: editId ? "Vertrag aktualisiert" : "Vertrag erstellt" });
+
+      // When a new contract is signed (status = aktiv), auto-create Praxen entry
+      if (!editId && variables.status === "aktiv" && contractId) {
+        // Set approved_by/approved_at
+        await supabase.from("contracts").update({
+          approved_by: user?.id,
+          approved_at: new Date().toISOString(),
+        }).eq("id", contractId);
+
+        // Convert linked lead to "kunde"
+        if (leadHfxNumber) {
+          await supabase.from("leads").update({ status: "kunde" }).eq("hfx_customer_number", leadHfxNumber);
+        }
+
+        // Create praxen entry if not exists
+        const hfxNr = leadHfxNumber || variables.mp_nr || null;
+        const existingCheck = hfxNr
+          ? await supabase.from("praxen").select("id").eq("mp_nr", hfxNr).maybeSingle()
+          : { data: null };
+        if (!existingCheck.data) {
+          await supabase.from("praxen").insert({
+            name: variables.praxis || `${variables.vorname} ${variables.nachname}`.trim() || "Unbekannt",
+            adresse: variables.praxisanschrift || variables.adresse || null,
+            plz: variables.plz || null,
+            ort: variables.ort || null,
+            telefon: variables.telefon || null,
+            email: variables.email || null,
+            mp_nr: hfxNr,
+            produkt: variables.selected_products.join(", ") || null,
+            module: variables.selected_products,
+            preis: variables.monthly_price || 0,
+            buchungs_datum: variables.start_date || new Date().toISOString().split("T")[0],
+            status: "aktiv",
+            converted_from_lead_id: fromLeadId || null,
+          });
+          queryClient.invalidateQueries({ queryKey: ["praxen"] });
+          toast({ title: "Kunde angelegt", description: `${variables.praxis || variables.vorname} wurde zu den Kunden hinzugefügt.` });
+        }
+        queryClient.invalidateQueries({ queryKey: ["leads"] });
+      }
       // Auto-open template PDF after creating a new contract (only if not a draft)
       if (!editId && variables.status !== "entwurf") {
         handleTemplatePdf(form);
