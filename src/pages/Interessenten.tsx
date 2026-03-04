@@ -28,7 +28,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, UserPlus, Eye, CheckCircle2, XCircle, Clock, RefreshCw, FileText } from "lucide-react";
+import { Search, UserPlus, Eye, CheckCircle2, XCircle, Clock, RefreshCw, FileText, AlertTriangle } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -181,9 +187,26 @@ export default function Interessenten() {
                     <TableRow key={lead.id}>
                       <TableCell className="font-mono text-sm font-medium">{lead.hfx_customer_number}</TableCell>
                       <TableCell>
-                        <div>
-                          <p className="font-medium text-foreground">{lead.praxis_name}</p>
-                          <p className="text-sm text-muted-foreground">{lead.vorname} {lead.nachname}</p>
+                        <div className="flex items-start gap-2">
+                          <div>
+                            <p className="font-medium text-foreground">{lead.praxis_name}</p>
+                            <p className="text-sm text-muted-foreground">{lead.vorname} {lead.nachname}</p>
+                          </div>
+                          {(lead.registration_attempts ?? 1) > 1 && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="flex items-center gap-1 bg-amber-100 text-amber-700 text-xs font-semibold px-1.5 py-0.5 rounded-full border border-amber-300 cursor-default mt-0.5 shrink-0">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    {lead.registration_attempts}x
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Hat sich {lead.registration_attempts}× registriert – Zugangsdaten wurden erneut zugesendet.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-sm">{lead.email}</TableCell>
