@@ -13,7 +13,6 @@ import {
   Menu,
   BookMarked,
   TrendingUp,
-  Lock,
   FileText,
   Package,
   FlaskConical,
@@ -30,7 +29,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole, AppRole } from "@/hooks/useUserRole";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const allRoles: AppRole[] = ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "tippgeber", "admin"];
 
@@ -94,7 +92,7 @@ interface NavSectionProps {
 
 function NavSection({ label, items, userRole, isAdmin, currentPath, onNavigate }: NavSectionProps) {
   const visibleItems = items.filter(
-    (item) => (userRole && item.roles.includes(userRole)) || item.adminOnly
+    (item) => userRole && item.roles.includes(userRole)
   );
 
   if (visibleItems.length === 0) return null;
@@ -105,31 +103,7 @@ function NavSection({ label, items, userRole, isAdmin, currentPath, onNavigate }
         {label}
       </div>
       {visibleItems.map((item) => {
-        const hasAccess = userRole && item.roles.includes(userRole);
         const isActive = currentPath === item.href;
-        const isLocked = item.adminOnly && !isAdmin;
-
-        if (isLocked) {
-          return (
-            <Tooltip key={item.name}>
-              <TooltipTrigger asChild>
-                <div
-                  className="sidebar-link opacity-40 cursor-not-allowed pointer-events-auto"
-                >
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
-                  <span className="truncate flex-1">{item.name}</span>
-                  <Lock className="h-3.5 w-3.5 flex-shrink-0 text-sidebar-foreground/40" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>Nur für Administratoren</p>
-              </TooltipContent>
-            </Tooltip>
-          );
-        }
-
-        if (!hasAccess) return null;
-
         return (
           <Link
             key={item.name}
