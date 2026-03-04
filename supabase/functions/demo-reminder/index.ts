@@ -11,6 +11,16 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // Verify internal secret — only the cron scheduler (or admins) may call this
+  const CRON_SECRET = Deno.env.get("CRON_SECRET");
+  const incomingSecret = req.headers.get("x-cron-secret");
+  if (!CRON_SECRET || incomingSecret !== CRON_SECRET) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
