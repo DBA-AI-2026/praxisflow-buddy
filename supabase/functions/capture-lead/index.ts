@@ -512,10 +512,12 @@ Deno.serve(async (req) => {
     // Sync to Qodia (HFX-Nummer + Passwort)
     try {
       const QODIA_SIGNUP_URL = "https://auth.qodia.de/api/external/sign-up";
+      const qodiaApiKey = Deno.env.get("QODIA_API_KEY");
       const qodiaResponse = await fetch(QODIA_SIGNUP_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(qodiaApiKey ? { "Authorization": `Bearer ${qodiaApiKey}` } : {}),
         },
         body: JSON.stringify({
           username: lead.hfx_customer_number,
