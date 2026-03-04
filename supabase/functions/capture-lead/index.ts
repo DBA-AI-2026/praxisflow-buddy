@@ -300,10 +300,10 @@ Deno.serve(async (req) => {
       nachricht,
     } = mapCf7Fields(rawBody);
 
-    // Validate required fields
-    if (!praxis_name || !vorname || !nachname || !email || !plz || !mobilnummer || !abrechnungszentrum) {
+    // Validate required fields (mobilnummer is optional – website form may omit it)
+    if (!praxis_name || !vorname || !nachname || !email || !plz || !abrechnungszentrum) {
       return new Response(
-        JSON.stringify({ error: "Fehlende Pflichtfelder", details: { praxis_name: !!praxis_name, vorname: !!vorname, nachname: !!nachname, email: !!email, plz: !!plz, mobilnummer: !!mobilnummer, abrechnungszentrum: !!abrechnungszentrum } }),
+        JSON.stringify({ error: "Fehlende Pflichtfelder", details: { praxis_name: !!praxis_name, vorname: !!vorname, nachname: !!nachname, email: !!email, plz: !!plz, abrechnungszentrum: !!abrechnungszentrum } }),
         { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
       );
     }
@@ -421,7 +421,7 @@ Deno.serve(async (req) => {
         nachname: nachname.trim().slice(0, 100),
         email: email.trim().toLowerCase().slice(0, 255),
         plz: plz.trim().slice(0, 10),
-        mobilnummer: mobilnummer.trim().slice(0, 30),
+        mobilnummer: (mobilnummer || "").trim().slice(0, 30),
         abrechnungszentrum,
         mp_nummer: mp_nummer?.trim().slice(0, 50) || null,
         nachricht: nachricht?.trim().slice(0, 2000) || null,
