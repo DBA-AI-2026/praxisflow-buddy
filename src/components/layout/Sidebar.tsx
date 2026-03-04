@@ -22,6 +22,7 @@ import {
   Receipt,
   Lightbulb,
   MapPin,
+  Mail,
 } from "lucide-react";
 import logo from "@/assets/fox-logo.jpeg";
 import { useState } from "react";
@@ -72,6 +73,7 @@ const adminNavigation: NavItem[] = [
   { name: "Benutzerverwaltung", href: "/admin/users", icon: Users, roles: ["admin"], adminOnly: true },
   { name: "Produktverwaltung", href: "/admin/products", icon: Package, roles: ["admin"], adminOnly: true },
   { name: "E-Mail-Vorschau", href: "/admin/email-preview", icon: FileText, roles: ["admin"], adminOnly: true },
+  { name: "E-Mail-Einstellungen", href: "/admin/email-settings", icon: Mail, roles: ["admin"], adminOnly: true },
   { name: "Rechnungen", href: "/rechnungen", icon: Receipt, roles: ["admin"], adminOnly: true },
   { name: "Buchhaltung", href: "/buchhaltung", icon: TrendingUp, roles: ["admin"], adminOnly: true },
   { name: "Datenexport", href: "/export", icon: FileDown, roles: ["admin"], adminOnly: true },
