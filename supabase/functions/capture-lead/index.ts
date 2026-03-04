@@ -413,6 +413,32 @@ Deno.serve(async (req) => {
     // Generate password for Qodia access
     const generatedPassword = generatePassword(12);
 
+    // Auto-assign Gebietsleiter based on PLZ prefix (2-digit match, highest priority wins)
+    let assignedTo: string | null = null;
+    let assignedName: string | null = null;
+    try {
+      const plzClean = plz.trim().replace(/\s/g, "");
+      if (plzClean.length >= 2) {
+        const prefix2 = plzClean.substring(0, 2);
+        const { data: mappings } = await supabase
+          .from("plz_gebietsleiter_mapping")
+          .select("gebietsleiter_id, gebietsleiter_name, priority")
+          .eq("plz_prefix", prefix2)
+          .eq("is_active", true)
+          .order("priority", { ascending: false })
+          .limit(1);
+        if (mappings && mappings.length > 0 && mappings[0].gebietsleiter_id) {
+          assignedTo = mappings[0].gebietsleiter_id;
+          assignedName = mappings[0].gebietsleiter_name;
+          console.log(`Lead PLZ ${plzClean} → assigned to ${assignedName} (prefix: ${prefix2})`);
+        } else {
+          console.log(`No GL mapping found for PLZ prefix ${prefix2}`);
+        }
+      }
+    } catch (plzErr) {
+      console.error("PLZ mapping lookup error:", plzErr);
+    }
+
     const { data: lead, error: insertError } = await supabase
       .from("leads")
       .insert({
@@ -426,6 +452,7 @@ Deno.serve(async (req) => {
         mp_nummer: mp_nummer?.trim().slice(0, 50) || null,
         nachricht: nachricht?.trim().slice(0, 2000) || null,
         generated_password: generatedPassword,
+        assigned_to: assignedTo,
       })
       .select("id, hfx_customer_number")
       .single();

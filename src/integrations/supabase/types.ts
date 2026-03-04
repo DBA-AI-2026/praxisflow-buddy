@@ -738,6 +738,42 @@ export type Database = {
         }
         Relationships: []
       }
+      plz_gebietsleiter_mapping: {
+        Row: {
+          created_at: string
+          gebietsleiter_id: string | null
+          gebietsleiter_name: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          plz_prefix: string
+          priority: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          gebietsleiter_id?: string | null
+          gebietsleiter_name: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          plz_prefix: string
+          priority?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          gebietsleiter_id?: string | null
+          gebietsleiter_name?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          plz_prefix?: string
+          priority?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       praxen: {
         Row: {
           adresse: string | null
