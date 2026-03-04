@@ -350,6 +350,10 @@ export default function AccessRequests() {
                   <SelectContent>
                     <SelectItem value="user">Gebietsleiter</SelectItem>
                     <SelectItem value="sales_partner">Vertriebspartner</SelectItem>
+                    <SelectItem value="sales_lead">Vertriebsleitung</SelectItem>
+                    <SelectItem value="regional_lead">Regionalleiter</SelectItem>
+                    <SelectItem value="vertragsabteilung">Vertragsabteilung</SelectItem>
+                    <SelectItem value="tippgeber">Tippgeber</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
