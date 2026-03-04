@@ -52,15 +52,13 @@ const vertriebNavigation: NavItem[] = [
   { name: "Verträge", href: "/vertrieb/vertraege", icon: FileText, roles: allRoles },
   { name: "Kunden", href: "/praxen", icon: Building2, roles: allRoles },
   { name: "Reservierungen", href: "/reservierungen", icon: BookMarked, roles: ["user", "sales_partner", "regional_lead", "admin"] },
+  { name: "HFX EBM Lizenzen", href: "/lizenzen", icon: Key, roles: allRoles },
   { name: "Demo-Tracking", href: "/demo-tracking", icon: FlaskConical, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
   { name: "Umsätze", href: "/umsaetze", icon: TrendingUp, roles: allRoles },
-  
-  
 ];
 
 const allgemeinNavigation: NavItem[] = [
   { name: "Tickets", href: "/tickets", icon: Ticket, roles: allRoles },
-  { name: "HFX EBM Lizenzen", href: "/lizenzen", icon: Key, roles: allRoles },
   { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "regional_lead", "admin"] },
   { name: "E-Mail-Vorschau", href: "/tools/email-preview", icon: FileText, roles: allRoles },
   { name: "Sicherheit (2FA)", href: "/sicherheit", icon: ShieldCheck, roles: allRoles },
