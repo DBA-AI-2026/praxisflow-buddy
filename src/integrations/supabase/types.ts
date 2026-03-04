@@ -666,6 +666,7 @@ export type Database = {
       leads: {
         Row: {
           abrechnungszentrum: string
+          assigned_to: string | null
           confirmation_email_sent: boolean
           created_at: string
           email: string
@@ -689,6 +690,7 @@ export type Database = {
         }
         Insert: {
           abrechnungszentrum?: string
+          assigned_to?: string | null
           confirmation_email_sent?: boolean
           created_at?: string
           email: string
@@ -712,6 +714,7 @@ export type Database = {
         }
         Update: {
           abrechnungszentrum?: string
+          assigned_to?: string | null
           confirmation_email_sent?: boolean
           created_at?: string
           email?: string

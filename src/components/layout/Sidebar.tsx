@@ -46,17 +46,17 @@ const dashboardNav: NavItem[] = [
 ];
 
 const kundenNavigation: NavItem[] = [
-  { name: "Interessenten", href: "/interessenten", icon: UserPlus, roles: ["sales_partner", "sales_lead", "regional_lead", "admin"] },
+  { name: "Interessenten", href: "/interessenten", icon: UserPlus, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
   { name: "Kunden", href: "/praxen", icon: Building2, roles: allRoles },
   { name: "Verträge", href: "/vertrieb/vertraege", icon: FileText, roles: allRoles },
-  { name: "Reservierungen", href: "/reservierungen", icon: BookMarked, roles: ["sales_partner", "regional_lead", "admin"] },
-  { name: "Demo-Tracking", href: "/demo-tracking", icon: FlaskConical, roles: ["sales_partner", "sales_lead", "regional_lead", "admin"] },
+  { name: "Reservierungen", href: "/reservierungen", icon: BookMarked, roles: ["user", "sales_partner", "regional_lead", "admin"] },
+  { name: "Demo-Tracking", href: "/demo-tracking", icon: FlaskConical, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
 ];
 
 const vertriebNavigation: NavItem[] = [
   { name: "Umsätze", href: "/umsaetze", icon: TrendingUp, roles: allRoles },
   { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users, roles: ["sales_lead", "regional_lead", "admin"] },
-  { name: "Provisionen", href: "/vertrieb/provisionen", icon: BarChart3, roles: ["sales_lead", "regional_lead", "admin"] },
+  { name: "Provisionen", href: "/vertrieb/provisionen", icon: BarChart3, roles: ["user", "sales_lead", "regional_lead", "admin"] },
 ];
 
 const tippgeberNavigation: NavItem[] = [

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   Table,
   TableBody,
@@ -28,7 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Eye, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, Send } from "lucide-react";
+import { Search, Eye, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, Send, UserCheck } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -53,6 +54,28 @@ export default function Interessenten() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { isAdmin, isSalesLead, isRegionalLead } = useUserRole();
+
+  const canAssign = isAdmin || isSalesLead || isRegionalLead;
+
+  // Fetch Gebietsleiter users for assignment
+  const { data: gebietsleiter = [] } = useQuery({
+    queryKey: ["gebietsleiter-users"],
+    enabled: canAssign,
+    queryFn: async () => {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "user");
+      if (!roles?.length) return [];
+      const userIds = roles.map((r) => r.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .in("user_id", userIds);
+      return profiles || [];
+    },
+  });
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["leads", statusFilter],
@@ -104,6 +127,20 @@ export default function Interessenten() {
     },
   });
 
+  const assignLeadMutation = useMutation({
+    mutationFn: async ({ id, assigned_to }: { id: string; assigned_to: string | null }) => {
+      const { error } = await supabase
+        .from("leads")
+        .update({ assigned_to })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast({ title: "Gebietsleiter zugewiesen" });
+    },
+  });
+
   const filtered = leads.filter((l: any) => {
     const s = search.toLowerCase();
     return (
@@ -116,6 +153,12 @@ export default function Interessenten() {
       l.plz?.includes(s)
     );
   });
+
+  const getAssigneeName = (assigned_to: string | null) => {
+    if (!assigned_to) return null;
+    const p = gebietsleiter.find((g: any) => g.user_id === assigned_to);
+    return p ? p.full_name : "–";
+  };
 
   return (
     <MainLayout title="Interessenten" subtitle="Lead-Übersicht aus Website-Kontaktformular">
@@ -141,7 +184,6 @@ export default function Interessenten() {
               <SelectItem value="kontaktiert">Kontaktiert</SelectItem>
               <SelectItem value="qualifiziert">Qualifiziert</SelectItem>
               <SelectItem value="abgelehnt">Abgelehnt</SelectItem>
-              {/* "Kunde" entfernt – konvertierte Leads erscheinen unter Kunden */}
             </SelectContent>
           </Select>
         </div>
@@ -179,6 +221,7 @@ export default function Interessenten() {
                 <TableHead>PLZ</TableHead>
                 <TableHead>Abr.-Zentrum</TableHead>
                 <TableHead>Status</TableHead>
+                {canAssign && <TableHead>Gebietsleiter</TableHead>}
                 <TableHead className="text-center">SF</TableHead>
                 <TableHead>Datum</TableHead>
                 <TableHead></TableHead>
@@ -187,13 +230,13 @@ export default function Interessenten() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={canAssign ? 10 : 9} className="text-center py-8 text-muted-foreground">
                     Lade Interessenten...
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={canAssign ? 10 : 9} className="text-center py-8 text-muted-foreground">
                     Keine Interessenten gefunden
                   </TableCell>
                 </TableRow>
@@ -244,6 +287,37 @@ export default function Interessenten() {
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      {canAssign && (
+                        <TableCell>
+                          <Select
+                            value={lead.assigned_to || "none"}
+                            onValueChange={(val) =>
+                              assignLeadMutation.mutate({ id: lead.id, assigned_to: val === "none" ? null : val })
+                            }
+                          >
+                            <SelectTrigger className="h-7 w-[150px]">
+                              <SelectValue>
+                                {lead.assigned_to ? (
+                                  <span className="flex items-center gap-1 text-xs">
+                                    <UserCheck className="h-3 w-3 text-green-600" />
+                                    {getAssigneeName(lead.assigned_to)}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">Nicht zugewiesen</span>
+                                )}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Nicht zugewiesen</SelectItem>
+                              {gebietsleiter.map((g: any) => (
+                                <SelectItem key={g.user_id} value={g.user_id}>
+                                  {g.full_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      )}
                       <TableCell className="text-center">
                         {lead.salesforce_synced ? (
                           <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
@@ -307,6 +381,14 @@ export default function Interessenten() {
                     <p className="font-medium">{selectedLead.mp_nummer}</p>
                   </div>
                 )}
+                {canAssign && (
+                  <div>
+                    <p className="text-muted-foreground">Zugewiesener Gebietsleiter</p>
+                    <p className="font-medium">
+                      {selectedLead.assigned_to ? getAssigneeName(selectedLead.assigned_to) : "Nicht zugewiesen"}
+                    </p>
+                  </div>
+                )}
               </div>
               {selectedLead.nachricht && (
                 <div>
@@ -346,11 +428,8 @@ export default function Interessenten() {
                   className="flex-1"
                   onClick={() => {
                     const lead = selectedLead;
-
                     setSelectedLead(null);
-                    // Update lead status to "kunde"
                     updateStatusMutation.mutate({ id: lead.id, status: "kunde" });
-                    // Navigate to Vertraege with pre-filled data
                     navigate("/vertrieb/vertraege", {
                       state: {
                         fromLead: {
