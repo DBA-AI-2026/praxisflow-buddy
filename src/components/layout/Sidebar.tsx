@@ -44,24 +44,18 @@ interface NavItem {
 
 const dashboardNav: NavItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: allRoles },
+  { name: "Tippgeber-Leads", href: "/tippgeber", icon: Lightbulb, roles: ["tippgeber", "admin"] },
 ];
 
-const kundenNavigation: NavItem[] = [
+const vertriebNavigation: NavItem[] = [
   { name: "Interessenten", href: "/interessenten", icon: UserPlus, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
   { name: "Verträge", href: "/vertrieb/vertraege", icon: FileText, roles: allRoles },
   { name: "Kunden", href: "/praxen", icon: Building2, roles: allRoles },
   { name: "Reservierungen", href: "/reservierungen", icon: BookMarked, roles: ["user", "sales_partner", "regional_lead", "admin"] },
   { name: "Demo-Tracking", href: "/demo-tracking", icon: FlaskConical, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
-];
-
-const vertriebNavigation: NavItem[] = [
   { name: "Umsätze", href: "/umsaetze", icon: TrendingUp, roles: allRoles },
   { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users, roles: ["sales_lead", "regional_lead", "admin"] },
   { name: "Provisionen", href: "/vertrieb/provisionen", icon: BarChart3, roles: ["user", "sales_lead", "regional_lead", "admin"] },
-];
-
-const tippgeberNavigation: NavItem[] = [
-  { name: "Tippgeber-Leads", href: "/tippgeber", icon: Lightbulb, roles: ["tippgeber", "admin"] },
 ];
 
 const allgemeinNavigation: NavItem[] = [
@@ -189,10 +183,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-2 lg:px-3 py-4 overflow-y-auto">
         <NavSection label="Übersicht" items={dashboardNav} {...sectionProps} />
-        <NavSection label="Kunden" items={kundenNavigation} {...sectionProps} />
         <NavSection label="Vertrieb" items={vertriebNavigation} {...sectionProps} />
         <NavSection label="Allgemein" items={allgemeinNavigation} {...sectionProps} />
-        <NavSection label="Tippgeber-Leads" items={tippgeberNavigation} {...sectionProps} />
         <NavSection label="Administration" items={adminNavigation} {...sectionProps} />
       </nav>
 
