@@ -60,7 +60,6 @@ const vertriebNavigation: NavItem[] = [
 const allgemeinNavigation: NavItem[] = [
   { name: "Tickets", href: "/tickets", icon: Ticket, roles: allRoles },
   { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "regional_lead", "admin"] },
-  { name: "E-Mail-Vorschau", href: "/tools/email-preview", icon: FileText, roles: allRoles },
   { name: "Sicherheit (2FA)", href: "/sicherheit", icon: ShieldCheck, roles: allRoles },
 ];
 
@@ -75,6 +74,7 @@ const adminNavigation: NavItem[] = [
   { name: "Zugangsanfragen", href: "/admin/access-requests", icon: UserPlus, roles: ["admin"], adminOnly: true },
   { name: "Benutzerverwaltung", href: "/admin/users", icon: Users, roles: ["admin"], adminOnly: true },
   { name: "Produktverwaltung", href: "/admin/products", icon: Package, roles: ["admin"], adminOnly: true },
+  { name: "E-Mail-Vorschau", href: "/admin/email-preview", icon: FileText, roles: ["admin"], adminOnly: true },
   { name: "Rechnungen", href: "/rechnungen", icon: Receipt, roles: ["admin"], adminOnly: true },
   { name: "Buchhaltung", href: "/buchhaltung", icon: TrendingUp, roles: ["admin"], adminOnly: true },
   { name: "Datenexport", href: "/export", icon: FileDown, roles: ["admin"], adminOnly: true },
