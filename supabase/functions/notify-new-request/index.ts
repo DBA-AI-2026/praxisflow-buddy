@@ -34,6 +34,22 @@ Deno.serve(async (req) => {
 
     console.log(`New access request received from: ${email}`);
 
+    // Check email notification settings
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    const { data: emailSettings } = await supabase
+      .from("email_notification_settings")
+      .select("setting_key, is_enabled")
+      .eq("setting_key", "new_access_request_admin");
+    const notifEnabled = (emailSettings?.[0]?.is_enabled) !== false;
+    if (!notifEnabled) {
+      console.log("Admin access request notification is disabled.");
+      return new Response(JSON.stringify({ success: true, skipped: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (!fullName || !email) {
       return new Response(
         JSON.stringify({ error: "Missing required fields: fullName and email" }),
