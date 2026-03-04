@@ -42,7 +42,6 @@ interface NavItem {
 
 const dashboardNav: NavItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: allRoles },
-  { name: "Tipp-Leads", href: "/tipp-leads", icon: Lightbulb, roles: ["tippgeber", "admin", "sales_lead"] },
 ];
 
 const vertriebNavigation: NavItem[] = [
@@ -64,7 +63,7 @@ const allgemeinNavigation: NavItem[] = [
 const vertriebsAdminNavigation: NavItem[] = [
   { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users, roles: ["sales_lead", "regional_lead", "admin"] },
   { name: "Provisionen", href: "/vertrieb/provisionen", icon: BarChart3, roles: ["user", "sales_lead", "regional_lead", "admin"] },
-  { name: "Tipp-Leads", href: "/tipp-leads", icon: Lightbulb, roles: ["admin", "sales_lead"] },
+  { name: "Tipp-Leads", href: "/tipp-leads", icon: Lightbulb, roles: ["tippgeber", "admin", "sales_lead"] },
   { name: "PLZ-Zuordnung", href: "/admin/plz-mapping", icon: MapPin, roles: ["admin", "sales_lead"] },
 ];
 
