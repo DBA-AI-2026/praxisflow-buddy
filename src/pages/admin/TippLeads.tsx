@@ -1,15 +1,17 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Lightbulb, Clock, CheckCircle, XCircle, Mail, Phone, Timer, Search } from "lucide-react";
+import { Loader2, Lightbulb, Clock, CheckCircle, XCircle, Mail, Phone, Timer, Search, UserCheck, X } from "lucide-react";
 import { format, isPast, formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 const statusConfig: Record<string, { label: string; class: string; icon: typeof Clock }> = {
   neu: { label: "Neu", class: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300", icon: Clock },
@@ -36,6 +38,8 @@ export default function AdminTippLeads() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [assigningId, setAssigningId] = useState<string | null>(null);
+  const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
 
   const { data: tips = [], isLoading } = useQuery({
     queryKey: ["admin-tipp-leads"],
@@ -47,6 +51,39 @@ export default function AdminTippLeads() {
       if (error) throw error;
       return data as any[];
     },
+  });
+
+  // All profiles for AD assignment dropdown
+  const { data: salesReps = [] } = useQuery({
+    queryKey: ["all-profiles-for-ad"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .order("full_name");
+      if (error) throw error;
+      return data as { user_id: string; full_name: string; email: string | null }[];
+    },
+  });
+
+  const assignAdMutation = useMutation({
+    mutationFn: async ({ tippLeadId, adEmail }: { tippLeadId: string; adEmail: string | null }) => {
+      setAssigningId(tippLeadId);
+      const { error } = await supabase
+        .from("tipp_leads" as any)
+        .update({ ad_email: adEmail })
+        .eq("id", tippLeadId);
+      if (error) throw error;
+    },
+    onSuccess: (_, { adEmail }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-tipp-leads"] });
+      toast({
+        title: adEmail ? "AD zugewiesen" : "Zuweisung entfernt",
+        description: adEmail ? `${adEmail} als Ansprechpartner gesetzt.` : "AD-Zuweisung wurde entfernt.",
+      });
+    },
+    onError: (e: Error) => toast({ title: "Fehler", description: e.message, variant: "destructive" }),
+    onSettled: () => setAssigningId(null),
   });
 
   const updateStatusMutation = useMutation({
@@ -181,7 +218,10 @@ export default function AdminTippLeads() {
                     const cfg = statusConfig[tip.status] ?? statusConfig.neu;
                     const Icon = cfg.icon;
                     const isUpdating = updatingId === tip.id;
+                    const isAssigning = assigningId === tip.id;
                     const profile = tip.profiles as { full_name: string; email: string } | null;
+                    const hasNoAd = !tip.ad_email && !tip.ad_telefon;
+
                     return (
                       <tr key={tip.id} className="hover:bg-muted/30 transition-colors">
                         <td className="py-3.5 px-4">
@@ -206,22 +246,85 @@ export default function AdminTippLeads() {
                         <td className="py-3.5 px-4 text-center">
                           <TimerBadge reservationUntil={tip.reservation_until ?? null} />
                         </td>
+
+                        {/* AD Assignment Cell */}
                         <td className="py-3.5 px-4 text-sm">
-                          {(tip.ad_email || tip.ad_telefon) ? (
-                            <div className="space-y-0.5">
-                              {tip.ad_email && (
-                                <a href={`mailto:${tip.ad_email}`} className="flex items-center gap-1 text-primary hover:underline text-xs">
-                                  <Mail className="h-3 w-3" />{tip.ad_email}
-                                </a>
-                              )}
-                              {tip.ad_telefon && (
-                                <a href={`tel:${tip.ad_telefon}`} className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-xs">
-                                  <Phone className="h-3 w-3" />{tip.ad_telefon}
-                                </a>
-                              )}
-                            </div>
-                          ) : <span className="text-xs text-muted-foreground/40">–</span>}
+                          <div className="flex flex-col gap-1.5">
+                            {(tip.ad_email || tip.ad_telefon) ? (
+                              <div className="space-y-0.5">
+                                {tip.ad_email && (
+                                  <a href={`mailto:${tip.ad_email}`} className="flex items-center gap-1 text-primary hover:underline text-xs">
+                                    <Mail className="h-3 w-3" />{tip.ad_email}
+                                  </a>
+                                )}
+                                {tip.ad_telefon && (
+                                  <a href={`tel:${tip.ad_telefon}`} className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-xs">
+                                    <Phone className="h-3 w-3" />{tip.ad_telefon}
+                                  </a>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded">
+                                <UserCheck className="h-3 w-3" />
+                                Kein AD
+                              </span>
+                            )}
+
+                            {/* Manual assignment popover */}
+                            <Popover open={openPopoverId === tip.id} onOpenChange={(open) => setOpenPopoverId(open ? tip.id : null)}>
+                              <PopoverTrigger asChild>
+                                <button
+                                  className="text-[11px] text-muted-foreground hover:text-primary flex items-center gap-1 underline underline-offset-2"
+                                  disabled={isAssigning}
+                                >
+                                  {isAssigning ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserCheck className="h-3 w-3" />}
+                                  {hasNoAd ? "AD zuweisen" : "Ändern"}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-72 p-0" align="start">
+                                <Command>
+                                  <CommandInput placeholder="Mitarbeiter suchen…" className="h-9" />
+                                  <CommandList>
+                                    <CommandEmpty>Keine Treffer</CommandEmpty>
+                                    <CommandGroup>
+                                      {tip.ad_email && (
+                                        <CommandItem
+                                          onSelect={() => {
+                                            assignAdMutation.mutate({ tippLeadId: tip.id, adEmail: null });
+                                            setOpenPopoverId(null);
+                                          }}
+                                          className="text-destructive"
+                                        >
+                                          <X className="h-3.5 w-3.5 mr-2" />
+                                          Zuweisung entfernen
+                                        </CommandItem>
+                                      )}
+                                      {salesReps.map((rep) => (
+                                        <CommandItem
+                                          key={rep.user_id}
+                                          value={`${rep.full_name} ${rep.email}`}
+                                          onSelect={() => {
+                                            assignAdMutation.mutate({ tippLeadId: tip.id, adEmail: rep.email });
+                                            setOpenPopoverId(null);
+                                          }}
+                                        >
+                                          <div className="flex flex-col">
+                                            <span className="font-medium text-xs">{rep.full_name}</span>
+                                            {rep.email && <span className="text-[11px] text-muted-foreground">{rep.email}</span>}
+                                          </div>
+                                          {tip.ad_email === rep.email && (
+                                            <CheckCircle className="h-3.5 w-3.5 ml-auto text-primary" />
+                                          )}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
                         </td>
+
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-2">
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.class}`}>
