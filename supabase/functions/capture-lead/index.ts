@@ -517,11 +517,13 @@ Deno.serve(async (req) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(qodiaApiKey ? { "Authorization": `Bearer ${qodiaApiKey}` } : {}),
+          ...(qodiaApiKey ? { "x-api-key": qodiaApiKey } : {}),
         },
         body: JSON.stringify({
           username: lead.hfx_customer_number,
+          email: email,
           password: generatedPassword,
+          name: `${vorname} ${nachname}`,
         }),
       });
 
