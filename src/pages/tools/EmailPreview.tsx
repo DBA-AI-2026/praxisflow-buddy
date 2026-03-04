@@ -104,6 +104,7 @@ function buildLeadConfirmationHtml() {
 <tr><td>
 <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8; border-radius:8px; border:1px solid #d0d5dd;">
 <tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;">
+<strong>Registrierte E-Mail-Adresse:</strong> ${email}<br>
 <strong>Benutzername:</strong> ${hfx_customer_number}<br>
 <strong>Passwort:</strong> <code style="background:#fff; padding:2px 8px; border-radius:4px; font-size:13pt; letter-spacing:1px;">${generated_password}</code>
 </td></tr></table>
