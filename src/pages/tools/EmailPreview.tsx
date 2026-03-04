@@ -31,7 +31,7 @@ const MOCK = {
 };
 
 // ─── Templates ────────────────────────────────────────────────────────────────
-type TemplateId = "lead-confirmation" | "contract-customer" | "contract-partner" | "invoice" | "invoice-pdf" | "dashboard-credentials";
+type TemplateId = "lead-confirmation" | "contract-customer" | "contract-partner" | "invoice" | "invoice-pdf" | "dashboard-credentials" | "ad-tipp-lead" | "ad-demo-reminder";
 
 interface Template {
   id: TemplateId;
@@ -82,6 +82,22 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "Zugangsdaten für neue interne Dashboard-Nutzer",
+  },
+  {
+    id: "ad-tipp-lead",
+    label: "AD: Neuer Tipp-Lead",
+    subject: "Neuer Lead-Tipp: Praxis Mustermann (PLZ 80331)",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "Benachrichtigung an AD bei neuem Tipp-Lead durch Tippgeber",
+  },
+  {
+    id: "ad-demo-reminder",
+    label: "AD: Testphasen-Ablauf",
+    subject: "⏰ Testphase endet bald: Testpraxis GmbH (01.04.2026)",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "AD-Benachrichtigung parallel zur Kunden-Erinnerung bei Demo-Ablauf",
   },
 ];
 
@@ -486,6 +502,104 @@ function buildDashboardCredentialsHtml() {
 </html>`;
 }
 
+function buildAdTippLeadHtml() {
+  const year = new Date().getFullYear();
+  return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07);">
+      <tr><td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:32px 24px;text-align:center;">
+        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Neuer Lead-Tipp eingegangen 🎯</h1>
+        <p style="margin:8px 0 0;color:#c7d7f5;font-size:14px;">Tippgeber: Maria Musterfrau</p>
+      </td></tr>
+      <tr><td style="padding:28px 24px;">
+        <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hallo,</p>
+        <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
+          Ein neuer Lead-Tipp wurde durch einen Tippgeber eingereicht und Ihnen zugeordnet.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+          <tr><td style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Lead-Details</p>
+          </td></tr>
+          <tr><td style="padding:16px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;width:160px;">Arzt / Ärztin</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">Dr. Max Mustermann</td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Praxis</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">Praxis Mustermann</td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">PLZ</td><td style="padding:4px 0;font-size:13px;color:#111827;">80331</td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">E-Mail Praxis</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="mailto:praxis@example.com" style="color:#0b367f;">praxis@example.com</a></td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Telefon Praxis</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="tel:+4989123456" style="color:#0b367f;">+49 89 123456</a></td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Geschäftsbereich</td><td style="padding:4px 0;font-size:13px;color:#111827;">MCC</td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;vertical-align:top;">Dienstleistung</td><td style="padding:4px 0;font-size:13px;color:#111827;">Interesse an HFX.GOÄ – Demo gewünscht</td></tr>
+            </table>
+          </td></tr>
+        </table>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+          <tr><td style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Empfohlen von</p>
+          </td></tr>
+          <tr><td style="padding:16px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;width:160px;">Tippgeber</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">Maria Musterfrau</td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Kontakt</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="mailto:maria@example.com" style="color:#0b367f;">maria@example.com</a></td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#9ca3af;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${year} HFX Honorarfuchs GmbH</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+}
+
+function buildAdDemoReminderHtml() {
+  const year = new Date().getFullYear();
+  return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07);">
+      <tr><td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:32px 24px;text-align:center;">
+        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Testphase läuft in 3 Tagen ab ⏰</h1>
+        <p style="margin:8px 0 0;color:#c7d7f5;font-size:14px;">Jetzt Kontakt aufnehmen!</p>
+      </td></tr>
+      <tr><td style="padding:28px 24px;">
+        <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hallo,</p>
+        <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
+          Die Testphase eines Interessenten aus Ihrem Gebiet endet in <strong style="color:#0b367f;">3 Tagen</strong> am <strong style="color:#0b367f;">01.04.2026</strong>. Dies ist ein guter Zeitpunkt, um Kontakt aufzunehmen.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+          <tr><td style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Interessent</p>
+          </td></tr>
+          <tr><td style="padding:16px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;width:160px;">Unternehmen</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">Testpraxis GmbH</td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Ansprechpartner</td><td style="padding:4px 0;font-size:13px;color:#111827;">Dr. Hans Mustermann</td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">E-Mail</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="mailto:praxis@testgmbh.de" style="color:#0b367f;">praxis@testgmbh.de</a></td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Telefon</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="tel:+4989654321" style="color:#0b367f;">+49 89 654321</a></td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Produkt</td><td style="padding:4px 0;font-size:13px;color:#111827;">HFX.GOÄ Demo</td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">HFX-Nr.</td><td style="padding:4px 0;font-size:13px;color:#111827;font-family:monospace;">HFX-D01234</td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Testende</td><td style="padding:4px 0;font-size:13px;color:#0b367f;font-weight:600;">01.04.2026</td></tr>
+            </table>
+          </td></tr>
+        </table>
+        <p style="margin:0;font-size:13px;color:#6b7280;">Bitte nehmen Sie zeitnah Kontakt auf, um einen Abschluss zu begleiten.</p>
+      </td></tr>
+      <tr><td style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#9ca3af;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${year} HFX Honorarfuchs GmbH</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+}
+
 const DEFAULT_HTML: Record<string, () => string> = {
   "lead-confirmation": buildLeadConfirmationHtml,
   "contract-customer": buildContractCustomerHtml,
@@ -493,6 +607,8 @@ const DEFAULT_HTML: Record<string, () => string> = {
   "invoice": buildInvoiceHtml,
   "invoice-pdf": buildInvoicePdfPreviewHtml,
   "dashboard-credentials": buildDashboardCredentialsHtml,
+  "ad-tipp-lead": buildAdTippLeadHtml,
+  "ad-demo-reminder": buildAdDemoReminderHtml,
 };
 
 function getHtmlForTemplate(id: TemplateId) {
