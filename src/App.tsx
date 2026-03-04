@@ -23,7 +23,7 @@ import Vertriebler from "./pages/vertrieb/Vertriebler";
 import AdminUsers from "./pages/admin/Users";
 import AdminSettings from "./pages/admin/Settings";
 import AdminProducts from "./pages/admin/Products";
-import AdminTippLeads from "./pages/admin/TippLeads";
+import TippLeadsPage from "./pages/TippLeads";
 import AccessRequests from "./pages/admin/AccessRequests";
 import AuditLogs from "./pages/admin/AuditLogs";
 import Auth from "./pages/Auth";
@@ -33,7 +33,6 @@ import Sicherheit from "./pages/Sicherheit";
 import PdfCoordinateFinder from "./pages/tools/PdfCoordinateFinder";
 import EmailPreview from "./pages/tools/EmailPreview";
 import { PdfViewerOverlay } from "@/components/PdfViewerOverlay";
-import TippgeberPage from "./pages/Tippgeber";
 import Documentation from "./pages/admin/Documentation";
 import PlzMapping from "./pages/admin/PlzMapping";
 import Buchhaltung from "./pages/Buchhaltung";
@@ -71,11 +70,12 @@ const App = () => (
             <Route path="/admin/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
             <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
-            <Route path="/admin/tipp-leads" element={<ProtectedRoute><AdminTippLeads /></ProtectedRoute>} />
+            <Route path="/tipp-leads" element={<ProtectedRoute><TippLeadsPage /></ProtectedRoute>} />
+            <Route path="/tippgeber" element={<ProtectedRoute><TippLeadsPage /></ProtectedRoute>} />
+            <Route path="/admin/tipp-leads" element={<ProtectedRoute><TippLeadsPage /></ProtectedRoute>} />
             <Route path="/tools/pdf-coordinates" element={<ProtectedRoute><PdfCoordinateFinder /></ProtectedRoute>} />
             <Route path="/tools/email-preview" element={<ProtectedRoute><EmailPreview /></ProtectedRoute>} />
             <Route path="/sicherheit" element={<ProtectedRoute><Sicherheit /></ProtectedRoute>} />
-             <Route path="/tippgeber" element={<ProtectedRoute><TippgeberPage /></ProtectedRoute>} />
             <Route path="/admin/documentation" element={<ProtectedRoute><Documentation /></ProtectedRoute>} />
             <Route path="/admin/plz-mapping" element={<ProtectedRoute><PlzMapping /></ProtectedRoute>} />
             <Route path="/buchhaltung" element={<ProtectedRoute><Buchhaltung /></ProtectedRoute>} />

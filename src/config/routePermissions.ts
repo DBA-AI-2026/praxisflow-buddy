@@ -52,11 +52,8 @@ export const routePermissions: RoutePermission[] = [
   // Sicherheit (2FA) - alle eingeloggten Benutzer
   { path: "/sicherheit", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "tippgeber", "admin"] },
 
-  // Tippgeber
-  { path: "/tippgeber", allowedRoles: ["tippgeber", "admin"] },
-
-  // Admin Tipp-Leads
-  { path: "/admin/tipp-leads", allowedRoles: ["admin", "sales_lead"] },
+  // Tipp-Leads (unified)
+  { path: "/tipp-leads", allowedRoles: ["tippgeber", "admin", "sales_lead"] },
 
   // PLZ-Mapping Verwaltung
   { path: "/admin/plz-mapping", allowedRoles: ["admin", "sales_lead"] },
