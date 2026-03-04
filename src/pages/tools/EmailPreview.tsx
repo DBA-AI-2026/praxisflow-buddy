@@ -31,7 +31,7 @@ const MOCK = {
 };
 
 // ─── Templates ────────────────────────────────────────────────────────────────
-type TemplateId = "lead-confirmation" | "contract-customer" | "contract-partner" | "invoice" | "invoice-pdf";
+type TemplateId = "lead-confirmation" | "contract-customer" | "contract-partner" | "invoice" | "invoice-pdf" | "dashboard-credentials";
 
 interface Template {
   id: TemplateId;
@@ -74,6 +74,14 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "Rechnungs-E-Mail mit PDF-Anhang",
+  },
+  {
+    id: "dashboard-credentials",
+    label: "Dashboard-Zugangsdaten",
+    subject: "Ihre Zugangsdaten für das HFX Sales Portal",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "Zugangsdaten für neue interne Dashboard-Nutzer",
   },
 ];
 
@@ -425,12 +433,66 @@ function buildInvoicePdfPreviewHtml() {
 </body></html>`;
 }
 
+function buildDashboardCredentialsHtml() {
+  const { full_name, email } = { full_name: "Max Mustermann", email: MOCK.email };
+  const roleLabel = "Vertriebspartner";
+  const portalUrl = "https://praxisflow-buddy.lovable.app";
+  const password = "Ax7$kP2mQz9wLn3R";
+  return `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:verdana,geneva,sans-serif;">
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f5f5f5;padding:20px 0;">
+<tr><td align="center">
+<table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+  <tr>
+    <td style="background-color:#0b367f;padding:30px 40px;text-align:center;">
+      <h1 style="color:#ffffff;font-size:22pt;margin:0;font-family:verdana,geneva,sans-serif;">🦊 Willkommen!</h1>
+      <p style="color:#c8d8f0;font-size:11pt;margin:8px 0 0 0;">HFX Sales Portal · das Portal für den Vertrieb</p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:32px 40px;">
+      <p style="font-size:12pt;color:#333333;margin:0 0 12px 0;">Hallo <strong>${full_name}</strong>,</p>
+      <p style="font-size:11pt;color:#555555;margin:0 0 24px 0;">Ihr Benutzerkonto wurde erfolgreich erstellt. Sie wurden als <strong>${roleLabel}</strong> registriert.</p>
+      <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8;border-radius:8px;border:1px solid #d0d5dd;margin-bottom:24px;">
+        <tr><td align="left" valign="top" style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:20pt;">
+          <strong style="font-size:10pt;color:#0b367f;text-transform:uppercase;letter-spacing:0.5px;">Ihre Zugangsdaten</strong><br><br>
+          <strong>Registrierte E-Mail-Adresse:</strong> ${email}<br>
+          <strong>Temporäres Passwort:</strong> <code style="background:#fff;padding:2px 8px;border-radius:4px;font-size:13pt;letter-spacing:1px;">${password}</code>
+        </td></tr>
+      </table>
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">
+        <tr><td align="center">
+          <a href="${portalUrl}" style="display:inline-block;background-color:#0b367f;color:#ffffff;font-family:verdana,geneva,sans-serif;font-size:12pt;font-weight:bold;padding:12px 32px;border-radius:6px;text-decoration:none;">Zum Portal anmelden</a>
+        </td></tr>
+      </table>
+      <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background:#fff8e1;border-radius:6px;border:1px solid #f59e0b;">
+        <tr><td style="font-size:10pt;color:#92400e;font-family:verdana,geneva,sans-serif;">
+          ⚠️ <strong>Wichtig:</strong> Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung unter Einstellungen → Sicherheit.
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="background-color:#f8f8f8;padding:16px 40px;border-top:1px solid #eeeeee;text-align:center;">
+      <p style="font-size:9pt;color:#aaaaaa;margin:0;">© Honorarfuchs GmbH · Bei Fragen: info@honorarfuchs.de</p>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
 const DEFAULT_HTML: Record<string, () => string> = {
   "lead-confirmation": buildLeadConfirmationHtml,
   "contract-customer": buildContractCustomerHtml,
   "contract-partner": buildContractPartnerHtml,
   "invoice": buildInvoiceHtml,
   "invoice-pdf": buildInvoicePdfPreviewHtml,
+  "dashboard-credentials": buildDashboardCredentialsHtml,
 };
 
 function getHtmlForTemplate(id: TemplateId) {
