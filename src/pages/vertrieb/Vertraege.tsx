@@ -26,7 +26,7 @@ import {
   FilePen, FileSignature, CircleCheck, CircleOff, ArchiveX, ShieldBan, ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
 // Check and ChevronsUpDown already imported above via combobox imports
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { generateContractPdf } from "@/lib/generateContractPdf";
 import { fillContractTemplate } from "@/lib/fillContractTemplate";
 import { openPdfBlob } from "@/lib/openPdfBlob";
@@ -2063,10 +2063,26 @@ export default function Vertraege() {
                   {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                   Als Entwurf speichern
                 </Button>
-                <Button type="submit" disabled={upsertMutation.isPending || !isFormComplete}>
-                  {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                  {editId ? "Speichern" : "Vertrag zeichnen"}
-                </Button>
+                <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span tabIndex={0}>
+                      <Button type="submit" disabled={upsertMutation.isPending || !isFormComplete}>
+                        {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                        {editId ? "Speichern" : "Vertrag zeichnen"}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {!isFormComplete && (
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p className="font-semibold mb-1">Fehlende Pflichtfelder:</p>
+                      <ul className="list-disc pl-4 text-xs space-y-0.5">
+                        {getMissingFields().map((f) => <li key={f}>{f}</li>)}
+                      </ul>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+                </TooltipProvider>
               </div>
             </DialogFooter>
           </form>
