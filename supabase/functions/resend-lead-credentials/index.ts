@@ -116,16 +116,16 @@ function buildCredentialsEmailHtml(fields: {
             <p style="font-size:10pt;color:#0b367f;font-weight:bold;text-transform:uppercase;margin:0 0 12px 0;">Ihre Zugangsdaten</p>
             <table border="0" cellpadding="0" cellspacing="0" width="100%">
               <tr>
-                <td style="padding:6px 0;font-size:10pt;color:#777777;width:140px;">Benutzername</td>
+                <td style="padding:6px 0;font-size:10pt;color:#777777;width:140px;">Registrierte E-Mail-Adresse</td>
+                <td style="padding:6px 0;font-size:11pt;color:#333333;">${email}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 0;font-size:10pt;color:#777777;">Benutzername</td>
                 <td style="padding:6px 0;font-size:11pt;color:#0b367f;font-weight:bold;font-family:monospace;">${hfx_customer_number}</td>
               </tr>
               <tr>
                 <td style="padding:6px 0;font-size:10pt;color:#777777;">Passwort</td>
                 <td style="padding:6px 0;font-size:11pt;color:#0b367f;font-weight:bold;font-family:monospace;">${generated_password}</td>
-              </tr>
-              <tr>
-                <td style="padding:6px 0;font-size:10pt;color:#777777;">E-Mail</td>
-                <td style="padding:6px 0;font-size:11pt;color:#333333;">${email}</td>
               </tr>
             </table>
           </td>
