@@ -453,6 +453,39 @@ export type Database = {
         }
         Relationships: []
       }
+      email_notification_settings: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          is_enabled: boolean
+          label: string
+          setting_key: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_enabled?: boolean
+          label: string
+          setting_key: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_enabled?: boolean
+          label?: string
+          setting_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_template_overrides: {
         Row: {
           created_at: string

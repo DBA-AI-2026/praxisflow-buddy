@@ -32,6 +32,7 @@ import NotFound from "./pages/NotFound";
 import Sicherheit from "./pages/Sicherheit";
 import PdfCoordinateFinder from "./pages/tools/PdfCoordinateFinder";
 import EmailPreview from "./pages/tools/EmailPreview";
+import EmailSettings from "./pages/admin/EmailSettings";
 import { PdfViewerOverlay } from "@/components/PdfViewerOverlay";
 import Documentation from "./pages/admin/Documentation";
 import PlzMapping from "./pages/admin/PlzMapping";
@@ -76,6 +77,7 @@ const App = () => (
             <Route path="/tools/pdf-coordinates" element={<ProtectedRoute><PdfCoordinateFinder /></ProtectedRoute>} />
             <Route path="/tools/email-preview" element={<ProtectedRoute><EmailPreview /></ProtectedRoute>} />
             <Route path="/admin/email-preview" element={<ProtectedRoute><EmailPreview /></ProtectedRoute>} />
+            <Route path="/admin/email-settings" element={<ProtectedRoute><EmailSettings /></ProtectedRoute>} />
             <Route path="/sicherheit" element={<ProtectedRoute><Sicherheit /></ProtectedRoute>} />
             <Route path="/admin/documentation" element={<ProtectedRoute><Documentation /></ProtectedRoute>} />
             <Route path="/admin/plz-mapping" element={<ProtectedRoute><PlzMapping /></ProtectedRoute>} />
