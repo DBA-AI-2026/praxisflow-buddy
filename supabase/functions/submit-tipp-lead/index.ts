@@ -74,7 +74,36 @@ Deno.serve(async (req) => {
     const tippgeberName = profile?.full_name ?? "Unbekannt";
     const tippgeberEmail = profile?.email ?? null;
 
-    // ── 1. Salesforce: Create Lead ──────────────────────────────────────────
+    // ── 1. PLZ-based AD assignment from plz_gebietsleiter_mapping ──────────
+    // Look up the responsible sales rep by PLZ prefix (2-digit first, then 1-digit)
+    let adEmail: string | null = null;
+    let adTelefon: string | null = null;
+
+    const plzPrefix2 = tip.plz?.slice(0, 2) ?? "";
+    const plzPrefix1 = tip.plz?.slice(0, 1) ?? "";
+
+    const { data: mappings } = await supabase
+      .from("plz_gebietsleiter_mapping")
+      .select("gebietsleiter_id, gebietsleiter_name, plz_prefix")
+      .eq("is_active", true)
+      .in("plz_prefix", [plzPrefix2, plzPrefix1])
+      .order("priority", { ascending: false });
+
+    // Prefer 2-digit match over 1-digit
+    const bestMatch = mappings?.find(m => m.plz_prefix === plzPrefix2) 
+      ?? mappings?.find(m => m.plz_prefix === plzPrefix1) 
+      ?? null;
+
+    if (bestMatch?.gebietsleiter_id) {
+      const { data: adProfile } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("user_id", bestMatch.gebietsleiter_id)
+        .single();
+      if (adProfile?.email) adEmail = adProfile.email;
+    }
+
+    // ── 2. Salesforce: Create Lead ──────────────────────────────────────────
     const { data: sfConn } = await supabase
       .from("salesforce_connections")
       .select("access_token, refresh_token, instance_url, is_connected")
@@ -82,8 +111,6 @@ Deno.serve(async (req) => {
       .single();
 
     let sfId: string | null = null;
-    let adEmail: string | null = null;
-    let adTelefon: string | null = null;
 
     if (sfConn?.is_connected && sfConn.access_token) {
       let token = sfConn.access_token;
@@ -123,8 +150,8 @@ Deno.serve(async (req) => {
         const sfData = await sfRes.json();
         sfId = sfData.id ?? null;
 
-        // Try to get assigned owner details from SF
-        if (sfId) {
+        // Try to get assigned owner details from SF (only if PLZ mapping didn't provide them)
+        if (sfId && !adEmail) {
           const ownerRes = await fetch(
             `${instanceUrl}/services/data/v59.0/sobjects/Lead/${sfId}?fields=Owner.Email,Owner.Phone`,
             { headers: { Authorization: `Bearer ${token}` } }
