@@ -28,7 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, UserPlus, Eye, CheckCircle2, XCircle, Clock, RefreshCw, FileText, AlertTriangle } from "lucide-react";
+import { Search, Eye, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, Send } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -72,6 +72,23 @@ export default function Interessenten() {
       return data;
     },
   });
+
+  const [resending, setResending] = useState(false);
+
+  const resendCredentials = async (leadId: string) => {
+    setResending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("resend-lead-credentials", {
+        body: { leadId },
+      });
+      if (error) throw error;
+      toast({ title: "Zugangsdaten versendet", description: data?.message });
+    } catch (err: any) {
+      toast({ title: "Fehler", description: err.message || "Versand fehlgeschlagen", variant: "destructive" });
+    } finally {
+      setResending(false);
+    }
+  };
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -315,11 +332,21 @@ export default function Interessenten() {
                   HonorarPlus
                 </span>
               </div>
-              <div className="pt-2 border-t">
+              <div className="flex gap-2 pt-2 border-t">
                 <Button
-                  className="w-full"
+                  variant="outline"
+                  className="flex-1"
+                  disabled={resending}
+                  onClick={() => resendCredentials(selectedLead.id)}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {resending ? "Wird gesendet…" : "Zugangsdaten erneut senden"}
+                </Button>
+                <Button
+                  className="flex-1"
                   onClick={() => {
                     const lead = selectedLead;
+
                     setSelectedLead(null);
                     // Update lead status to "kunde"
                     updateStatusMutation.mutate({ id: lead.id, status: "kunde" });
