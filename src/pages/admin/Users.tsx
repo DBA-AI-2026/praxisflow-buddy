@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText, UserCog, Clock, Upload, Download, CheckCircle } from "lucide-react";
+import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText, UserCog, Clock, Upload, Download, CheckCircle, Mail, Eye } from "lucide-react";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { RegionalAssignmentDialog } from "@/components/admin/RegionalAssignmentDialog";
 import {
@@ -65,6 +65,8 @@ export default function AdminUsers() {
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [selectedRole, setSelectedRole] = useState<AppRole>("user");
   const [uploadingAgreement, setUploadingAgreement] = useState(false);
+  const [credentialsPreviewOpen, setCredentialsPreviewOpen] = useState(false);
+  const [sendingCredentials, setSendingCredentials] = useState(false);
   const agreementInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -193,6 +195,40 @@ export default function AdminUsers() {
   const handleAgreementClick = (user: UserWithRole) => {
     setSelectedUser(user);
     setAgreementDialogOpen(true);
+  };
+
+  const handleSendCredentialsClick = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setCredentialsPreviewOpen(true);
+  };
+
+  const handleSendCredentialsConfirm = async () => {
+    if (!selectedUser) return;
+    setSendingCredentials(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await supabase.functions.invoke("create-user", {
+        body: {
+          email: selectedUser.email,
+          fullName: selectedUser.full_name,
+          role: selectedUser.role,
+          sendEmail: true,
+          confirmReset: true,
+        },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+
+      toast({
+        title: "Zugangsdaten gesendet",
+        description: `Ein neues Passwort wurde generiert und an ${selectedUser.email} gesendet.`,
+      });
+      setCredentialsPreviewOpen(false);
+    } catch (e: unknown) {
+      toast({ title: "Fehler", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setSendingCredentials(false);
+    }
   };
 
   const handleAgreementUpload = async (file: File) => {
@@ -356,6 +392,10 @@ export default function AdminUsers() {
                                Vereinbarung hochladen
                              </DropdownMenuItem>
                            )}
+                           <DropdownMenuItem onClick={() => handleSendCredentialsClick(user)}>
+                             <Mail className="h-4 w-4 mr-2" />
+                             Zugangsdaten zusenden
+                           </DropdownMenuItem>
                            <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-destructive"
@@ -547,6 +587,93 @@ export default function AdminUsers() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setAgreementDialogOpen(false)}>
               Schließen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Credentials Preview & Send Dialog */}
+      <Dialog open={credentialsPreviewOpen} onOpenChange={setCredentialsPreviewOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Zugangsdaten zusenden
+            </DialogTitle>
+            <DialogDescription>
+              Es wird ein neues Passwort generiert und folgende E-Mail an den Benutzer gesendet.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedUser && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary shrink-0">
+                  {selectedUser.full_name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                </div>
+                <div>
+                  <p className="font-medium text-sm">{selectedUser.full_name}</p>
+                  <p className="text-xs text-muted-foreground">{selectedUser.email} · {roleConfig[selectedUser.role]?.label}</p>
+                </div>
+              </div>
+
+              {/* Email Preview */}
+              <div className="border rounded-lg overflow-hidden">
+                <div className="bg-muted/50 px-4 py-2 border-b flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">E-Mail-Vorschau</span>
+                </div>
+                <div className="p-4 bg-[#f9fafb]">
+                  {/* Simulated email */}
+                  <div style={{ fontFamily: "Arial, sans-serif", maxWidth: "500px", margin: "0 auto" }}>
+                    <div style={{ background: "linear-gradient(135deg, #f97316, #ea580c)", color: "white", padding: "24px 20px", borderRadius: "8px 8px 0 0", textAlign: "center" }}>
+                      <div style={{ fontSize: "24px", fontWeight: "bold", margin: 0 }}>🦊 Willkommen!</div>
+                      <div style={{ margin: "8px 0 0 0", opacity: 0.9, fontSize: "14px" }}>HFX Sales Portal</div>
+                    </div>
+                    <div style={{ background: "white", padding: "24px 20px", border: "1px solid #e5e7eb", borderTop: "none" }}>
+                      <p style={{ margin: "0 0 12px 0", fontSize: "14px" }}>Hallo <strong>{selectedUser.full_name}</strong>,</p>
+                      <p style={{ margin: "0 0 16px 0", fontSize: "13px", color: "#555" }}>Ihr Benutzerkonto wurde erfolgreich erstellt. Sie wurden als <strong>{roleConfig[selectedUser.role]?.label}</strong> registriert.</p>
+                      <div style={{ background: "#f3f4f6", borderRadius: "8px", border: "1px solid #e5e7eb", padding: "16px", marginBottom: "16px" }}>
+                        <div style={{ fontWeight: "bold", color: "#374151", marginBottom: "12px", fontSize: "13px" }}>Ihre Zugangsdaten</div>
+                        <div style={{ marginBottom: "10px" }}>
+                          <div style={{ fontSize: "11px", fontWeight: "bold", color: "#6b7280", textTransform: "uppercase", marginBottom: "4px" }}>Registrierte E-Mail-Adresse</div>
+                          <div style={{ fontSize: "13px", background: "white", padding: "8px 10px", borderRadius: "6px", fontFamily: "monospace", border: "1px solid #e5e7eb" }}>{selectedUser.email}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "11px", fontWeight: "bold", color: "#6b7280", textTransform: "uppercase", marginBottom: "4px" }}>Temporäres Passwort</div>
+                          <div style={{ fontSize: "13px", background: "white", padding: "8px 10px", borderRadius: "6px", fontFamily: "monospace", border: "1px dashed #d1d5db", color: "#9ca3af" }}>wird beim Versand generiert</div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "center", marginBottom: "16px" }}>
+                        <div style={{ display: "inline-block", background: "#f97316", color: "white", padding: "10px 24px", borderRadius: "6px", fontWeight: "bold", fontSize: "13px" }}>Zum Portal anmelden</div>
+                      </div>
+                      <div style={{ background: "#fef3c7", border: "1px solid #f59e0b", padding: "10px 12px", borderRadius: "6px", fontSize: "12px", color: "#92400e" }}>
+                        ⚠️ <strong>Wichtig:</strong> Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung.
+                      </div>
+                    </div>
+                    <div style={{ background: "#f9fafb", padding: "14px 20px", border: "1px solid #e5e7eb", borderTop: "none", borderRadius: "0 0 8px 8px", fontSize: "12px", color: "#6b7280", textAlign: "center" }}>
+                      Bei Fragen wenden Sie sich bitte an Ihren Administrator.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                <span className="text-base leading-none mt-0.5">⚠️</span>
+                <span>Es wird ein <strong>neues Passwort</strong> generiert und das bisherige überschrieben. Der Benutzer erhält das neue Passwort per E-Mail.</span>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setCredentialsPreviewOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button onClick={handleSendCredentialsConfirm} disabled={sendingCredentials}>
+              {sendingCredentials ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Wird gesendet…</>
+              ) : (
+                <><Mail className="h-4 w-4 mr-2" />Zugangsdaten jetzt senden</>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
