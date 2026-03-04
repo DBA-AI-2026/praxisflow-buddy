@@ -61,7 +61,7 @@ const vertriebNavigation: NavItem[] = [
 ];
 
 const tippgeberNavigation: NavItem[] = [
-  { name: "Meine Tipps", href: "/tippgeber", icon: Lightbulb, roles: ["tippgeber", "admin"] },
+  { name: "Tippgeber-Leads", href: "/tippgeber", icon: Lightbulb, roles: ["tippgeber", "admin"] },
 ];
 
 const allgemeinNavigation: NavItem[] = [
@@ -192,7 +192,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <NavSection label="Kunden" items={kundenNavigation} {...sectionProps} />
         <NavSection label="Vertrieb" items={vertriebNavigation} {...sectionProps} />
         <NavSection label="Allgemein" items={allgemeinNavigation} {...sectionProps} />
-        <NavSection label="Meine Tipps" items={tippgeberNavigation} {...sectionProps} />
+        <NavSection label="Tippgeber-Leads" items={tippgeberNavigation} {...sectionProps} />
         <NavSection label="Administration" items={adminNavigation} {...sectionProps} />
       </nav>
 
