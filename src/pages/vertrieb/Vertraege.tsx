@@ -330,8 +330,11 @@ export default function Vertraege() {
         nachname: lead.nachname || "",
         email: lead.email || "",
         plz: lead.plz || "",
+        ort: lead.ort || "",
+        adresse: lead.adresse || "",
         telefon: lead.telefon || "",
         mp_nr: lead.mp_nr || "",
+        notes: lead.nachricht || "",
         customer_name: `${lead.vorname || ""} ${lead.nachname || ""}`.trim() || lead.praxis || "",
         sales_partner_name: profile?.full_name || "",
         status: "entwurf",
@@ -564,6 +567,29 @@ export default function Vertraege() {
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
       toast({ title: editId ? "Vertrag aktualisiert" : "Vertrag erstellt" });
 
+      // Shared helper: create Praxen entry + convert lead to "kunde"
+      const activateContract = async (hfxNr: string | null, praxisData: {
+        name: string; adresse?: string | null; plz?: string | null; ort?: string | null;
+        telefon?: string | null; email?: string | null; mp_nr?: string | null;
+        produkt?: string | null; module?: string[]; preis?: number; buchungs_datum?: string;
+        converted_from_lead_id?: string | null;
+      }) => {
+        // Convert linked lead to "kunde"
+        if (hfxNr) {
+          await supabase.from("leads").update({ status: "kunde" }).eq("hfx_customer_number", hfxNr);
+        }
+        // Create praxen entry if not exists
+        const existingCheck = hfxNr
+          ? await supabase.from("praxen").select("id").eq("mp_nr", hfxNr).maybeSingle()
+          : { data: null };
+        if (!existingCheck.data) {
+          await supabase.from("praxen").insert({ ...praxisData, status: "aktiv" });
+          queryClient.invalidateQueries({ queryKey: ["praxen"] });
+          toast({ title: "✅ Kunde angelegt", description: `${praxisData.name} wurde erfolgreich als Kunden hinterlegt.` });
+        }
+        queryClient.invalidateQueries({ queryKey: ["leads"] });
+      };
+
       // When a new contract is signed (status = aktiv), auto-create Praxen entry
       if (!editId && variables.status === "aktiv" && contractId) {
         // Set approved_by/approved_at
@@ -572,36 +598,21 @@ export default function Vertraege() {
           approved_at: new Date().toISOString(),
         }).eq("id", contractId);
 
-        // Convert linked lead to "kunde"
-        if (leadHfxNumber) {
-          await supabase.from("leads").update({ status: "kunde" }).eq("hfx_customer_number", leadHfxNumber);
-        }
-
-        // Create praxen entry if not exists
         const hfxNr = leadHfxNumber || variables.mp_nr || null;
-        const existingCheck = hfxNr
-          ? await supabase.from("praxen").select("id").eq("mp_nr", hfxNr).maybeSingle()
-          : { data: null };
-        if (!existingCheck.data) {
-          await supabase.from("praxen").insert({
-            name: variables.praxis || `${variables.vorname} ${variables.nachname}`.trim() || "Unbekannt",
-            adresse: variables.praxisanschrift || variables.adresse || null,
-            plz: variables.plz || null,
-            ort: variables.ort || null,
-            telefon: variables.telefon || null,
-            email: variables.email || null,
-            mp_nr: hfxNr,
-            produkt: variables.selected_products.join(", ") || null,
-            module: variables.selected_products,
-            preis: variables.monthly_price || 0,
-            buchungs_datum: variables.start_date || new Date().toISOString().split("T")[0],
-            status: "aktiv",
-            converted_from_lead_id: fromLeadId || null,
-          });
-          queryClient.invalidateQueries({ queryKey: ["praxen"] });
-          toast({ title: "Kunde angelegt", description: `${variables.praxis || variables.vorname} wurde zu den Kunden hinzugefügt.` });
-        }
-        queryClient.invalidateQueries({ queryKey: ["leads"] });
+        await activateContract(hfxNr, {
+          name: variables.praxis || `${variables.vorname} ${variables.nachname}`.trim() || "Unbekannt",
+          adresse: variables.praxisanschrift || variables.adresse || null,
+          plz: variables.plz || null,
+          ort: variables.ort || null,
+          telefon: variables.telefon || null,
+          email: variables.email || null,
+          mp_nr: hfxNr,
+          produkt: variables.selected_products.join(", ") || null,
+          module: variables.selected_products,
+          preis: variables.monthly_price || 0,
+          buchungs_datum: variables.start_date || new Date().toISOString().split("T")[0],
+          converted_from_lead_id: fromLeadId || null,
+        });
       }
       // Auto-open template PDF after creating a new contract (only if not a draft)
       if (!editId && variables.status !== "entwurf") {
@@ -903,43 +914,40 @@ export default function Vertraege() {
 
     // When contract is signed/activated: convert linked lead to "kunde" and add to Kunden
     if (newStatus === "aktiv" || newStatus === "gezeichnet") {
-      // Find the contract to get the hfx_customer_number
       const contract = contracts.find((c: any) => c.id === contractId);
-      if (contract?.hfx_customer_number) {
-        // Update lead status to "kunde"
-        await supabase
-          .from("leads")
-          .update({ status: "kunde" })
-          .eq("hfx_customer_number", contract.hfx_customer_number);
+      const hfxNr = contract?.hfx_customer_number || contract?.mp_nr || null;
 
-        // If activating (final step), create/upsert praxen entry
-        if (newStatus === "aktiv") {
-          const { data: existingPraxis } = await supabase
-            .from("praxen")
-            .select("id")
-            .eq("mp_nr", contract.hfx_customer_number)
-            .maybeSingle();
-
-          if (!existingPraxis) {
-            await supabase.from("praxen").insert({
-              name: contract.praxis || contract.customer_name,
-              adresse: contract.adresse || null,
-              plz: contract.plz || null,
-              ort: contract.ort || null,
-              telefon: contract.telefon || null,
-              email: contract.email || null,
-              mp_nr: contract.mp_nr || null,
-              produkt: contract.product_name || null,
-              module: contract.modules || [],
-              preis: contract.monthly_price || 0,
-              buchungs_datum: new Date().toISOString().split("T")[0],
-              status: "aktiv",
-            });
-            queryClient.invalidateQueries({ queryKey: ["praxen"] });
-            toast({ title: "Kunde angelegt", description: `${contract.praxis || contract.customer_name} wurde zu den Kunden hinzugefügt.` });
-          }
-        }
+      if (hfxNr) {
+        // Convert linked lead to "kunde"
+        await supabase.from("leads").update({ status: "kunde" }).eq("hfx_customer_number", hfxNr);
         queryClient.invalidateQueries({ queryKey: ["leads"] });
+      }
+
+      // Create Praxen entry only on "aktiv"
+      if (newStatus === "aktiv" && contract) {
+        const existingCheck = hfxNr
+          ? await supabase.from("praxen").select("id").eq("mp_nr", hfxNr).maybeSingle()
+          : { data: null };
+
+        if (!existingCheck.data) {
+          await supabase.from("praxen").insert({
+            name: contract.praxis || contract.customer_name,
+            adresse: contract.praxisanschrift || contract.adresse || null,
+            plz: contract.plz || null,
+            ort: contract.ort || null,
+            telefon: contract.telefon || null,
+            email: contract.email || null,
+            mp_nr: contract.mp_nr || null,
+            produkt: contract.product_name || null,
+            module: contract.modules || [],
+            preis: contract.monthly_price || 0,
+            buchungs_datum: new Date().toISOString().split("T")[0],
+            status: "aktiv",
+            converted_from_lead_id: (contract as any).converted_from_lead_id || null,
+          });
+          queryClient.invalidateQueries({ queryKey: ["praxen"] });
+          toast({ title: "✅ Kunde angelegt", description: `${contract.praxis || contract.customer_name} wurde erfolgreich als Kunden hinterlegt.` });
+        }
       }
     }
 

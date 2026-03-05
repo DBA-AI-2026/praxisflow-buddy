@@ -213,7 +213,7 @@ export default function Interessenten() {
         </div>
 
         {/* Table */}
-        <div className="card-elevated overflow-hidden">
+        <div className="card-elevated overflow-hidden overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -277,14 +277,22 @@ export default function Interessenten() {
                       <TableCell>
                         <Select
                           value={lead.status}
-                          onValueChange={(val) => updateStatusMutation.mutate({ id: lead.id, status: val })}
+                          onValueChange={(val) => {
+                            // Statusübergänge einschränken: kein Sprung zurück auf "neu"
+                            const order = ["neu", "kontaktiert", "qualifiziert", "vertrag", "abgelehnt"];
+                            const currentIdx = order.indexOf(lead.status);
+                            const newIdx = order.indexOf(val);
+                            // Rücksprung auf "neu" nur wenn aktuell "kontaktiert"
+                            if (val === "neu" && currentIdx > 1) return;
+                            updateStatusMutation.mutate({ id: lead.id, status: val });
+                          }}
                         >
                           <SelectTrigger className="h-7 w-[130px]">
                             <Badge variant={sc.variant} className="text-xs">{sc.label}</Badge>
                           </SelectTrigger>
                           <SelectContent>
                             {Object.entries(statusConfig)
-                              .filter(([key]) => key !== "kunde") // "kunde" is set automatically
+                              .filter(([key]) => key !== "kunde") // "kunde" wird automatisch gesetzt
                               .map(([key, cfg]) => (
                                 <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
                               ))}
@@ -357,8 +365,11 @@ export default function Interessenten() {
                                             nachname: lead.nachname,
                                             email: lead.email,
                                             plz: lead.plz,
+                                            ort: lead.ort || "",
+                                            adresse: lead.adresse || "",
                                             telefon: lead.mobilnummer,
                                             mp_nr: lead.mp_nummer || "",
+                                            nachricht: lead.nachricht || "",
                                           },
                                         },
                                       });
