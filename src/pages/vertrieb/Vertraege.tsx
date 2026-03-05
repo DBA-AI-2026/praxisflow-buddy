@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { Mail } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -253,6 +254,7 @@ export default function Vertraege() {
   const [bicLoading, setBicLoading] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [leadHfxNumber, setLeadHfxNumber] = useState<string | null>(null);
+  const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
   const { user, profile } = useAuth();
   const { isAdmin, isVertragsabteilung } = useUserRole();
   const { toast } = useToast();
@@ -1099,6 +1101,95 @@ export default function Vertraege() {
   const set = (field: keyof ContractFormData, value: any) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
+  const handleSendEmail = async (c: any) => {
+    if (!c.email) {
+      toast({ title: "Keine E-Mail-Adresse", description: "Für diesen Kunden ist keine E-Mail-Adresse hinterlegt.", variant: "destructive" });
+      return;
+    }
+    setSendingEmailId(c.id);
+    try {
+      // Load logo
+      let logoBytes: ArrayBuffer | undefined;
+      try {
+        const res = await fetch(foxLogoUrl);
+        logoBytes = await res.arrayBuffer();
+      } catch { /* continue without logo */ }
+
+      // Build product price details
+      const now = new Date();
+      const selectedNames: string[] = c.modules?.length ? c.modules : (c.product_name ? [c.product_name] : []);
+      const product_price_details = products
+        .filter((p: any) => selectedNames.includes(p.name))
+        .map((p: any) => ({
+          name: p.name,
+          monthly_price: Number(p.monthly_price),
+          price_per_unit: p.price_per_unit != null ? Number(p.price_per_unit) : null,
+          price_per_unit_label: p.price_per_unit_label || null,
+          promo_price: p.promo_price != null ? Number(p.promo_price) : null,
+          promo_price_label: p.promo_price_label || null,
+          promo_end_date: p.promo_end_date || null,
+          promo_base_fee_end_date: p.promo_base_fee_end_date || null,
+          has_active_promo: p.promo_price != null && p.promo_end_date && new Date(p.promo_end_date) >= now,
+        }));
+
+      const addonNames: string[] = c.selected_addon_modules || [];
+      const addon_module_details = ebmModules
+        .filter((m: any) => addonNames.includes(m.name))
+        .map((m: any) => ({ name: m.name, monthly_price: Number(m.monthly_price) }));
+
+      // 1) Generate Vorschau PDF
+      const previewBytes = await generateContractPdf({
+        ...c,
+        product_price_details,
+        selected_addon_modules: addonNames,
+        addon_module_details,
+      }, logoBytes);
+      const previewBase64 = btoa(String.fromCharCode(...new Uint8Array(previewBytes)));
+
+      // 2) Generate Vertragsdokument PDF (template)
+      const templateRes = await fetch("/templates/vertrag-honorarfuchs.pdf");
+      const templateBytes = await templateRes.arrayBuffer();
+      const contractBytes = await fillContractTemplate(templateBytes, {
+        mp_nr: c.mp_nr, praxis: c.praxis, fachrichtung: c.fachrichtung,
+        rechtsform: c.rechtsform, vorname: c.vorname, nachname: c.nachname,
+        adresse: c.adresse, praxisanschrift: c.praxisanschrift, plz: c.plz,
+        telefon: c.telefon, email: c.email,
+        kontoinhaber: c.kontoinhaber, kontoinhaber_strasse: c.kontoinhaber_strasse,
+        kontoinhaber_plz_ort: c.kontoinhaber_plz_ort, bank_name: c.bank_name,
+        iban: c.iban, bic: c.bic, bsnr: c.bsnr,
+        lanr: c.lanr, weitere_bsnr: c.weitere_bsnr, weitere_lanr: c.weitere_lanr, ort: c.ort,
+        monthly_price: c.monthly_price, start_date: c.start_date, end_date: c.end_date,
+        modules: c.modules?.length ? c.modules : (c.product_name ? [c.product_name] : []),
+        duration_months: c.duration_months, notes: c.notes,
+        signature_data: c.signature_data, vertrieb_signature_data: c.vertrieb_signature_data,
+        praxissystem: c.praxissystem, stundenaufwand_pro_woche: c.stundenaufwand_pro_woche,
+        selected_addon_modules: addonNames,
+      });
+      const contractBase64 = btoa(String.fromCharCode(...new Uint8Array(contractBytes)));
+
+      const customerName = [c.vorname, c.nachname].filter(Boolean).join(" ") || c.praxis || c.customer_name;
+      const { error } = await supabase.functions.invoke("send-contract-email", {
+        body: {
+          email: c.email,
+          salesPartnerEmail: null,
+          customerName,
+          pdfBase64: contractBase64,
+          previewPdfBase64: previewBase64,
+          products: c.product_name || selectedNames.join(", "),
+          startDate: c.start_date,
+          hfxNumber: c.hfx_customer_number,
+        },
+      });
+      if (error) throw error;
+      toast({ title: "E-Mail gesendet", description: `Vorschau und Vertragsdokument wurden an ${c.email} gesendet.` });
+    } catch (err: any) {
+      console.error("Send email error:", err);
+      toast({ title: "Fehler beim E-Mail-Versand", description: err.message, variant: "destructive" });
+    } finally {
+      setSendingEmailId(null);
+    }
+  };
+
   const handlePreviewPdf = async (contractData: Record<string, any>) => {
     try {
       // Capture signature from pad if available
@@ -1405,24 +1496,47 @@ export default function Vertraege() {
                              📄 Papier
                            </span>
                          )}
-                         <Button
-                           variant="outline"
-                           size="sm"
-                           className="h-7 gap-1 text-xs"
-                           onClick={() => handlePreviewPdf(c)}
-                         >
-                           <Eye className="h-3 w-3" />
-                           Vorschau
-                         </Button>
-                         <Button
-                           variant="outline"
-                           size="sm"
-                           className="h-7 gap-1 text-xs"
-                           onClick={() => handleTemplatePdf(c)}
-                         >
-                           <FileText className="h-3 w-3" />
-                           Vertragsdokument
-                         </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1 text-xs"
+                            onClick={() => handlePreviewPdf(c)}
+                          >
+                            <Eye className="h-3 w-3" />
+                            Vorschau
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1 text-xs"
+                            onClick={() => handleTemplatePdf(c)}
+                          >
+                            <FileText className="h-3 w-3" />
+                            Vertragsdokument
+                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 gap-1 text-xs text-primary border-primary/30 hover:bg-primary/5"
+                                  disabled={sendingEmailId === c.id || !c.email}
+                                  onClick={() => handleSendEmail(c)}
+                                >
+                                  {sendingEmailId === c.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Mail className="h-3 w-3" />
+                                  )}
+                                  Per Mail senden
+                                </Button>
+                              </TooltipTrigger>
+                              {!c.email && (
+                                <TooltipContent>Keine E-Mail-Adresse hinterlegt</TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
                           {c.document_url && (
                             <button
                               className="text-primary hover:underline text-xs flex items-center gap-1"

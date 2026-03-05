@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { email, salesPartnerEmail, customerName, pdfBase64, products, startDate, hfxNumber } = await req.json();
+    const { email, salesPartnerEmail, customerName, pdfBase64, previewPdfBase64, products, startDate, hfxNumber } = await req.json();
 
     // Check email notification settings
     const supabaseAdmin = createClient(
@@ -84,6 +84,14 @@ Deno.serve(async (req) => {
       filename: `Vertrag-${hfxNumber || "Honorarfuchs"}.pdf`,
       content: pdfBase64,
     };
+
+    const attachments = [attachment];
+    if (previewPdfBase64) {
+      attachments.push({
+        filename: `Produktvorschau-${hfxNumber || "Honorarfuchs"}.pdf`,
+        content: previewPdfBase64,
+      });
+    }
 
     const detailsHtml = `
       <div style="background: white; border: 1px solid #e5e7eb; padding: 16px; border-radius: 8px; margin: 20px 0;">
@@ -125,7 +133,7 @@ Deno.serve(async (req) => {
         from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
         to: [email],
         subject: `Ihre Vertragsunterlagen – ${products || "Honorarfuchs"}`,
-        attachments: [attachment],
+        attachments,
         html: customerHtml,
       });
       console.log("Customer email sent to:", email, results.customer);
@@ -161,7 +169,7 @@ Deno.serve(async (req) => {
         from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
         to: [salesPartnerEmail],
         subject: `Vertragskopie – ${customerName || "Neuer Kunde"} – ${products || "Honorarfuchs"}`,
-        attachments: [attachment],
+        attachments,
         html: partnerHtml,
       });
       console.log("Partner email sent to:", salesPartnerEmail, results.partner);
