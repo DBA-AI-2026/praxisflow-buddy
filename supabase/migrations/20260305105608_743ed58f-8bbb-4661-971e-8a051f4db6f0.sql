@@ -1,0 +1,1 @@
+ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS parent_contract_id uuid REFERENCES public.contracts(id) ON DELETE SET NULL;
