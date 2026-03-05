@@ -135,10 +135,16 @@ export default function Interessenten() {
         .update({ assigned_to })
         .eq("id", id);
       if (error) throw error;
+      // Send email notification to the newly assigned AD
+      if (assigned_to) {
+        await supabase.functions.invoke("notify-lead-assignment", {
+          body: { leadId: id, assignedToUserId: assigned_to },
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
-      toast({ title: "Gebietsleiter zugewiesen" });
+      toast({ title: "Gebietsleiter zugewiesen", description: "AD wurde per E-Mail benachrichtigt." });
     },
   });
 
