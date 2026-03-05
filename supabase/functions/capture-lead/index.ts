@@ -414,26 +414,37 @@ Deno.serve(async (req) => {
     // Generate password for Qodia access
     const generatedPassword = generatePassword(12);
 
-    // Auto-assign Gebietsleiter based on PLZ prefix (2-digit match, highest priority wins)
+    // Auto-assign Gebietsleiter based on PLZ prefix
+    // Tries 2-digit match first (more specific), then falls back to 1-digit.
+    // Among matches of the same prefix length, highest priority wins.
     let assignedTo: string | null = null;
     let assignedName: string | null = null;
     try {
       const plzClean = plz.trim().replace(/\s/g, "");
-      if (plzClean.length >= 2) {
+      if (plzClean.length >= 1) {
         const prefix2 = plzClean.substring(0, 2);
+        const prefix1 = plzClean.substring(0, 1);
+        const prefixes = plzClean.length >= 2 ? [prefix2, prefix1] : [prefix1];
+
         const { data: mappings } = await supabase
           .from("plz_gebietsleiter_mapping")
-          .select("gebietsleiter_id, gebietsleiter_name, priority")
-          .eq("plz_prefix", prefix2)
+          .select("gebietsleiter_id, gebietsleiter_name, plz_prefix, priority")
           .eq("is_active", true)
-          .order("priority", { ascending: false })
-          .limit(1);
-        if (mappings && mappings.length > 0 && mappings[0].gebietsleiter_id) {
-          assignedTo = mappings[0].gebietsleiter_id;
-          assignedName = mappings[0].gebietsleiter_name;
-          console.log(`Lead PLZ ${plzClean} → assigned to ${assignedName} (prefix: ${prefix2})`);
+          .in("plz_prefix", prefixes)
+          .order("priority", { ascending: false });
+
+        // Prefer 2-digit match over 1-digit (more specific wins regardless of priority)
+        const bestMatch =
+          mappings?.find((m) => m.plz_prefix === prefix2) ??
+          mappings?.find((m) => m.plz_prefix === prefix1) ??
+          null;
+
+        if (bestMatch?.gebietsleiter_id) {
+          assignedTo = bestMatch.gebietsleiter_id;
+          assignedName = bestMatch.gebietsleiter_name;
+          console.log(`Lead PLZ ${plzClean} → assigned to ${assignedName} (prefix: ${bestMatch.plz_prefix})`);
         } else {
-          console.log(`No GL mapping found for PLZ prefix ${prefix2}`);
+          console.log(`No GL mapping found for PLZ ${plzClean} (tried prefixes: ${prefixes.join(", ")})`);
         }
       }
     } catch (plzErr) {

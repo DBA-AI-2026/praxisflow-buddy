@@ -92,11 +92,11 @@ export default function PlzMapping() {
   const { data: profiles = [] } = useQuery({
     queryKey: ["gebietsleiter-profiles"],
     queryFn: async () => {
-      // Get users with role 'user' (Gebietsleiter)
+    // Get users with roles that can be Gebietsleiter (user, sales_partner, sales_lead, regional_lead)
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id")
-        .eq("role", "user");
+        .in("role", ["user", "sales_partner", "sales_lead", "regional_lead"]);
       if (rolesError) throw rolesError;
 
       if (!roles || roles.length === 0) return [];
