@@ -9,11 +9,21 @@ import {
   Building2, FlaskConical, TrendingUp, FileText,
   ArrowRight, Clock, Users,
   PlusCircle, Eye, FileSignature, Lightbulb, MapPin, BarChart3, BookMarked,
-  X, Sparkles,
+  X, Sparkles, Activity, FileCheck, UserPlus, MessageSquare,
 } from "lucide-react";
 import type { AppRole } from "@/hooks/useUserRole";
-import { format } from "date-fns";
+import { format, formatDistanceToNow, subHours } from "date-fns";
 import { de } from "date-fns/locale";
+
+interface ActivityItem {
+  id: string;
+  type: "contract" | "lead" | "tipp";
+  label: string;
+  sub: string;
+  status: string;
+  time: string;
+  link: string;
+}
 
 interface QuickLink {
   to: string;
@@ -206,6 +216,58 @@ export default function Dashboard() {
         .from("contracts")
         .select("id", { count: "exact", head: true });
       return (count ?? 0) > 0;
+    },
+  });
+
+  // Activity feed: last 48h changes, role-filtered
+  const { data: activityFeed = [] } = useQuery({
+    queryKey: ["dashboard-activity", role],
+    enabled: !!role,
+    queryFn: async () => {
+      const since = subHours(new Date(), 48).toISOString();
+      const items: ActivityItem[] = [];
+
+      if (role === "tippgeber") {
+        const { data } = await supabase
+          .from("tipp_leads")
+          .select("id, praxis_name, arzt_name, status, created_at, updated_at")
+          .gte("updated_at", since)
+          .order("updated_at", { ascending: false })
+          .limit(10);
+        (data ?? []).forEach((r) => items.push({
+          id: r.id, type: "tipp", label: r.praxis_name, sub: r.arzt_name,
+          status: r.status, time: r.updated_at, link: "/tipp-leads",
+        }));
+      } else {
+        // Contracts
+        const { data: contracts } = await supabase
+          .from("contracts")
+          .select("id, customer_name, product_name, status, created_at, updated_at")
+          .gte("updated_at", since)
+          .order("updated_at", { ascending: false })
+          .limit(8);
+        (contracts ?? []).forEach((r) => items.push({
+          id: r.id, type: "contract", label: r.customer_name, sub: r.product_name,
+          status: r.status, time: r.updated_at, link: "/vertrieb/vertraege",
+        }));
+
+        // Leads always shown in else-branch (tippgeber is already handled above)
+        if (true) {
+          const { data: leads } = await supabase
+            .from("leads")
+            .select("id, praxis_name, vorname, nachname, status, created_at, updated_at")
+            .gte("updated_at", since)
+            .order("updated_at", { ascending: false })
+            .limit(8);
+          (leads ?? []).forEach((r) => items.push({
+            id: r.id, type: "lead", label: r.praxis_name, sub: `${r.vorname} ${r.nachname}`.trim(),
+            status: r.status, time: r.updated_at, link: "/interessenten",
+          }));
+        }
+      }
+
+      // Sort combined by time desc, limit 12
+      return items.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 12);
     },
   });
 
@@ -414,6 +476,56 @@ export default function Dashboard() {
           </div>
         </div>
 
+      </div>
+
+      {/* === AKTIVITÄTS-FEED === */}
+      <div className="mt-6 card-elevated">
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Activity className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold text-foreground">Letzte Aktivitäten</h3>
+            <span className="text-xs text-muted-foreground">(48 Std.)</span>
+          </div>
+        </div>
+        <div className="divide-y divide-border">
+          {activityFeed.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">Keine Aktivitäten in den letzten 48 Stunden.</p>
+          ) : activityFeed.map((item) => {
+            const Icon = item.type === "contract" ? FileCheck : item.type === "lead" ? UserPlus : MessageSquare;
+            const iconClass = item.type === "contract"
+              ? "bg-primary/10 text-primary"
+              : item.type === "lead"
+              ? "bg-purple-500/10 text-purple-600"
+              : "bg-amber-500/10 text-amber-600";
+            const typeLabel = item.type === "contract" ? "Vertrag" : item.type === "lead" ? "Interessent" : "Tipp-Lead";
+            return (
+              <Link
+                key={item.id + item.type}
+                to={item.link}
+                className="flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors"
+              >
+                <div className={`shrink-0 rounded-lg p-2 ${iconClass}`}>
+                  <Icon className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-foreground text-sm truncate">{item.label}</span>
+                    <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${statusBadge(item.status)}`}>
+                      {item.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {typeLabel} · {item.sub}
+                  </p>
+                </div>
+                <div className="shrink-0 text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {formatDistanceToNow(new Date(item.time), { addSuffix: true, locale: de })}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </MainLayout>
   );
