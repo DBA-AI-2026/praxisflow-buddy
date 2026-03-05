@@ -12,6 +12,9 @@ const roleLabels: Record<string, string> = {
   admin: "Administrator",
   sales_partner: "Vertriebspartner",
   sales_lead: "Vertriebsleitung",
+  regional_lead: "Regionalleiter",
+  vertragsabteilung: "Vertragsabteilung",
+  tippgeber: "Tippgeber",
   user: "Gebietsleiter",
 };
 
