@@ -6,6 +6,40 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+/**
+ * Generates a secure random password (12 chars: uppercase, lowercase, digits, special).
+ * Password is generated on-demand and never stored persistently.
+ */
+function generatePassword(length = 12): string {
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghjkmnpqrstuvwxyz";
+  const digits = "23456789";
+  const special = "!@#$%&*";
+  const all = upper + lower + digits + special;
+
+  const arr = new Uint8Array(length);
+  crypto.getRandomValues(arr);
+
+  const result = [
+    upper[arr[0] % upper.length],
+    lower[arr[1] % lower.length],
+    digits[arr[2] % digits.length],
+    special[arr[3] % special.length],
+  ];
+
+  for (let i = 4; i < length; i++) {
+    result.push(all[arr[i] % all.length]);
+  }
+
+  // Shuffle
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = arr[i] % (i + 1);
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+
+  return result.join("");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -35,10 +69,10 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "leadId is required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Fetch lead
+    // Fetch lead (do NOT read generated_password)
     const { data: lead, error: leadError } = await supabaseAdmin
       .from("leads")
-      .select("*")
+      .select("id, hfx_customer_number, praxis_name, vorname, nachname, email, status")
       .eq("id", leadId)
       .single();
 
@@ -46,9 +80,38 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Lead not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    if (!lead.generated_password) {
-      return new Response(JSON.stringify({ error: "Kein gespeichertes Passwort für diesen Lead vorhanden." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!lead.email) {
+      return new Response(JSON.stringify({ error: "Kein E-Mail für diesen Lead vorhanden." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    // Generate a fresh password on-demand — never read from DB
+    const newPassword = generatePassword(12);
+
+    // Find the Supabase Auth user by email and update their password
+    const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    if (listError) {
+      console.error("Error listing users:", listError);
+      return new Response(JSON.stringify({ error: "Fehler beim Abrufen der Benutzerliste." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const authUser = listData?.users?.find((u) => u.email?.toLowerCase() === lead.email.toLowerCase());
+
+    if (authUser) {
+      // Update existing auth user password
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(authUser.id, {
+        password: newPassword,
+      });
+      if (updateError) {
+        console.error("Error updating password:", updateError);
+        return new Response(JSON.stringify({ error: "Fehler beim Zurücksetzen des Passworts." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
+    // Clear the stored plaintext password from the leads table (security hygiene)
+    await supabaseAdmin
+      .from("leads")
+      .update({ generated_password: null })
+      .eq("id", leadId);
 
     const resend = new Resend(Deno.env.get("RESEND_API_KEY")!);
 
@@ -58,7 +121,7 @@ Deno.serve(async (req) => {
       nachname: lead.nachname,
       email: lead.email,
       hfx_customer_number: lead.hfx_customer_number,
-      generated_password: lead.generated_password,
+      generated_password: newPassword,
     });
 
     await resend.emails.send({
@@ -68,10 +131,10 @@ Deno.serve(async (req) => {
       html: emailHtml,
     });
 
-    console.log(`Credentials manually resent for lead ${lead.hfx_customer_number} to ${lead.email}`);
+    console.log(`New credentials generated and sent for lead ${lead.hfx_customer_number} to ${lead.email}`);
 
     return new Response(
-      JSON.stringify({ success: true, message: `Zugangsdaten wurden erneut an ${lead.email} gesendet.` }),
+      JSON.stringify({ success: true, message: `Neue Zugangsdaten wurden an ${lead.email} gesendet.` }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {
@@ -100,23 +163,23 @@ function buildCredentialsEmailHtml(fields: {
   <tr>
     <td style="background-color:#0b367f;padding:30px 40px;text-align:center;">
       <h1 style="color:#ffffff;font-size:22pt;margin:0;font-family:verdana,geneva,sans-serif;">🦊 Honorarfuchs</h1>
-      <p style="color:#c8d8f0;font-size:11pt;margin:8px 0 0 0;">Ihre Zugangsdaten (erneute Zusendung)</p>
+      <p style="color:#c8d8f0;font-size:11pt;margin:8px 0 0 0;">Ihre neuen Zugangsdaten</p>
     </td>
   </tr>
   <!-- Body -->
   <tr>
     <td style="padding:32px 40px;">
       <p style="font-size:12pt;color:#333333;margin:0 0 16px 0;">Hallo <strong>${vorname} ${nachname}</strong>,</p>
-      <p style="font-size:11pt;color:#555555;margin:0 0 24px 0;">auf Wunsch senden wir Ihnen Ihre Zugangsdaten für das Honorarfuchs-Portal erneut zu.</p>
+      <p style="font-size:11pt;color:#555555;margin:0 0 24px 0;">auf Wunsch haben wir Ihre Zugangsdaten zurückgesetzt. Sie finden unten Ihre neuen Anmeldedaten für das Honorarfuchs-Portal.</p>
 
       <!-- Credentials Box -->
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f5ff;border-radius:8px;border:1px solid #c8d8f0;margin-bottom:24px;">
         <tr>
           <td style="padding:20px 24px;">
-            <p style="font-size:10pt;color:#0b367f;font-weight:bold;text-transform:uppercase;margin:0 0 12px 0;">Ihre Zugangsdaten</p>
+            <p style="font-size:10pt;color:#0b367f;font-weight:bold;text-transform:uppercase;margin:0 0 12px 0;">Ihre neuen Zugangsdaten</p>
             <table border="0" cellpadding="0" cellspacing="0" width="100%">
               <tr>
-                <td style="padding:6px 0;font-size:10pt;color:#777777;width:140px;">Registrierte E-Mail-Adresse</td>
+                <td style="padding:6px 0;font-size:10pt;color:#777777;width:140px;">E-Mail-Adresse</td>
                 <td style="padding:6px 0;font-size:11pt;color:#333333;">${email}</td>
               </tr>
               <tr>
@@ -124,7 +187,7 @@ function buildCredentialsEmailHtml(fields: {
                 <td style="padding:6px 0;font-size:11pt;color:#0b367f;font-weight:bold;font-family:monospace;">${hfx_customer_number}</td>
               </tr>
               <tr>
-                <td style="padding:6px 0;font-size:10pt;color:#777777;">Passwort</td>
+                <td style="padding:6px 0;font-size:10pt;color:#777777;">Neues Passwort</td>
                 <td style="padding:6px 0;font-size:11pt;color:#0b367f;font-weight:bold;font-family:monospace;">${generated_password}</td>
               </tr>
             </table>
@@ -133,7 +196,10 @@ function buildCredentialsEmailHtml(fields: {
       </table>
 
       <p style="font-size:10pt;color:#888888;margin:0 0 8px 0;">
-        Falls Sie diese E-Mail nicht angefordert haben, können Sie sie ignorieren.
+        Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung.
+      </p>
+      <p style="font-size:10pt;color:#888888;margin:0 0 8px 0;">
+        Falls Sie diese E-Mail nicht angefordert haben, wenden Sie sich bitte umgehend an uns.
       </p>
     </td>
   </tr>
