@@ -2049,7 +2049,7 @@ export default function Vertraege() {
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Unterschriften</h4>
 
               {/* Unterschrift-Modus Toggle */}
-              <div className="flex gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => set("signature_mode", "digital")}
