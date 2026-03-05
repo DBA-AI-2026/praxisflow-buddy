@@ -24,9 +24,10 @@ function getRoleLabel(role: string | null): string {
   const labels: Record<string, string> = {
     admin: "Administrator",
     sales_partner: "Vertriebspartner",
-    sales_lead: "Sales Lead",
+    sales_lead: "Vertriebsleitung",
     vertragsabteilung: "Vertragsabteilung",
-    regional_lead: "Regional Lead",
+    regional_lead: "Regionalleiter",
+    tippgeber: "Tippgeber",
     user: "Gebietsleiter",
   };
   return role ? labels[role] ?? role : "";
