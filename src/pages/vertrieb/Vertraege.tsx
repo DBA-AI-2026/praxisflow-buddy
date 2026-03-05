@@ -255,6 +255,7 @@ export default function Vertraege() {
   const [showErrors, setShowErrors] = useState(false);
   const [leadHfxNumber, setLeadHfxNumber] = useState<string | null>(null);
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
+  const [emailConfirmContract, setEmailConfirmContract] = useState<any | null>(null);
   const { user, profile } = useAuth();
   const { isAdmin, isVertragsabteilung } = useUserRole();
   const { toast } = useToast();
@@ -1522,7 +1523,7 @@ export default function Vertraege() {
                                   size="sm"
                                   className="h-7 gap-1 text-xs text-primary border-primary/30 hover:bg-primary/5"
                                   disabled={sendingEmailId === c.id || !c.email}
-                                  onClick={() => handleSendEmail(c)}
+                                  onClick={() => setEmailConfirmContract(c)}
                                 >
                                   {sendingEmailId === c.id ? (
                                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -2552,7 +2553,48 @@ export default function Vertraege() {
         </DialogContent>
       </Dialog>
 
-    
+      {/* E-Mail Bestätigungsdialog */}
+      <Dialog open={!!emailConfirmContract} onOpenChange={(open) => { if (!open) setEmailConfirmContract(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              E-Mail senden?
+            </DialogTitle>
+            <DialogDescription>
+              Die Vertragsunterlagen (Vertragsdokument + Produktvorschau) werden per E-Mail versendet an:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-md border border-border bg-muted/50 px-4 py-3 text-sm font-medium break-all">
+            {emailConfirmContract?.email}
+          </div>
+          {emailConfirmContract?.customer_name && (
+            <p className="text-sm text-muted-foreground -mt-1">
+              Empfänger: <span className="text-foreground font-medium">{emailConfirmContract.customer_name}</span>
+            </p>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setEmailConfirmContract(null)}>
+              Abbrechen
+            </Button>
+            <Button
+              disabled={sendingEmailId === emailConfirmContract?.id}
+              onClick={() => {
+                const c = emailConfirmContract;
+                setEmailConfirmContract(null);
+                handleSendEmail(c);
+              }}
+            >
+              {sendingEmailId === emailConfirmContract?.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Mail className="h-4 w-4" />
+              )}
+              Senden
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
