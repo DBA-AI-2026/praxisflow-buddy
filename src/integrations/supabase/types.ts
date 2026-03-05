@@ -154,6 +154,7 @@ export type Database = {
           notes: string | null
           one_time_fee: number
           ort: string | null
+          parent_contract_id: string | null
           payment_interval: string
           plz: string | null
           praxis: string | null
@@ -216,6 +217,7 @@ export type Database = {
           notes?: string | null
           one_time_fee?: number
           ort?: string | null
+          parent_contract_id?: string | null
           payment_interval?: string
           plz?: string | null
           praxis?: string | null
@@ -278,6 +280,7 @@ export type Database = {
           notes?: string | null
           one_time_fee?: number
           ort?: string | null
+          parent_contract_id?: string | null
           payment_interval?: string
           plz?: string | null
           praxis?: string | null
@@ -306,6 +309,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "praxen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_parent_contract_id_fkey"
+            columns: ["parent_contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
         ]

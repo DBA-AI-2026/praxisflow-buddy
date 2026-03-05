@@ -24,6 +24,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye, CheckCircle,
   FilePen, FileSignature, CircleCheck, CircleOff, ArchiveX, ShieldBan, ArrowUpDown, ArrowUp, ArrowDown,
+  GitMerge,
 } from "lucide-react";
 // Check and ChevronsUpDown already imported above via combobox imports
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
@@ -775,6 +776,95 @@ export default function Vertraege() {
   const [sortField, setSortField] = useState<"created_at" | "updated_at">("created_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
+  // Extension / Nachtrag dialog state
+  const [extensionDialogOpen, setExtensionDialogOpen] = useState(false);
+  const [extensionBaseContract, setExtensionBaseContract] = useState<any | null>(null);
+  const [extensionForm, setExtensionForm] = useState({
+    product_name: "",
+    start_date: new Date().toISOString().split("T")[0],
+    monthly_price: 0,
+    one_time_fee: 0,
+    notes: "",
+    status: "entwurf" as string,
+  });
+  const [extensionSaving, setExtensionSaving] = useState(false);
+
+  const openExtensionDialog = (contract: any) => {
+    setExtensionBaseContract(contract);
+    setExtensionForm({
+      product_name: "",
+      start_date: new Date().toISOString().split("T")[0],
+      monthly_price: 0,
+      one_time_fee: 0,
+      notes: "",
+      status: "entwurf",
+    });
+    setExtensionDialogOpen(true);
+  };
+
+  const handleSaveExtension = async (asActive: boolean) => {
+    if (!extensionBaseContract || !user?.id) return;
+    if (!extensionForm.product_name.trim()) {
+      toast({ title: "Pflichtfeld fehlt", description: "Bitte ein Produkt / Leistung angeben.", variant: "destructive" });
+      return;
+    }
+    setExtensionSaving(true);
+    try {
+      const base = extensionBaseContract;
+      const endDate = addMonths(new Date(extensionForm.start_date), base.duration_months || 12);
+      const { error } = await supabase.from("contracts").insert({
+        parent_contract_id: base.id,
+        customer_name: base.customer_name,
+        sales_partner_id: base.sales_partner_id,
+        sales_partner_name: base.sales_partner_name || null,
+        mp_nr: base.mp_nr || null,
+        hfx_customer_number: base.hfx_customer_number || null,
+        customer_id: base.customer_id || null,
+        praxis: base.praxis || null,
+        fachrichtung: base.fachrichtung || null,
+        vorname: base.vorname || null,
+        nachname: base.nachname || null,
+        praxisanschrift: base.praxisanschrift || null,
+        adresse: base.adresse || null,
+        plz: base.plz || null,
+        ort: base.ort || null,
+        telefon: base.telefon || null,
+        email: base.email || null,
+        rechnungs_email: base.rechnungs_email || null,
+        rechtsform: base.rechtsform || null,
+        kontoinhaber: base.kontoinhaber || null,
+        kontoinhaber_strasse: base.kontoinhaber_strasse || null,
+        kontoinhaber_plz_ort: base.kontoinhaber_plz_ort || null,
+        bank_name: base.bank_name || null,
+        iban: base.iban || null,
+        bic: base.bic || null,
+        product_name: extensionForm.product_name,
+        modules: [extensionForm.product_name],
+        monthly_price: extensionForm.monthly_price,
+        one_time_fee: extensionForm.one_time_fee,
+        start_date: extensionForm.start_date,
+        end_date: endDate.toISOString().split("T")[0],
+        duration_months: base.duration_months || 12,
+        cancellation_period_months: base.cancellation_period_months || 6,
+        auto_renewal: base.auto_renewal ?? true,
+        discount_percent: 0,
+        payment_interval: base.payment_interval || "monatlich",
+        notes: extensionForm.notes ? `[Nachtrag] ${extensionForm.notes}` : "[Nachtrag]",
+        status: asActive ? "aktiv" : "entwurf",
+        created_by: user.id,
+      } as any);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      toast({ title: "Nachtrag erstellt", description: `Vertragserweiterung für ${base.customer_name} gespeichert.` });
+      setExtensionDialogOpen(false);
+      setExtensionBaseContract(null);
+    } catch (err: any) {
+      toast({ title: "Fehler", description: err.message, variant: "destructive" });
+    } finally {
+      setExtensionSaving(false);
+    }
+  };
+
   const handleSort = (field: "created_at" | "updated_at") => {
     if (sortField === field) {
       setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -1227,6 +1317,12 @@ export default function Vertraege() {
                      <td className="py-3.5 px-4 text-muted-foreground text-sm">{c.mp_nr || "–"}</td>
                     <td className="py-3.5 px-4 max-w-[220px]">
                       <div className="space-y-1">
+                        {(c as any).parent_contract_id && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-primary border border-primary/30 bg-primary/5 rounded px-1.5 py-0.5 w-fit">
+                            <GitMerge className="h-3 w-3" />
+                            Nachtrag
+                          </span>
+                        )}
                         <div className="flex flex-wrap gap-1">
                           {c.product_name.split(", ").map((p: string, i: number) => (
                             <Badge key={i} variant="secondary" className="text-xs font-normal px-2 py-0.5 whitespace-nowrap">
@@ -1368,6 +1464,15 @@ export default function Vertraege() {
                             <Pencil className="h-4 w-4 mr-2" />
                             Bearbeiten
                           </DropdownMenuItem>
+                          {(c.status === "aktiv" || c.status === "gezeichnet") && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => openExtensionDialog(c)} className="text-primary">
+                                <GitMerge className="h-4 w-4 mr-2" />
+                                Produkt hinzubuchen
+                              </DropdownMenuItem>
+                            </>
+                          )}
                           {isAdmin && c.status === "gezeichnet" && (
                             <>
                               <DropdownMenuSeparator />
@@ -2212,6 +2317,116 @@ export default function Vertraege() {
               </div>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Nachtrag / Vertragserweiterung Dialog */}
+      <Dialog open={extensionDialogOpen} onOpenChange={(o) => { if (!o) { setExtensionDialogOpen(false); setExtensionBaseContract(null); } }}>
+        <DialogContent className="w-full max-w-[95vw] sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GitMerge className="h-5 w-5 text-primary" />
+              Produkt hinzubuchen – Nachtrag
+            </DialogTitle>
+            <DialogDescription>
+              Erstellt einen Nachtrag zum bestehenden Vertrag. Der Originalvertrag bleibt unverändert.
+            </DialogDescription>
+          </DialogHeader>
+
+          {extensionBaseContract && (
+            <div className="space-y-5">
+              {/* Readonly parent contract info */}
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-2 text-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Stammvertrag</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                  <span className="text-muted-foreground">Kunde</span>
+                  <span className="font-medium">{extensionBaseContract.customer_name}</span>
+                  <span className="text-muted-foreground">Praxis</span>
+                  <span>{extensionBaseContract.praxis || "–"}</span>
+                  <span className="text-muted-foreground">HFX-Nr.</span>
+                  <span className="font-mono text-xs">{extensionBaseContract.hfx_customer_number || "–"}</span>
+                  <span className="text-muted-foreground">Bestehende Produkte</span>
+                  <span className="flex flex-wrap gap-1">
+                    {(extensionBaseContract.product_name || "").split(", ").map((p: string, i: number) => (
+                      <Badge key={i} variant="secondary" className="text-xs px-1.5 py-0">{p}</Badge>
+                    ))}
+                  </span>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* New product fields */}
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="ext-product">Neues Produkt / Leistung *</Label>
+                  <Input
+                    id="ext-product"
+                    placeholder="z.B. HFX Doku, HFX QM …"
+                    value={extensionForm.product_name}
+                    onChange={(e) => setExtensionForm(f => ({ ...f, product_name: e.target.value }))}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ext-start">Vertragsbeginn *</Label>
+                    <Input
+                      id="ext-start"
+                      type="date"
+                      value={extensionForm.start_date}
+                      onChange={(e) => setExtensionForm(f => ({ ...f, start_date: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ext-price">Monatspreis (€)</Label>
+                    <Input
+                      id="ext-price"
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={extensionForm.monthly_price}
+                      onChange={(e) => setExtensionForm(f => ({ ...f, monthly_price: parseFloat(e.target.value) || 0 }))}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ext-fee">Einmalzahlung (€)</Label>
+                  <Input
+                    id="ext-fee"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={extensionForm.one_time_fee}
+                    onChange={(e) => setExtensionForm(f => ({ ...f, one_time_fee: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="ext-notes">Anmerkungen</Label>
+                  <Textarea
+                    id="ext-notes"
+                    placeholder="Optional: Hinweise zur Erweiterung …"
+                    rows={2}
+                    value={extensionForm.notes}
+                    onChange={(e) => setExtensionForm(f => ({ ...f, notes: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-2">
+            <Button variant="outline" onClick={() => { setExtensionDialogOpen(false); setExtensionBaseContract(null); }} disabled={extensionSaving}>
+              Abbrechen
+            </Button>
+            <Button variant="outline" onClick={() => handleSaveExtension(false)} disabled={extensionSaving}>
+              {extensionSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Als Entwurf speichern
+            </Button>
+            <Button onClick={() => handleSaveExtension(true)} disabled={extensionSaving}>
+              {extensionSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Nachtrag aktivieren
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
