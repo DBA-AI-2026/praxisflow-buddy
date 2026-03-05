@@ -229,7 +229,7 @@ export default function Interessenten() {
                 <TableHead>PLZ</TableHead>
                 <TableHead>Abr.-Zentrum</TableHead>
                 <TableHead>Status</TableHead>
-                {canAssign && <TableHead>Gebietsleiter</TableHead>}
+                {canAssign && <TableHead>AD-Zuteilung</TableHead>}
                 <TableHead className="text-center">SF</TableHead>
                 <TableHead>Datum</TableHead>
                 <TableHead></TableHead>
@@ -440,7 +440,7 @@ export default function Interessenten() {
                 )}
                 {canAssign && (
                   <div>
-                    <p className="text-muted-foreground">Zugewiesener Gebietsleiter</p>
+                    <p className="text-muted-foreground">AD-Zuteilung</p>
                     <p className="font-medium">
                       {selectedLead.assigned_to ? getAssigneeName(selectedLead.assigned_to) : "Nicht zugewiesen"}
                     </p>
