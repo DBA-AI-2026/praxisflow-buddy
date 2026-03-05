@@ -250,6 +250,7 @@ export default function Vertraege() {
   const [file, setFile] = useState<File | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [bicLoading, setBicLoading] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
   const [leadHfxNumber, setLeadHfxNumber] = useState<string | null>(null);
   const { user, profile } = useAuth();
   const { isAdmin, isVertragsabteilung } = useUserRole();
@@ -711,6 +712,7 @@ export default function Vertraege() {
     setFromLeadId(null);
     setForm(emptyForm);
     setFile(null);
+    setShowErrors(false);
   };
 
   const openEdit = (contract: any) => {
@@ -902,6 +904,14 @@ export default function Vertraege() {
 
   const isFormComplete = getMissingFields().length === 0;
 
+  // Helper: returns true if showErrors is active and this required field is empty
+  const fieldErr = (key: keyof ContractFormData) => {
+    if (!showErrors) return false;
+    if (!(key in requiredFieldLabels)) return false;
+    const v = form[key];
+    return typeof v === "string" ? v.trim() === "" : !v;
+  };
+
   const handleSaveDraft = () => {
     const hasMinimum = form.praxis.trim() !== "" || form.vorname.trim() !== "" || form.nachname.trim() !== "";
     if (!hasMinimum) {
@@ -944,6 +954,7 @@ export default function Vertraege() {
     e.preventDefault();
     const missing = getMissingFields();
     if (missing.length > 0) {
+      setShowErrors(true);
       toast({ title: "Fehlende Pflichtfelder", description: missing.join(", "), variant: "destructive" });
       return;
     }
@@ -1416,47 +1427,57 @@ export default function Vertraege() {
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Vertragsparteien</h4>
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
-                  <Label>Praxis *</Label>
-                  <Input value={form.praxis} onChange={(e) => set("praxis", e.target.value)} placeholder="Name der Praxis" required />
-                </div>
-                <div>
-                  <Label>Fachrichtung</Label>
-                  <Input value={form.fachrichtung} onChange={(e) => set("fachrichtung", e.target.value)} placeholder="z.B. Allgemeinmedizin, Orthopädie..." />
-                </div>
-                <div>
-                  <Label>Rechtsform</Label>
-                  <Input value={form.rechtsform} onChange={(e) => set("rechtsform", e.target.value)} placeholder="z.B. Einzelpraxis, GbR, MVZ..." />
-                </div>
-                <div>
-                  <Label>Vorname *</Label>
-                  <Input value={form.vorname} onChange={(e) => set("vorname", e.target.value)} required />
-                </div>
-                <div>
-                  <Label>Nachname *</Label>
-                  <Input value={form.nachname} onChange={(e) => set("nachname", e.target.value)} required />
-                </div>
-                <div className="col-span-2 pt-2">
-                  <h4 className="font-semibold text-sm text-foreground">Praxisanschrift</h4>
-                </div>
-                <div className="col-span-2">
-                  <Label>Adresse (Straße, Hausnummer) *</Label>
-                  <Input value={form.praxisanschrift} onChange={(e) => set("praxisanschrift", e.target.value)} placeholder="Straße und Hausnummer der Praxis" />
-                </div>
-                <div>
-                  <Label>PLZ *</Label>
-                  <Input value={form.plz} onChange={(e) => set("plz", e.target.value)} placeholder="z.B. 10115" />
-                </div>
-                <div>
-                  <Label>Ort *</Label>
-                  <Input value={form.ort} onChange={(e) => set("ort", e.target.value)} placeholder="z.B. Berlin" />
-                </div>
-                <div>
-                  <Label>Telefonnummer</Label>
-                  <Input value={form.telefon} onChange={(e) => set("telefon", e.target.value)} placeholder="+49..." type="tel" />
-                </div>
-                <div>
-                  <Label>E-Mail-Adresse</Label>
-                  <Input value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="praxis@example.de" type="email" />
+                   <Label>Praxis *</Label>
+                   <Input value={form.praxis} onChange={(e) => set("praxis", e.target.value)} placeholder="Name der Praxis" required className={fieldErr("praxis") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                   {fieldErr("praxis") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                 </div>
+                 <div>
+                   <Label>Fachrichtung</Label>
+                   <Input value={form.fachrichtung} onChange={(e) => set("fachrichtung", e.target.value)} placeholder="z.B. Allgemeinmedizin, Orthopädie..." className={fieldErr("fachrichtung") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                   {fieldErr("fachrichtung") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                 </div>
+                 <div>
+                   <Label>Rechtsform</Label>
+                   <Input value={form.rechtsform} onChange={(e) => set("rechtsform", e.target.value)} placeholder="z.B. Einzelpraxis, GbR, MVZ..." className={fieldErr("rechtsform") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                   {fieldErr("rechtsform") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                 </div>
+                 <div>
+                   <Label>Vorname *</Label>
+                   <Input value={form.vorname} onChange={(e) => set("vorname", e.target.value)} required className={fieldErr("vorname") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                   {fieldErr("vorname") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                 </div>
+                 <div>
+                   <Label>Nachname *</Label>
+                   <Input value={form.nachname} onChange={(e) => set("nachname", e.target.value)} required className={fieldErr("nachname") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                   {fieldErr("nachname") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                 </div>
+                 <div className="col-span-2 pt-2">
+                   <h4 className="font-semibold text-sm text-foreground">Praxisanschrift</h4>
+                 </div>
+                 <div className="col-span-2">
+                   <Label>Adresse (Straße, Hausnummer) *</Label>
+                   <Input value={form.praxisanschrift} onChange={(e) => set("praxisanschrift", e.target.value)} placeholder="Straße und Hausnummer der Praxis" className={fieldErr("praxisanschrift") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                   {fieldErr("praxisanschrift") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                 </div>
+                 <div>
+                   <Label>PLZ *</Label>
+                   <Input value={form.plz} onChange={(e) => set("plz", e.target.value)} placeholder="z.B. 10115" className={fieldErr("plz") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                   {fieldErr("plz") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                 </div>
+                 <div>
+                   <Label>Ort *</Label>
+                   <Input value={form.ort} onChange={(e) => set("ort", e.target.value)} placeholder="z.B. Berlin" className={fieldErr("ort") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                   {fieldErr("ort") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                 </div>
+                 <div>
+                   <Label>Telefonnummer</Label>
+                   <Input value={form.telefon} onChange={(e) => set("telefon", e.target.value)} placeholder="+49..." type="tel" className={fieldErr("telefon") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                   {fieldErr("telefon") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                 </div>
+                 <div>
+                   <Label>E-Mail-Adresse</Label>
+                   <Input value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="praxis@example.de" type="email" className={fieldErr("email") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                   {fieldErr("email") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
                 </div>
                 <div>
                   <Label>MP-Nummer</Label>
@@ -1831,7 +1852,8 @@ export default function Vertraege() {
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Laufzeit & Kündigung</h4>
               <div>
                  <Label className="text-xs text-muted-foreground">Vertragsbeginn</Label>
-                 <Input type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} />
+                 <Input type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} className={fieldErr("start_date") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                 {fieldErr("start_date") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
                </div>
             </div>
 
@@ -1965,63 +1987,69 @@ export default function Vertraege() {
 
               {form.payment_method === "sepa" && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="sm:col-span-2">
-                    <Label>Kontoinhaber</Label>
-                    <Input value={form.kontoinhaber} onChange={(e) => set("kontoinhaber", e.target.value)} placeholder="Vor- und Nachname des Kontoinhabers" />
-                  </div>
-                  <div>
-                    <Label>Straße/Hausnr. (Kontoinhaber)</Label>
-                    <Input value={form.kontoinhaber_strasse} onChange={(e) => set("kontoinhaber_strasse", e.target.value)} placeholder="Musterstraße 1" />
-                  </div>
-                  <div>
-                    <Label>PLZ/Ort (Kontoinhaber)</Label>
-                    <Input value={form.kontoinhaber_plz_ort} onChange={(e) => set("kontoinhaber_plz_ort", e.target.value)} placeholder="12345 Musterstadt" />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Label>Name der Bank</Label>
-                    <Input value={form.bank_name} onChange={(e) => set("bank_name", e.target.value)} placeholder="z.B. Deutsche Bank" />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Label>IBAN</Label>
-                    <Input
-                      value={form.iban.replace(/(.{4})/g, "$1 ").trim()}
-                      onChange={async (e) => {
-                        const val = e.target.value.toUpperCase().replace(/\s/g, "");
-                        set("iban", val);
-                        if (val && validateIban(val).valid && !form.bic) {
-                          setBicLoading(true);
-                          const bic = await lookupBicFromIban(val);
-                          if (bic) set("bic", bic);
-                          setBicLoading(false);
-                        }
-                      }}
-                      placeholder="DE89 3704 0044 0532 0130 00"
-                      className={form.iban && !validateIban(form.iban).valid ? "border-destructive" : ""}
-                    />
-                    {form.iban && (() => {
-                      const result = validateIban(form.iban);
-                      if (!result.valid) {
-                        return <p className="text-xs text-destructive mt-1">{result.message}</p>;
-                      }
-                      return <p className="text-xs text-success mt-1">✓ IBAN gültig</p>;
-                    })()}
-                  </div>
-                  <div>
-                    <Label>BIC {bicLoading && <span className="text-xs text-muted-foreground ml-1">(wird ermittelt...)</span>}</Label>
-                    <Input
-                      value={form.bic}
-                      onChange={(e) => set("bic", e.target.value.toUpperCase().replace(/\s/g, ""))}
-                      placeholder="COBADEFFXXX"
-                      className={form.bic && !validateBic(form.bic).valid ? "border-destructive" : ""}
-                    />
-                    {form.bic && (() => {
-                      const result = validateBic(form.bic);
-                      if (!result.valid) {
-                        return <p className="text-xs text-destructive mt-1">{result.message}</p>;
-                      }
-                      return <p className="text-xs text-success mt-1">✓ BIC gültig</p>;
-                    })()}
-                  </div>
+                   <div className="sm:col-span-2">
+                     <Label>Kontoinhaber</Label>
+                     <Input value={form.kontoinhaber} onChange={(e) => set("kontoinhaber", e.target.value)} placeholder="Vor- und Nachname des Kontoinhabers" className={fieldErr("kontoinhaber") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                     {fieldErr("kontoinhaber") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                   </div>
+                   <div>
+                     <Label>Straße/Hausnr. (Kontoinhaber)</Label>
+                     <Input value={form.kontoinhaber_strasse} onChange={(e) => set("kontoinhaber_strasse", e.target.value)} placeholder="Musterstraße 1" className={fieldErr("kontoinhaber_strasse") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                     {fieldErr("kontoinhaber_strasse") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                   </div>
+                   <div>
+                     <Label>PLZ/Ort (Kontoinhaber)</Label>
+                     <Input value={form.kontoinhaber_plz_ort} onChange={(e) => set("kontoinhaber_plz_ort", e.target.value)} placeholder="12345 Musterstadt" className={fieldErr("kontoinhaber_plz_ort") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                     {fieldErr("kontoinhaber_plz_ort") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                   </div>
+                   <div className="sm:col-span-2">
+                     <Label>Name der Bank</Label>
+                     <Input value={form.bank_name} onChange={(e) => set("bank_name", e.target.value)} placeholder="z.B. Deutsche Bank" className={fieldErr("bank_name") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                     {fieldErr("bank_name") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                   </div>
+                   <div className="sm:col-span-2">
+                     <Label>IBAN</Label>
+                     <Input
+                       value={form.iban.replace(/(.{4})/g, "$1 ").trim()}
+                       onChange={async (e) => {
+                         const val = e.target.value.toUpperCase().replace(/\s/g, "");
+                         set("iban", val);
+                         if (val && validateIban(val).valid && !form.bic) {
+                           setBicLoading(true);
+                           const bic = await lookupBicFromIban(val);
+                           if (bic) set("bic", bic);
+                           setBicLoading(false);
+                         }
+                       }}
+                       placeholder="DE89 3704 0044 0532 0130 00"
+                       className={(form.iban && !validateIban(form.iban).valid) || fieldErr("iban") ? "border-destructive" : ""}
+                     />
+                     {!form.iban && fieldErr("iban") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                     {form.iban && (() => {
+                       const result = validateIban(form.iban);
+                       if (!result.valid) {
+                         return <p className="text-xs text-destructive mt-1">{result.message}</p>;
+                       }
+                       return <p className="text-xs text-success mt-1">✓ IBAN gültig</p>;
+                     })()}
+                   </div>
+                   <div>
+                     <Label>BIC {bicLoading && <span className="text-xs text-muted-foreground ml-1">(wird ermittelt...)</span>}</Label>
+                     <Input
+                       value={form.bic}
+                       onChange={(e) => set("bic", e.target.value.toUpperCase().replace(/\s/g, ""))}
+                       placeholder="COBADEFFXXX"
+                       className={(form.bic && !validateBic(form.bic).valid) || fieldErr("bic") ? "border-destructive" : ""}
+                     />
+                     {!form.bic && fieldErr("bic") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                     {form.bic && (() => {
+                       const result = validateBic(form.bic);
+                       if (!result.valid) {
+                         return <p className="text-xs text-destructive mt-1">{result.message}</p>;
+                       }
+                       return <p className="text-xs text-success mt-1">✓ BIC gültig</p>;
+                     })()}
+                   </div>
                 </div>
               )}
             </div>
