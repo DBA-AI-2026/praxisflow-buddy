@@ -709,6 +709,7 @@ export type Database = {
       leads: {
         Row: {
           abrechnungszentrum: string
+          adresse: string | null
           assigned_to: string | null
           confirmation_email_sent: boolean
           created_at: string
@@ -721,6 +722,7 @@ export type Database = {
           mp_nummer: string | null
           nachname: string
           nachricht: string | null
+          ort: string | null
           plz: string
           praxis_name: string
           qodia_synced: boolean
@@ -733,6 +735,7 @@ export type Database = {
         }
         Insert: {
           abrechnungszentrum?: string
+          adresse?: string | null
           assigned_to?: string | null
           confirmation_email_sent?: boolean
           created_at?: string
@@ -745,6 +748,7 @@ export type Database = {
           mp_nummer?: string | null
           nachname: string
           nachricht?: string | null
+          ort?: string | null
           plz: string
           praxis_name: string
           qodia_synced?: boolean
@@ -757,6 +761,7 @@ export type Database = {
         }
         Update: {
           abrechnungszentrum?: string
+          adresse?: string | null
           assigned_to?: string | null
           confirmation_email_sent?: boolean
           created_at?: string
@@ -769,6 +774,7 @@ export type Database = {
           mp_nummer?: string | null
           nachname?: string
           nachricht?: string | null
+          ort?: string | null
           plz?: string
           praxis_name?: string
           qodia_synced?: boolean

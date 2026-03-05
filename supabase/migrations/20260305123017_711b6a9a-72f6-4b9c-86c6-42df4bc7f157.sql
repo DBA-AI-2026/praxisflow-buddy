@@ -1,0 +1,1 @@
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS adresse text, ADD COLUMN IF NOT EXISTS ort text;

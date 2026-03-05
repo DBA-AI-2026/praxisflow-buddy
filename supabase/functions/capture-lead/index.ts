@@ -52,7 +52,9 @@ function mapCf7Fields(body: Record<string, any>): Record<string, any> {
     mobilnummer: data.mobilnummer || data["your-mobilnummer"] || data.telefon || data.phone || data.tel || data["your-tel"] || data.mobile || "",
     abrechnungszentrum: data.abrechnungszentrum || data["your-abrechnungszentrum"] || data.abrechnung || "nein",
     mp_nummer: data.mp_nummer || data["your-mp-nummer"] || data.mp_nr || data.mpnummer || null,
-    nachricht: data.nachricht || data["your-message"] || data.message || data.nachricht || null,
+    nachricht: data.nachricht || data["your-message"] || data.message || null,
+    adresse: data.adresse || data["your-adresse"] || data.strasse || data.street || data.address || null,
+    ort: data.ort || data["your-ort"] || data.city || data.stadt || null,
   };
 }
 
@@ -299,6 +301,8 @@ Deno.serve(async (req) => {
       abrechnungszentrum,
       mp_nummer,
       nachricht,
+      adresse,
+      ort,
     } = mapCf7Fields(rawBody);
 
     // Validate required fields (mobilnummer is optional – website form may omit it)
@@ -463,6 +467,8 @@ Deno.serve(async (req) => {
         abrechnungszentrum,
         mp_nummer: mp_nummer?.trim().slice(0, 50) || null,
         nachricht: nachricht?.trim().slice(0, 2000) || null,
+        adresse: adresse?.trim().slice(0, 300) || null,
+        ort: ort?.trim().slice(0, 100) || null,
         generated_password: generatedPassword,
         assigned_to: assignedTo,
       })
