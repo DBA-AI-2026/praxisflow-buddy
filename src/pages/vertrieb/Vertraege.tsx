@@ -183,6 +183,7 @@ interface ContractFormData {
   status: string;
   signature_data: string;
   vertrieb_signature_data: string;
+  signature_mode: "digital" | "papier";
   praxissystem: string;
   stundenaufwand_pro_woche: string;
   rechnungs_email: string;
@@ -234,6 +235,7 @@ const emptyForm: ContractFormData = {
   status: "aktiv",
   signature_data: "",
   vertrieb_signature_data: "",
+  signature_mode: "digital" as "digital" | "papier",
   praxissystem: "",
   stundenaufwand_pro_woche: "",
   rechnungs_email: "",
@@ -475,7 +477,7 @@ export default function Vertraege() {
         one_time_fee: data.one_time_fee,
         discount_percent: data.discount_percent,
         payment_interval: data.payment_interval,
-        notes: data.notes || null,
+        notes: data.notes ? (data.signature_mode === "papier" ? `[Papier] ${data.notes}` : data.notes) : (data.signature_mode === "papier" ? "[Papier]" : null),
         kontoinhaber: data.kontoinhaber || null,
         kontoinhaber_strasse: data.kontoinhaber_strasse || null,
         kontoinhaber_plz_ort: data.kontoinhaber_plz_ort || null,
@@ -739,7 +741,7 @@ export default function Vertraege() {
       discount_percent: contract.discount_percent,
       payment_interval: contract.payment_interval,
       payment_method: (contract.iban ? "sepa" : "stripe") as PaymentMethod,
-      notes: contract.notes || "",
+      notes: (contract.notes || "").replace(/^\[Papier\]\s?/, ""),
       kontoinhaber: contract.kontoinhaber || "",
       kontoinhaber_strasse: contract.kontoinhaber_strasse || "",
       kontoinhaber_plz_ort: contract.kontoinhaber_plz_ort || "",
@@ -758,6 +760,7 @@ export default function Vertraege() {
       status: contract.status,
       signature_data: contract.signature_data || "",
       vertrieb_signature_data: contract.vertrieb_signature_data || "",
+      signature_mode: (contract.notes?.startsWith("[Papier]") ? "papier" : "digital") as "digital" | "papier",
       praxissystem: contract.praxissystem || "",
       stundenaufwand_pro_woche: contract.stundenaufwand_pro_woche || "",
       rechnungs_email: contract.rechnungs_email || "",
@@ -890,8 +893,10 @@ export default function Vertraege() {
       if (empty) missing.push(requiredFieldLabels[f]);
     });
     if (form.selected_products.length === 0) missing.push("Produkte");
-    if (!form.signature_data) missing.push("Unterschrift Kunde");
-    if (!form.vertrieb_signature_data) missing.push("Unterschrift Vertrieb");
+    if (form.signature_mode === "digital") {
+      if (!form.signature_data && !(signaturePadRef.current && !signaturePadRef.current.isEmpty())) missing.push("Unterschrift Kunde");
+      if (!form.vertrieb_signature_data && !(vertriebSignaturePadRef.current && !vertriebSignaturePadRef.current.isEmpty())) missing.push("Unterschrift Vertrieb");
+    }
     return missing;
   };
 
@@ -1280,6 +1285,11 @@ export default function Vertraege() {
                         </td>
                        <td>
                        <div className="flex flex-col gap-1">
+                         {c.notes?.startsWith("[Papier]") && (
+                           <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground border rounded px-1.5 py-0.5 w-fit">
+                             📄 Papier
+                           </span>
+                         )}
                          <Button
                            variant="outline"
                            size="sm"
@@ -2037,6 +2047,24 @@ export default function Vertraege() {
             {/* Unterschriften */}
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Unterschriften</h4>
+
+              {/* Unterschrift-Modus Toggle */}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => set("signature_mode", "digital")}
+                  className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-colors ${form.signature_mode === "digital" ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:border-muted-foreground/50"}`}
+                >
+                  ✍️ Digital unterschreiben
+                </button>
+                <button
+                  type="button"
+                  onClick={() => set("signature_mode", "papier")}
+                  className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-colors ${form.signature_mode === "papier" ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:border-muted-foreground/50"}`}
+                >
+                  📄 Papier / Manuell
+                </button>
+              </div>
               
               {/* Ort & Datum (auto-filled from Vertragsparteien) */}
               <div className="grid grid-cols-2 gap-3">
@@ -2052,37 +2080,52 @@ export default function Vertraege() {
 
               <Separator />
 
-              {/* Kundenunterschrift */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Unterschrift Kunde</Label>
-                <div className="border rounded-lg p-2 bg-background">
-                  <canvas
-                    ref={signatureCanvasRef}
-                    className="w-full h-32 cursor-crosshair rounded"
-                    style={{ touchAction: "none" }}
-                  />
-                </div>
-                <Button type="button" variant="outline" size="sm" onClick={clearSignature}>
-                  Kundenunterschrift löschen
-                </Button>
-              </div>
+              {form.signature_mode === "digital" ? (
+                <>
+                  {/* Kundenunterschrift */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Unterschrift Kunde</Label>
+                    <div className="border rounded-lg p-2 bg-background">
+                      <canvas
+                        ref={signatureCanvasRef}
+                        className="w-full h-32 cursor-crosshair rounded"
+                        style={{ touchAction: "none" }}
+                      />
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={clearSignature}>
+                      Kundenunterschrift löschen
+                    </Button>
+                  </div>
 
-              <Separator />
+                  <Separator />
 
-              {/* Vertriebsunterschrift */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Unterschrift Vertriebsmitarbeiter</Label>
-                <div className="border rounded-lg p-2 bg-background">
-                  <canvas
-                    ref={vertriebSignatureCanvasRef}
-                    className="w-full h-32 cursor-crosshair rounded"
-                    style={{ touchAction: "none" }}
-                  />
+                  {/* Vertriebsunterschrift */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Unterschrift Vertriebsmitarbeiter</Label>
+                    <div className="border rounded-lg p-2 bg-background">
+                      <canvas
+                        ref={vertriebSignatureCanvasRef}
+                        className="w-full h-32 cursor-crosshair rounded"
+                        style={{ touchAction: "none" }}
+                      />
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={clearVertriebSignature}>
+                      Vertriebsunterschrift löschen
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-lg border border-success/40 bg-success/5 p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-success font-medium text-sm">
+                    <CheckCircle className="h-4 w-4" />
+                    Papierunterschrift – manuell erfasst
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Der Vertrag wurde auf Papier unterschrieben. Digitale Unterschriftspads werden nicht benötigt.
+                    Optional können Sie das gescannte Dokument unten hochladen.
+                  </p>
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={clearVertriebSignature}>
-                  Vertriebsunterschrift löschen
-                </Button>
-              </div>
+              )}
             </div>
 
             {/* Notizen */}
@@ -2092,10 +2135,22 @@ export default function Vertraege() {
             </div>
 
             <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button type="button" variant="outline" onClick={() => handlePreviewPdf(form)} className="gap-2" disabled={!isFormComplete}>
-                <Eye className="h-4 w-4" />
-                Vorschau PDF
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleTemplatePdf({ ...form, signature_data: null, vertrieb_signature_data: null })}
+                  className="gap-2"
+                  disabled={!form.praxis && !form.vorname && !form.nachname}
+                >
+                  <Download className="h-4 w-4" />
+                  Zum Ausdrucken
+                </Button>
+                <Button type="button" variant="outline" onClick={() => handlePreviewPdf(form)} className="gap-2" disabled={!isFormComplete}>
+                  <Eye className="h-4 w-4" />
+                  Vorschau PDF
+                </Button>
+              </div>
               
               <div className="flex gap-2 ml-auto">
                 <Button type="button" variant="outline" onClick={closeDialog}>Abbrechen</Button>
