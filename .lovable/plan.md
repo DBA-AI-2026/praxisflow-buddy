@@ -1,5 +1,19 @@
 
-## Analyse
+## Globale Entwicklungsregeln
+
+### 📱 Mobile / iPad-First
+- **ALLE** Änderungen müssen auf iPad (768px–1024px) und Mobilgeräten einwandfrei laufen
+- Sidebar-Breakpoint: `lg` (1024px) — darunter immer mobiles Menü
+- Tabellen: auf kleinen Screens scrollbar machen (`overflow-x-auto`) oder Card-Layout nutzen
+- Formulare: volle Breite auf Mobile, keine festen Pixelbreiten
+- Touch-Targets: mindestens 44×44px für alle Buttons/Links
+- Grids: mindestens `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` – kein festes `grid-cols-4`
+- Dialoge/Sheets: auf Mobile `w-full` oder Sheet-Komponente verwenden
+- Text: keine feste `text-xs` in engen Layouts, die auf Mobile unlesbar werden
+
+---
+
+## Analyse: Vertragsergänzungen
 
 Der bestehende Vertrag speichert Produkte in den Feldern `product_name` (kommaseparierter Text), `modules` (Array) und `selected_addon_modules` (Array). Es gibt keine separate Tabelle für "Vertragserweiterungen" — alle Änderungen laufen über `UPDATE` auf dem `contracts`-Datensatz.
 

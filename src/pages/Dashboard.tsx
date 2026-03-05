@@ -518,7 +518,7 @@ export default function Dashboard() {
                     {typeLabel} · {item.sub}
                   </p>
                 </div>
-                <div className="shrink-0 text-xs text-muted-foreground flex items-center gap-1">
+                <div className="shrink-0 text-xs text-muted-foreground hidden sm:flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   {formatDistanceToNow(new Date(item.time), { addSuffix: true, locale: de })}
                 </div>
