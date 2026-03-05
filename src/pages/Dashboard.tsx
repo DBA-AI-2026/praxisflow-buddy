@@ -5,13 +5,70 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
-  Building2, Ticket, FlaskConical, TrendingUp, FileText,
-  ArrowRight, Clock, CheckCircle2, AlertTriangle, Users,
-  PlusCircle, Eye, FileSignature, Euro
+  Building2, FlaskConical, TrendingUp, FileText,
+  ArrowRight, Clock, Users,
+  PlusCircle, Eye, FileSignature, Lightbulb, MapPin, BarChart3, BookMarked
 } from "lucide-react";
+import type { AppRole } from "@/hooks/useUserRole";
 
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+
+interface QuickLink {
+  to: string;
+  label: string;
+  icon: React.ElementType;
+  primary?: boolean;
+}
+
+function getQuickLinks(role: AppRole | null): QuickLink[] {
+  switch (role) {
+    case "tippgeber":
+      return [
+        { to: "/tipp-leads", label: "Tipp-Lead einreichen", icon: Lightbulb, primary: true },
+        { to: "/tipp-leads", label: "Meine Tipp-Leads", icon: Eye },
+      ];
+    case "user":
+      return [
+        { to: "/interessenten", label: "Meine Leads", icon: Users, primary: true },
+        { to: "/praxen", label: "Kunden", icon: Building2 },
+        { to: "/reservierungen", label: "Reservierungen", icon: BookMarked },
+      ];
+    case "sales_partner":
+      return [
+        { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle, primary: true },
+        { to: "/interessenten", label: "Interessenten", icon: Users },
+        { to: "/reservierungen", label: "Reservierungen", icon: BookMarked },
+      ];
+    case "regional_lead":
+      return [
+        { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle, primary: true },
+        { to: "/interessenten", label: "Interessenten", icon: Users },
+        { to: "/vertrieb/provisionen", label: "Provisionen", icon: BarChart3 },
+        { to: "/praxen", label: "Kunden", icon: Building2 },
+      ];
+    case "vertragsabteilung":
+      return [
+        { to: "/vertrieb/vertraege", label: "Verträge prüfen", icon: FileText, primary: true },
+        { to: "/praxen", label: "Kunden", icon: Building2 },
+        { to: "/umsaetze", label: "Umsätze", icon: TrendingUp },
+      ];
+    case "sales_lead":
+      return [
+        { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle, primary: true },
+        { to: "/interessenten", label: "Interessenten", icon: Users },
+        { to: "/vertrieb/provisionen", label: "Provisionen", icon: BarChart3 },
+        { to: "/admin/plz-mapping", label: "PLZ-Zuordnung", icon: MapPin },
+      ];
+    case "admin":
+    default:
+      return [
+        { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle, primary: true },
+        { to: "/interessenten", label: "Interessenten", icon: Users },
+        { to: "/praxen", label: "Kunden", icon: Eye },
+      ];
+  }
+}
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -118,29 +175,18 @@ export default function Dashboard() {
             </span>
           )}
         </div>
-        {/* Quick Actions */}
+        {/* Quick Actions – rollenspezifisch */}
         <div className="flex gap-2 flex-wrap">
-          <Link
-            to="/vertrieb/vertraege"
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            <PlusCircle className="h-4 w-4" />
-            Neuer Vertrag
-          </Link>
-          <Link
-            to="/interessenten"
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
-          >
-            <Users className="h-4 w-4" />
-            Interessenten
-          </Link>
-          <Link
-            to="/praxen"
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
-          >
-            <Eye className="h-4 w-4" />
-            Kunden
-          </Link>
+          {getQuickLinks(role).map((ql) => (
+            <Link
+              key={ql.to}
+              to={ql.to}
+              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${ql.primary ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"}`}
+            >
+              <ql.icon className="h-4 w-4" />
+              {ql.label}
+            </Link>
+          ))}
         </div>
       </div>
 
