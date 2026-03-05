@@ -1399,7 +1399,7 @@ export default function Vertraege() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) closeDialog(); else setDialogOpen(true); }}>
-        <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-[98vw] sm:max-w-[680px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
@@ -2134,36 +2134,39 @@ export default function Vertraege() {
               <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={2} placeholder="Zusätzliche Informationen..." />
             </div>
 
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <div className="flex gap-2">
+            <DialogFooter className="flex-col gap-2">
+              {/* Zeile 1: PDF-Aktionen */}
+              <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   onClick={() => handleTemplatePdf({ ...form, signature_data: null, vertrieb_signature_data: null })}
-                  className="gap-2"
+                  className="gap-1.5 flex-1 sm:flex-none"
                   disabled={!form.praxis && !form.vorname && !form.nachname}
                 >
                   <Download className="h-4 w-4" />
                   Zum Ausdrucken
                 </Button>
-                <Button type="button" variant="outline" onClick={() => handlePreviewPdf(form)} className="gap-2" disabled={!isFormComplete}>
+                <Button type="button" variant="outline" size="sm" onClick={() => handlePreviewPdf(form)} className="gap-1.5 flex-1 sm:flex-none" disabled={!isFormComplete}>
                   <Eye className="h-4 w-4" />
                   Vorschau PDF
                 </Button>
               </div>
-              
-              <div className="flex gap-2 ml-auto">
-                <Button type="button" variant="outline" onClick={closeDialog}>Abbrechen</Button>
-                <Button type="button" variant="secondary" onClick={handleSaveDraft} disabled={upsertMutation.isPending}>
-                  {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                  Als Entwurf speichern
+
+              {/* Zeile 2: Speichern-Aktionen */}
+              <div className="flex flex-wrap gap-2 justify-end">
+                <Button type="button" variant="outline" size="sm" onClick={closeDialog} className="flex-1 sm:flex-none">Abbrechen</Button>
+                <Button type="button" variant="secondary" size="sm" onClick={handleSaveDraft} disabled={upsertMutation.isPending} className="flex-1 sm:flex-none">
+                  {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+                  Als Entwurf
                 </Button>
                 <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span tabIndex={0}>
-                      <Button type="submit" disabled={upsertMutation.isPending || !isFormComplete}>
-                        {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                    <span tabIndex={0} className="flex-1 sm:flex-none">
+                      <Button type="submit" size="sm" disabled={upsertMutation.isPending || !isFormComplete} className="w-full">
+                        {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
                         {editId ? "Speichern" : "Vertrag zeichnen"}
                       </Button>
                     </span>
