@@ -67,13 +67,15 @@ export default function Interessenten() {
       const { data: roles } = await supabase
         .from("user_roles")
         .select("user_id")
-        .eq("role", "user");
+        .in("role", ["user", "sales_lead", "regional_lead"]);
       if (!roles?.length) return [];
-      const userIds = roles.map((r) => r.user_id);
+      // Deduplicate user IDs (a user could have multiple roles)
+      const userIds = [...new Set(roles.map((r) => r.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, full_name, email")
-        .in("user_id", userIds);
+        .in("user_id", userIds)
+        .order("full_name");
       return profiles || [];
     },
   });
