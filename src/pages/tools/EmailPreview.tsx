@@ -31,7 +31,7 @@ const MOCK = {
 };
 
 // ─── Templates ────────────────────────────────────────────────────────────────
-type TemplateId = "lead-confirmation" | "contract-customer" | "contract-partner" | "invoice" | "invoice-pdf" | "dashboard-credentials" | "ad-tipp-lead" | "ad-demo-reminder" | "ad-new-lead";
+type TemplateId = "lead-confirmation" | "contract-customer" | "contract-customer-pdf-send" | "contract-partner" | "invoice" | "invoice-pdf" | "dashboard-credentials" | "ad-tipp-lead" | "ad-demo-reminder" | "ad-new-lead" | "ad-lead-assignment";
 
 interface Template {
   id: TemplateId;
@@ -58,6 +58,14 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "Vertragsbestätigung an Kunden nach Aktivierung",
+  },
+  {
+    id: "contract-customer-pdf-send",
+    label: "Vertrag + Vorschau per Mail (Kunde)",
+    subject: "Ihre Vertragsunterlagen – HFX EBM, HFX GOÄ",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "Manueller E-Mail-Versand an Kunden: Vertragsdokument + Produktvorschau als Anhang",
   },
   {
     id: "contract-partner",
@@ -106,6 +114,14 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "Benachrichtigung an AD wenn ein neuer Interessent über die HFX-Webseite eingeht",
+  },
+  {
+    id: "ad-lead-assignment",
+    label: "AD: Lead manuell zugewiesen",
+    subject: "📋 Lead zugewiesen: Testpraxis Dr. Müller (80331)",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "Benachrichtigung an AD wenn ihm ein Lead manuell im Portal zugewiesen wird",
   },
 ];
 
@@ -657,9 +673,130 @@ function buildAdNewLeadHtml() {
 </body></html>`;
 }
 
+function buildContractCustomerPdfSendHtml() {
+  const { vorname, nachname, praxis_name, hfx_customer_number } = MOCK;
+  const year = new Date().getFullYear();
+  const customerName = `${vorname} ${nachname}`;
+  const products = "HFX EBM, HFX GOÄ";
+  const startDate = new Date().toLocaleDateString("de-DE");
+  return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07);">
+      <tr><td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:32px 24px;text-align:center;">
+        <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg" alt="Honorarfuchs" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin-bottom:12px;" />
+        <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;">Ihre Vertragsunterlagen</h1>
+        <p style="margin:8px 0 0;color:#c7d7f5;font-size:14px;">HFX Honorarfuchs – Sales Portal</p>
+      </td></tr>
+      <tr><td style="padding:28px 24px;">
+        <p style="margin:0 0 16px;font-size:15px;color:#374151;">Sehr geehrte/r <strong>${customerName}</strong>,</p>
+        <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
+          vielen Dank für Ihr Vertrauen! Anbei erhalten Sie Ihre Vertragsunterlagen sowie eine Produktvorschau als PDF-Dokument.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:24px;">
+          <tr><td style="background:#eef3fb;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#0b367f;">Vertragsdetails</p>
+          </td></tr>
+          <tr><td style="padding:16px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;width:160px;">Kundennummer</td><td style="padding:5px 0;font-size:13px;color:#111827;font-weight:700;font-family:monospace;">${hfx_customer_number}</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Praxis</td><td style="padding:5px 0;font-size:13px;color:#111827;font-weight:600;">${praxis_name}</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Produkte</td><td style="padding:5px 0;font-size:13px;color:#111827;">${products}</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Vertragsbeginn</td><td style="padding:5px 0;font-size:13px;color:#111827;">${startDate}</td></tr>
+            </table>
+          </td></tr>
+        </table>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:24px;">
+          <tr><td style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Anhänge in dieser E-Mail</p>
+          </td></tr>
+          <tr><td style="padding:16px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="padding:8px 0;border-bottom:1px solid #f3f4f6;">
+                  <p style="margin:0;font-size:13px;color:#111827;font-weight:600;">📄 Vertrag-${hfx_customer_number}.pdf</p>
+                  <p style="margin:2px 0 0;font-size:12px;color:#6b7280;">Unterzeichnetes Vertragsdokument mit allen Konditionen</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0;">
+                  <p style="margin:0;font-size:13px;color:#111827;font-weight:600;">📊 Produktvorschau-${hfx_customer_number}.pdf</p>
+                  <p style="margin:2px 0 0;font-size:12px;color:#6b7280;">Übersicht der gewählten Produkte, Preise und Laufzeit</p>
+                </td>
+              </tr>
+            </table>
+          </td></tr>
+        </table>
+        <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
+          Bitte prüfen Sie die beigefügten Unterlagen sorgfältig. Bei Fragen stehen wir Ihnen gerne zur Verfügung.
+        </p>
+        <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.6;background:#eef3fb;border-left:3px solid #0b367f;padding:12px 16px;border-radius:0 4px 4px 0;">
+          <strong>Hinweis:</strong> Bitte bewahren Sie diese Unterlagen sicher auf. Bei Fragen wenden Sie sich an Ihren persönlichen Ansprechpartner.
+        </p>
+      </td></tr>
+      <tr><td style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#9ca3af;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${year} HFX Honorarfuchs GmbH</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+}
+
+function buildAdLeadAssignmentHtml() {
+  const { praxis_name, vorname, nachname, email, plz, mobilnummer, hfx_customer_number } = MOCK;
+  const year = new Date().getFullYear();
+  return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07);">
+      <tr><td style="background:linear-gradient(135deg,#b6193d,#d42050);padding:32px 24px;text-align:center;">
+        <p style="margin:0 0 8px;font-size:13px;color:#f9c0cc;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;">Lead-Zuweisung</p>
+        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Dir wurde ein Interessent zugewiesen</h1>
+        <p style="margin:8px 0 0;color:#f9c0cc;font-size:14px;">Manuelle Zuweisung durch das HFX-Team</p>
+      </td></tr>
+      <tr><td style="padding:28px 24px;">
+        <p style="margin:0 0 20px;font-size:15px;color:#374151;">Hallo <strong>Uwe Waldenmeyer</strong>,</p>
+        <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
+          ein Interessent wurde dir manuell zugewiesen. Bitte nimm zeitnah Kontakt auf.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:24px;">
+          <tr><td style="background:#fef2f4;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#b6193d;">Lead-Details</p>
+          </td></tr>
+          <tr><td style="padding:16px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;width:160px;">HFX-Nummer</td><td style="padding:5px 0;font-size:13px;color:#111827;font-weight:700;font-family:monospace;">${hfx_customer_number}</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Praxis</td><td style="padding:5px 0;font-size:13px;color:#111827;font-weight:600;">${praxis_name}</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Name</td><td style="padding:5px 0;font-size:13px;color:#111827;font-weight:500;">${vorname} ${nachname}</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">E-Mail</td><td style="padding:5px 0;font-size:13px;color:#b6193d;">${email}</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Telefon</td><td style="padding:5px 0;font-size:13px;color:#111827;">${mobilnummer}</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">PLZ / Ort</td><td style="padding:5px 0;font-size:13px;color:#111827;">${plz} München</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Status</td><td style="padding:5px 0;font-size:13px;color:#111827;">neu</td></tr>
+            </table>
+          </td></tr>
+        </table>
+        <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.6;background:#fafafa;border-left:3px solid #b6193d;padding:12px 16px;border-radius:0 4px 4px 0;">
+          <strong>Nächster Schritt:</strong> Bitte nimm zeitnah Kontakt mit dem Interessenten auf. Du findest den Lead im HFX-Portal unter <em>Interessenten</em>.
+        </p>
+      </td></tr>
+      <tr><td style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#9ca3af;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${year} HFX Honorarfuchs GmbH</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+}
+
 const DEFAULT_HTML: Record<string, () => string> = {
   "lead-confirmation": buildLeadConfirmationHtml,
   "contract-customer": buildContractCustomerHtml,
+  "contract-customer-pdf-send": buildContractCustomerPdfSendHtml,
   "contract-partner": buildContractPartnerHtml,
   "invoice": buildInvoiceHtml,
   "invoice-pdf": buildInvoicePdfPreviewHtml,
@@ -667,6 +804,7 @@ const DEFAULT_HTML: Record<string, () => string> = {
   "ad-tipp-lead": buildAdTippLeadHtml,
   "ad-demo-reminder": buildAdDemoReminderHtml,
   "ad-new-lead": buildAdNewLeadHtml,
+  "ad-lead-assignment": buildAdLeadAssignmentHtml,
 };
 
 function getHtmlForTemplate(id: TemplateId) {
