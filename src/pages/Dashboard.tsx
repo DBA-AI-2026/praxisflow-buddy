@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -7,10 +8,10 @@ import { Link } from "react-router-dom";
 import {
   Building2, FlaskConical, TrendingUp, FileText,
   ArrowRight, Clock, Users,
-  PlusCircle, Eye, FileSignature, Lightbulb, MapPin, BarChart3, BookMarked
+  PlusCircle, Eye, FileSignature, Lightbulb, MapPin, BarChart3, BookMarked,
+  X, Sparkles,
 } from "lucide-react";
 import type { AppRole } from "@/hooks/useUserRole";
-
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -90,9 +91,55 @@ function getRoleLabel(role: string | null): string {
   return role ? labels[role] ?? role : "";
 }
 
+const onboardingConfig: Partial<Record<AppRole, { icon: React.ElementType; title: string; text: string; cta: string; to: string }>> = {
+  tippgeber: {
+    icon: Lightbulb,
+    title: "Willkommen als Tippgeber!",
+    text: "Reichen Sie jetzt Ihren ersten Empfehlungs-Lead ein. Wählen Sie Arzt, Praxis und gewünschte Dienstleistung – der Außendienst kümmert sich um den Rest.",
+    cta: "Ersten Tipp-Lead einreichen",
+    to: "/tipp-leads",
+  },
+  user: {
+    icon: Users,
+    title: "Willkommen als Gebietsleiter!",
+    text: "Ihr Gebiet ist bereit. Erfassen Sie Interessenten oder schauen Sie sich Ihre zugeordneten Kunden an.",
+    cta: "Interessenten anzeigen",
+    to: "/interessenten",
+  },
+  sales_partner: {
+    icon: FileText,
+    title: "Willkommen als Vertriebspartner!",
+    text: "Legen Sie jetzt Ihren ersten Vertrag an oder erfassen Sie neue Interessenten in Ihrem Vertriebsgebiet.",
+    cta: "Ersten Vertrag erstellen",
+    to: "/vertrieb/vertraege",
+  },
+  regional_lead: {
+    icon: BarChart3,
+    title: "Willkommen als Regionalleiter!",
+    text: "Verwalten Sie Ihr Team, bearbeiten Sie Interessenten und behalten Sie die Provisionen im Blick.",
+    cta: "Vertragsübersicht öffnen",
+    to: "/vertrieb/vertraege",
+  },
+  vertragsabteilung: {
+    icon: FileSignature,
+    title: "Willkommen in der Vertragsabteilung!",
+    text: "Prüfen und genehmigen Sie eingereichte Verträge. Alle gezeichneten Verträge warten auf Ihre Freigabe.",
+    cta: "Verträge prüfen",
+    to: "/vertrieb/vertraege",
+  },
+  sales_lead: {
+    icon: MapPin,
+    title: "Willkommen als Vertriebsleitung!",
+    text: "Überblicken Sie alle Vertriebsaktivitäten. Richten Sie zunächst die PLZ-Zuordnung ein, damit Leads automatisch zugewiesen werden.",
+    cta: "PLZ-Zuordnung einrichten",
+    to: "/admin/plz-mapping",
+  },
+};
+
 export default function Dashboard() {
   const { profile } = useAuth();
-  const { role, isAdmin, isVertragsabteilung, isSalesPartner, isSalesLead, isRegionalLead } = useUserRole();
+  const { role, isAdmin, isVertragsabteilung } = useUserRole();
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "Willkommen";
 
@@ -144,6 +191,27 @@ export default function Dashboard() {
     },
   });
 
+  // Onboarding check: does this user already have relevant data?
+  const { data: hasOwnData } = useQuery({
+    queryKey: ["dashboard-onboarding-check", role],
+    enabled: !!role && role !== "admin",
+    queryFn: async () => {
+      if (role === "tippgeber") {
+        const { count } = await supabase
+          .from("tipp_leads")
+          .select("id", { count: "exact", head: true });
+        return (count ?? 0) > 0;
+      }
+      const { count } = await supabase
+        .from("contracts")
+        .select("id", { count: "exact", head: true });
+      return (count ?? 0) > 0;
+    },
+  });
+
+  const showOnboarding = !bannerDismissed && hasOwnData === false && !!role && role !== "admin";
+  const onboarding = role ? onboardingConfig[role] : undefined;
+
   const statusBadge = (status: string) => {
     const map: Record<string, string> = {
       entwurf: "bg-muted text-muted-foreground",
@@ -179,7 +247,7 @@ export default function Dashboard() {
         <div className="flex gap-2 flex-wrap">
           {getQuickLinks(role).map((ql) => (
             <Link
-              key={ql.to}
+              key={ql.to + ql.label}
               to={ql.to}
               className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${ql.primary ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"}`}
             >
@@ -189,6 +257,39 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      {/* === ONBOARDING BANNER === */}
+      {showOnboarding && onboarding && (
+        <div className="mb-6 relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 p-5">
+          {/* Decorative sparkle */}
+          <div className="absolute top-3 right-10 opacity-10">
+            <Sparkles className="h-16 w-16 text-primary" />
+          </div>
+          <button
+            onClick={() => setBannerDismissed(true)}
+            className="absolute top-3 right-3 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            aria-label="Schließen"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <div className="flex items-start gap-4 pr-8">
+            <div className="shrink-0 rounded-lg bg-primary/10 border border-primary/20 p-2.5">
+              <onboarding.icon className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-foreground text-sm mb-1">{onboarding.title}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-3">{onboarding.text}</p>
+              <Link
+                to={onboarding.to}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+              >
+                {onboarding.cta}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* === KPI CARDS === */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
