@@ -31,7 +31,7 @@ const MOCK = {
 };
 
 // ─── Templates ────────────────────────────────────────────────────────────────
-type TemplateId = "lead-confirmation" | "contract-customer" | "contract-customer-pdf-send" | "contract-partner" | "invoice" | "invoice-pdf" | "dashboard-credentials" | "demo-expiry-customer" | "ad-tipp-lead" | "ad-demo-reminder" | "ad-new-lead" | "ad-lead-assignment";
+type TemplateId = "lead-confirmation" | "contract-customer" | "contract-customer-pdf-send" | "contract-partner" | "contract-paper-confirmation" | "invoice" | "invoice-pdf" | "dashboard-credentials" | "demo-expiry-customer" | "ad-tipp-lead" | "ad-demo-reminder" | "ad-new-lead" | "ad-lead-assignment";
 
 interface Template {
   id: TemplateId;
@@ -66,6 +66,14 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "Manueller E-Mail-Versand an Kunden: Vertragsdokument + Produktvorschau als Anhang",
+  },
+  {
+    id: "contract-paper-confirmation",
+    label: "Vertragsbestätigung (manuell)",
+    subject: "✅ Bitte bestätigen Sie Ihren HFX-Vertrag (HFX-I01019)",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "Bestätigungs-E-Mail an Kunden nach Papiervertrag-Upload durch AD – mit Bestätigungs-Button und optionalem Stripe-Zahlungslink",
   },
   {
     id: "contract-partner",
@@ -951,11 +959,162 @@ function buildAdLeadAssignmentHtml() {
 </body></html>`;
 }
 
+function buildContractPaperConfirmationHtml() {
+  const { hfx_customer_number, praxis_name, vorname, nachname, email } = MOCK;
+  const year = new Date().getFullYear();
+  const confirmationUrl = "https://praxisflow-buddy.lovable.app/vertrag-bestaetigen?token=demo-token-preview";
+  const stripeUrl = "https://checkout.stripe.com/pay/demo-preview";
+  const startDate = "01.04.2026";
+  const endDate = "31.03.2027";
+  const price = "179,00 €/Monat";
+  const duration = "12";
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vertragsbestätigung – HFX Honorarfuchs</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f6fa;font-family:Verdana,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fa;padding:40px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.10);max-width:600px;">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:36px 40px;text-align:center;">
+            <p style="color:#ffffff;font-size:24px;font-weight:700;margin:0;letter-spacing:-0.5px;">🦊 HFX Honorarfuchs</p>
+            <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:6px 0 0;">Vertragsbestätigung</p>
+          </td>
+        </tr>
+
+        <!-- Greeting -->
+        <tr>
+          <td style="padding:36px 40px 24px;">
+            <p style="color:#1a1a2e;font-size:16px;margin:0 0 12px;">Guten Tag ${vorname} ${nachname},</p>
+            <p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 12px;">
+              wir haben Ihren unterzeichneten Vertrag erhalten. <strong>Bitte bestätigen Sie den Vertrag</strong> mit einem Klick auf den Button unten, damit er vollständig aktiviert werden kann.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Contract Details Box -->
+        <tr>
+          <td style="padding:0 40px 28px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;overflow:hidden;">
+              <tr>
+                <td style="background:#0b367f;padding:12px 20px;">
+                  <p style="color:#ffffff;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin:0;">📋 Ihre Vertragsdetails</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:20px;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="padding:6px 0;font-size:13px;color:#6b7280;width:160px;vertical-align:top;">HFX-Kundennummer</td>
+                      <td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;font-family:monospace;">${hfx_customer_number}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:6px 0;font-size:13px;color:#6b7280;width:160px;vertical-align:top;">Produkt</td>
+                      <td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">HFX GOÄ – die KI für Ihre Privatabrechnung</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Praxis</td>
+                      <td style="padding:6px 0;font-size:13px;color:#111827;">${praxis_name}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Monatspreis</td>
+                      <td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">${price}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Laufzeit</td>
+                      <td style="padding:6px 0;font-size:13px;color:#111827;">${duration} Monate (${startDate} – ${endDate})</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Confirmation CTA -->
+        <tr>
+          <td style="padding:0 40px 28px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-radius:8px;border:1px solid #86efac;">
+              <tr><td style="padding:24px;">
+                <p style="color:#15803d;font-size:16px;font-weight:700;margin:0 0 8px;">✅ Vertrag bestätigen</p>
+                <p style="color:#374151;font-size:13px;line-height:1.5;margin:0 0 16px;">
+                  Klicken Sie auf den Button, um Ihren Vertrag digital zu bestätigen. Nach Ihrer Bestätigung wird der Vertrag aktiviert.
+                </p>
+                <table cellpadding="0" cellspacing="0">
+                  <tr><td style="background:#15803d;border-radius:6px;padding:14px 32px;">
+                    <a href="${confirmationUrl}" style="color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;display:block;">
+                      ✅ Vertrag jetzt bestätigen →
+                    </a>
+                  </td></tr>
+                </table>
+                <p style="color:#6b7280;font-size:11px;margin:10px 0 0;">Dieser Link ist personalisiert und gilt nur für Ihren Vertrag.</p>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Stripe Payment CTA -->
+        <tr>
+          <td style="padding:0 40px 28px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#f0f7ff,#e8f0fe);border-radius:8px;border:1px solid #bfdbfe;">
+              <tr><td style="padding:20px 24px;">
+                <p style="color:#1e40af;font-size:15px;font-weight:700;margin:0 0 8px;">💳 Zahlung einrichten</p>
+                <p style="color:#374151;font-size:13px;line-height:1.5;margin:0 0 14px;">
+                  Richten Sie jetzt bequem Ihre Zahlung per Kreditkarte oder SEPA-Lastschrift ein.
+                </p>
+                <table cellpadding="0" cellspacing="0">
+                  <tr><td style="background:#1e40af;border-radius:6px;padding:12px 24px;">
+                    <a href="${stripeUrl}" style="color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;display:block;">
+                      💳 Zahlung einrichten →
+                    </a>
+                  </td></tr>
+                </table>
+                <p style="color:#6b7280;font-size:11px;margin:10px 0 0;">Sichere Zahlung über Stripe. SSL-verschlüsselt.</p>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Sign-off -->
+        <tr>
+          <td style="padding:0 40px 32px;">
+            <p style="color:#374151;font-size:14px;line-height:1.7;margin:0;">
+              Bei Fragen stehen wir Ihnen gerne unter <a href="mailto:info@hfx-honorarfuchs.de" style="color:#0b367f;">info@hfx-honorarfuchs.de</a> zur Verfügung.<br><br>
+              Mit freundlichen Grüßen,<br>
+              <strong>Ihr HFX Honorarfuchs Team</strong>
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
+            <p style="color:#9ca3af;font-size:11px;margin:0;">
+              HFX Honorarfuchs • Diese E-Mail wurde automatisch generiert.<br>
+              © ${year} HFX Honorarfuchs GmbH
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
 const DEFAULT_HTML: Record<string, () => string> = {
   "lead-confirmation": buildLeadConfirmationHtml,
   "contract-customer": buildContractCustomerHtml,
   "contract-customer-pdf-send": buildContractCustomerPdfSendHtml,
   "contract-partner": buildContractPartnerHtml,
+  "contract-paper-confirmation": buildContractPaperConfirmationHtml,
   "invoice": buildInvoiceHtml,
   "invoice-pdf": buildInvoicePdfPreviewHtml,
   "dashboard-credentials": buildDashboardCredentialsHtml,
