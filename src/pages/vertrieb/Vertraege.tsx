@@ -1024,24 +1024,17 @@ export default function Vertraege() {
   };
 
   const handleStripeCheckout = async (contractId: string) => {
-    const stripeItems = buildStripeLineItems(form.selected_products);
-    if (stripeItems.length === 0) {
-      toast({ title: "Keine Stripe-Produkte", description: "Für die gewählten Produkte ist noch kein Stripe-Preis hinterlegt.", variant: "destructive" });
-      return;
-    }
+    // Use create-contract-subscription which sets correct metadata for the webhook
     try {
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: {
-          customer_email: form.email,
-          customer_name: `${form.vorname} ${form.nachname}`.trim(),
-          contract_id: contractId,
-          line_items: stripeItems,
-        },
+      const { data, error } = await supabase.functions.invoke("create-contract-subscription", {
+        body: { contract_id: contractId },
       });
       if (error) throw error;
       if (data?.url) {
         window.open(data.url, "_blank");
         toast({ title: "Stripe Checkout geöffnet", description: "Der Zahlungslink wurde in einem neuen Tab geöffnet." });
+      } else if (data?.reason === "no_stripe_products") {
+        toast({ title: "Keine Stripe-Produkte", description: "Für die gewählten Produkte ist noch kein Stripe-Preis hinterlegt." });
       } else {
         throw new Error("Keine Checkout-URL erhalten");
       }

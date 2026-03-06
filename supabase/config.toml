@@ -25,3 +25,7 @@ project_id = "gvsxentbbzuyanqbqvea"
     verify_jwt = false
   [functions.demo-reminder]
     verify_jwt = false
+  [functions.stripe-webhook]
+    verify_jwt = false
+  [functions.create-contract-subscription]
+    verify_jwt = false
