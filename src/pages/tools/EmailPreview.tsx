@@ -70,10 +70,10 @@ const TEMPLATES: Template[] = [
   {
     id: "contract-paper-confirmation",
     label: "Vertragsbestätigung (manuell)",
-    subject: "✅ Bitte bestätigen Sie Ihren HFX-Vertrag (HFX-I01019)",
+    subject: "Ihr HFX-Vertrag – jetzt verbindlich buchen (HFX-I01019)",
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
-    description: "Bestätigungs-E-Mail an Kunden nach Papiervertrag-Upload durch AD – mit Bestätigungs-Button und optionalem Stripe-Zahlungslink",
+    description: "E-Mail an Kunden nach Papiervertrag-Upload durch AD – einziger Button 'Verbindlich buchen' → Stripe. Vertrag aktiviert sich nach Zahlung automatisch.",
   },
   {
     id: "contract-partner",
