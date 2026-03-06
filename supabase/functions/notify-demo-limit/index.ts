@@ -157,9 +157,9 @@ Deno.serve(async (req) => {
     if (RESEND_API_KEY && demo.email && customerReminderEnabled) {
       // Build Stripe checkout URL if possible
       const STRIPE_PRODUCT_MAP: Record<string, { price_id: string; recurring: boolean }> = {
-        "HFX EBM": { price_id: "price_1T4HDh6v0qHdbOipecPqXas5", recurring: true },
-        "HFX GOÄ - die KI für ihre Privatabrechnung": { price_id: "price_1T4HEl6v0qHdbOipmPO3EKHl", recurring: true },
-        "HFX GOÄ/GOZ Live-Check": { price_id: "price_1T4HF76v0qHdbOipbBG04A5Q", recurring: false },
+        "HFX EBM": { price_id: "price_1T7z1h6v0qHdbOip4A7qocQC", recurring: true },
+        "HFX GOÄ - die KI für ihre Privatabrechnung": { price_id: "price_1T7z2Z6v0qHdbOipvyPDB9mB", recurring: true },
+        "HFX GOÄ/GOZ Live-Check": { price_id: "price_1T7z3X6v0qHdbOiplCCLqD2n", recurring: false },
       };
 
       let stripeCheckoutUrl: string | null = null;
