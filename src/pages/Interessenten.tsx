@@ -520,6 +520,8 @@ export default function Interessenten() {
           )}
         </DialogContent>
       </Dialog>
+
+      <CreateLeadDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} />
     </MainLayout>
   );
 }
