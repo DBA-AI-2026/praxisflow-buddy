@@ -156,15 +156,11 @@ export default function Rechnungen() {
       .select("*, contracts(iban)")
       .order("created_at", { ascending: false });
     if (!error && data) {
-      setInvoices(data.map((r) => {
-        const contract = r.contracts as { iban: string | null } | null;
-        const hasIban = !!(contract?.iban && contract.iban.trim());
-        return {
-          ...r,
-          positions: (r.positions as unknown as InvoicePosition[]) || [],
-          payment_method: r.contract_id ? (hasIban ? "sepa" : "stripe") : null,
-        } as Invoice;
-      }));
+      setInvoices(data.map((r) => ({
+        ...r,
+        positions: (r.positions as unknown as InvoicePosition[]) || [],
+        payment_method: r.contract_id ? "stripe" : null,
+      } as Invoice)));
     }
     setLoading(false);
   };
