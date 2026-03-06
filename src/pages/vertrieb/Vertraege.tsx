@@ -2594,6 +2594,8 @@ export default function Vertraege() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PaperContractDialog open={paperContractOpen} onOpenChange={setPaperContractOpen} />
     </MainLayout>
   );
 }
