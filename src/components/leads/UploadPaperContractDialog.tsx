@@ -22,8 +22,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Upload, FileText, Loader2, CheckCircle2 } from "lucide-react";
-import { addMonths } from "date-fns";
-
 const PRODUCT_OPTIONS = [
   "HFX EBM",
   "HFX GOÄ - die KI für ihre Privatabrechnung",
