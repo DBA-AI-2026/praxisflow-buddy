@@ -212,9 +212,9 @@ const emptyForm: ContractFormData = {
   selected_modules: [],
   license_count: 1,
   start_date: new Date().toISOString().split("T")[0],
-  duration_months: 12,
+  duration_months: 0, // unbefristet
   cancellation_period_months: 6,
-  auto_renewal: true,
+  auto_renewal: false,
   monthly_price: 0,
   one_time_fee: 0,
   discount_percent: 0,
