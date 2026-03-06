@@ -68,6 +68,14 @@ const TEMPLATES: Template[] = [
     description: "Manueller E-Mail-Versand an Kunden: Vertragsdokument + Produktvorschau als Anhang",
   },
   {
+    id: "contract-paper-confirmation",
+    label: "Vertragsbestätigung (manuell)",
+    subject: "✅ Bitte bestätigen Sie Ihren HFX-Vertrag (HFX-I01019)",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "Bestätigungs-E-Mail an Kunden nach Papiervertrag-Upload durch AD – mit Bestätigungs-Button und optionalem Stripe-Zahlungslink",
+  },
+  {
     id: "contract-partner",
     label: "Vertrag (Vertrieb)",
     subject: "Neuer Vertrag abgeschlossen – HFX Sales Portal",
