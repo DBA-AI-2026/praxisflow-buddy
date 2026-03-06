@@ -169,6 +169,8 @@ export type Database = {
           signature_data: string | null
           start_date: string
           status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           stundenaufwand_pro_woche: string | null
           telefon: string | null
           updated_at: string
@@ -232,6 +234,8 @@ export type Database = {
           signature_data?: string | null
           start_date: string
           status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           stundenaufwand_pro_woche?: string | null
           telefon?: string | null
           updated_at?: string
@@ -295,6 +299,8 @@ export type Database = {
           signature_data?: string | null
           start_date?: string
           status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           stundenaufwand_pro_woche?: string | null
           telefon?: string | null
           updated_at?: string

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import Stripe from "https://esm.sh/stripe@18.5.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -61,13 +62,79 @@ Deno.serve(async (req) => {
     let sent = 0;
     let failed = 0;
 
+    // Stripe product map – must match src/lib/stripeProducts.ts
+    const STRIPE_PRODUCT_MAP: Record<string, { price_id: string; recurring: boolean }> = {
+      "HFX EBM": { price_id: "price_1T4HDh6v0qHdbOipecPqXas5", recurring: true },
+      "HFX GOÄ - die KI für ihre Privatabrechnung": { price_id: "price_1T4HEl6v0qHdbOipmPO3EKHl", recurring: true },
+      "HFX GOÄ/GOZ Live-Check": { price_id: "price_1T4HF76v0qHdbOipbBG04A5Q", recurring: false },
+    };
+
     for (const demo of demos ?? []) {
       const testEndFormatted = new Date(demo.test_phase_end + "T00:00:00").toLocaleDateString("de-DE", {
         day: "2-digit", month: "2-digit", year: "numeric"
       });
 
-      const html = `
-<!DOCTYPE html>
+      // ── Build Stripe Checkout URL for this demo ─────────────────────────
+      let stripeCheckoutUrl: string | null = null;
+      const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+      if (stripeKey && demo.product_name && STRIPE_PRODUCT_MAP[demo.product_name]) {
+        try {
+          const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+          const priceInfo = STRIPE_PRODUCT_MAP[demo.product_name];
+          const checkoutSession = await stripe.checkout.sessions.create({
+            customer_email: demo.email,
+            line_items: [{ price: priceInfo.price_id, quantity: 1 }],
+            mode: priceInfo.recurring ? "subscription" : "payment",
+            payment_method_types: ["card", "sepa_debit"],
+            success_url: "https://praxisflow-buddy.lovable.app/demo-success?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url: "https://praxisflow-buddy.lovable.app/demo-cancel",
+            metadata: {
+              source: "demo_booking",
+              demo_id: demo.id,
+            },
+            subscription_data: priceInfo.recurring ? { metadata: { demo_id: demo.id } } : undefined,
+          });
+          stripeCheckoutUrl = checkoutSession.url;
+          console.log(`[demo-reminder] Stripe checkout session created for ${demo.id}: ${checkoutSession.id}`);
+        } catch (stripeErr) {
+          console.error("[demo-reminder] Failed to create Stripe session:", stripeErr);
+        }
+      }
+
+      const ctaSection = stripeCheckoutUrl
+        ? `
+        <!-- Direct Booking CTA -->
+        <tr>
+          <td style="padding:0 40px 32px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#f0f7ff,#e8f0fe);border-radius:8px;border:1px solid #bfdbfe;margin:0 0 24px;">
+              <tr><td style="padding:24px;">
+                <p style="color:#1e40af;font-size:16px;font-weight:700;margin:0 0 8px;">🚀 Jetzt direkt weiterbuchen</p>
+                <p style="color:#374151;font-size:14px;line-height:1.5;margin:0 0 16px;">
+                  Gefällt Ihnen <strong>${demo.product_name}</strong>? Buchen Sie jetzt direkt online und nutzen Sie das Produkt ohne Unterbrechung weiter.
+                </p>
+                <table cellpadding="0" cellspacing="0">
+                  <tr><td style="background:#0b367f;border-radius:6px;padding:14px 28px;">
+                    <a href="${stripeCheckoutUrl}" style="color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;display:block;">
+                      ✅ Jetzt kostenpflichtig buchen →
+                    </a>
+                  </td></tr>
+                </table>
+                <p style="color:#6b7280;font-size:12px;margin:10px 0 0;">Sichere Zahlung per Kreditkarte oder SEPA-Lastschrift über Stripe.</p>
+              </td></tr>
+            </table>
+          </td>
+        </tr>`
+        : `
+        <!-- Fallback CTA (no Stripe price mapped) -->
+        <tr>
+          <td style="padding:0 40px 32px;">
+            <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 16px;">
+              Möchten Sie HFX weiter nutzen? Sprechen Sie uns an – wir erstellen Ihnen gerne ein individuelles Angebot.
+            </p>
+          </td>
+        </tr>`;
+
+      const html = `<!DOCTYPE html>
 <html lang="de">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f4f6fa;font-family:Arial,sans-serif;">
@@ -83,27 +150,27 @@ Deno.serve(async (req) => {
         </tr>
         <!-- Body -->
         <tr>
-          <td style="padding:40px;">
+          <td style="padding:40px 40px 24px;">
             <p style="color:#1a1a2e;font-size:16px;margin:0 0 16px;">Guten Tag${demo.contact_name ? ` ${demo.contact_name}` : ""},</p>
             <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 16px;">
               wir möchten Sie daran erinnern, dass Ihre Testphase für <strong>${demo.product_name ?? "HFX-Produkt"}</strong>
               ${demo.company_name ? ` (${demo.company_name})` : ""} in <strong>3 Tagen</strong> – am <strong>${testEndFormatted}</strong> – abläuft.
             </p>
-            <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px;">
-              Wir hoffen, dass Sie von den Möglichkeiten unserer Software überzeugt sind. Gerne beraten wir Sie jetzt über die nächsten Schritte und ein passendes Angebot für Ihre Praxis.
-            </p>
-            <!-- CTA Box -->
+            <!-- Test phase info box -->
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4ff;border-radius:6px;margin:0 0 24px;">
-              <tr><td style="padding:20px 24px;">
-                <p style="color:#0b367f;font-size:14px;font-weight:700;margin:0 0 8px;">📋 Ihre Testphase</p>
-                <p style="color:#374151;font-size:14px;margin:0;"><strong>Produkt:</strong> ${demo.product_name ?? "–"}</p>
-                ${demo.hfx_customer_number ? `<p style="color:#374151;font-size:14px;margin:4px 0 0;"><strong>HFX-Nr.:</strong> ${demo.hfx_customer_number}</p>` : ""}
-                <p style="color:#374151;font-size:14px;margin:4px 0 0;"><strong>Testende:</strong> ${testEndFormatted}</p>
+              <tr><td style="padding:16px 20px;">
+                <p style="color:#0b367f;font-size:13px;font-weight:700;margin:0 0 8px;">📋 Ihre Testphase</p>
+                <p style="color:#374151;font-size:13px;margin:0;"><strong>Produkt:</strong> ${demo.product_name ?? "–"}</p>
+                ${demo.hfx_customer_number ? `<p style="color:#374151;font-size:13px;margin:4px 0 0;"><strong>HFX-Nr.:</strong> ${demo.hfx_customer_number}</p>` : ""}
+                <p style="color:#374151;font-size:13px;margin:4px 0 0;"><strong>Testende:</strong> ${testEndFormatted}</p>
               </td></tr>
             </table>
-            <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px;">
-              Möchten Sie HFX weiter nutzen? Sprechen Sie uns an – wir erstellen Ihnen gerne ein individuelles Angebot.
-            </p>
+          </td>
+        </tr>
+        ${ctaSection}
+        <!-- Sign off -->
+        <tr>
+          <td style="padding:0 40px 32px;">
             <p style="color:#374151;font-size:15px;line-height:1.6;margin:0;">
               Mit freundlichen Grüßen,<br>
               <strong>Ihr HFX Honorarfuchs Team</strong>
