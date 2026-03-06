@@ -42,7 +42,6 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Use service role for reading contract (bypasses RLS for this admin task)
   const adminClient = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -86,10 +85,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Build confirmation URL
-    const confirmationUrl = `${APP_URL}/vertrag-bestaetigen?token=${contract.customer_confirmation_token}`;
-
-    // Try to build Stripe checkout session
+    // Build Stripe checkout session
     let stripeCheckoutUrl: string | null = null;
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     const productName = contract.product_name;
@@ -103,8 +99,8 @@ Deno.serve(async (req) => {
           line_items: [{ price: priceInfo.price_id, quantity: 1 }],
           mode: priceInfo.recurring ? "subscription" : "payment",
           payment_method_types: ["card", "sepa_debit"],
-          success_url: `${APP_URL}/demo-success?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${APP_URL}/demo-cancel`,
+          success_url: `${APP_URL}/vertrag-bestaetigen?status=success&contract_id=${contract.id}`,
+          cancel_url: `${APP_URL}/vertrag-bestaetigen?status=cancelled`,
           metadata: {
             source: "paper_contract_confirmation",
             contract_id: contract.id,
@@ -136,37 +132,54 @@ Deno.serve(async (req) => {
       ? `${Number(contract.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/Monat`
       : "–";
 
-    const stripeSection = stripeCheckoutUrl
+    // CTA block — only shown if Stripe URL is available
+    const ctaBlock = stripeCheckoutUrl
       ? `
-      <!-- Stripe Payment CTA -->
-      <tr>
-        <td style="padding:0 40px 28px;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#f0f7ff,#e8f0fe);border-radius:8px;border:1px solid #bfdbfe;">
-            <tr><td style="padding:20px 24px;">
-              <p style="color:#1e40af;font-size:15px;font-weight:700;margin:0 0 8px;">💳 Zahlung einrichten</p>
-              <p style="color:#374151;font-size:13px;line-height:1.5;margin:0 0 14px;">
-                Richten Sie jetzt bequem Ihre Zahlung per Kreditkarte oder SEPA-Lastschrift ein.
-              </p>
-              <table cellpadding="0" cellspacing="0">
-                <tr><td style="background:#1e40af;border-radius:6px;padding:12px 24px;">
-                  <a href="${stripeCheckoutUrl}" style="color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;display:block;">
-                    💳 Zahlung einrichten →
-                  </a>
-                </td></tr>
-              </table>
-              <p style="color:#6b7280;font-size:11px;margin:10px 0 0;">Sichere Zahlung über Stripe. SSL-verschlüsselt.</p>
-            </td></tr>
-          </table>
-        </td>
-      </tr>`
-      : "";
+        <!-- Buchungs-CTA -->
+        <tr>
+          <td style="padding:0 40px 28px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#0b367f,#1a4a9e);border-radius:10px;overflow:hidden;">
+              <tr><td style="padding:28px 32px;text-align:center;">
+                <p style="color:rgba(255,255,255,0.9);font-size:14px;line-height:1.6;margin:0 0 20px;">
+                  Ihr Außendienstmitarbeiter hat Ihren Vertragsabschluss vorbereitet.<br>
+                  Bitte schließen Sie die Buchung verbindlich ab – Ihre Zahlung aktiviert den Vertrag automatisch.
+                </p>
+                <table cellpadding="0" cellspacing="0" align="center">
+                  <tr><td style="background:#ffffff;border-radius:8px;padding:0;">
+                    <a href="${stripeCheckoutUrl}"
+                       style="display:block;padding:16px 40px;color:#0b367f;font-size:16px;font-weight:700;text-decoration:none;letter-spacing:0.01em;">
+                      Verbindlich buchen →
+                    </a>
+                  </td></tr>
+                </table>
+                <p style="color:rgba(255,255,255,0.6);font-size:11px;margin:14px 0 0;">
+                  Sichere Zahlung via Stripe · Kreditkarte oder SEPA-Lastschrift · SSL-verschlüsselt
+                </p>
+              </td></tr>
+            </table>
+          </td>
+        </tr>`
+      : `
+        <!-- Hinweis ohne Stripe -->
+        <tr>
+          <td style="padding:0 40px 28px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef9ec;border-radius:8px;border:1px solid #fcd34d;">
+              <tr><td style="padding:20px 24px;">
+                <p style="color:#92400e;font-size:14px;font-weight:600;margin:0 0 6px;">ℹ️ Zahlung wird manuell eingerichtet</p>
+                <p style="color:#374151;font-size:13px;line-height:1.5;margin:0;">
+                  Ihr Außendienstmitarbeiter wird sich in Kürze bei Ihnen melden, um die Zahlung einzurichten.
+                </p>
+              </td></tr>
+            </table>
+          </td>
+        </tr>`;
 
     const html = `<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vertragsbestätigung – HFX Honorarfuchs</title>
+  <title>Ihr HFX-Vertrag – jetzt verbindlich buchen</title>
 </head>
 <body style="margin:0;padding:0;background:#f4f6fa;font-family:Verdana,Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fa;padding:40px 0;">
@@ -177,7 +190,7 @@ Deno.serve(async (req) => {
         <tr>
           <td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:36px 40px;text-align:center;">
             <p style="color:#ffffff;font-size:24px;font-weight:700;margin:0;letter-spacing:-0.5px;">🦊 HFX Honorarfuchs</p>
-            <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:6px 0 0;">Vertragsbestätigung</p>
+            <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:6px 0 0;">Ihr Vertrag wartet auf Ihre Buchung</p>
           </td>
         </tr>
 
@@ -186,7 +199,7 @@ Deno.serve(async (req) => {
           <td style="padding:36px 40px 24px;">
             <p style="color:#1a1a2e;font-size:16px;margin:0 0 12px;">Guten Tag${contract.vorname ? ` ${contract.vorname} ${contract.nachname || ""}` : ""},</p>
             <p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 12px;">
-              wir haben Ihren unterzeichneten Vertrag erhalten. <strong>Bitte bestätigen Sie den Vertrag</strong> mit einem Klick auf den Button unten, damit er vollständig aktiviert werden kann.
+              wir haben Ihren Vertrag erhalten und für Sie vorbereitet. Mit einem Klick auf den Button unten schließen Sie die Buchung kostenpflichtig ab – Ihr Vertrag wird danach automatisch aktiviert.
             </p>
           </td>
         </tr>
@@ -232,29 +245,7 @@ Deno.serve(async (req) => {
           </td>
         </tr>
 
-        <!-- Confirmation CTA -->
-        <tr>
-          <td style="padding:0 40px 28px;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-radius:8px;border:1px solid #86efac;">
-              <tr><td style="padding:24px;">
-                <p style="color:#15803d;font-size:16px;font-weight:700;margin:0 0 8px;">✅ Vertrag bestätigen</p>
-                <p style="color:#374151;font-size:13px;line-height:1.5;margin:0 0 16px;">
-                  Klicken Sie auf den Button, um Ihren Vertrag digital zu bestätigen. Nach Ihrer Bestätigung wird der Vertrag aktiviert.
-                </p>
-                <table cellpadding="0" cellspacing="0">
-                  <tr><td style="background:#15803d;border-radius:6px;padding:14px 32px;">
-                    <a href="${confirmationUrl}" style="color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;display:block;">
-                      ✅ Vertrag jetzt bestätigen →
-                    </a>
-                  </td></tr>
-                </table>
-                <p style="color:#6b7280;font-size:11px;margin:10px 0 0;">Dieser Link ist personalisiert und gilt nur für Ihren Vertrag.</p>
-              </td></tr>
-            </table>
-          </td>
-        </tr>
-
-        ${stripeSection}
+        ${ctaBlock}
 
         <!-- Sign-off -->
         <tr>
@@ -292,7 +283,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
         to: [contract.email],
-        subject: `✅ Bitte bestätigen Sie Ihren HFX-Vertrag${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}`,
+        subject: `Ihr HFX-Vertrag – jetzt verbindlich buchen${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}`,
         html,
       }),
     });
