@@ -14,6 +14,8 @@ import {
 import type { AppRole } from "@/hooks/useUserRole";
 import { format, formatDistanceToNow, subHours } from "date-fns";
 import { de } from "date-fns/locale";
+import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
+import { Button } from "@/components/ui/button";
 
 interface ActivityItem {
   id: string;
@@ -150,6 +152,7 @@ export default function Dashboard() {
   const { profile } = useAuth();
   const { role, isAdmin, isVertragsabteilung } = useUserRole();
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [createLeadOpen, setCreateLeadOpen] = useState(false);
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "Willkommen";
 
@@ -317,6 +320,15 @@ export default function Dashboard() {
               {ql.label}
             </Link>
           ))}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCreateLeadOpen(true)}
+            className="gap-2"
+          >
+            <UserPlus className="h-4 w-4" />
+            Lead anlegen
+          </Button>
         </div>
       </div>
 
@@ -516,6 +528,8 @@ export default function Dashboard() {
           })}
         </div>
       </div>
+
+      <CreateLeadDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} />
     </MainLayout>
   );
 }

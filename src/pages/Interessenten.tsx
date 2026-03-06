@@ -29,7 +29,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Eye, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, Send, UserCheck, FilePlus } from "lucide-react";
+import { Search, Eye, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, Send, UserCheck, FilePlus, UserPlus } from "lucide-react";
+import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
 import {
   Tooltip,
   TooltipContent,
@@ -58,6 +59,7 @@ export default function Interessenten() {
   const { isAdmin, isSalesLead, isRegionalLead } = useUserRole();
 
   const canAssign = isAdmin || isSalesLead || isRegionalLead;
+  const [createLeadOpen, setCreateLeadOpen] = useState(false);
 
   // Fetch Gebietsleiter users for assignment
   const { data: gebietsleiter = [] } = useQuery({
@@ -196,6 +198,10 @@ export default function Interessenten() {
               <SelectItem value="abgelehnt">Abgelehnt</SelectItem>
             </SelectContent>
           </Select>
+          <Button onClick={() => setCreateLeadOpen(true)} className="shrink-0 gap-2">
+            <UserPlus className="h-4 w-4" />
+            Manuell anlegen
+          </Button>
         </div>
 
         {/* Stats */}
@@ -514,6 +520,8 @@ export default function Interessenten() {
           )}
         </DialogContent>
       </Dialog>
+
+      <CreateLeadDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} />
     </MainLayout>
   );
 }
