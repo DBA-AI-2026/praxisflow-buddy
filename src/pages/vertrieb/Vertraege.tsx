@@ -1049,17 +1049,6 @@ export default function Vertraege() {
       toast({ title: "Ungültige MP-Nummer", description: "Die MP-Nummer muss genau 5-stellig sein (nur Ziffern).", variant: "destructive" });
       return;
     }
-    // SEPA validation only when SEPA is selected
-    if (form.payment_method === "sepa") {
-      if (!validateIban(form.iban).valid) {
-        toast({ title: "Ungültige IBAN", description: validateIban(form.iban).message, variant: "destructive" });
-        return;
-      }
-      if (!validateBic(form.bic).valid) {
-        toast({ title: "Ungültige BIC", description: validateBic(form.bic).message, variant: "destructive" });
-        return;
-      }
-    }
     // BSNR/LANR format validation
     const bsnrFields = [
       { val: form.bsnr, label: "BSNR" },
