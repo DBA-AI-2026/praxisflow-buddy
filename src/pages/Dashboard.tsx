@@ -528,6 +528,8 @@ export default function Dashboard() {
           })}
         </div>
       </div>
+
+      <CreateLeadDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} />
     </MainLayout>
   );
 }
