@@ -30,7 +30,6 @@ const schema = z.object({
   start_date: z.string().min(1, "Pflichtfeld"),
   duration_months: z.coerce.number().min(1),
   rechnungs_email: z.string().email("Ungültige E-Mail").or(z.literal("")).optional(),
-  rechnungs_email: z.string().email("Ungültige E-Mail").or(z.literal("")).optional(),
   notes: z.string().optional(),
 });
 
