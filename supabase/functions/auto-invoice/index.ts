@@ -156,14 +156,9 @@ Deno.serve(async (req) => {
         const dueDateStr = collectionDate.toISOString().split("T")[0];
         const collectionDateFormatted = collectionDate.toLocaleDateString("de-DE");
 
-        // Determine payment method
-        const isSepa = !!(contract.iban && contract.iban.trim());
-        const paymentMethodLabel = isSepa
-          ? "SEPA-Lastschrift"
-          : "Stripe (Kreditkarte/SEPA)";
-        const paymentMethodNote = isSepa
-          ? `Der Betrag wird automatisch per SEPA-Lastschrift von Ihrem Konto eingezogen.`
-          : `Der Betrag wird automatisch über Stripe von Ihrem hinterlegten Zahlungsmittel eingezogen.`;
+        // Determine payment method (Stripe only)
+        const paymentMethodLabel = "Stripe";
+        const paymentMethodNote = `Der Betrag wird automatisch über Stripe von Ihrem hinterlegten Zahlungsmittel eingezogen.`;
         const todayStr = today.toISOString().split("T")[0];
 
         const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];

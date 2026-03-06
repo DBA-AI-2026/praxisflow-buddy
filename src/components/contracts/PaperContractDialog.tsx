@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { addMonths } from "date-fns";
-import { FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2, CreditCard } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,10 +29,6 @@ const schema = z.object({
   license_count: z.coerce.number().min(1),
   start_date: z.string().min(1, "Pflichtfeld"),
   duration_months: z.coerce.number().min(1),
-  payment_method: z.enum(["sepa", "stripe", "rechnung"]),
-  iban: z.string().optional(),
-  bic: z.string().optional(),
-  kontoinhaber: z.string().optional(),
   rechnungs_email: z.string().email("Ungültige E-Mail").or(z.literal("")).optional(),
   notes: z.string().optional(),
 });
@@ -59,18 +55,15 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
     },
   });
 
-  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       start_date: new Date().toISOString().split("T")[0],
       duration_months: 12,
       license_count: 1,
       monthly_price: 0,
-      payment_method: "sepa",
     },
   });
-
-  const paymentMethod = watch("payment_method");
 
   const onSubmit = async (data: FormData) => {
     if (!user?.id) return;
@@ -105,9 +98,6 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
           one_time_fee: 0,
           discount_percent: 0,
           payment_interval: "monatlich",
-          iban: data.iban || null,
-          bic: data.bic || null,
-          kontoinhaber: data.kontoinhaber || null,
           rechnungs_email: data.rechnungs_email || null,
           status: "aktiv",
           notes: `[Papier]${data.notes ? " " + data.notes : ""}`,
@@ -250,41 +240,16 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
             </div>
           </div>
 
-          {/* Zahlungsdaten */}
+          {/* Zahlung */}
           <div>
             <h3 className="text-sm font-semibold text-foreground mb-3 pb-1 border-b border-border">Zahlung</h3>
             <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2 space-y-1">
-                <Label>Zahlungsmethode</Label>
-                <Select defaultValue="sepa" onValueChange={(v: any) => setValue("payment_method", v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sepa">SEPA-Lastschrift</SelectItem>
-                    <SelectItem value="stripe">Stripe (Kreditkarte)</SelectItem>
-                    <SelectItem value="rechnung">Rechnung</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="col-span-2">
+                <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-primary shrink-0" />
+                  <span>Zahlung über <strong className="text-foreground">Stripe</strong> (Kreditkarte oder SEPA-Lastschrift)</span>
+                </div>
               </div>
-
-              {paymentMethod === "sepa" && (
-                <>
-                  <div className="col-span-2 space-y-1">
-                    <Label htmlFor="kontoinhaber">Kontoinhaber</Label>
-                    <Input id="kontoinhaber" {...register("kontoinhaber")} placeholder="Elisabeth Freitag" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="iban">IBAN</Label>
-                    <Input id="iban" {...register("iban")} placeholder="DE89 3704 0044 ..." />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="bic">BIC</Label>
-                    <Input id="bic" {...register("bic")} placeholder="COBADEFFXXX" />
-                  </div>
-                </>
-              )}
-
               <div className="col-span-2 space-y-1">
                 <Label htmlFor="rechnungs_email">Rechnungs-E-Mail (falls abweichend)</Label>
                 <Input id="rechnungs_email" type="email" {...register("rechnungs_email")} placeholder="buchhaltung@praxis.de" className={errors.rechnungs_email ? "border-destructive" : ""} />

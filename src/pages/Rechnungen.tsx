@@ -85,8 +85,8 @@ interface Invoice {
   exported_to_lexware: boolean;
   notes: string | null;
   created_at: string;
-  // joined from contracts
-  payment_method?: "sepa" | "stripe" | null;
+  // joined from contracts - always Stripe
+  payment_method?: "stripe" | null;
 }
 
 interface Contract {
@@ -153,18 +153,14 @@ export default function Rechnungen() {
     setLoading(true);
     const { data, error } = await supabase
       .from("invoices")
-      .select("*, contracts(iban)")
+      .select("*")
       .order("created_at", { ascending: false });
     if (!error && data) {
-      setInvoices(data.map((r) => {
-        const contract = r.contracts as { iban: string | null } | null;
-        const hasIban = !!(contract?.iban && contract.iban.trim());
-        return {
-          ...r,
-          positions: (r.positions as unknown as InvoicePosition[]) || [],
-          payment_method: r.contract_id ? (hasIban ? "sepa" : "stripe") : null,
-        } as Invoice;
-      }));
+      setInvoices(data.map((r) => ({
+        ...r,
+        positions: (r.positions as unknown as InvoicePosition[]) || [],
+        payment_method: r.contract_id ? "stripe" : null,
+      } as Invoice)));
     }
     setLoading(false);
   };
@@ -450,19 +446,9 @@ export default function Rechnungen() {
                       <TableCell>{new Date(inv.invoice_date).toLocaleDateString("de-DE")}</TableCell>
                       <TableCell className="text-right font-medium">{Number(inv.gross_amount).toFixed(2)} €</TableCell>
                        <TableCell>
-                         {inv.payment_method === "sepa" && (
-                           <Badge variant="outline" className="gap-1 text-xs border-primary/50 text-primary bg-primary/5">
-                             🏦 SEPA
-                           </Badge>
-                         )}
-                         {inv.payment_method === "stripe" && (
-                           <Badge variant="outline" className="gap-1 text-xs border-accent/50 text-accent-foreground bg-accent/20">
-                             💳 Stripe
-                           </Badge>
-                         )}
-                         {!inv.payment_method && (
-                           <span className="text-xs text-muted-foreground">–</span>
-                         )}
+                         <Badge variant="outline" className="gap-1 text-xs border-accent/50 text-accent-foreground bg-accent/20">
+                           💳 Stripe
+                         </Badge>
                        </TableCell>
                        <TableCell>
                         <Badge variant={s.variant} className="gap-1">
