@@ -59,6 +59,7 @@ export default function Interessenten() {
   const { isAdmin, isSalesLead, isRegionalLead } = useUserRole();
 
   const canAssign = isAdmin || isSalesLead || isRegionalLead;
+  const [createLeadOpen, setCreateLeadOpen] = useState(false);
 
   // Fetch Gebietsleiter users for assignment
   const { data: gebietsleiter = [] } = useQuery({
