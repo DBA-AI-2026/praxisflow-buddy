@@ -14,6 +14,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 
+// Far-future end date = unbefristet (99 years)
+const UNBEFRISTET_END_DATE = "2099-12-31";
+
 const schema = z.object({
   vorname: z.string().min(1, "Pflichtfeld"),
   nachname: z.string().min(1, "Pflichtfeld"),
@@ -27,7 +30,6 @@ const schema = z.object({
   monthly_price: z.coerce.number().min(0, "Pflichtfeld"),
   license_count: z.coerce.number().min(1),
   start_date: z.string().min(1, "Pflichtfeld"),
-  duration_months: z.coerce.number().min(1),
   rechnungs_email: z.string().email("Ungültige E-Mail").or(z.literal("")).optional(),
   notes: z.string().optional(),
 });
@@ -58,7 +60,6 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
     resolver: zodResolver(schema),
     defaultValues: {
       start_date: new Date().toISOString().split("T")[0],
-      duration_months: 12,
       license_count: 1,
       monthly_price: 0,
     },
@@ -69,7 +70,6 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
     setIsSubmitting(true);
 
     try {
-      const endDate = addMonths(new Date(data.start_date), data.duration_months);
       const customerName = `${data.vorname} ${data.nachname}`.trim();
       const now = new Date().toISOString();
 
@@ -90,10 +90,10 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
           monthly_price: data.monthly_price,
           license_count: data.license_count,
           start_date: data.start_date,
-          duration_months: data.duration_months,
-          end_date: endDate.toISOString().split("T")[0],
-          cancellation_period_months: 3,
-          auto_renewal: true,
+          end_date: UNBEFRISTET_END_DATE,
+          duration_months: 0, // unbefristet
+          cancellation_period_months: 6,
+          auto_renewal: false,
           one_time_fee: 0,
           discount_percent: 0,
           payment_interval: "monatlich",
@@ -228,13 +228,14 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
                 <Label htmlFor="license_count">Lizenzen</Label>
                 <Input id="license_count" type="number" min={1} {...register("license_count")} />
               </div>
-              <div className="space-y-1">
+              <div className="col-span-2 space-y-1">
                 <Label htmlFor="start_date">Vertragsbeginn *</Label>
                 <Input id="start_date" type="date" {...register("start_date")} className={errors.start_date ? "border-destructive" : ""} />
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="duration_months">Laufzeit (Monate)</Label>
-                <Input id="duration_months" type="number" min={1} {...register("duration_months")} />
+              <div className="col-span-2">
+                <p className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                  ⏳ Vertrag läuft <strong>unbefristet</strong> – Kündigung mit 6 Monaten Frist zum Monatsende.
+                </p>
               </div>
             </div>
           </div>
