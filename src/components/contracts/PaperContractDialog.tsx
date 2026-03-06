@@ -55,18 +55,15 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
     },
   });
 
-  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       start_date: new Date().toISOString().split("T")[0],
       duration_months: 12,
       license_count: 1,
       monthly_price: 0,
-      payment_method: "sepa",
     },
   });
-
-  const paymentMethod = watch("payment_method");
 
   const onSubmit = async (data: FormData) => {
     if (!user?.id) return;
