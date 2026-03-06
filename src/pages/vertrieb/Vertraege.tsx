@@ -139,7 +139,7 @@ const statusConfig: Record<string, { label: string; class: string; icon: typeof 
 
 // Product options are now loaded from the database
 
-type PaymentMethod = "stripe" | "sepa" | "rechnung";
+type PaymentMethod = "stripe";
 
 interface ContractFormData {
   customer_name: string;
