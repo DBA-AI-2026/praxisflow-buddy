@@ -12,20 +12,20 @@ export interface StripePriceMapping {
 
 export const STRIPE_PRODUCT_MAP: Record<string, StripePriceMapping> = {
   "HFX EBM": {
-    price_id: "price_1T4HDh6v0qHdbOipecPqXas5",
-    product_id: "prod_U2Lv9ZUjzB1CMB",
+    price_id: "price_1T7z1h6v0qHdbOip4A7qocQC",
+    product_id: "prod_U6BONYT5L2tmxy",
     recurring: true,
     label: "HFX EBM – 179 €/Monat",
   },
   "HFX GOÄ - die KI für ihre Privatabrechnung": {
-    price_id: "price_1T4HEl6v0qHdbOipmPO3EKHl",
-    product_id: "prod_U2LwBZsgza4ncZ",
+    price_id: "price_1T7z2Z6v0qHdbOipvyPDB9mB",
+    product_id: "prod_U6BPWYJ9ohE9L3",
     recurring: true,
     label: "HFX GOÄ – 49 €/Monat",
   },
   "HFX GOÄ/GOZ Live-Check": {
-    price_id: "price_1T4HF76v0qHdbOipbBG04A5Q",
-    product_id: "prod_U2LxeYe1xUbb8s",
+    price_id: "price_1T7z3X6v0qHdbOiplCCLqD2n",
+    product_id: "prod_U6BQaQg3TGblld",
     recurring: false,
     label: "HFX GOÄ/GOZ Live-Check – 649 € (einmalig)",
   },
