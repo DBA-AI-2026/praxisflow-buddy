@@ -327,7 +327,7 @@ export default function Dashboard() {
             className="gap-2"
           >
             <UserPlus className="h-4 w-4" />
-            Lead anlegen
+            Neuer Interessent
           </Button>
         </div>
       </div>
