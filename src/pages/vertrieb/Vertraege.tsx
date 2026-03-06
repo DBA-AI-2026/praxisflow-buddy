@@ -974,18 +974,8 @@ export default function Vertraege() {
     start_date: "Vertragsbeginn",
   };
 
-  const sepaFieldLabels: Record<string, string> = {
-    kontoinhaber: "Kontoinhaber",
-    kontoinhaber_strasse: "Straße Kontoinhaber",
-    kontoinhaber_plz_ort: "PLZ/Ort Kontoinhaber",
-    bank_name: "Bank",
-    iban: "IBAN",
-    bic: "BIC",
-  };
-
   const requiredFieldLabels: Record<string, string> = {
     ...baseRequiredFieldLabels,
-    ...(form.payment_method === "sepa" ? sepaFieldLabels : {}),
   };
 
   const requiredFields = Object.keys(requiredFieldLabels) as (keyof ContractFormData)[];
