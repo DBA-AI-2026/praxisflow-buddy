@@ -130,6 +130,7 @@ function SalesPartnerCombobox({
 
 const statusConfig: Record<string, { label: string; class: string; icon: typeof FileText }> = {
   entwurf: { label: "Entwurf", class: "bg-muted text-muted-foreground", icon: FilePen },
+  eingegangen: { label: "Eingegangen", class: "bg-warning/10 text-warning", icon: Upload },
   gezeichnet: { label: "Gezeichnet", class: "bg-primary/10 text-primary", icon: FileSignature },
   aktiv: { label: "Aktiv", class: "bg-success/10 text-success", icon: CircleCheck },
   gekuendigt: { label: "Gekündigt", class: "bg-warning/10 text-warning", icon: CircleOff },
