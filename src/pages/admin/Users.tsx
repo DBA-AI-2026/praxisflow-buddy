@@ -330,6 +330,26 @@ export default function AdminUsers() {
         </Button>
       </div>
 
+      {/* Duplikat-Warnung */}
+      {(duplicates.names.length > 0 || duplicates.emails.length > 0) && (
+        <Alert className="mb-4 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <AlertDescription className="text-amber-800 dark:text-amber-200">
+            <span className="font-semibold">Mögliche Duplikate gefunden:</span>
+            {duplicates.names.length > 0 && (
+              <span className="block mt-1 text-sm">
+                Gleicher Name: {duplicates.names.join(", ")}
+              </span>
+            )}
+            {duplicates.emails.length > 0 && (
+              <span className="block mt-1 text-sm">
+                Gleiche E-Mail: {duplicates.emails.join(", ")}
+              </span>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Table */}
       <div className="card-elevated overflow-hidden">
         <div className="overflow-x-auto">
