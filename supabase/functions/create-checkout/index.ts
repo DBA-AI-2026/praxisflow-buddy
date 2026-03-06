@@ -13,6 +13,12 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[CREATE-CHECKOUT] ${step}${d}`);
 };
 
+// Stripe Coupon ID for HFX GOÄ promo: 100% off for 18 months (covers until 31.12.2026)
+// Applied automatically for contracts signed before 30.06.2026
+const GOA_PROMO_COUPON_ID = "Z6xkvF0U";
+const GOA_PROMO_PRICE_ID = "price_1T7z2Z6v0qHdbOipvyPDB9mB";
+const GOA_PROMO_DEADLINE = new Date("2026-06-30T23:59:59Z");
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -62,9 +68,25 @@ serve(async (req) => {
     const mode = hasRecurring ? "subscription" : "payment";
     logStep("Checkout mode", { mode });
 
+    // Check if HFX GOÄ promo applies:
+    // - Contract contains the GOÄ product
+    // - Current date is on or before 30.06.2026
+    const now = new Date();
+    const isGoaProduct = line_items.some(
+      (item: { price_id: string }) => item.price_id === GOA_PROMO_PRICE_ID
+    );
+    const isWithinPromoDeadline = now <= GOA_PROMO_DEADLINE;
+    const applyPromoCoupon = isGoaProduct && isWithinPromoDeadline && mode === "subscription";
+
+    if (applyPromoCoupon) {
+      logStep("Applying HFX GOÄ promo coupon (100% off until 31.12.2026)", {
+        couponId: GOA_PROMO_COUPON_ID,
+      });
+    }
+
     const origin = req.headers.get("origin") || "https://praxisflow-buddy.lovable.app";
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
       customer_email: customerId ? undefined : customer_email,
       client_reference_id: contract_id || undefined,
@@ -79,16 +101,35 @@ serve(async (req) => {
         contract_id: contract_id || "",
         created_by: user.id,
         customer_name: customer_name || "",
+        promo_applied: applyPromoCoupon ? "GOA_PROMO_2026" : "",
       },
-      payment_method_types: mode === "subscription" ? ["card", "sepa_debit"] : ["card", "sepa_debit"],
+      payment_method_types: ["card", "sepa_debit"],
+    };
+
+    // Apply promo coupon for GOÄ subscriptions within the deadline
+    if (applyPromoCoupon) {
+      sessionParams.discounts = [{ coupon: GOA_PROMO_COUPON_ID }];
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
+
+    logStep("Checkout session created", {
+      sessionId: session.id,
+      url: session.url,
+      promoCouponApplied: applyPromoCoupon,
     });
 
-    logStep("Checkout session created", { sessionId: session.id, url: session.url });
-
-    return new Response(JSON.stringify({ url: session.url, session_id: session.id }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    return new Response(
+      JSON.stringify({
+        url: session.url,
+        session_id: session.id,
+        promo_applied: applyPromoCoupon,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     logStep("ERROR", { message: msg });
