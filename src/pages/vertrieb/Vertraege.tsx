@@ -2147,7 +2147,17 @@ export default function Vertraege() {
 
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Zahlungsmethode</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-primary shrink-0" />
+                <div>
+                  <span className="font-medium text-foreground">Stripe</span>
+                  <p>Zahlung per Kreditkarte oder SEPA-Lastschrift über Stripe Checkout.</p>
+                  {!hasStripeProducts(form.selected_products) && form.selected_products.length > 0 && (
+                    <p className="mt-1 text-warning font-medium">⚠ Für die gewählten Produkte ist noch kein Stripe-Preis hinterlegt.</p>
+                  )}
+                </div>
+              </div>
+            </div>
                 <div
                   className={`p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                     form.payment_method === "stripe"
