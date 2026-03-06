@@ -376,24 +376,13 @@ export default function Dashboard() {
           iconClass="bg-purple-500/10 text-purple-600"
           link="/interessenten"
         />
-        {(isAdmin || isVertragsabteilung) ? (
-          <KpiCard
-            title="Verträge zur Freigabe"
-            value={kpis?.pendingContracts ?? "–"}
-            icon={FileSignature}
-            iconClass={kpis?.pendingContracts ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}
-            link="/vertrieb/vertraege"
-            highlight={!!kpis?.pendingContracts}
-          />
-        ) : (
-          <KpiCard
-            title="Monatsumsatz"
-            value={kpis?.monthRevenue != null ? kpis.monthRevenue.toLocaleString("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }) : "–"}
-            icon={TrendingUp}
-            iconClass="bg-green-500/10 text-green-600"
-            link="/umsaetze"
-          />
-        )}
+        <KpiCard
+          title="Monatsumsatz"
+          value={kpis?.monthRevenue != null ? kpis.monthRevenue.toLocaleString("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }) : "–"}
+          icon={TrendingUp}
+          iconClass="bg-green-500/10 text-green-600"
+          link="/umsaetze"
+        />
       </div>
 
       {/* === MAIN CONTENT GRID === */}
