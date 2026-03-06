@@ -14,6 +14,8 @@ import {
 import type { AppRole } from "@/hooks/useUserRole";
 import { format, formatDistanceToNow, subHours } from "date-fns";
 import { de } from "date-fns/locale";
+import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
+import { Button } from "@/components/ui/button";
 
 interface ActivityItem {
   id: string;
