@@ -29,8 +29,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Eye, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, Send, UserCheck, FilePlus, UserPlus } from "lucide-react";
+import { Search, Eye, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, Send, UserCheck, FilePlus, UserPlus, Upload } from "lucide-react";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
+import { UploadPaperContractDialog } from "@/components/leads/UploadPaperContractDialog";
 import {
   Tooltip,
   TooltipContent,
