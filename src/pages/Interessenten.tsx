@@ -198,6 +198,10 @@ export default function Interessenten() {
               <SelectItem value="abgelehnt">Abgelehnt</SelectItem>
             </SelectContent>
           </Select>
+          <Button onClick={() => setCreateLeadOpen(true)} className="shrink-0 gap-2">
+            <UserPlus className="h-4 w-4" />
+            Manuell anlegen
+          </Button>
         </div>
 
         {/* Stats */}
