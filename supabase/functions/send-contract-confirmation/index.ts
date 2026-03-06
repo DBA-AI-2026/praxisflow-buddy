@@ -122,12 +122,6 @@ Deno.serve(async (req) => {
         })
       : "–";
 
-    const endDateFormatted = contract.end_date
-      ? new Date(contract.end_date + "T00:00:00").toLocaleDateString("de-DE", {
-          day: "2-digit", month: "2-digit", year: "numeric",
-        })
-      : "–";
-
     const priceFormatted = contract.monthly_price
       ? `${Number(contract.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/Monat`
       : "–";
