@@ -152,9 +152,7 @@ export default function Rechnungen() {
   const fetchInvoices = async () => {
     setLoading(true);
     const { data, error } = await supabase
-      .from("invoices")
-      .select("*, contracts(iban)")
-      .order("created_at", { ascending: false });
+      .select("*")
     if (!error && data) {
       setInvoices(data.map((r) => ({
         ...r,
