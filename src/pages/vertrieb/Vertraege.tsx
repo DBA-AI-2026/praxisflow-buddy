@@ -1308,8 +1308,8 @@ export default function Vertraege() {
       </div>
 
       {/* Stats / Filter-Kacheln */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-4 mb-6">
-        {(["entwurf", "gezeichnet", "aktiv", "gekuendigt", "beendet", "gesperrt"] as const).map((s) => {
+      <div className="grid grid-cols-3 sm:grid-cols-7 gap-2 sm:gap-4 mb-6">
+        {(["entwurf", "eingegangen", "gezeichnet", "aktiv", "gekuendigt", "beendet", "gesperrt"] as const).map((s) => {
           const cfg = statusConfig[s];
           const Icon = cfg.icon;
           const count = contracts.filter((c: any) => c.status === s).length;
