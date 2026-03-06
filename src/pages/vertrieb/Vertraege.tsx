@@ -759,7 +759,7 @@ export default function Vertraege() {
       one_time_fee: contract.one_time_fee,
       discount_percent: contract.discount_percent,
       payment_interval: contract.payment_interval,
-      payment_method: (contract.iban ? "sepa" : "stripe") as PaymentMethod,
+      payment_method: "stripe" as PaymentMethod,
       notes: (contract.notes || "").replace(/^\[Papier\]\s?/, ""),
       kontoinhaber: contract.kontoinhaber || "",
       kontoinhaber_strasse: contract.kontoinhaber_strasse || "",
