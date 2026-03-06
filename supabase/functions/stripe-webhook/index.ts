@@ -59,9 +59,14 @@ Deno.serve(async (req) => {
         await handleDemoBooking(supabase, stripe, session, RESEND_API_KEY);
       }
 
-      // ─── CONTRACT ACTIVATION FLOW ───────────────────────────────────────
+      // ─── CONTRACT ACTIVATION FLOW (digital) ─────────────────────────────
       if (source === "contract_activation") {
         await handleContractActivation(supabase, stripe, session);
+      }
+
+      // ─── PAPER CONTRACT: activate after customer payment ────────────────
+      if (source === "paper_contract_confirmation") {
+        await handlePaperContractPayment(supabase, stripe, session);
       }
     }
 
