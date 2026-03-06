@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, Trash2, Loader2, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, MapPin, Search, Users, CheckCircle2, Map } from "lucide-react";
 
 interface PlzMapping {
   id: string;
@@ -68,6 +68,18 @@ const emptyForm = {
   is_active: true,
 };
 
+// Stable color palette per RL (cycles through accent hues)
+const RL_COLORS = [
+  "bg-primary/10 text-primary border-primary/20",
+  "bg-secondary text-secondary-foreground border-border",
+  "bg-accent text-accent-foreground border-accent",
+  "bg-muted text-muted-foreground border-border",
+];
+
+function getRlColor(_name: string, index: number) {
+  return RL_COLORS[index % RL_COLORS.length];
+}
+
 export default function PlzMapping() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -76,6 +88,7 @@ export default function PlzMapping() {
   const [editEntry, setEditEntry] = useState<PlzMapping | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [search, setSearch] = useState("");
+  const [filterRl, setFilterRl] = useState<string>("all");
 
   const { data: mappings = [], isLoading } = useQuery({
     queryKey: ["plz-mappings"],
@@ -228,57 +241,120 @@ export default function PlzMapping() {
     upsertMutation.mutate(editEntry ? { ...form, id: editEntry.id } : form);
   };
 
-  const filtered = mappings.filter(
-    (m) =>
+  // Unique RL names for filter tabs
+  const rlNames = [...new Set(
+    mappings
+      .map((m) => m.gebietsleiter_id ? rlNameByGlId[m.gebietsleiter_id] : null)
+      .filter(Boolean) as string[]
+  )].sort();
+
+  // Color index per RL name
+  const rlColorIndex: Record<string, number> = {};
+  rlNames.forEach((name, i) => { rlColorIndex[name] = i; });
+
+  const filtered = mappings.filter((m) => {
+    const rlName = m.gebietsleiter_id ? (rlNameByGlId[m.gebietsleiter_id] || "") : "";
+    const matchesSearch =
       m.plz_prefix.includes(search) ||
       m.gebietsleiter_name.toLowerCase().includes(search.toLowerCase()) ||
-      (m.notes?.toLowerCase() || "").includes(search.toLowerCase())
-  );
+      rlName.toLowerCase().includes(search.toLowerCase()) ||
+      (m.notes?.toLowerCase() || "").includes(search.toLowerCase());
+    const matchesRl = filterRl === "all" || rlName === filterRl || (filterRl === "none" && !rlName);
+    return matchesSearch && matchesRl;
+  });
+
+  const activeCount = mappings.filter((m) => m.is_active).length;
+  const glCount = new Set(mappings.map((m) => m.gebietsleiter_name)).size;
 
   return (
     <MainLayout title="PLZ-Gebietsleiter-Zuordnung" subtitle="Automatische Lead-Zuweisung nach Postleitzahl">
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <MapPin className="h-7 w-7 text-primary" />
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <MapPin className="h-6 w-6 text-primary" />
+            </div>
             <div>
-              <h1 className="text-2xl font-bold">PLZ-Gebietsleiter-Zuordnung</h1>
+              <h1 className="text-xl font-bold">PLZ-Gebietsleiter-Zuordnung</h1>
               <p className="text-sm text-muted-foreground">
-                Zuordnung von Postleitzahl-Präfixen zu Gebietsleitern für automatische Lead-Zuweisung
+                Automatische Lead-Zuweisung nach Postleitzahl-Präfix
               </p>
             </div>
           </div>
-          <Button onClick={handleOpenCreate}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button onClick={handleOpenCreate} size="sm">
+            <Plus className="h-4 w-4 mr-1.5" />
             Neue Zuordnung
           </Button>
         </div>
 
         {/* Stats */}
-        <div className="flex gap-4 flex-wrap">
-          <div className="bg-card border rounded-lg px-4 py-3 flex items-center gap-2">
-            <span className="text-2xl font-bold text-primary">{mappings.length}</span>
-            <span className="text-sm text-muted-foreground">Einträge gesamt</span>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-card border rounded-lg px-4 py-3 flex items-center gap-3">
+            <Map className="h-8 w-8 text-primary/70 shrink-0" />
+            <div>
+              <p className="text-2xl font-bold leading-none">{mappings.length}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">PLZ-Einträge</p>
+            </div>
           </div>
-          <div className="bg-card border rounded-lg px-4 py-3 flex items-center gap-2">
-            <span className="text-2xl font-bold text-primary">{mappings.filter((m) => m.is_active).length}</span>
-            <span className="text-sm text-muted-foreground">Aktiv</span>
+          <div className="bg-card border rounded-lg px-4 py-3 flex items-center gap-3">
+            <CheckCircle2 className="h-8 w-8 text-primary/60 shrink-0" />
+            <div>
+              <p className="text-2xl font-bold leading-none">{activeCount}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Aktiv</p>
+            </div>
           </div>
-          <div className="bg-card border rounded-lg px-4 py-3 flex items-center gap-2">
-            <span className="text-2xl font-bold">{new Set(mappings.map((m) => m.gebietsleiter_name)).size}</span>
-            <span className="text-sm text-muted-foreground">Gebietsleiter zugeordnet</span>
+          <div className="bg-card border rounded-lg px-4 py-3 flex items-center gap-3">
+            <Users className="h-8 w-8 text-muted-foreground/60 shrink-0" />
+            <div>
+              <p className="text-2xl font-bold leading-none">{glCount}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Gebietsleiter</p>
+            </div>
           </div>
         </div>
 
-        {/* Search */}
-        <div className="flex gap-2">
-          <Input
-            placeholder="Suche nach PLZ, Gebietsleiter oder Notiz..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="max-w-sm"
-          />
+        {/* Search + RL Filter */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Suche PLZ, Gebietsleiter, Regionalleiter..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-1.5 flex-wrap">
+            <Button
+              variant={filterRl === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFilterRl("all")}
+              className="h-9"
+            >
+              Alle
+            </Button>
+            {rlNames.map((name, i) => (
+              <Button
+                key={name}
+                variant={filterRl === name ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterRl(filterRl === name ? "all" : name)}
+                className="h-9"
+              >
+                {name}
+              </Button>
+            ))}
+            {mappings.some((m) => !m.gebietsleiter_id || !rlNameByGlId[m.gebietsleiter_id!]) && (
+              <Button
+                variant={filterRl === "none" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterRl(filterRl === "none" ? "all" : "none")}
+                className="h-9"
+              >
+                Kein RL
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Table */}
@@ -290,14 +366,14 @@ export default function PlzMapping() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-24">PLZ-Präfix</TableHead>
-                  <TableHead>Gebietsleiter</TableHead>
-                  <TableHead>Regionalleiter</TableHead>
-                  <TableHead className="w-16 text-center">Priorität</TableHead>
-                  <TableHead>Notizen</TableHead>
-                  <TableHead className="w-20 text-center">Status</TableHead>
-                  <TableHead className="w-24 text-right">Aktionen</TableHead>
+                <TableRow className="bg-muted/40">
+                  <TableHead className="w-28 font-semibold">PLZ-Präfix</TableHead>
+                  <TableHead className="font-semibold">Gebietsleiter</TableHead>
+                  <TableHead className="font-semibold">Regionalleiter</TableHead>
+                  <TableHead className="w-24 font-semibold">Notizen</TableHead>
+                  <TableHead className="w-16 text-center font-semibold">Prio</TableHead>
+                  <TableHead className="w-20 text-center font-semibold">Status</TableHead>
+                  <TableHead className="w-20 text-right font-semibold">Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -308,60 +384,82 @@ export default function PlzMapping() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell>
-                        <Badge variant="outline" className="font-mono text-base font-bold">
-                          {entry.plz_prefix}*
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">{entry.gebietsleiter_name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {entry.gebietsleiter_id
-                          ? (rlNameByGlId[entry.gebietsleiter_id] || "—")
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={entry.priority > 0 ? "default" : "secondary"}>
-                          {entry.priority}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {entry.notes || "—"}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {entry.is_active ? (
-                          <Badge variant="outline" className="border-primary/30 text-primary">Aktiv</Badge>
-                        ) : (
-                          <Badge variant="secondary">Inaktiv</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenEdit(entry)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setDeleteId(entry.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  filtered.map((entry) => {
+                    const rlName = entry.gebietsleiter_id
+                      ? (rlNameByGlId[entry.gebietsleiter_id] || null)
+                      : null;
+                    const colorClass = rlName ? getRlColor(rlName, rlColorIndex[rlName] ?? 0) : "";
+                    return (
+                      <TableRow key={entry.id} className={!entry.is_active ? "opacity-50" : ""}>
+                        <TableCell>
+                          <span className="font-mono font-bold text-sm bg-muted px-2 py-0.5 rounded">
+                            {entry.plz_prefix}*
+                          </span>
+                        </TableCell>
+                        <TableCell className="font-medium text-sm">{entry.gebietsleiter_name}</TableCell>
+                        <TableCell>
+                          {rlName ? (
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${colorClass}`}>
+                              {rlName}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[120px] truncate">
+                          {entry.notes || "—"}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {entry.priority > 0 ? (
+                            <Badge variant="secondary" className="text-xs">{entry.priority}</Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">0</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {entry.is_active ? (
+                            <Badge variant="outline" className="text-xs border-primary/30 text-primary">
+                              Aktiv
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">
+                              Inaktiv
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-0.5">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => handleOpenEdit(entry)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => setDeleteId(entry.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
           )}
         </div>
+        {filtered.length > 0 && (
+          <p className="text-xs text-muted-foreground text-right">
+            {filtered.length} von {mappings.length} Einträgen
+          </p>
+        )}
       </div>
 
       {/* Create / Edit Dialog */}
@@ -373,21 +471,37 @@ export default function PlzMapping() {
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="plz_prefix">PLZ-Präfix *</Label>
-              <Input
-                id="plz_prefix"
-                value={form.plz_prefix}
-                onChange={(e) => setForm((f) => ({ ...f, plz_prefix: e.target.value }))}
-                placeholder="z.B. 44 oder 8"
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                Die ersten Ziffern der PLZ — z.B. „44" deckt alle PLZ ab, die mit 44 beginnen.
-              </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="plz_prefix">PLZ-Präfix *</Label>
+                <Input
+                  id="plz_prefix"
+                  value={form.plz_prefix}
+                  onChange={(e) => setForm((f) => ({ ...f, plz_prefix: e.target.value }))}
+                  placeholder="z.B. 44 oder 8"
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Präfix deckt alle PLZ mit diesem Anfang ab.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="priority">Priorität</Label>
+                <Input
+                  id="priority"
+                  type="number"
+                  value={form.priority}
+                  onChange={(e) => setForm((f) => ({ ...f, priority: Number(e.target.value) }))}
+                  min={0}
+                  max={100}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Höhere Zahl = höhere Priorität bei Überlappung.
+                </p>
+              </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label>Gebietsleiter *</Label>
               <Select value={form.gebietsleiter_id} onValueChange={handleGlSelect}>
                 <SelectTrigger>
@@ -403,8 +517,8 @@ export default function PlzMapping() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="gebietsleiter_name">Name (manuell) *</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="gebietsleiter_name">Name (manuell überschreiben)</Label>
               <Input
                 id="gebietsleiter_name"
                 value={form.gebietsleiter_name}
@@ -414,22 +528,7 @@ export default function PlzMapping() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="priority">Priorität</Label>
-              <Input
-                id="priority"
-                type="number"
-                value={form.priority}
-                onChange={(e) => setForm((f) => ({ ...f, priority: Number(e.target.value) }))}
-                min={0}
-                max={100}
-              />
-              <p className="text-xs text-muted-foreground">
-                Bei überlappenden PLZ-Präfixen gewinnt der Eintrag mit der höchsten Priorität.
-              </p>
-            </div>
-
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="notes">Notizen</Label>
               <Input
                 id="notes"
@@ -439,7 +538,7 @@ export default function PlzMapping() {
               />
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 pt-1">
               <Switch
                 id="is_active"
                 checked={form.is_active}
