@@ -152,6 +152,7 @@ export default function Dashboard() {
   const { profile } = useAuth();
   const { role, isAdmin, isVertragsabteilung } = useUserRole();
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [createLeadOpen, setCreateLeadOpen] = useState(false);
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "Willkommen";
 
