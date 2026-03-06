@@ -62,7 +62,7 @@ import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { format, addMonths } from "date-fns";
+import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import SignaturePad from "signature_pad";
 
