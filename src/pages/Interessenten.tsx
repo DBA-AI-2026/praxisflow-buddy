@@ -362,41 +362,58 @@ export default function Interessenten() {
                             <Eye className="h-4 w-4" />
                           </Button>
                           {lead.status !== "kunde" && lead.status !== "abgelehnt" && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-primary hover:text-primary"
-                                    onClick={() => {
-                                      updateStatusMutation.mutate({ id: lead.id, status: "vertrag" });
-                                      navigate("/vertrieb/vertraege", {
-                                        state: {
-                                          fromLead: {
-                                            lead_id: lead.id,
-                                            hfx_customer_number: lead.hfx_customer_number,
-                                            praxis: lead.praxis_name,
-                                            vorname: lead.vorname,
-                                            nachname: lead.nachname,
-                                            email: lead.email,
-                                            plz: lead.plz,
-                                            ort: lead.ort || "",
-                                            adresse: lead.adresse || "",
-                                            telefon: lead.mobilnummer,
-                                            mp_nr: lead.mp_nummer || "",
-                                            nachricht: lead.nachricht || "",
+                            <>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="text-primary hover:text-primary"
+                                      onClick={() => {
+                                        updateStatusMutation.mutate({ id: lead.id, status: "vertrag" });
+                                        navigate("/vertrieb/vertraege", {
+                                          state: {
+                                            fromLead: {
+                                              lead_id: lead.id,
+                                              hfx_customer_number: lead.hfx_customer_number,
+                                              praxis: lead.praxis_name,
+                                              vorname: lead.vorname,
+                                              nachname: lead.nachname,
+                                              email: lead.email,
+                                              plz: lead.plz,
+                                              ort: lead.ort || "",
+                                              adresse: lead.adresse || "",
+                                              telefon: lead.mobilnummer,
+                                              mp_nr: lead.mp_nummer || "",
+                                              nachricht: lead.nachricht || "",
+                                            },
                                           },
-                                        },
-                                      });
-                                    }}
-                                  >
-                                    <FilePlus className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Vertrag erstellen</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                                        });
+                                      }}
+                                    >
+                                      <FilePlus className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Digitalen Vertrag erstellen</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="text-warning hover:text-warning"
+                                      onClick={() => setUploadContractLead(lead)}
+                                    >
+                                      <Upload className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Papiervertrag einreichen</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </>
                           )}
                         </div>
                       </TableCell>
