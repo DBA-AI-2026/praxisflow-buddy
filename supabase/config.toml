@@ -29,3 +29,5 @@ project_id = "gvsxentbbzuyanqbqvea"
     verify_jwt = false
   [functions.create-contract-subscription]
     verify_jwt = false
+  [functions.notify-demo-limit]
+    verify_jwt = false
