@@ -320,6 +320,15 @@ export default function Dashboard() {
               {ql.label}
             </Link>
           ))}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCreateLeadOpen(true)}
+            className="gap-2"
+          >
+            <UserPlus className="h-4 w-4" />
+            Lead anlegen
+          </Button>
         </div>
       </div>
 
