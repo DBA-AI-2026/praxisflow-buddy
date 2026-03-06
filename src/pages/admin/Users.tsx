@@ -380,7 +380,7 @@ export default function AdminUsers() {
                              <Pencil className="h-4 w-4 mr-2" />
                              Rolle ändern
                            </DropdownMenuItem>
-                           {user.role === "regional_lead" && (
+                           {(user.role === "regional_lead" || user.role === "sales_lead") && (
                              <DropdownMenuItem onClick={() => handleAssignClick(user)}>
                                <UserCog className="h-4 w-4 mr-2" />
                                Team zuordnen
