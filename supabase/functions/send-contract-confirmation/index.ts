@@ -230,14 +230,14 @@ Deno.serve(async (req) => {
                       <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Praxis</td>
                       <td style="padding:6px 0;font-size:13px;color:#111827;">${contract.praxis}</td>
                     </tr>` : ""}
-                    <tr>
-                      <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Monatspreis</td>
-                      <td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">${priceFormatted}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Laufzeit</td>
-                      <td style="padding:6px 0;font-size:13px;color:#111827;">${contract.duration_months} Monate (${startDateFormatted} – ${endDateFormatted})</td>
-                    </tr>
+                     <tr>
+                       <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Monatspreis</td>
+                       <td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">${priceFormatted}</td>
+                     </tr>
+                     <tr>
+                       <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Kündigung</td>
+                       <td style="padding:6px 0;font-size:13px;color:#111827;">Unbefristet · 6 Monate Frist zum Monatsende</td>
+                     </tr>
                   </table>
                 </td>
               </tr>
