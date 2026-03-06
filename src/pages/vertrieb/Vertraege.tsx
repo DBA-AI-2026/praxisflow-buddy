@@ -1438,7 +1438,7 @@ export default function Vertraege() {
                            </button>
                          </DropdownMenuTrigger>
                          <DropdownMenuContent align="center" className="min-w-[160px]">
-                           {(["entwurf", "gezeichnet", "aktiv", "gekuendigt", "beendet", "gesperrt"] as const).map((s) => {
+                           {(["entwurf", "eingegangen", "gezeichnet", "aktiv", "gekuendigt", "beendet", "gesperrt"] as const).map((s) => {
                              const cfg = statusConfig[s];
                              const Icon = cfg.icon;
                              return (
