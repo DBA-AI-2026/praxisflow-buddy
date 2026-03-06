@@ -92,15 +92,12 @@ export default function PlzMapping() {
   const { data: profiles = [] } = useQuery({
     queryKey: ["gebietsleiter-profiles"],
     queryFn: async () => {
-    // Get users with roles that can be Gebietsleiter (user, sales_partner, sales_lead, regional_lead)
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id")
         .in("role", ["user", "sales_partner", "sales_lead", "regional_lead"]);
       if (rolesError) throw rolesError;
-
       if (!roles || roles.length === 0) return [];
-
       const userIds = roles.map((r) => r.user_id);
       const { data: profs, error: profError } = await supabase
         .from("profiles")
@@ -109,6 +106,34 @@ export default function PlzMapping() {
         .order("full_name");
       if (profError) throw profError;
       return profs as Profile[];
+    },
+  });
+
+  // Map: gebietsleiter_id -> regional lead name
+  const { data: rlNameByGlId = {} } = useQuery({
+    queryKey: ["plz-rl-assignments"],
+    queryFn: async () => {
+      const { data: assignments, error: aErr } = await supabase
+        .from("user_regional_assignments")
+        .select("user_id, regional_lead_id");
+      if (aErr) throw aErr;
+      if (!assignments || assignments.length === 0) return {};
+
+      const rlIds = [...new Set(assignments.map((a) => a.regional_lead_id))];
+      const { data: rlProfiles, error: pErr } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", rlIds);
+      if (pErr) throw pErr;
+
+      const rlNameById: Record<string, string> = {};
+      (rlProfiles || []).forEach((p) => { rlNameById[p.user_id] = p.full_name; });
+
+      const map: Record<string, string> = {};
+      assignments.forEach((a) => {
+        map[a.user_id] = rlNameById[a.regional_lead_id] || "—";
+      });
+      return map;
     },
   });
 
@@ -268,6 +293,7 @@ export default function PlzMapping() {
                 <TableRow>
                   <TableHead className="w-24">PLZ-Präfix</TableHead>
                   <TableHead>Gebietsleiter</TableHead>
+                  <TableHead>Regionalleiter</TableHead>
                   <TableHead className="w-16 text-center">Priorität</TableHead>
                   <TableHead>Notizen</TableHead>
                   <TableHead className="w-20 text-center">Status</TableHead>
@@ -277,7 +303,7 @@ export default function PlzMapping() {
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-12">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-12">
                       Keine Einträge gefunden
                     </TableCell>
                   </TableRow>
@@ -290,6 +316,11 @@ export default function PlzMapping() {
                         </Badge>
                       </TableCell>
                       <TableCell className="font-medium">{entry.gebietsleiter_name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {entry.gebietsleiter_id
+                          ? (rlNameByGlId[entry.gebietsleiter_id] || "—")
+                          : "—"}
+                      </TableCell>
                       <TableCell className="text-center">
                         <Badge variant={entry.priority > 0 ? "default" : "secondary"}>
                           {entry.priority}
