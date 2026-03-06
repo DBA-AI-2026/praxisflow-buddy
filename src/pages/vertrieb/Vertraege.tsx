@@ -828,7 +828,6 @@ export default function Vertraege() {
     setExtensionSaving(true);
     try {
       const base = extensionBaseContract;
-      const endDate = addMonths(new Date(extensionForm.start_date), base.duration_months || 12);
       const { error } = await supabase.from("contracts").insert({
         parent_contract_id: base.id,
         customer_name: base.customer_name,
