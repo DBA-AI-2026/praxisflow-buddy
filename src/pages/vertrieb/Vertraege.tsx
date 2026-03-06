@@ -39,6 +39,7 @@ import { buildStripeLineItems, hasStripeProducts } from "@/lib/stripeProducts";
 import { CreditCard } from "lucide-react"; // CreditCard used for payment section
 import foxLogoUrl from "@/assets/fox-logo.jpeg";
 import { useAuth } from "@/hooks/useAuth";
+import { PaperContractDialog } from "@/components/contracts/PaperContractDialog";
 
 const validateBsnr = (value: string): string | null => {
   if (!value) return null;
@@ -247,6 +248,7 @@ const emptyForm: ContractFormData = {
 export default function Vertraege() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [paperContractOpen, setPaperContractOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<ContractFormData>(emptyForm);
   const [file, setFile] = useState<File | null>(null);
@@ -1313,6 +1315,10 @@ export default function Vertraege() {
               <Download className="h-4 w-4 mr-2" />
               Vertragsvorlage
             </a>
+          </Button>
+          <Button variant="outline" onClick={() => setPaperContractOpen(true)}>
+            <FileText className="h-4 w-4 mr-2" />
+            Papiervertrag nacherfassen
           </Button>
           <Button onClick={() => { setForm({ ...emptyForm, sales_partner_name: profile?.full_name || "" }); setDialogOpen(true); }}>
             <Plus className="h-4 w-4 mr-2" />
@@ -2588,6 +2594,8 @@ export default function Vertraege() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PaperContractDialog open={paperContractOpen} onOpenChange={setPaperContractOpen} />
     </MainLayout>
   );
 }
