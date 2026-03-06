@@ -85,8 +85,8 @@ interface Invoice {
   exported_to_lexware: boolean;
   notes: string | null;
   created_at: string;
-  // joined from contracts
-  payment_method?: "sepa" | "stripe" | null;
+  // joined from contracts - always Stripe
+  payment_method?: "stripe" | null;
 }
 
 interface Contract {
