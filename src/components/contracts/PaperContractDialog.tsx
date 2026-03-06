@@ -29,10 +29,7 @@ const schema = z.object({
   license_count: z.coerce.number().min(1),
   start_date: z.string().min(1, "Pflichtfeld"),
   duration_months: z.coerce.number().min(1),
-  payment_method: z.enum(["sepa", "stripe", "rechnung"]),
-  iban: z.string().optional(),
-  bic: z.string().optional(),
-  kontoinhaber: z.string().optional(),
+  rechnungs_email: z.string().email("Ungültige E-Mail").or(z.literal("")).optional(),
   rechnungs_email: z.string().email("Ungültige E-Mail").or(z.literal("")).optional(),
   notes: z.string().optional(),
 });
