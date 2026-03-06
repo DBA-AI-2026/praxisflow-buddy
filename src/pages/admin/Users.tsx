@@ -170,6 +170,31 @@ export default function AdminUsers() {
       u.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Duplikat-Erkennung
+  const duplicates = useMemo(() => {
+    const nameCounts: Record<string, string[]> = {};
+    const emailCounts: Record<string, string[]> = {};
+    users.forEach((u) => {
+      const name = u.full_name.toLowerCase().trim();
+      const email = u.email.toLowerCase().trim();
+      if (name && name !== "unbekannt") {
+        if (!nameCounts[name]) nameCounts[name] = [];
+        nameCounts[name].push(u.user_id);
+      }
+      if (email && email !== "-") {
+        if (!emailCounts[email]) emailCounts[email] = [];
+        emailCounts[email].push(u.user_id);
+      }
+    });
+    const dupNames = Object.entries(nameCounts)
+      .filter(([, ids]) => ids.length > 1)
+      .map(([name]) => users.find((u) => u.full_name.toLowerCase().trim() === name)?.full_name || name);
+    const dupEmails = Object.entries(emailCounts)
+      .filter(([, ids]) => ids.length > 1)
+      .map(([email]) => email);
+    return { names: dupNames, emails: dupEmails };
+  }, [users]);
+
   const adminCount = users.filter((u) => u.role === "admin").length;
   const vertragsabteilungCount = users.filter((u) => u.role === "vertragsabteilung").length;
   const salesLeadCount = users.filter((u) => u.role === "sales_lead").length;
