@@ -1316,6 +1316,10 @@ export default function Vertraege() {
               Vertragsvorlage
             </a>
           </Button>
+          <Button variant="outline" onClick={() => setPaperContractOpen(true)}>
+            <FileText className="h-4 w-4 mr-2" />
+            Papiervertrag nacherfassen
+          </Button>
           <Button onClick={() => { setForm({ ...emptyForm, sales_partner_name: profile?.full_name || "" }); setDialogOpen(true); }}>
             <Plus className="h-4 w-4 mr-2" />
             Neuer Vertrag
