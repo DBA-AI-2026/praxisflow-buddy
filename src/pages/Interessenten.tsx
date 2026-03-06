@@ -541,6 +541,11 @@ export default function Interessenten() {
       </Dialog>
 
       <CreateLeadDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} />
+      <UploadPaperContractDialog
+        open={!!uploadContractLead}
+        onOpenChange={(open) => { if (!open) setUploadContractLead(null); }}
+        lead={uploadContractLead}
+      />
     </MainLayout>
   );
 }
