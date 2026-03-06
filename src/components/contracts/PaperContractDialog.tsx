@@ -243,41 +243,16 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
             </div>
           </div>
 
-          {/* Zahlungsdaten */}
+          {/* Zahlung */}
           <div>
             <h3 className="text-sm font-semibold text-foreground mb-3 pb-1 border-b border-border">Zahlung</h3>
             <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2 space-y-1">
-                <Label>Zahlungsmethode</Label>
-                <Select defaultValue="sepa" onValueChange={(v: any) => setValue("payment_method", v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sepa">SEPA-Lastschrift</SelectItem>
-                    <SelectItem value="stripe">Stripe (Kreditkarte)</SelectItem>
-                    <SelectItem value="rechnung">Rechnung</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="col-span-2">
+                <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-primary shrink-0" />
+                  <span>Zahlung über <strong className="text-foreground">Stripe</strong> (Kreditkarte oder SEPA-Lastschrift)</span>
+                </div>
               </div>
-
-              {paymentMethod === "sepa" && (
-                <>
-                  <div className="col-span-2 space-y-1">
-                    <Label htmlFor="kontoinhaber">Kontoinhaber</Label>
-                    <Input id="kontoinhaber" {...register("kontoinhaber")} placeholder="Elisabeth Freitag" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="iban">IBAN</Label>
-                    <Input id="iban" {...register("iban")} placeholder="DE89 3704 0044 ..." />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="bic">BIC</Label>
-                    <Input id="bic" {...register("bic")} placeholder="COBADEFFXXX" />
-                  </div>
-                </>
-              )}
-
               <div className="col-span-2 space-y-1">
                 <Label htmlFor="rechnungs_email">Rechnungs-E-Mail (falls abweichend)</Label>
                 <Input id="rechnungs_email" type="email" {...register("rechnungs_email")} placeholder="buchhaltung@praxis.de" className={errors.rechnungs_email ? "border-destructive" : ""} />
