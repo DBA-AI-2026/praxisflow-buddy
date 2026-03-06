@@ -284,7 +284,100 @@ async function handleContractActivation(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// EMAIL TEMPLATE
+// PAPER CONTRACT PAYMENT: activate existing eingegangen contract after payment
+// ────────────────────────────────────────────────────────────────────────────
+async function handlePaperContractPayment(
+  supabase: ReturnType<typeof createClient>,
+  stripe: Stripe,
+  session: Stripe.Checkout.Session
+) {
+  const contractId = session.metadata?.contract_id;
+  if (!contractId) {
+    console.error("[stripe-webhook] paper_contract_confirmation missing contract_id");
+    return;
+  }
+
+  let stripeSubscriptionId: string | null = null;
+  let stripeCustomerId: string | null = null;
+  if (session.subscription) {
+    stripeSubscriptionId = typeof session.subscription === "string"
+      ? session.subscription : (session.subscription as any).id;
+  }
+  if (session.customer) {
+    stripeCustomerId = typeof session.customer === "string"
+      ? session.customer : (session.customer as any).id;
+  }
+
+  const now = new Date().toISOString();
+
+  // Activate the contract
+  const { error: updateError } = await supabase
+    .from("contracts")
+    .update({
+      status: "aktiv",
+      approved_at: now,
+      customer_confirmed_at: now,
+      stripe_subscription_id: stripeSubscriptionId,
+      stripe_customer_id: stripeCustomerId,
+    } as any)
+    .eq("id", contractId);
+
+  if (updateError) {
+    console.error("[stripe-webhook] failed to activate paper contract:", updateError);
+    return;
+  }
+  log("Paper contract activated after payment", { contractId });
+
+  // Load contract to create praxen entry
+  const { data: contract } = await supabase
+    .from("contracts")
+    .select("*")
+    .eq("id", contractId)
+    .maybeSingle();
+
+  if (!contract) return;
+
+  // Create praxen entry if not already exists
+  const { data: existingPraxis } = await supabase
+    .from("praxen")
+    .select("id")
+    .eq("name", contract.praxis || contract.customer_name)
+    .maybeSingle();
+
+  if (!existingPraxis) {
+    let leadId: string | null = null;
+    if (contract.hfx_customer_number) {
+      const { data: lead } = await supabase
+        .from("leads")
+        .select("id")
+        .eq("hfx_customer_number", contract.hfx_customer_number)
+        .maybeSingle();
+      if (lead) leadId = lead.id;
+    }
+
+    const praxisData: Record<string, unknown> = {
+      name: contract.praxis || contract.customer_name,
+      adresse: contract.adresse || null,
+      plz: contract.plz || null,
+      ort: contract.ort || null,
+      telefon: contract.telefon || null,
+      email: contract.email || null,
+      mp_nr: contract.mp_nr || null,
+      produkt: contract.product_name,
+      status: "aktiv",
+      buchungs_datum: contract.start_date,
+      preis: contract.monthly_price,
+    };
+    if (leadId) {
+      praxisData.converted_from_lead_id = leadId;
+      await supabase.from("leads").update({ status: "kunde" }).eq("id", leadId);
+    }
+    await supabase.from("praxen").insert(praxisData);
+    log("Praxen entry created for paper contract", { contractId });
+  }
+}
+
+
 // ────────────────────────────────────────────────────────────────────────────
 function buildConfirmationEmail(params: {
   contactName: string;
