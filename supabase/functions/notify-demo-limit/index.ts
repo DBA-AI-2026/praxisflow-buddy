@@ -86,6 +86,27 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ── This invoice-limit flow only applies to HFX GOÄ ─────────────────
+    const GOÄ_PRODUCT_NAMES = [
+      "HFX GOÄ - die KI für ihre Privatabrechnung",
+      "HFX GOÄ",
+    ];
+    const isGoaeProduct = demo.product_name && GOÄ_PRODUCT_NAMES.some(
+      (name) => demo.product_name.toLowerCase().includes("goä") || demo.product_name === name
+    );
+
+    if (!isGoaeProduct) {
+      console.log(`[notify-demo-limit] Skipped: product '${demo.product_name}' is not HFX GOÄ. Invoice limit rule does not apply.`);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          updated: false,
+          reason: `Invoice limit flow is only applicable to HFX GOÄ products. Received product: '${demo.product_name}'`,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const today = new Date().toISOString().split("T")[0];
 
     // Update: mark as limit_reached and set test_phase_end to today
