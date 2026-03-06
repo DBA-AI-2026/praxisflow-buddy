@@ -434,7 +434,6 @@ export default function Vertraege() {
   const upsertMutation = useMutation({
     mutationFn: async (data: ContractFormData): Promise<string | null> => {
       if (!user?.id) throw new Error("Nicht authentifiziert – bitte neu einloggen.");
-      const endDate = addMonths(new Date(data.start_date), data.duration_months);
       let documentUrl: string | undefined;
       let documentName: string | undefined;
 
