@@ -31,7 +31,7 @@ const MOCK = {
 };
 
 // ─── Templates ────────────────────────────────────────────────────────────────
-type TemplateId = "lead-confirmation" | "contract-customer" | "contract-customer-pdf-send" | "contract-partner" | "invoice" | "invoice-pdf" | "dashboard-credentials" | "ad-tipp-lead" | "ad-demo-reminder" | "ad-new-lead" | "ad-lead-assignment";
+type TemplateId = "lead-confirmation" | "contract-customer" | "contract-customer-pdf-send" | "contract-partner" | "invoice" | "invoice-pdf" | "dashboard-credentials" | "demo-expiry-customer" | "ad-tipp-lead" | "ad-demo-reminder" | "ad-new-lead" | "ad-lead-assignment";
 
 interface Template {
   id: TemplateId;
@@ -90,6 +90,14 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "Zugangsdaten für neue interne Dashboard-Nutzer",
+  },
+  {
+    id: "demo-expiry-customer",
+    label: "Interessent: Testphase läuft ab",
+    subject: "⏰ Erinnerung: Ihre Testphase endet am 01.04.2026",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "Erinnerungsmail an den Interessenten 3 Tage vor Ablauf der Testphase – mit Stripe-Buchungslink",
   },
   {
     id: "ad-tipp-lead",
@@ -295,6 +303,85 @@ function buildLeadConfirmationHtml() {
 <tr><td align="center" valign="top" style="color:#888888; font-family:verdana, geneva, sans-serif; font-size:9pt;">© ${new Date().getFullYear()} Honorarfuchs · Qodia GmbH</td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td></tr>
 </table></td></tr></table></td></tr></table></td></tr></table>`;
+}
+
+function buildDemoExpiryCustomerHtml() {
+  const testEndFormatted = "01.04.2026";
+  const productName = "HFX GOÄ - die KI für ihre Privatabrechnung";
+  const companyName = "Testpraxis Dr. Müller";
+  const contactName = "Dr. Max Müller";
+  const hfxNr = "HFX-D01234";
+  const stripeCheckoutUrl = "#stripe-checkout-demo-link";
+  return `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f4f6fa;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fa;padding:40px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:32px 40px;text-align:center;">
+            <p style="color:#ffffff;font-size:22px;font-weight:700;margin:0;">HFX Honorarfuchs</p>
+            <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:4px 0 0;">Ihre Testphase läuft bald ab</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:40px 40px 24px;">
+            <p style="color:#1a1a2e;font-size:16px;margin:0 0 16px;">Guten Tag ${contactName},</p>
+            <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 16px;">
+              wir möchten Sie daran erinnern, dass Ihre Testphase für <strong>${productName}</strong>
+              (${companyName}) in <strong>3 Tagen</strong> – am <strong>${testEndFormatted}</strong> – abläuft.
+            </p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4ff;border-radius:6px;margin:0 0 24px;">
+              <tr><td style="padding:16px 20px;">
+                <p style="color:#0b367f;font-size:13px;font-weight:700;margin:0 0 8px;">📋 Ihre Testphase</p>
+                <p style="color:#374151;font-size:13px;margin:0;"><strong>Produkt:</strong> ${productName}</p>
+                <p style="color:#374151;font-size:13px;margin:4px 0 0;"><strong>HFX-Nr.:</strong> ${hfxNr}</p>
+                <p style="color:#374151;font-size:13px;margin:4px 0 0;"><strong>Testende:</strong> ${testEndFormatted}</p>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 40px 32px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#f0f7ff,#e8f0fe);border-radius:8px;border:1px solid #bfdbfe;margin:0 0 24px;">
+              <tr><td style="padding:24px;">
+                <p style="color:#1e40af;font-size:16px;font-weight:700;margin:0 0 8px;">🚀 Jetzt direkt weiterbuchen</p>
+                <p style="color:#374151;font-size:14px;line-height:1.5;margin:0 0 16px;">
+                  Gefällt Ihnen <strong>${productName}</strong>? Buchen Sie jetzt direkt online und nutzen Sie das Produkt ohne Unterbrechung weiter.
+                </p>
+                <table cellpadding="0" cellspacing="0">
+                  <tr><td style="background:#0b367f;border-radius:6px;padding:14px 28px;">
+                    <a href="${stripeCheckoutUrl}" style="color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;display:block;">
+                      ✅ Jetzt kostenpflichtig buchen →
+                    </a>
+                  </td></tr>
+                </table>
+                <p style="color:#6b7280;font-size:12px;margin:10px 0 0;">Sichere Zahlung per Kreditkarte oder SEPA-Lastschrift über Stripe.</p>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 40px 32px;">
+            <p style="color:#374151;font-size:15px;line-height:1.6;margin:0;">
+              Mit freundlichen Grüßen,<br>
+              <strong>Ihr HFX Honorarfuchs Team</strong>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
+            <p style="color:#9ca3af;font-size:12px;margin:0;">
+              HFX Honorarfuchs • Diese E-Mail wurde automatisch generiert.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
 }
 
 function buildContractCustomerHtml() {
@@ -801,6 +888,7 @@ const DEFAULT_HTML: Record<string, () => string> = {
   "invoice": buildInvoiceHtml,
   "invoice-pdf": buildInvoicePdfPreviewHtml,
   "dashboard-credentials": buildDashboardCredentialsHtml,
+  "demo-expiry-customer": buildDemoExpiryCustomerHtml,
   "ad-tipp-lead": buildAdTippLeadHtml,
   "ad-demo-reminder": buildAdDemoReminderHtml,
   "ad-new-lead": buildAdNewLeadHtml,
