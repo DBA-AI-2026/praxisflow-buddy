@@ -696,45 +696,89 @@ function buildAdTippLeadHtml() {
 
 function buildAdDemoReminderHtml() {
   const year = new Date().getFullYear();
-  return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
-  <tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07);">
-      <tr><td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:32px 24px;text-align:center;">
-        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Testphase läuft in 3 Tagen ab ⏰</h1>
-        <p style="margin:8px 0 0;color:#c7d7f5;font-size:14px;">Jetzt Kontakt aufnehmen!</p>
+  return `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f6fa;font-family:verdana,geneva,sans-serif;">
+<table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>
+<table align="center" border="0" cellpadding="0" cellspacing="0" width="600">
+  <!-- Mailheader Banner -->
+  <tr><td align="center" valign="top" bgcolor="#ffffff">
+    <img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/Mailheader-Neutral-hfx-1200px.png" alt="Honorarfuchs" width="600" height="80" border="0" style="border-width:0px;display:block;" />
+  </td></tr>
+  <!-- Body -->
+  <tr><td bgcolor="#ffffff">
+    <table align="center" border="0" cellpadding="0" cellspacing="0" width="580" style="margin:0 auto;">
+      <tr><td style="font-size:0;line-height:0;height:32px;">&nbsp;</td></tr>
+      <!-- Alert banner -->
+      <tr><td align="center" valign="top" style="background:#0b367f;border-radius:8px;padding:16px 20px;">
+        <p style="margin:0;color:#ffffff;font-family:verdana,geneva,sans-serif;font-size:14pt;font-weight:bold;">⏰ Testphase läuft in 3 Tagen ab</p>
+        <p style="margin:6px 0 0;color:#c7d7f5;font-family:verdana,geneva,sans-serif;font-size:10pt;">Jetzt Kontakt aufnehmen!</p>
       </td></tr>
-      <tr><td style="padding:28px 24px;">
-        <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hallo,</p>
-        <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
-          Die Testphase eines Interessenten aus Ihrem Gebiet endet in <strong style="color:#0b367f;">3 Tagen</strong> am <strong style="color:#0b367f;">01.04.2026</strong>. Dies ist ein guter Zeitpunkt, um Kontakt aufzunehmen.
-        </p>
-        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:20px;">
-          <tr><td style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
-            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Interessent</p>
+      <tr><td style="font-size:0;line-height:0;height:24px;">&nbsp;</td></tr>
+      <!-- Greeting -->
+      <tr><td align="left" valign="top" style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:18pt;">
+        Hallo,
+      </td></tr>
+      <tr><td style="font-size:0;line-height:0;height:12px;">&nbsp;</td></tr>
+      <tr><td align="left" valign="top" style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:18pt;">
+        Die Testphase eines Interessenten aus Ihrem Gebiet endet in <strong style="color:#0b367f;">3 Tagen</strong> am <strong style="color:#0b367f;">01.04.2026</strong>. Dies ist ein guter Zeitpunkt, um Kontakt aufzunehmen.
+      </td></tr>
+      <tr><td style="font-size:0;line-height:0;height:20px;">&nbsp;</td></tr>
+      <!-- Details box -->
+      <tr><td>
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f4ff;border-radius:8px;border:1px solid #d0d9ef;">
+          <tr><td style="background:#0b367f;border-radius:8px 8px 0 0;padding:10px 16px;">
+            <p style="margin:0;color:#ffffff;font-family:verdana,geneva,sans-serif;font-size:10pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;">Interessent</p>
           </td></tr>
           <tr><td style="padding:16px;">
-            <table width="100%" cellpadding="0" cellspacing="0">
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;width:160px;">Unternehmen</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">Testpraxis GmbH</td></tr>
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Ansprechpartner</td><td style="padding:4px 0;font-size:13px;color:#111827;">Dr. Hans Mustermann</td></tr>
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">E-Mail</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="mailto:praxis@testgmbh.de" style="color:#0b367f;">praxis@testgmbh.de</a></td></tr>
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Telefon</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="tel:+4989654321" style="color:#0b367f;">+49 89 654321</a></td></tr>
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Produkt</td><td style="padding:4px 0;font-size:13px;color:#111827;">HFX.GOÄ Demo</td></tr>
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">HFX-Nr.</td><td style="padding:4px 0;font-size:13px;color:#111827;font-family:monospace;">HFX-D01234</td></tr>
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Testende</td><td style="padding:4px 0;font-size:13px;color:#0b367f;font-weight:600;">01.04.2026</td></tr>
+            <table border="0" cellpadding="3" cellspacing="0" width="100%">
+              <tr>
+                <td align="left" valign="top" width="160" style="color:#666666;font-family:verdana,geneva,sans-serif;font-size:10pt;">Unternehmen</td>
+                <td align="left" valign="top" style="color:#111827;font-family:verdana,geneva,sans-serif;font-size:10pt;font-weight:bold;">Testpraxis GmbH</td>
+              </tr>
+              <tr>
+                <td align="left" valign="top" width="160" style="color:#666666;font-family:verdana,geneva,sans-serif;font-size:10pt;">Ansprechpartner</td>
+                <td align="left" valign="top" style="color:#111827;font-family:verdana,geneva,sans-serif;font-size:10pt;">Dr. Hans Mustermann</td>
+              </tr>
+              <tr>
+                <td align="left" valign="top" width="160" style="color:#666666;font-family:verdana,geneva,sans-serif;font-size:10pt;">E-Mail</td>
+                <td align="left" valign="top" style="font-family:verdana,geneva,sans-serif;font-size:10pt;"><a href="mailto:praxis@testgmbh.de" style="color:#0b367f;">praxis@testgmbh.de</a></td>
+              </tr>
+              <tr>
+                <td align="left" valign="top" width="160" style="color:#666666;font-family:verdana,geneva,sans-serif;font-size:10pt;">Telefon</td>
+                <td align="left" valign="top" style="font-family:verdana,geneva,sans-serif;font-size:10pt;"><a href="tel:+4989654321" style="color:#0b367f;">+49 89 654321</a></td>
+              </tr>
+              <tr>
+                <td align="left" valign="top" width="160" style="color:#666666;font-family:verdana,geneva,sans-serif;font-size:10pt;">Produkt</td>
+                <td align="left" valign="top" style="color:#111827;font-family:verdana,geneva,sans-serif;font-size:10pt;">HFX.GOÄ Demo</td>
+              </tr>
+              <tr>
+                <td align="left" valign="top" width="160" style="color:#666666;font-family:verdana,geneva,sans-serif;font-size:10pt;">HFX-Nr.</td>
+                <td align="left" valign="top" style="color:#111827;font-family:verdana,geneva,sans-serif;font-size:10pt;font-family:monospace;">HFX-D01234</td>
+              </tr>
+              <tr>
+                <td align="left" valign="top" width="160" style="color:#666666;font-family:verdana,geneva,sans-serif;font-size:10pt;">Testende</td>
+                <td align="left" valign="top" style="color:#0b367f;font-family:verdana,geneva,sans-serif;font-size:10pt;font-weight:bold;">01.04.2026</td>
+              </tr>
             </table>
           </td></tr>
         </table>
-        <p style="margin:0;font-size:13px;color:#6b7280;">Bitte nehmen Sie zeitnah Kontakt auf, um einen Abschluss zu begleiten.</p>
       </td></tr>
-      <tr><td style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center;">
-        <p style="margin:0;font-size:12px;color:#9ca3af;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
-        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${year} HFX Honorarfuchs GmbH</p>
+      <tr><td style="font-size:0;line-height:0;height:20px;">&nbsp;</td></tr>
+      <tr><td align="left" valign="top" style="color:#666666;font-family:verdana,geneva,sans-serif;font-size:10pt;line-height:16pt;border-left:3px solid #0b367f;padding:10px 14px;background:#f8fafc;border-radius:0 4px 4px 0;">
+        <strong>Bitte nehmen Sie zeitnah Kontakt auf</strong>, um einen Abschluss zu begleiten. Den Interessenten finden Sie im HFX-Portal unter <em>Demo-Tracking</em>.
       </td></tr>
+      <tr><td style="font-size:0;line-height:0;height:40px;">&nbsp;</td></tr>
     </table>
   </td></tr>
+  <!-- Footer -->
+  <tr><td bgcolor="#f9fafb" style="border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
+    <p style="margin:0;color:#9ca3af;font-family:verdana,geneva,sans-serif;font-size:9pt;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
+    <p style="margin:4px 0 0;color:#9ca3af;font-family:verdana,geneva,sans-serif;font-size:9pt;">© ${year} HFX Honorarfuchs GmbH</p>
+  </td></tr>
 </table>
+</td></tr></table>
 </body></html>`;
 }
 
