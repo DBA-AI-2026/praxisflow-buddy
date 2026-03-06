@@ -122,12 +122,6 @@ Deno.serve(async (req) => {
         })
       : "–";
 
-    const endDateFormatted = contract.end_date
-      ? new Date(contract.end_date + "T00:00:00").toLocaleDateString("de-DE", {
-          day: "2-digit", month: "2-digit", year: "numeric",
-        })
-      : "–";
-
     const priceFormatted = contract.monthly_price
       ? `${Number(contract.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/Monat`
       : "–";
@@ -230,14 +224,14 @@ Deno.serve(async (req) => {
                       <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Praxis</td>
                       <td style="padding:6px 0;font-size:13px;color:#111827;">${contract.praxis}</td>
                     </tr>` : ""}
-                    <tr>
-                      <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Monatspreis</td>
-                      <td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">${priceFormatted}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Laufzeit</td>
-                      <td style="padding:6px 0;font-size:13px;color:#111827;">${contract.duration_months} Monate (${startDateFormatted} – ${endDateFormatted})</td>
-                    </tr>
+                     <tr>
+                       <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Monatspreis</td>
+                       <td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">${priceFormatted}</td>
+                     </tr>
+                     <tr>
+                       <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Kündigung</td>
+                       <td style="padding:6px 0;font-size:13px;color:#111827;">Unbefristet · 6 Monate Frist zum Monatsende</td>
+                     </tr>
                   </table>
                 </td>
               </tr>

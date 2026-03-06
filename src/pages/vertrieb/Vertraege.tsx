@@ -62,7 +62,7 @@ import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { format, addMonths } from "date-fns";
+import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import SignaturePad from "signature_pad";
 
@@ -212,9 +212,9 @@ const emptyForm: ContractFormData = {
   selected_modules: [],
   license_count: 1,
   start_date: new Date().toISOString().split("T")[0],
-  duration_months: 12,
+  duration_months: 0, // unbefristet
   cancellation_period_months: 6,
-  auto_renewal: true,
+  auto_renewal: false,
   monthly_price: 0,
   one_time_fee: 0,
   discount_percent: 0,
@@ -434,7 +434,6 @@ export default function Vertraege() {
   const upsertMutation = useMutation({
     mutationFn: async (data: ContractFormData): Promise<string | null> => {
       if (!user?.id) throw new Error("Nicht authentifiziert – bitte neu einloggen.");
-      const endDate = addMonths(new Date(data.start_date), data.duration_months);
       let documentUrl: string | undefined;
       let documentName: string | undefined;
 
@@ -480,10 +479,10 @@ export default function Vertraege() {
         modules: data.selected_products,
         license_count: data.license_count,
         start_date: data.start_date,
-        duration_months: data.duration_months,
-        end_date: endDate.toISOString().split("T")[0],
-        cancellation_period_months: data.cancellation_period_months,
-        auto_renewal: data.auto_renewal,
+        duration_months: 0, // unbefristet
+        end_date: "2099-12-31",
+        cancellation_period_months: 6,
+        auto_renewal: false,
         monthly_price: data.monthly_price,
         one_time_fee: data.one_time_fee,
         discount_percent: data.discount_percent,
@@ -648,8 +647,8 @@ export default function Vertraege() {
               weitere_bsnr: [form.weitere_bsnr_1, form.weitere_bsnr_2, form.weitere_bsnr_3].filter(Boolean).join(", "),
               weitere_lanr: form.weitere_lanr, ort: form.ort,
               monthly_price: form.monthly_price, start_date: form.start_date,
-              end_date: addMonths(new Date(form.start_date), form.duration_months).toISOString().split("T")[0],
-              modules: form.selected_products, duration_months: form.duration_months,
+              end_date: "2099-12-31",
+              modules: form.selected_products, duration_months: 0,
               notes: form.notes, signature_data: sigData, vertrieb_signature_data: vertriebSigData,
               praxissystem: form.praxissystem, stundenaufwand_pro_woche: form.stundenaufwand_pro_woche,
               selected_addon_modules: form.selected_modules,
@@ -828,7 +827,6 @@ export default function Vertraege() {
     setExtensionSaving(true);
     try {
       const base = extensionBaseContract;
-      const endDate = addMonths(new Date(extensionForm.start_date), base.duration_months || 12);
       const { error } = await supabase.from("contracts").insert({
         parent_contract_id: base.id,
         customer_name: base.customer_name,
@@ -860,10 +858,10 @@ export default function Vertraege() {
         monthly_price: extensionForm.monthly_price,
         one_time_fee: extensionForm.one_time_fee,
         start_date: extensionForm.start_date,
-        end_date: endDate.toISOString().split("T")[0],
-        duration_months: base.duration_months || 12,
-        cancellation_period_months: base.cancellation_period_months || 6,
-        auto_renewal: base.auto_renewal ?? true,
+        end_date: "2099-12-31",
+        duration_months: 0, // unbefristet
+        cancellation_period_months: 6,
+        auto_renewal: false,
         discount_percent: 0,
         payment_interval: base.payment_interval || "monatlich",
         notes: extensionForm.notes ? `[Nachtrag] ${extensionForm.notes}` : "[Nachtrag]",

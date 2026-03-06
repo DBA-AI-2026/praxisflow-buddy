@@ -22,7 +22,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Upload, FileText, Loader2, CheckCircle2 } from "lucide-react";
-import { addMonths } from "date-fns";
 
 const PRODUCT_OPTIONS = [
   "HFX EBM",
@@ -33,6 +32,9 @@ const PRODUCT_OPTIONS = [
   "HFX GOÄ/GOZ Permanent-Check",
   "HFX Praxismanagement Zahnmedizin",
 ];
+
+// Far-future end date = unbefristet (99 years)
+const UNBEFRISTET_END_DATE = "2099-12-31";
 
 interface Lead {
   id: string;
@@ -63,7 +65,6 @@ export function UploadPaperContractDialog({ open, onOpenChange, lead }: Props) {
   const [productName, setProductName] = useState("");
   const [monthlyPrice, setMonthlyPrice] = useState("");
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
-  const [durationMonths, setDurationMonths] = useState("12");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -72,7 +73,6 @@ export function UploadPaperContractDialog({ open, onOpenChange, lead }: Props) {
     setProductName("");
     setMonthlyPrice("");
     setStartDate(new Date().toISOString().split("T")[0]);
-    setDurationMonths("12");
     setFile(null);
     setDone(false);
   };
@@ -107,8 +107,6 @@ export function UploadPaperContractDialog({ open, onOpenChange, lead }: Props) {
 
     setLoading(true);
     try {
-      const endDate = addMonths(new Date(startDate), parseInt(durationMonths));
-
       // 1. Insert contract record first to get the ID
       const { data: contractData, error: contractError } = await supabase
         .from("contracts")
@@ -128,8 +126,10 @@ export function UploadPaperContractDialog({ open, onOpenChange, lead }: Props) {
           hfx_customer_number: lead.hfx_customer_number,
           monthly_price: parseFloat(monthlyPrice) || 0,
           start_date: startDate,
-          end_date: endDate.toISOString().split("T")[0],
-          duration_months: parseInt(durationMonths),
+          end_date: UNBEFRISTET_END_DATE,
+          duration_months: 0, // unbefristet
+          cancellation_period_months: 6,
+          auto_renewal: false,
           created_by: user.id,
           sales_partner_id: user.id,
           sales_partner_name: profile?.full_name || "",
@@ -237,38 +237,22 @@ export function UploadPaperContractDialog({ open, onOpenChange, lead }: Props) {
               </div>
 
               {/* Price */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="price">Monatspreis (€)</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="z.B. 179"
-                    value={monthlyPrice}
-                    onChange={(e) => setMonthlyPrice(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="duration">Laufzeit (Monate)</Label>
-                  <Select value={durationMonths} onValueChange={setDurationMonths}>
-                    <SelectTrigger id="duration">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="6">6 Monate</SelectItem>
-                      <SelectItem value="12">12 Monate</SelectItem>
-                      <SelectItem value="24">24 Monate</SelectItem>
-                      <SelectItem value="36">36 Monate</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="price">Monatspreis (€)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="z.B. 179"
+                  value={monthlyPrice}
+                  onChange={(e) => setMonthlyPrice(e.target.value)}
+                />
               </div>
 
               {/* Start date */}
               <div className="space-y-1.5">
-                <Label htmlFor="start">Startdatum</Label>
+                <Label htmlFor="start">Vertragsbeginn</Label>
                 <Input
                   id="start"
                   type="date"
@@ -276,6 +260,11 @@ export function UploadPaperContractDialog({ open, onOpenChange, lead }: Props) {
                   onChange={(e) => setStartDate(e.target.value)}
                 />
               </div>
+
+              {/* Unbefristet hint */}
+              <p className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                ⏳ Der Vertrag läuft <strong>unbefristet</strong> – Kündigung mit 6 Monaten Frist zum Monatsende.
+              </p>
 
               {/* PDF Upload */}
               <div className="space-y-1.5">
