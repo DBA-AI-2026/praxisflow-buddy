@@ -38,6 +38,7 @@ import Documentation from "./pages/admin/Documentation";
 import PlzMapping from "./pages/admin/PlzMapping";
 import Buchhaltung from "./pages/Buchhaltung";
 import DemoSuccess from "./pages/DemoSuccess";
+import ContractConfirmation from "./pages/ContractConfirmation";
 
 const queryClient = new QueryClient();
 
