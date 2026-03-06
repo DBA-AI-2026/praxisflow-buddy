@@ -69,19 +69,35 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Find active demo by HFX number
+    // Find demo by HFX number – accept both testphase AND limit_reached
+    // (Qodia may call this endpoint multiple times for the same user)
     const { data: demo, error: fetchError } = await supabase
       .from("demo_downloads")
-      .select("id, status, test_phase_end, company_name, email, product_name")
+      .select("id, status, test_phase_end, company_name, email, product_name, reminder_sent_at, notes")
       .eq("hfx_customer_number", hfxNumber)
-      .eq("status", "testphase")
+      .in("status", ["testphase", "limit_reached"])
       .maybeSingle();
 
     if (fetchError) throw fetchError;
 
     if (!demo) {
       return new Response(
-        JSON.stringify({ success: true, updated: false, reason: "No active testphase demo found for this HFX number" }),
+        JSON.stringify({ success: true, updated: false, reason: "No active demo found for this HFX number" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── Idempotency guard: email already sent → skip silently ────────────
+    if (demo.reminder_sent_at) {
+      console.log(`[notify-demo-limit] Email already sent for ${hfxNumber} at ${demo.reminder_sent_at} – skipping duplicate`);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          updated: false,
+          reason: "Email already sent",
+          email_sent_at: demo.reminder_sent_at,
+          demo_id: demo.id,
+        }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -141,9 +157,9 @@ Deno.serve(async (req) => {
     if (RESEND_API_KEY && demo.email && customerReminderEnabled) {
       // Build Stripe checkout URL if possible
       const STRIPE_PRODUCT_MAP: Record<string, { price_id: string; recurring: boolean }> = {
-        "HFX EBM": { price_id: "price_1T4HDh6v0qHdbOipecPqXas5", recurring: true },
-        "HFX GOÄ - die KI für ihre Privatabrechnung": { price_id: "price_1T4HEl6v0qHdbOipmPO3EKHl", recurring: true },
-        "HFX GOÄ/GOZ Live-Check": { price_id: "price_1T4HF76v0qHdbOipbBG04A5Q", recurring: false },
+        "HFX EBM": { price_id: "price_1T7z1h6v0qHdbOip4A7qocQC", recurring: true },
+        "HFX GOÄ - die KI für ihre Privatabrechnung": { price_id: "price_1T7z2Z6v0qHdbOipvyPDB9mB", recurring: true },
+        "HFX GOÄ/GOZ Live-Check": { price_id: "price_1T7z3X6v0qHdbOiplCCLqD2n", recurring: false },
       };
 
       let stripeCheckoutUrl: string | null = null;
