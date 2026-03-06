@@ -130,6 +130,8 @@ export type Database = {
           creditreform_checked_by: string | null
           creditreform_rating: string | null
           creditreform_score: number | null
+          customer_confirmation_token: string | null
+          customer_confirmed_at: string | null
           customer_id: string | null
           customer_name: string
           discount_percent: number
@@ -154,6 +156,7 @@ export type Database = {
           notes: string | null
           one_time_fee: number
           ort: string | null
+          paper_contract_pdf_path: string | null
           parent_contract_id: string | null
           payment_interval: string
           plz: string | null
@@ -195,6 +198,8 @@ export type Database = {
           creditreform_checked_by?: string | null
           creditreform_rating?: string | null
           creditreform_score?: number | null
+          customer_confirmation_token?: string | null
+          customer_confirmed_at?: string | null
           customer_id?: string | null
           customer_name: string
           discount_percent?: number
@@ -219,6 +224,7 @@ export type Database = {
           notes?: string | null
           one_time_fee?: number
           ort?: string | null
+          paper_contract_pdf_path?: string | null
           parent_contract_id?: string | null
           payment_interval?: string
           plz?: string | null
@@ -260,6 +266,8 @@ export type Database = {
           creditreform_checked_by?: string | null
           creditreform_rating?: string | null
           creditreform_score?: number | null
+          customer_confirmation_token?: string | null
+          customer_confirmed_at?: string | null
           customer_id?: string | null
           customer_name?: string
           discount_percent?: number
@@ -284,6 +292,7 @@ export type Database = {
           notes?: string | null
           one_time_fee?: number
           ort?: string | null
+          paper_contract_pdf_path?: string | null
           parent_contract_id?: string | null
           payment_interval?: string
           plz?: string | null

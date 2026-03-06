@@ -130,6 +130,7 @@ function SalesPartnerCombobox({
 
 const statusConfig: Record<string, { label: string; class: string; icon: typeof FileText }> = {
   entwurf: { label: "Entwurf", class: "bg-muted text-muted-foreground", icon: FilePen },
+  eingegangen: { label: "Eingegangen", class: "bg-warning/10 text-warning", icon: Upload },
   gezeichnet: { label: "Gezeichnet", class: "bg-primary/10 text-primary", icon: FileSignature },
   aktiv: { label: "Aktiv", class: "bg-success/10 text-success", icon: CircleCheck },
   gekuendigt: { label: "Gekündigt", class: "bg-warning/10 text-warning", icon: CircleOff },
@@ -1307,8 +1308,8 @@ export default function Vertraege() {
       </div>
 
       {/* Stats / Filter-Kacheln */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-4 mb-6">
-        {(["entwurf", "gezeichnet", "aktiv", "gekuendigt", "beendet", "gesperrt"] as const).map((s) => {
+      <div className="grid grid-cols-3 sm:grid-cols-7 gap-2 sm:gap-4 mb-6">
+        {(["entwurf", "eingegangen", "gezeichnet", "aktiv", "gekuendigt", "beendet", "gesperrt"] as const).map((s) => {
           const cfg = statusConfig[s];
           const Icon = cfg.icon;
           const count = contracts.filter((c: any) => c.status === s).length;
@@ -1437,7 +1438,7 @@ export default function Vertraege() {
                            </button>
                          </DropdownMenuTrigger>
                          <DropdownMenuContent align="center" className="min-w-[160px]">
-                           {(["entwurf", "gezeichnet", "aktiv", "gekuendigt", "beendet", "gesperrt"] as const).map((s) => {
+                           {(["entwurf", "eingegangen", "gezeichnet", "aktiv", "gekuendigt", "beendet", "gesperrt"] as const).map((s) => {
                              const cfg = statusConfig[s];
                              const Icon = cfg.icon;
                              return (
