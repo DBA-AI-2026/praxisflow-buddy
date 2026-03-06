@@ -315,71 +315,98 @@ function buildDemoExpiryCustomerHtml() {
   return `<!DOCTYPE html>
 <html lang="de">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f4f6fa;font-family:Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fa;padding:40px 0;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:verdana,geneva,sans-serif;">
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f5f5f5;padding:20px 0;">
+<tr><td align="center">
+<table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+  <!-- Header Banner -->
+  <tr>
+    <td align="center" valign="top" bgcolor="#ffffff">
+      <img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/Mailheader-Neutral-hfx-1200px.png" alt="Honorarfuchs" width="600" height="80" border="0" style="display:block;border-width:0px;" />
+    </td>
+  </tr>
+  <!-- Blue header bar -->
+  <tr>
+    <td style="background-color:#0b367f;padding:24px 40px;text-align:center;">
+      <p style="color:#ffffff;font-size:18pt;font-weight:bold;margin:0;font-family:verdana,geneva,sans-serif;">⏰ Ihre Testphase läuft bald ab</p>
+      <p style="color:#c8d8f0;font-size:11pt;margin:6px 0 0 0;font-family:verdana,geneva,sans-serif;">HFX Honorarfuchs – Erinnerung</p>
+    </td>
+  </tr>
+  <!-- Body -->
+  <tr>
+    <td style="padding:32px 40px 24px;">
+      <p style="font-size:12pt;color:#333333;margin:0 0 16px 0;font-family:verdana,geneva,sans-serif;">Guten Tag <strong>${contactName}</strong>,</p>
+      <p style="font-size:11pt;color:#555555;line-height:18pt;margin:0 0 16px 0;font-family:verdana,geneva,sans-serif;">
+        wir möchten Sie daran erinnern, dass Ihre Testphase für <strong>${productName}</strong>
+        (${companyName}) in <strong>3 Tagen</strong> – am <strong>${testEndFormatted}</strong> – abläuft.
+      </p>
+      <!-- Info box -->
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f5ff;border-radius:8px;border:1px solid #c8d8f0;margin-bottom:24px;">
         <tr>
-          <td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:32px 40px;text-align:center;">
-            <p style="color:#ffffff;font-size:22px;font-weight:700;margin:0;">HFX Honorarfuchs</p>
-            <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:4px 0 0;">Ihre Testphase läuft bald ab</p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:40px 40px 24px;">
-            <p style="color:#1a1a2e;font-size:16px;margin:0 0 16px;">Guten Tag ${contactName},</p>
-            <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 16px;">
-              wir möchten Sie daran erinnern, dass Ihre Testphase für <strong>${productName}</strong>
-              (${companyName}) in <strong>3 Tagen</strong> – am <strong>${testEndFormatted}</strong> – abläuft.
-            </p>
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4ff;border-radius:6px;margin:0 0 24px;">
-              <tr><td style="padding:16px 20px;">
-                <p style="color:#0b367f;font-size:13px;font-weight:700;margin:0 0 8px;">📋 Ihre Testphase</p>
-                <p style="color:#374151;font-size:13px;margin:0;"><strong>Produkt:</strong> ${productName}</p>
-                <p style="color:#374151;font-size:13px;margin:4px 0 0;"><strong>HFX-Nr.:</strong> ${hfxNr}</p>
-                <p style="color:#374151;font-size:13px;margin:4px 0 0;"><strong>Testende:</strong> ${testEndFormatted}</p>
-              </td></tr>
+          <td style="padding:20px 24px;">
+            <p style="font-size:10pt;color:#0b367f;font-weight:bold;text-transform:uppercase;margin:0 0 10px 0;font-family:verdana,geneva,sans-serif;">📋 Ihre Testphase</p>
+            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+              <tr>
+                <td style="padding:5px 0;font-size:10pt;color:#777777;width:140px;font-family:verdana,geneva,sans-serif;">Produkt</td>
+                <td style="padding:5px 0;font-size:10pt;color:#333333;font-family:verdana,geneva,sans-serif;"><strong>${productName}</strong></td>
+              </tr>
+              <tr>
+                <td style="padding:5px 0;font-size:10pt;color:#777777;font-family:verdana,geneva,sans-serif;">HFX-Nr.</td>
+                <td style="padding:5px 0;font-size:10pt;color:#0b367f;font-weight:bold;font-family:monospace;">${hfxNr}</td>
+              </tr>
+              <tr>
+                <td style="padding:5px 0;font-size:10pt;color:#777777;font-family:verdana,geneva,sans-serif;">Testende</td>
+                <td style="padding:5px 0;font-size:11pt;color:#0b367f;font-weight:bold;font-family:verdana,geneva,sans-serif;">${testEndFormatted}</td>
+              </tr>
             </table>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:0 40px 32px;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#f0f7ff,#e8f0fe);border-radius:8px;border:1px solid #bfdbfe;margin:0 0 24px;">
-              <tr><td style="padding:24px;">
-                <p style="color:#1e40af;font-size:16px;font-weight:700;margin:0 0 8px;">🚀 Jetzt direkt weiterbuchen</p>
-                <p style="color:#374151;font-size:14px;line-height:1.5;margin:0 0 16px;">
-                  Gefällt Ihnen <strong>${productName}</strong>? Buchen Sie jetzt direkt online und nutzen Sie das Produkt ohne Unterbrechung weiter.
-                </p>
-                <table cellpadding="0" cellspacing="0">
-                  <tr><td style="background:#0b367f;border-radius:6px;padding:14px 28px;">
-                    <a href="${stripeCheckoutUrl}" style="color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;display:block;">
-                      ✅ Jetzt kostenpflichtig buchen →
-                    </a>
-                  </td></tr>
-                </table>
-                <p style="color:#6b7280;font-size:12px;margin:10px 0 0;">Sichere Zahlung per Kreditkarte oder SEPA-Lastschrift über Stripe.</p>
-              </td></tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:0 40px 32px;">
-            <p style="color:#374151;font-size:15px;line-height:1.6;margin:0;">
-              Mit freundlichen Grüßen,<br>
-              <strong>Ihr HFX Honorarfuchs Team</strong>
-            </p>
-          </td>
-        </tr>
-        <tr>
-          <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
-            <p style="color:#9ca3af;font-size:12px;margin:0;">
-              HFX Honorarfuchs • Diese E-Mail wurde automatisch generiert.
-            </p>
           </td>
         </tr>
       </table>
-    </td></tr>
-  </table>
+    </td>
+  </tr>
+  <!-- CTA Box -->
+  <tr>
+    <td style="padding:0 40px 32px;">
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:linear-gradient(135deg,#f0f7ff,#e8f0fe);border-radius:8px;border:1px solid #bfdbfe;">
+        <tr>
+          <td style="padding:24px;">
+            <p style="color:#1e40af;font-size:13pt;font-weight:bold;margin:0 0 10px 0;font-family:verdana,geneva,sans-serif;">🚀 Jetzt direkt weiterbuchen</p>
+            <p style="color:#374151;font-size:11pt;line-height:17pt;margin:0 0 16px 0;font-family:verdana,geneva,sans-serif;">
+              Gefällt Ihnen <strong>${productName}</strong>? Buchen Sie jetzt direkt online und nutzen Sie das Produkt ohne Unterbrechung weiter.
+            </p>
+            <table border="0" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="background-color:#0b367f;border-radius:6px;">
+                  <a href="${stripeCheckoutUrl}" style="display:block;padding:14px 28px;color:#ffffff;font-size:12pt;font-weight:bold;text-decoration:none;font-family:verdana,geneva,sans-serif;">
+                    ✅ Jetzt kostenpflichtig buchen →
+                  </a>
+                </td>
+              </tr>
+            </table>
+            <p style="color:#6b7280;font-size:9pt;margin:10px 0 0;font-family:verdana,geneva,sans-serif;">Sichere Zahlung per Kreditkarte oder SEPA-Lastschrift über Stripe.</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <!-- Sign off -->
+  <tr>
+    <td style="padding:0 40px 32px;">
+      <p style="font-size:11pt;color:#374151;line-height:18pt;margin:0;font-family:verdana,geneva,sans-serif;">
+        Mit freundlichen Grüßen,<br>
+        <strong>Ihr HFX Honorarfuchs Team</strong>
+      </p>
+    </td>
+  </tr>
+  <!-- Footer -->
+  <tr>
+    <td style="background-color:#f8f8f8;padding:16px 40px;border-top:1px solid #eeeeee;text-align:center;">
+      <p style="font-size:9pt;color:#aaaaaa;margin:0;font-family:verdana,geneva,sans-serif;">© Honorarfuchs GmbH · Bei Fragen: info@honorarfuchs.de</p>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
 </body>
 </html>`;
 }
