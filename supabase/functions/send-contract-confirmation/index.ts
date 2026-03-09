@@ -276,9 +276,31 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+        reply_to: "info@hfx-honorarfuchs.de",
         to: [contract.email],
-        subject: `Ihr HFX-Vertrag – jetzt verbindlich buchen${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}`,
+        subject: `Ihre HFX-Vertragsbestätigung${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}`,
         html,
+        text: [
+          `Guten Tag${contract.vorname ? ` ${contract.vorname} ${contract.nachname || ""}` : ""},`,
+          "",
+          "wir haben Ihren Vertrag erhalten und für Sie vorbereitet.",
+          "",
+          "Ihre Vertragsdetails:",
+          contract.hfx_customer_number ? `HFX-Kundennummer: ${contract.hfx_customer_number}` : null,
+          `Produkt: ${contract.product_name}`,
+          contract.praxis ? `Praxis: ${contract.praxis}` : null,
+          `Monatspreis: ${priceFormatted}`,
+          "Kündigung: Unbefristet, 6 Monate Frist zum Monatsende",
+          "",
+          stripeCheckoutUrl
+            ? `Bitte schließen Sie die Buchung verbindlich ab:\n${stripeCheckoutUrl}`
+            : "Ihr Außendienstmitarbeiter wird sich in Kürze bei Ihnen melden, um die Zahlung einzurichten.",
+          "",
+          "Bei Fragen: info@hfx-honorarfuchs.de",
+          "",
+          "Mit freundlichen Grüßen,",
+          "Ihr HFX Honorarfuchs Team",
+        ].filter(Boolean).join("\n"),
       }),
     });
 
