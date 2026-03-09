@@ -1698,7 +1698,7 @@ export default function Vertraege() {
                           <div className="flex items-center gap-1">
                             {(c as any).paper_contract_pdf_path ? (
                               <button
-                                className="text-orange-600 hover:underline text-xs flex items-center gap-1"
+                                className="text-warning hover:underline text-xs flex items-center gap-1"
                                 onClick={async () => {
                                   const { data, error } = await supabase.storage
                                     .from("contracts")
@@ -1720,9 +1720,9 @@ export default function Vertraege() {
                                 <TooltipTrigger asChild>
                                   <label className="cursor-pointer inline-flex items-center justify-center h-5 w-5 rounded hover:bg-muted transition-colors">
                                     {uploadingPaperId === c.id ? (
-                                      <Loader2 className="h-3 w-3 animate-spin text-orange-600" />
+                                      <Loader2 className="h-3 w-3 animate-spin text-warning" />
                                     ) : (
-                                      <Upload className="h-3 w-3 text-muted-foreground hover:text-orange-600" />
+                                      <Upload className="h-3 w-3 text-muted-foreground" />
                                     )}
                                     <input
                                       type="file"
