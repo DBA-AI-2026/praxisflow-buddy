@@ -32,6 +32,8 @@ import { useSalesforceConnection } from "@/hooks/useSalesforceConnection";
 interface Praxis {
   id: string;
   name: string;
+  arztName: string;
+  hfxNr: string;
   adresse: string;
   plz: string;
   ort: string;
