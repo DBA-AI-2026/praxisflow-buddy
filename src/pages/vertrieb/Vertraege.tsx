@@ -1412,7 +1412,7 @@ export default function Vertraege() {
               <thead>
                <tr className="bg-accent/5">
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">HFX-Nr.</th>
-                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Kunde</th>
+                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Praxis / Name</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">E-Mail</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">MP-Nr.</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 max-w-[220px]">Produkt</th>
@@ -1438,8 +1438,13 @@ export default function Vertraege() {
               <tbody className="divide-y divide-border/50">
                  {filtered.map((c: any) => (
                    <tr key={c.id} className="hover:bg-muted/30 transition-colors">
-                     <td className="py-3.5 px-4 text-xs text-muted-foreground font-mono whitespace-nowrap">{c.hfx_customer_number || "–"}</td>
-                     <td className="py-3.5 px-4 font-medium text-foreground whitespace-nowrap">{c.customer_name}</td>
+                      <td className="py-3.5 px-4 text-xs text-muted-foreground font-mono whitespace-nowrap">{c.hfx_customer_number || "–"}</td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <p className="font-medium text-foreground leading-tight">{c.praxis || c.customer_name}</p>
+                        {c.praxis && (c.vorname || c.nachname) && (
+                          <p className="text-xs text-muted-foreground leading-tight">{[c.vorname, c.nachname].filter(Boolean).join(" ")}</p>
+                        )}
+                      </td>
                      <td className="py-3.5 px-4">
                        <div className="space-y-0.5 min-w-[160px]">
                          {c.email ? (

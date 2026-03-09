@@ -32,6 +32,8 @@ import { useSalesforceConnection } from "@/hooks/useSalesforceConnection";
 interface Praxis {
   id: string;
   name: string;
+  arztName: string;
+  hfxNr: string;
   adresse: string;
   plz: string;
   ort: string;
@@ -91,6 +93,8 @@ export default function Praxen() {
       telefon: p.telefon || "",
       email: p.email || "",
       mpNr: p.mp_nr || "",
+      hfxNr: (p as any).hfx_customer_number || p.mp_nr || "",
+      arztName: "",
       produkt: p.produkt || "",
       module: p.module || [],
       preis: p.preis || 0,
@@ -115,12 +119,14 @@ export default function Praxen() {
       .map((c) => ({
         id: c.id,
         name: c.praxis || `${c.vorname || ""} ${c.nachname || ""}`.trim() || c.customer_name,
+        arztName: c.praxis ? `${c.vorname || ""} ${c.nachname || ""}`.trim() : "",
         adresse: c.praxisanschrift || c.adresse || "",
         plz: c.plz || "",
         ort: c.ort || "",
         telefon: c.telefon || "",
         email: c.email || "",
         mpNr: c.hfx_customer_number || c.mp_nr || "",
+        hfxNr: c.hfx_customer_number || c.mp_nr || "",
         produkt: c.product_name || "",
         module: c.modules || [],
         preis: c.monthly_price || 0,
@@ -168,6 +174,7 @@ export default function Praxen() {
   const filteredPraxen = praxen.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.hfxNr.toLowerCase().includes(search.toLowerCase()) ||
       p.mpNr.toLowerCase().includes(search.toLowerCase()) ||
       p.ort.toLowerCase().includes(search.toLowerCase()) ||
       p.email.toLowerCase().includes(search.toLowerCase())
@@ -202,7 +209,7 @@ export default function Praxen() {
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Suche nach Name, MP-Nr, Ort oder E-Mail..."
+            placeholder="Suche nach Praxis, HFX-Nr., Ort oder E-Mail..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -311,8 +318,9 @@ export default function Praxen() {
           <table className="data-table">
             <thead className="bg-muted/50">
               <tr>
-                <th>Kunde</th>
-                <th>MP-Nr</th>
+                <th>HFX-Nr.</th>
+                <th>Praxis / Name</th>
+                <th>E-Mail</th>
                 <th>Ort</th>
                 <th>Produkt</th>
                 <th>Preis/Monat</th>
@@ -325,27 +333,30 @@ export default function Praxen() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <td colSpan={10} className="text-center py-8 text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
                     Lade Kunden...
                   </td>
                 </tr>
               ) : filteredPraxen.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <td colSpan={10} className="text-center py-8 text-muted-foreground">
                     Keine Kunden gefunden
                   </td>
                 </tr>
               ) : (
                 filteredPraxen.map((praxis) => (
                   <tr key={`${praxis.source}-${praxis.id}`}>
+                    <td className="font-mono text-xs text-muted-foreground whitespace-nowrap">{praxis.hfxNr || "–"}</td>
                     <td>
                       <div>
                         <span className="font-medium text-foreground">{praxis.name}</span>
-                        <span className="block text-xs text-muted-foreground">{praxis.email}</span>
+                        {praxis.arztName && (
+                          <span className="block text-xs text-muted-foreground">{praxis.arztName}</span>
+                        )}
                       </div>
                     </td>
-                    <td className="font-mono text-xs text-muted-foreground">{praxis.mpNr}</td>
+                    <td className="text-xs text-muted-foreground">{praxis.email || "–"}</td>
                     <td className="text-muted-foreground">{praxis.plz} {praxis.ort}</td>
                     <td>
                       <span className="text-foreground">{praxis.produkt}</span>
