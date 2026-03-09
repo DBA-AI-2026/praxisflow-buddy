@@ -1513,8 +1513,8 @@ export default function Vertraege() {
                               </Tooltip>
                             </TooltipProvider>
                           )}
-                          {/* Resend confirmation email button for paper contracts */}
-                          {c.notes?.startsWith("[Papier]") && c.status === "eingegangen" && c.email && (
+                          {/* Resend confirmation email button – available for all contracts with email */}
+                          {c.email && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
