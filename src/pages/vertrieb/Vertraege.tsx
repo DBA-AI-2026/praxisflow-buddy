@@ -2422,7 +2422,7 @@ export default function Vertraege() {
                 {/* Papiervertrag */}
                 <div className="flex items-center justify-between px-3 py-2.5 gap-3">
                   <div className="flex items-center gap-2 min-w-0">
-                    <FileSignature className="h-4 w-4 shrink-0" style={{ color: "rgb(234 88 12)" }} />
+                    <FileSignature className="h-4 w-4 shrink-0 text-warning" />
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-foreground">Papiervertrag (unterschrieben)</p>
                       <p className="text-xs text-muted-foreground truncate">
@@ -2436,8 +2436,7 @@ export default function Vertraege() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-7 text-xs gap-1"
-                        style={{ color: "rgb(234 88 12)" }}
+                        className="h-7 text-xs gap-1 text-warning"
                         onClick={async () => {
                           const { data, error } = await supabase.storage.from("contracts").createSignedUrl(editingContract.paper_contract_pdf_path, 300);
                           if (error || !data?.signedUrl) { toast({ title: "Fehler", variant: "destructive" }); return; }
