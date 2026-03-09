@@ -400,6 +400,42 @@ export default function Dashboard() {
       {/* === MAIN CONTENT GRID === */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
+        {/* Letzte Interessenten */}
+        <div className="card-elevated">
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-purple-600" />
+              <h3 className="font-semibold text-foreground">Letzte Interessenten</h3>
+            </div>
+            <Link to="/interessenten" className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
+              Alle <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+          <div className="divide-y divide-border">
+            {recentLeads.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Noch keine Interessenten vorhanden.</p>
+            ) : recentLeads.map((l) => (
+              <div key={l.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-foreground text-sm truncate">{l.praxis_name}</span>
+                    <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${statusBadge(l.status)}`}>
+                      {l.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {l.vorname} {l.nachname} · {l.abrechnungszentrum}
+                  </p>
+                </div>
+                <div className="text-right text-xs text-muted-foreground ml-2 shrink-0 flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {format(new Date(l.created_at), "dd.MM.yy")}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Letzte Verträge */}
         <div className="card-elevated">
           <div className="flex items-center justify-between p-4 border-b border-border">
@@ -435,42 +471,6 @@ export default function Dashboard() {
                       {c.monthly_price.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}/Mo.
                     </div>
                   )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Letzte Interessenten */}
-        <div className="card-elevated">
-          <div className="flex items-center justify-between p-4 border-b border-border">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-purple-600" />
-              <h3 className="font-semibold text-foreground">Letzte Interessenten</h3>
-            </div>
-            <Link to="/interessenten" className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
-              Alle <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <div className="divide-y divide-border">
-            {recentLeads.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Noch keine Interessenten vorhanden.</p>
-            ) : recentLeads.map((l) => (
-              <div key={l.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-foreground text-sm truncate">{l.praxis_name}</span>
-                    <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${statusBadge(l.status)}`}>
-                      {l.status}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {l.vorname} {l.nachname} · {l.abrechnungszentrum}
-                  </p>
-                </div>
-                <div className="text-right text-xs text-muted-foreground ml-2 shrink-0 flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {format(new Date(l.created_at), "dd.MM.yy")}
                 </div>
               </div>
             ))}
