@@ -752,6 +752,7 @@ export default function Vertraege() {
   const closeDialog = () => {
     setDialogOpen(false);
     setEditId(null);
+    setEditingContract(null);
     setLeadHfxNumber(null);
     setFromLeadId(null);
     setForm(emptyForm);
