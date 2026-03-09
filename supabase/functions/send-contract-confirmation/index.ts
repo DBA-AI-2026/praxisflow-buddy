@@ -275,7 +275,7 @@ Deno.serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+        from: "HFX Honorarfuchs <noreply@notify.sales.hfx-honorarfuchs.de>",
         to: [contract.email],
         subject: `Ihr HFX-Vertrag – jetzt verbindlich buchen${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}`,
         html,
