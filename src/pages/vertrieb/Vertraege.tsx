@@ -258,6 +258,7 @@ export default function Vertraege() {
   const [showErrors, setShowErrors] = useState(false);
   const [leadHfxNumber, setLeadHfxNumber] = useState<string | null>(null);
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
+  const [resendingConfirmationId, setResendingConfirmationId] = useState<string | null>(null);
   const [emailConfirmContract, setEmailConfirmContract] = useState<any | null>(null);
   const { user, profile } = useAuth();
   const { isAdmin, isVertragsabteilung } = useUserRole();
