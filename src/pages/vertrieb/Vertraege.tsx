@@ -1412,7 +1412,7 @@ export default function Vertraege() {
               <thead>
                <tr className="bg-accent/5">
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">HFX-Nr.</th>
-                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Kunde</th>
+                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Praxis / Name</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">E-Mail</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">MP-Nr.</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 max-w-[220px]">Produkt</th>
