@@ -182,10 +182,24 @@ Deno.serve(async (req) => {
 
       results.partner = await resend.emails.send({
         from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+        reply_to: "info@hfx-honorarfuchs.de",
         to: [salesPartnerEmail],
         subject: `Vertragskopie – ${customerName || "Neuer Kunde"} – ${products || "Honorarfuchs"}`,
         attachments,
         html: partnerHtml,
+        text: [
+          "Hallo,",
+          "",
+          `ein neuer Vertrag wurde erfolgreich für ${customerName || "einen Kunden"} erstellt.`,
+          "",
+          hfxNumber ? `Kundennummer: ${hfxNumber}` : null,
+          products ? `Produkte: ${products}` : null,
+          startDate ? `Vertragsbeginn: ${new Date(startDate).toLocaleDateString("de-DE")}` : null,
+          "",
+          "Das Vertragsdokument ist als PDF beigefügt.",
+          "",
+          "© Honorarfuchs - HFX Sales Portal",
+        ].filter(Boolean).join("\n"),
       });
       console.log("Partner email sent to:", salesPartnerEmail, results.partner);
     }
