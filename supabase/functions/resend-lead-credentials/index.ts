@@ -126,9 +126,25 @@ Deno.serve(async (req) => {
 
     await resend.emails.send({
       from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+      reply_to: "info@hfx-honorarfuchs.de",
       to: [lead.email],
       subject: "Ihre Zugangsdaten – Honorarfuchs (erneute Zusendung)",
       html: emailHtml,
+      text: [
+        `Hallo ${lead.vorname} ${lead.nachname},`,
+        "",
+        "auf Wunsch haben wir Ihre Zugangsdaten zurückgesetzt.",
+        "",
+        "Ihre neuen Zugangsdaten:",
+        `E-Mail-Adresse: ${lead.email}`,
+        `Benutzername: ${lead.hfx_customer_number}`,
+        `Neues Passwort: ${newPassword}`,
+        "",
+        "Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung.",
+        "Falls Sie diese E-Mail nicht angefordert haben, wenden Sie sich bitte umgehend an uns.",
+        "",
+        "© Honorarfuchs GmbH · Bei Fragen: info@hfx-honorarfuchs.de",
+      ].join("\n"),
     });
 
     console.log(`New credentials generated and sent for lead ${lead.hfx_customer_number} to ${lead.email}`);

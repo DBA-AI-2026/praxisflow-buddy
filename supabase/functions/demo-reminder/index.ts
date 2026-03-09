@@ -203,9 +203,26 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+          reply_to: "info@hfx-honorarfuchs.de",
           to: [demo.email],
           subject: `⏰ Erinnerung: Ihre Testphase endet am ${testEndFormatted}`,
           html,
+          text: [
+            `Guten Tag${demo.contact_name ? ` ${demo.contact_name}` : ""},`,
+            "",
+            `Ihre Testphase für ${demo.product_name ?? "HFX-Produkt"}${demo.company_name ? ` (${demo.company_name})` : ""} endet in 3 Tagen – am ${testEndFormatted}.`,
+            "",
+            `Produkt: ${demo.product_name ?? "–"}`,
+            demo.hfx_customer_number ? `HFX-Nr.: ${demo.hfx_customer_number}` : null,
+            `Testende: ${testEndFormatted}`,
+            "",
+            stripeCheckoutUrl
+              ? `Jetzt direkt weiterbuchen: ${stripeCheckoutUrl}`
+              : "Möchten Sie HFX weiter nutzen? Sprechen Sie uns an – wir erstellen Ihnen gerne ein individuelles Angebot.",
+            "",
+            "Mit freundlichen Grüßen,",
+            "Ihr HFX Honorarfuchs Team",
+          ].filter(Boolean).join("\n"),
         }),
       }) : { ok: true };
 
@@ -302,9 +319,27 @@ Deno.serve(async (req) => {
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
             body: JSON.stringify({
               from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+              reply_to: "info@hfx-honorarfuchs.de",
               to: [adEmail],
               subject: `⏰ Testphase endet bald: ${demo.company_name} (${testEndFormatted})`,
               html: adHtml,
+              text: [
+                "Hallo,",
+                "",
+                `Die Testphase eines Interessenten aus Ihrem Gebiet endet in 3 Tagen am ${testEndFormatted}.`,
+                "",
+                `Unternehmen: ${demo.company_name}`,
+                demo.contact_name ? `Ansprechpartner: ${demo.contact_name}` : null,
+                demo.email ? `E-Mail: ${demo.email}` : null,
+                demo.telefon ? `Telefon: ${demo.telefon}` : null,
+                `Produkt: ${demo.product_name ?? "–"}`,
+                demo.hfx_customer_number ? `HFX-Nr.: ${demo.hfx_customer_number}` : null,
+                `Testende: ${testEndFormatted}`,
+                "",
+                "Bitte nehmen Sie zeitnah Kontakt auf.",
+                "",
+                "HFX Honorarfuchs",
+              ].filter(Boolean).join("\n"),
             }),
           });
           console.log(`AD reminder sent to ${adEmail} for demo ${demo.id}`);

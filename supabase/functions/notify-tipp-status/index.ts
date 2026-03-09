@@ -169,10 +169,27 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: "noreply@hfx-honorarfuchs.de",
+        from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+        reply_to: "info@hfx-honorarfuchs.de",
         to: [tippgeberEmail],
         subject: `Status Ihres Tipps für ${tip.praxis_name}: ${statusLabel}`,
         html: emailHtml,
+        text: [
+          `Hallo ${tippgeberName},`,
+          "",
+          `der Status Ihres Lead-Tipps für ${tip.praxis_name} wurde aktualisiert.`,
+          "",
+          `Neuer Status: ${statusLabel}`,
+          statusNote[newStatus] ?? "",
+          "",
+          `Arzt / Ärztin: ${tip.arzt_name}`,
+          `Praxis: ${tip.praxis_name}`,
+          `PLZ: ${tip.plz}`,
+          `Geschäftsbereich: ${tip.geschaeftsbereich}`,
+          "",
+          "Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.",
+          `© ${new Date().getFullYear()} HFX Honorarfuchs GmbH`,
+        ].filter(Boolean).join("\n"),
       }),
     });
 

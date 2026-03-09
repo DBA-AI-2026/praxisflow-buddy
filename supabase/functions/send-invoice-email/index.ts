@@ -210,10 +210,31 @@ Deno.serve(async (req) => {
 
     const result = await resend.emails.send({
       from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+      reply_to: "info@hfx-honorarfuchs.de",
       to: [invoice.rechnungs_email],
       subject: `Rechnung ${invoice.invoice_number} – ${invoice.customer_name}`,
       html: invoiceHtml,
       attachments: attachment,
+      text: [
+        "Sehr geehrte Damen und Herren,",
+        "",
+        `anbei erhalten Sie Ihre Rechnung ${invoice.invoice_number} vom ${new Date(invoice.invoice_date).toLocaleDateString("de-DE")}.`,
+        "",
+        `Rechnungsempfänger: ${invoice.customer_name}${invoice.customer_number ? ` (${invoice.customer_number})` : ""}`,
+        invoice.adresse ? `Adresse: ${invoice.adresse}${invoice.plz ? `, ${invoice.plz}` : ""}${invoice.ort ? ` ${invoice.ort}` : ""}` : null,
+        "",
+        `Nettobetrag: ${Number(invoice.net_amount).toFixed(2)} €`,
+        `MwSt. (${invoice.tax_rate}%): ${Number(invoice.tax_amount).toFixed(2)} €`,
+        `Gesamtbetrag: ${Number(invoice.gross_amount).toFixed(2)} €`,
+        "",
+        `${paymentMethodNote}`,
+        `Einzugsdatum: ${collectionDateFormatted}`,
+        "",
+        invoice.notes ? invoice.notes : null,
+        "",
+        "Diese Rechnung wurde automatisch aus dem HFX Sales Portal erstellt.",
+        "© Honorarfuchs – HFX Sales Portal",
+      ].filter(Boolean).join("\n"),
     });
 
     // Mark as sent + sync to customer_revenues

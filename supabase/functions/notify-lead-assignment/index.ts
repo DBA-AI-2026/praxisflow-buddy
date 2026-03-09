@@ -132,9 +132,27 @@ Deno.serve(async (req) => {
     const resend = new Resend(resendApiKey);
     await resend.emails.send({
       from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+      reply_to: "info@hfx-honorarfuchs.de",
       to: [adEmail],
       subject: `📋 Lead zugewiesen: ${lead.praxis_name} (${lead.plz})`,
       html,
+      text: [
+        `Hallo ${adName},`,
+        "",
+        "ein Interessent wurde dir manuell zugewiesen. Bitte nimm zeitnah Kontakt auf.",
+        "",
+        `HFX-Nummer: ${lead.hfx_customer_number}`,
+        `Praxis: ${lead.praxis_name}`,
+        `Name: ${lead.vorname} ${lead.nachname}`,
+        `E-Mail: ${lead.email}`,
+        lead.mobilnummer ? `Telefon: ${lead.mobilnummer}` : null,
+        `PLZ / Ort: ${lead.plz}${lead.ort ? ` ${lead.ort}` : ""}`,
+        lead.nachricht ? `Nachricht: ${lead.nachricht}` : null,
+        "",
+        "Den Lead findest du im HFX-Portal unter Interessenten.",
+        "",
+        "HFX Honorarfuchs",
+      ].filter(Boolean).join("\n"),
     });
 
     console.log(`Assignment notification sent to ${adEmail} for lead ${lead.hfx_customer_number}`);

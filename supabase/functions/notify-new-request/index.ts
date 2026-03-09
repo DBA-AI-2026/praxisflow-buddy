@@ -24,7 +24,6 @@ Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
 
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -60,8 +59,21 @@ Deno.serve(async (req) => {
     // Send notification email to admin
     const emailResponse = await resend.emails.send({
       from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+      reply_to: "info@hfx-honorarfuchs.de",
       to: [ADMIN_EMAIL],
       subject: `Neue Zugangsanfrage: ${fullName}`,
+      text: [
+        "Neue Zugangsanfrage eingegangen:",
+        "",
+        `Name: ${fullName}`,
+        `E-Mail: ${email}`,
+        company ? `Firma: ${company}` : null,
+        message ? `Nachricht: ${message}` : null,
+        "",
+        "Bitte im Admin-Portal anmelden, um die Anfrage zu bearbeiten.",
+        "",
+        "HFX Sales Portal",
+      ].filter(Boolean).join("\n"),
       html: `
         <!DOCTYPE html>
         <html>
@@ -75,7 +87,6 @@ Deno.serve(async (req) => {
             .label { font-weight: bold; color: #6b7280; font-size: 12px; text-transform: uppercase; }
             .value { margin-top: 4px; font-size: 16px; }
             .footer { margin-top: 20px; padding-top: 15px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280; }
-            .button { display: inline-block; background: #f97316; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px; }
           </style>
         </head>
         <body>
@@ -86,34 +97,11 @@ Deno.serve(async (req) => {
             </div>
             <div class="content">
               <p>Eine neue Zugangsanfrage ist eingegangen:</p>
-              
-              <div class="field">
-                <div class="label">Name</div>
-                <div class="value">${fullName}</div>
-              </div>
-              
-              <div class="field">
-                <div class="label">E-Mail</div>
-                <div class="value">${email}</div>
-              </div>
-              
-              ${company ? `
-              <div class="field">
-                <div class="label">Firma</div>
-                <div class="value">${company}</div>
-              </div>
-              ` : ''}
-              
-              ${message ? `
-              <div class="field">
-                <div class="label">Nachricht</div>
-                <div class="value">${message}</div>
-              </div>
-              ` : ''}
-              
-              <div class="footer">
-                <p>Bitte loggen Sie sich in das Admin-Portal ein, um die Anfrage zu bearbeiten.</p>
-              </div>
+              <div class="field"><div class="label">Name</div><div class="value">${fullName}</div></div>
+              <div class="field"><div class="label">E-Mail</div><div class="value">${email}</div></div>
+              ${company ? `<div class="field"><div class="label">Firma</div><div class="value">${company}</div></div>` : ''}
+              ${message ? `<div class="field"><div class="label">Nachricht</div><div class="value">${message}</div></div>` : ''}
+              <div class="footer"><p>Bitte loggen Sie sich in das Admin-Portal ein, um die Anfrage zu bearbeiten.</p></div>
             </div>
           </div>
         </body>

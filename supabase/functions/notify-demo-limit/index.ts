@@ -264,9 +264,24 @@ Deno.serve(async (req) => {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
         body: JSON.stringify({
           from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+          reply_to: "info@hfx-honorarfuchs.de",
           to: [demo.email],
           subject: `⚠️ Ihre Testphase für ${demo.product_name ?? "HFX"} ist abgelaufen`,
           html,
+          text: [
+            "Guten Tag,",
+            "",
+            `Ihre kostenlose Testphase für ${demo.product_name ?? "HFX-Produkt"} ist beendet – Sie haben das Limit von 20 Testrechnungen erreicht.`,
+            "",
+            stripeCheckoutUrl
+              ? `Jetzt direkt weiterbuchen: ${stripeCheckoutUrl}`
+              : "Möchten Sie HFX weiter nutzen? Sprechen Sie uns an – wir erstellen Ihnen gerne ein individuelles Angebot.",
+            "",
+            "Mit freundlichen Grüßen,",
+            "Ihr HFX Honorarfuchs Team",
+            "",
+            "Bei Fragen: info@hfx-honorarfuchs.de",
+          ].join("\n"),
         }),
       });
 
