@@ -174,6 +174,7 @@ export default function Praxen() {
   const filteredPraxen = praxen.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.hfxNr.toLowerCase().includes(search.toLowerCase()) ||
       p.mpNr.toLowerCase().includes(search.toLowerCase()) ||
       p.ort.toLowerCase().includes(search.toLowerCase()) ||
       p.email.toLowerCase().includes(search.toLowerCase())
