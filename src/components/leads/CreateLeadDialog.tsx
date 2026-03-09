@@ -40,7 +40,7 @@ const schema = z.object({
   plz: z.string().trim().min(4, "Pflichtfeld").max(10),
   ort: z.string().trim().max(100).default(""),
   adresse: z.string().trim().max(200).default(""),
-  abrechnungszentrum: z.string().default("nein"),
+  abrechnungszentrum: z.string().default("keins"),
   mp_nummer: z.string().trim().max(50).default(""),
   nachricht: z.string().trim().max(1000).default(""),
 });
