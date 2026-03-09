@@ -1182,8 +1182,8 @@ export default function Vertraege() {
     }
   };
 
+  const handlePreviewPdf = async (contractData: Record<string, any>) => {
     try {
-      // Capture signature from pad if available
       let sigData = contractData.signature_data;
       if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
         sigData = signaturePadRef.current.toDataURL();
