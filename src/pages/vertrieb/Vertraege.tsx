@@ -1165,7 +1165,23 @@ export default function Vertraege() {
     }
   };
 
-  const handlePreviewPdf = async (contractData: Record<string, any>) => {
+  const handleResendConfirmation = async (contract: any) => {
+    setResendingConfirmationId(contract.id);
+    try {
+      const { error } = await supabase.functions.invoke("send-contract-confirmation", {
+        body: { contract_id: contract.id },
+      });
+      if (error) throw error;
+      toast({ title: "Bestätigungsmail erneut gesendet", description: `An ${contract.email}` });
+      queryClient.invalidateQueries({ queryKey: ["contracts"] });
+    } catch (err: any) {
+      console.error("Resend confirmation error:", err);
+      toast({ title: "Fehler beim erneuten Senden", description: err.message, variant: "destructive" });
+    } finally {
+      setResendingConfirmationId(null);
+    }
+  };
+
     try {
       // Capture signature from pad if available
       let sigData = contractData.signature_data;
