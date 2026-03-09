@@ -290,6 +290,12 @@ Deno.serve(async (req) => {
 
     console.log(`[send-contract-confirmation] Email sent to ${contract.email} for contract ${contract_id}`);
 
+    // Record the timestamp when the confirmation email was successfully sent
+    await adminClient
+      .from("contracts")
+      .update({ confirmation_email_sent_at: new Date().toISOString() })
+      .eq("id", contract_id);
+
     return new Response(
       JSON.stringify({ success: true, email: contract.email }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -123,6 +123,7 @@ export type Database = {
           bic: string | null
           bsnr: string | null
           cancellation_period_months: number
+          confirmation_email_sent_at: string | null
           created_at: string
           created_by: string | null
           creditreform_approval_note: string | null
@@ -191,6 +192,7 @@ export type Database = {
           bic?: string | null
           bsnr?: string | null
           cancellation_period_months?: number
+          confirmation_email_sent_at?: string | null
           created_at?: string
           created_by?: string | null
           creditreform_approval_note?: string | null
@@ -259,6 +261,7 @@ export type Database = {
           bic?: string | null
           bsnr?: string | null
           cancellation_period_months?: number
+          confirmation_email_sent_at?: string | null
           created_at?: string
           created_by?: string | null
           creditreform_approval_note?: string | null
