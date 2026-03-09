@@ -2003,11 +2003,11 @@ export default function Vertraege() {
                               </div>
                               {hasPromo && (
                                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                                  <span className="text-xs text-success font-medium">
                                     🎉 Aktion bis {new Date(p.promo_end_date).toLocaleDateString("de-DE")}
                                   </span>
                                   {baseFeeWaived && (
-                                    <span className="text-xs text-green-600 dark:text-green-400">
+                                    <span className="text-xs text-success">
                                       Keine Grundgebühr bis {new Date(p.promo_base_fee_end_date).toLocaleDateString("de-DE")}
                                     </span>
                                   )}
