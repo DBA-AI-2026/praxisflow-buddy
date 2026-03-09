@@ -18,7 +18,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Download, MoreHorizontal, Pencil, Trash2, RefreshCw, Loader2, UserCheck, FileText } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import {
+  Plus, Search, Download, MoreHorizontal, Pencil, Trash2, RefreshCw,
+  Loader2, UserCheck, FileText, Eye, Building2, Mail, Phone, MapPin,
+  Calendar, Euro, Package, GitMerge, CircleCheck, CircleOff, ArchiveX,
+  ShieldBan, FilePen, Upload, FileSignature,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +34,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useSalesforceConnection } from "@/hooks/useSalesforceConnection";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
 
 interface Praxis {
   id: string;
@@ -55,18 +63,30 @@ const statusColors: Record<string, string> = {
   gekündigt: "badge-error",
 };
 
+const contractStatusConfig: Record<string, { label: string; class: string; icon: typeof FileText }> = {
+  entwurf: { label: "Entwurf", class: "bg-muted text-muted-foreground", icon: FilePen },
+  eingegangen: { label: "Eingegangen", class: "bg-warning/10 text-warning", icon: Upload },
+  gezeichnet: { label: "Gezeichnet", class: "bg-primary/10 text-primary", icon: FileSignature },
+  aktiv: { label: "Aktiv", class: "bg-success/10 text-success", icon: CircleCheck },
+  gekuendigt: { label: "Gekündigt", class: "bg-warning/10 text-warning", icon: CircleOff },
+  beendet: { label: "Beendet", class: "bg-destructive/10 text-destructive", icon: ArchiveX },
+  gesperrt: { label: "Gesperrt", class: "bg-destructive/20 text-destructive", icon: ShieldBan },
+};
+
 export default function Praxen() {
   const [praxen, setPraxen] = useState<Praxis[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [selectedPraxis, setSelectedPraxis] = useState<Praxis | null>(null);
+  const [praxisContracts, setPraxisContracts] = useState<any[]>([]);
+  const [loadingContracts, setLoadingContracts] = useState(false);
   const { connection: sfConnection } = useSalesforceConnection();
 
   const fetchPraxen = async () => {
     setLoading(true);
 
-    // Fetch from praxen table
     const { data: praxenData, error: praxenError } = await supabase
       .from("praxen")
       .select("*")
@@ -77,7 +97,6 @@ export default function Praxen() {
       console.error(praxenError);
     }
 
-    // Fetch active contracts not yet in praxen
     const { data: contractsData } = await supabase
       .from("contracts")
       .select("*")
@@ -87,14 +106,14 @@ export default function Praxen() {
     const praxenList: Praxis[] = (praxenData || []).map((p) => ({
       id: p.id,
       name: p.name,
+      arztName: "",
+      hfxNr: (p as any).hfx_customer_number || p.mp_nr || "",
       adresse: p.adresse || "",
       plz: p.plz || "",
       ort: p.ort || "",
       telefon: p.telefon || "",
       email: p.email || "",
       mpNr: p.mp_nr || "",
-      hfxNr: (p as any).hfx_customer_number || p.mp_nr || "",
-      arztName: "",
       produkt: p.produkt || "",
       module: p.module || [],
       preis: p.preis || 0,
@@ -104,7 +123,6 @@ export default function Praxen() {
       source: "praxen" as const,
     }));
 
-    // Add active contracts that are not already in praxen (by hfx_customer_number or email)
     const existingKeys = new Set([
       ...praxenList.map((p) => p.mpNr).filter(Boolean),
       ...praxenList.map((p) => p.email.toLowerCase()).filter(Boolean),
@@ -144,27 +162,64 @@ export default function Praxen() {
     fetchPraxen();
   }, []);
 
+  const openDetail = async (praxis: Praxis) => {
+    setSelectedPraxis(praxis);
+    setLoadingContracts(true);
+    setPraxisContracts([]);
+
+    // Search by hfxNr, mpNr, or email
+    const conditions: string[] = [];
+    if (praxis.hfxNr) conditions.push(`hfx_customer_number.eq.${praxis.hfxNr}`);
+    if (praxis.mpNr && praxis.mpNr !== praxis.hfxNr) conditions.push(`mp_nr.eq.${praxis.mpNr}`);
+
+    let query = supabase
+      .from("contracts")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (praxis.hfxNr) {
+      // Try by hfx_customer_number first, fallback to email
+      const { data: byHfx } = await supabase
+        .from("contracts")
+        .select("*")
+        .eq("hfx_customer_number", praxis.hfxNr)
+        .order("created_at", { ascending: false });
+
+      if (byHfx && byHfx.length > 0) {
+        setPraxisContracts(byHfx);
+        setLoadingContracts(false);
+        return;
+      }
+    }
+
+    // Fallback: search by email
+    if (praxis.email) {
+      const { data: byEmail } = await supabase
+        .from("contracts")
+        .select("*")
+        .eq("email", praxis.email)
+        .order("created_at", { ascending: false });
+      setPraxisContracts(byEmail || []);
+    } else {
+      setPraxisContracts([]);
+    }
+    setLoadingContracts(false);
+  };
+
   const syncToSalesforce = async (praxis: Praxis) => {
     if (!sfConnection.isConnected) {
       toast.error("Salesforce ist nicht verbunden. Bitte zuerst unter Einstellungen verbinden.");
       return;
     }
-
     setSyncingId(praxis.id);
     try {
       const { data, error } = await supabase.functions.invoke("salesforce-sync-price", {
         body: { mpNr: praxis.mpNr, preis: praxis.preis },
       });
-
       if (error) throw error;
-
-      if (data?.error) {
-        toast.error(data.error);
-      } else {
-        toast.success(`Preis für ${praxis.name} erfolgreich synchronisiert`);
-      }
+      if (data?.error) toast.error(data.error);
+      else toast.success(`Preis für ${praxis.name} erfolgreich synchronisiert`);
     } catch (err) {
-      console.error("Sync error:", err);
       toast.error("Fehler bei der Synchronisation");
     } finally {
       setSyncingId(null);
@@ -182,19 +237,17 @@ export default function Praxen() {
 
   const exportCSV = () => {
     const headers = [
-      "Name", "Adresse", "PLZ", "Ort", "Telefon", "E-Mail",
+      "HFX-Nr", "Name", "Adresse", "PLZ", "Ort", "Telefon", "E-Mail",
       "MP-Nr", "Produkt", "Module", "Preis", "Buchungsdatum", "Status",
     ];
     const rows = praxen.map((p) => [
-      p.name, p.adresse, p.plz, p.ort, p.telefon, p.email,
+      p.hfxNr, p.name, p.adresse, p.plz, p.ort, p.telefon, p.email,
       p.mpNr, p.produkt, p.module.join("; "), `${p.preis} €`,
       p.buchungsDatum, p.status,
     ]);
-
     const csvContent = [headers, ...rows]
       .map((row) => row.map((cell) => `"${cell}"`).join(","))
       .join("\n");
-
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -247,7 +300,6 @@ export default function Praxen() {
                   });
                   if (error) {
                     toast.error("Fehler beim Anlegen des Kunden");
-                    console.error(error);
                   } else {
                     toast.success("Kunde erfolgreich angelegt");
                     fetchPraxen();
@@ -346,7 +398,11 @@ export default function Praxen() {
                 </tr>
               ) : (
                 filteredPraxen.map((praxis) => (
-                  <tr key={`${praxis.source}-${praxis.id}`}>
+                  <tr
+                    key={`${praxis.source}-${praxis.id}`}
+                    className="cursor-pointer"
+                    onClick={() => openDetail(praxis)}
+                  >
                     <td className="font-mono text-xs text-muted-foreground whitespace-nowrap">{praxis.hfxNr || "–"}</td>
                     <td>
                       <div>
@@ -395,7 +451,7 @@ export default function Praxen() {
                         <span className="text-xs text-muted-foreground">Direkt</span>
                       )}
                     </td>
-                    <td>
+                    <td onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -403,6 +459,10 @@ export default function Praxen() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openDetail(praxis)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Details anzeigen
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => syncToSalesforce(praxis)}
                             disabled={syncingId === praxis.id || !sfConnection.isConnected}
@@ -432,6 +492,246 @@ export default function Praxen() {
           </table>
         </div>
       </div>
+
+      {/* Customer Detail Dialog */}
+      <Dialog open={!!selectedPraxis} onOpenChange={(open) => { if (!open) { setSelectedPraxis(null); setPraxisContracts([]); } }}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              {selectedPraxis?.name}
+            </DialogTitle>
+            {selectedPraxis?.hfxNr && (
+              <p className="text-xs font-mono text-muted-foreground pt-1">{selectedPraxis.hfxNr}</p>
+            )}
+          </DialogHeader>
+
+          {selectedPraxis && (
+            <div className="space-y-5 mt-1">
+              {/* Customer Info */}
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Stammdaten</h4>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 text-sm">
+                  {selectedPraxis.arztName && (
+                    <div className="flex items-start gap-2">
+                      <UserCheck className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Arzt / Inhaber</p>
+                        <p className="font-medium text-foreground">{selectedPraxis.arztName}</p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedPraxis.email && (
+                    <div className="flex items-start gap-2">
+                      <Mail className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">E-Mail</p>
+                        <a href={`mailto:${selectedPraxis.email}`} className="font-medium text-foreground hover:text-primary hover:underline">
+                          {selectedPraxis.email}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  {selectedPraxis.telefon && (
+                    <div className="flex items-start gap-2">
+                      <Phone className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Telefon</p>
+                        <p className="font-medium text-foreground">{selectedPraxis.telefon}</p>
+                      </div>
+                    </div>
+                  )}
+                  {(selectedPraxis.adresse || selectedPraxis.ort) && (
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Adresse</p>
+                        <p className="font-medium text-foreground">
+                          {selectedPraxis.adresse && <span>{selectedPraxis.adresse}<br /></span>}
+                          {selectedPraxis.plz} {selectedPraxis.ort}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedPraxis.produkt && (
+                    <div className="flex items-start gap-2">
+                      <Package className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Produkt</p>
+                        <p className="font-medium text-foreground">{selectedPraxis.produkt}</p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedPraxis.preis > 0 && (
+                    <div className="flex items-start gap-2">
+                      <Euro className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Monatspreis</p>
+                        <p className="font-medium text-foreground">{selectedPraxis.preis.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedPraxis.buchungsDatum && (
+                    <div className="flex items-start gap-2">
+                      <Calendar className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Buchungsdatum</p>
+                        <p className="font-medium text-foreground">
+                          {new Date(selectedPraxis.buchungsDatum).toLocaleDateString("de-DE")}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {selectedPraxis.module.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {selectedPraxis.module.map((mod) => (
+                      <span key={mod} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-secondary text-secondary-foreground">
+                        {mod}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Contracts Section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5" />
+                    Gebuchte Verträge
+                  </h4>
+                  {!loadingContracts && (
+                    <span className="text-xs text-muted-foreground">{praxisContracts.length} {praxisContracts.length === 1 ? "Vertrag" : "Verträge"}</span>
+                  )}
+                </div>
+
+                {loadingContracts ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : praxisContracts.length === 0 ? (
+                  <div className="rounded-lg border border-dashed p-6 text-center">
+                    <FileText className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Keine Verträge gefunden</p>
+                    <p className="text-xs text-muted-foreground/60 mt-0.5">Verträge werden über die HFX-Nr. oder E-Mail zugeordnet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {praxisContracts.map((contract) => {
+                      const cfg = contractStatusConfig[contract.status] || contractStatusConfig.entwurf;
+                      const StatusIcon = cfg.icon;
+                      const isNachtrag = !!contract.parent_contract_id;
+                      return (
+                        <div key={contract.id} className="rounded-lg border bg-card p-3.5 space-y-2.5">
+                          {/* Header row */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-0.5 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {isNachtrag && (
+                                  <span className="inline-flex items-center gap-1 text-xs font-medium text-primary border border-primary/30 bg-primary/5 rounded px-1.5 py-0.5">
+                                    <GitMerge className="h-3 w-3" />
+                                    Nachtrag
+                                  </span>
+                                )}
+                                <div className="flex flex-wrap gap-1">
+                                  {contract.product_name?.split(", ").map((p: string, i: number) => (
+                                    <Badge key={i} variant="secondary" className="text-xs font-normal px-2 py-0.5">
+                                      {p}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                              {contract.selected_addon_modules?.length > 0 && (
+                                <p className="text-xs text-muted-foreground">
+                                  + {contract.selected_addon_modules.join(", ")}
+                                </p>
+                              )}
+                            </div>
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap shrink-0 ${cfg.class}`}>
+                              <StatusIcon className="h-3 w-3" />
+                              {cfg.label}
+                            </span>
+                          </div>
+
+                          {/* Details row */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                            <div>
+                              <p className="text-muted-foreground">Monatspreis</p>
+                              <p className="font-semibold text-foreground tabular-nums">
+                                {Number(contract.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+                                {Number(contract.discount_percent) > 0 && (
+                                  <span className="ml-1 text-success font-normal">(-{contract.discount_percent}%)</span>
+                                )}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">Vertragsbeginn</p>
+                              <p className="font-medium text-foreground">
+                                {contract.start_date
+                                  ? format(new Date(contract.start_date), "dd.MM.yyyy", { locale: de })
+                                  : "–"}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">Zahlung</p>
+                              <p className="font-medium text-foreground capitalize">{contract.payment_interval || "–"}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">Erfasst</p>
+                              <p className="font-medium text-foreground">
+                                {contract.created_at
+                                  ? format(new Date(contract.created_at), "dd.MM.yy", { locale: de })
+                                  : "–"}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Email / Rechnungsemail */}
+                          {(contract.email || contract.rechnungs_email) && (
+                            <div className="flex flex-wrap gap-3 pt-1 border-t border-border/50 text-xs text-muted-foreground">
+                              {contract.email && (
+                                <span className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3 shrink-0" />
+                                  <a href={`mailto:${contract.email}`} className="hover:text-primary hover:underline">{contract.email}</a>
+                                  <span className="text-[10px] border border-border rounded px-1">Login</span>
+                                </span>
+                              )}
+                              {contract.rechnungs_email && contract.rechnungs_email !== contract.email && (
+                                <span className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3 shrink-0 opacity-60" />
+                                  <a href={`mailto:${contract.rechnungs_email}`} className="hover:text-primary hover:underline">{contract.rechnungs_email}</a>
+                                  <span className="text-[10px] border border-border rounded px-1">Rechnung</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Notes */}
+                          {contract.notes && (
+                            <p className="text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1">
+                              {contract.notes.replace(/^\[Papier\]\s?/, "").replace(/^\[Nachtrag\]\s?/, "")}
+                            </p>
+                          )}
+
+                          {/* Vertriebspartner */}
+                          {contract.sales_partner_name && (
+                            <p className="text-xs text-muted-foreground">
+                              Vertrieb: <span className="text-foreground">{contract.sales_partner_name}</span>
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
