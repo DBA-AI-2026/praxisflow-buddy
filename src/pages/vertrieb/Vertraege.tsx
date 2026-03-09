@@ -258,6 +258,7 @@ export default function Vertraege() {
   const [showErrors, setShowErrors] = useState(false);
   const [leadHfxNumber, setLeadHfxNumber] = useState<string | null>(null);
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
+  const [resendingConfirmationId, setResendingConfirmationId] = useState<string | null>(null);
   const [emailConfirmContract, setEmailConfirmContract] = useState<any | null>(null);
   const { user, profile } = useAuth();
   const { isAdmin, isVertragsabteilung } = useUserRole();
@@ -1164,9 +1165,25 @@ export default function Vertraege() {
     }
   };
 
+  const handleResendConfirmation = async (contract: any) => {
+    setResendingConfirmationId(contract.id);
+    try {
+      const { error } = await supabase.functions.invoke("send-contract-confirmation", {
+        body: { contract_id: contract.id },
+      });
+      if (error) throw error;
+      toast({ title: "Bestätigungsmail erneut gesendet", description: `An ${contract.email}` });
+      queryClient.invalidateQueries({ queryKey: ["contracts"] });
+    } catch (err: any) {
+      console.error("Resend confirmation error:", err);
+      toast({ title: "Fehler beim erneuten Senden", description: err.message, variant: "destructive" });
+    } finally {
+      setResendingConfirmationId(null);
+    }
+  };
+
   const handlePreviewPdf = async (contractData: Record<string, any>) => {
     try {
-      // Capture signature from pad if available
       let sigData = contractData.signature_data;
       if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
         sigData = signaturePadRef.current.toDataURL();
@@ -1493,6 +1510,30 @@ export default function Vertraege() {
                                     ? `Bestätigungs-E-Mail gesendet am ${format(new Date(c.confirmation_email_sent_at), "dd.MM.yyyy 'um' HH:mm", { locale: de })} Uhr`
                                     : "Bestätigungs-E-Mail wurde noch nicht versendet"}
                                 </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          {/* Resend confirmation email button for paper contracts */}
+                          {c.notes?.startsWith("[Papier]") && c.status === "eingegangen" && c.email && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 gap-1 text-[11px] px-2"
+                                    disabled={resendingConfirmationId === c.id}
+                                    onClick={() => handleResendConfirmation(c)}
+                                  >
+                                    {resendingConfirmationId === c.id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Mail className="h-3 w-3" />
+                                    )}
+                                    Bestätigungsmail erneut senden
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Bestätigungs-E-Mail mit Stripe-Buchungslink erneut an {c.email} senden</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                           )}
