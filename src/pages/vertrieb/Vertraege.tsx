@@ -762,6 +762,7 @@ export default function Vertraege() {
 
   const openEdit = (contract: any) => {
     setEditId(contract.id);
+    setEditingContract(contract);
     setForm({
       customer_name: contract.customer_name,
       sales_partner_name: contract.sales_partner_name || "",
