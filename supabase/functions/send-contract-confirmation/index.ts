@@ -90,11 +90,23 @@ Deno.serve(async (req) => {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     const productName = contract.product_name;
 
+    // HFX GOÄ promo: 100% off base fee until 31.12.2026 for contracts signed before 30.06.2026
+    const GOA_PROMO_COUPON_ID = "Z6xkvF0U";
+    const GOA_PROMO_PRICE_ID = "price_1T7z2Z6v0qHdbOipvyPDB9mB";
+    const GOA_PROMO_DEADLINE = new Date("2026-06-30T23:59:59Z");
+
     if (stripeKey && productName && STRIPE_PRODUCT_MAP[productName]) {
       try {
         const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
         const priceInfo = STRIPE_PRODUCT_MAP[productName];
-        const session = await stripe.checkout.sessions.create({
+
+        // Check if this GOÄ contract qualifies for the promo coupon
+        const isGoaPromoEligible =
+          priceInfo.price_id === GOA_PROMO_PRICE_ID &&
+          priceInfo.recurring &&
+          new Date() <= GOA_PROMO_DEADLINE;
+
+        const sessionParams: any = {
           customer_email: contract.email,
           line_items: [{ price: priceInfo.price_id, quantity: 1 }],
           mode: priceInfo.recurring ? "subscription" : "payment",
@@ -108,7 +120,15 @@ Deno.serve(async (req) => {
           subscription_data: priceInfo.recurring
             ? { metadata: { contract_id: contract.id } }
             : undefined,
-        });
+        };
+
+        // Apply promo coupon automatically for eligible GOÄ contracts
+        if (isGoaPromoEligible) {
+          sessionParams.discounts = [{ coupon: GOA_PROMO_COUPON_ID }];
+          console.log(`[send-contract-confirmation] Applying GOÄ promo coupon ${GOA_PROMO_COUPON_ID}`);
+        }
+
+        const session = await stripe.checkout.sessions.create(sessionParams);
         stripeCheckoutUrl = session.url;
         console.log(`[send-contract-confirmation] Stripe session created: ${session.id}`);
       } catch (stripeErr) {
