@@ -251,6 +251,7 @@ export default function Vertraege() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [paperContractOpen, setPaperContractOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [editingContract, setEditingContract] = useState<any | null>(null);
   const [form, setForm] = useState<ContractFormData>(emptyForm);
   const [file, setFile] = useState<File | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
