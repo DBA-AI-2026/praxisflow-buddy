@@ -131,10 +131,25 @@ Deno.serve(async (req) => {
 
       results.customer = await resend.emails.send({
         from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+        reply_to: "info@hfx-honorarfuchs.de",
         to: [email],
         subject: `Ihre Vertragsunterlagen – ${products || "Honorarfuchs"}`,
         attachments,
         html: customerHtml,
+        text: [
+          `Sehr geehrte/r ${customerName || "Kunde"},`,
+          "",
+          "vielen Dank für Ihr Vertrauen! Anbei erhalten Sie Ihre Vertragsunterlagen als PDF-Dokument.",
+          "",
+          hfxNumber ? `Kundennummer: ${hfxNumber}` : null,
+          products ? `Produkte: ${products}` : null,
+          startDate ? `Vertragsbeginn: ${new Date(startDate).toLocaleDateString("de-DE")}` : null,
+          "",
+          "Bitte prüfen Sie die beigefügten Unterlagen sorgfältig.",
+          "Bei Fragen wenden Sie sich bitte an Ihren Ansprechpartner.",
+          "",
+          "© Honorarfuchs - HFX Sales Portal",
+        ].filter(Boolean).join("\n"),
       });
       console.log("Customer email sent to:", email, results.customer);
     }
