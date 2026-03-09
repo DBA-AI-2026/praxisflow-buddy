@@ -920,10 +920,13 @@ export default function Vertraege() {
 
   const filtered = contracts
     .filter((c: any) => {
+      const q = search.toLowerCase();
       const matchesSearch =
-        c.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
-        c.product_name?.toLowerCase().includes(search.toLowerCase()) ||
-        c.sales_partner_name?.toLowerCase().includes(search.toLowerCase());
+        c.customer_name?.toLowerCase().includes(q) ||
+        c.product_name?.toLowerCase().includes(q) ||
+        c.sales_partner_name?.toLowerCase().includes(q) ||
+        c.email?.toLowerCase().includes(q) ||
+        c.rechnungs_email?.toLowerCase().includes(q);
       const matchesStatus = statusFilter ? c.status === statusFilter : true;
       return matchesSearch && matchesStatus;
     })
