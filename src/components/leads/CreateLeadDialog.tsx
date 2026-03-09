@@ -68,7 +68,7 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
       plz: "",
       ort: "",
       adresse: "",
-      abrechnungszentrum: "nein",
+      abrechnungszentrum: "keins",
       mp_nummer: "",
       nachricht: "",
     },
