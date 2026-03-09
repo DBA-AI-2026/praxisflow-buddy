@@ -920,10 +920,13 @@ export default function Vertraege() {
 
   const filtered = contracts
     .filter((c: any) => {
+      const q = search.toLowerCase();
       const matchesSearch =
-        c.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
-        c.product_name?.toLowerCase().includes(search.toLowerCase()) ||
-        c.sales_partner_name?.toLowerCase().includes(search.toLowerCase());
+        c.customer_name?.toLowerCase().includes(q) ||
+        c.product_name?.toLowerCase().includes(q) ||
+        c.sales_partner_name?.toLowerCase().includes(q) ||
+        c.email?.toLowerCase().includes(q) ||
+        c.rechnungs_email?.toLowerCase().includes(q);
       const matchesStatus = statusFilter ? c.status === statusFilter : true;
       return matchesSearch && matchesStatus;
     })
@@ -1407,9 +1410,10 @@ export default function Vertraege() {
           ) : (
             <table className="data-table w-full">
               <thead>
-                 <tr className="bg-accent/5">
+               <tr className="bg-accent/5">
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">HFX-Nr.</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Kunde</th>
+                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">E-Mail</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">MP-Nr.</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 max-w-[220px]">Produkt</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Partner</th>
@@ -1436,6 +1440,47 @@ export default function Vertraege() {
                    <tr key={c.id} className="hover:bg-muted/30 transition-colors">
                      <td className="py-3.5 px-4 text-xs text-muted-foreground font-mono whitespace-nowrap">{c.hfx_customer_number || "–"}</td>
                      <td className="py-3.5 px-4 font-medium text-foreground whitespace-nowrap">{c.customer_name}</td>
+                     <td className="py-3.5 px-4">
+                       <div className="space-y-0.5 min-w-[160px]">
+                         {c.email ? (
+                           <TooltipProvider>
+                             <Tooltip>
+                               <TooltipTrigger asChild>
+                                 <a
+                                   href={`mailto:${c.email}`}
+                                   className="text-xs text-foreground hover:text-primary hover:underline flex items-center gap-1 w-fit"
+                                   onClick={(e) => e.stopPropagation()}
+                                 >
+                                   <Mail className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                   <span className="truncate max-w-[180px]">{c.email}</span>
+                                 </a>
+                               </TooltipTrigger>
+                               <TooltipContent>Registrierungs-E-Mail (HFX-GOÄ Login)</TooltipContent>
+                             </Tooltip>
+                           </TooltipProvider>
+                         ) : (
+                           <span className="text-xs text-muted-foreground">–</span>
+                         )}
+                         {c.rechnungs_email && c.rechnungs_email !== c.email && (
+                           <TooltipProvider>
+                             <Tooltip>
+                               <TooltipTrigger asChild>
+                                 <a
+                                   href={`mailto:${c.rechnungs_email}`}
+                                   className="text-xs text-muted-foreground hover:text-primary hover:underline flex items-center gap-1 w-fit"
+                                   onClick={(e) => e.stopPropagation()}
+                                 >
+                                   <Mail className="h-3 w-3 shrink-0 opacity-50" />
+                                   <span className="truncate max-w-[180px]">{c.rechnungs_email}</span>
+                                   <span className="text-[10px] text-muted-foreground border border-border rounded px-1 shrink-0">Rechnung</span>
+                                 </a>
+                               </TooltipTrigger>
+                               <TooltipContent>Abweichende Rechnungs-E-Mail</TooltipContent>
+                             </Tooltip>
+                           </TooltipProvider>
+                         )}
+                       </div>
+                     </td>
                      <td className="py-3.5 px-4 text-muted-foreground text-sm">{c.mp_nr || "–"}</td>
                     <td className="py-3.5 px-4 max-w-[220px]">
                       <div className="space-y-1">
@@ -1653,7 +1698,7 @@ export default function Vertraege() {
                           <div className="flex items-center gap-1">
                             {(c as any).paper_contract_pdf_path ? (
                               <button
-                                className="text-orange-600 hover:underline text-xs flex items-center gap-1"
+                                className="text-warning hover:underline text-xs flex items-center gap-1"
                                 onClick={async () => {
                                   const { data, error } = await supabase.storage
                                     .from("contracts")
@@ -1675,9 +1720,9 @@ export default function Vertraege() {
                                 <TooltipTrigger asChild>
                                   <label className="cursor-pointer inline-flex items-center justify-center h-5 w-5 rounded hover:bg-muted transition-colors">
                                     {uploadingPaperId === c.id ? (
-                                      <Loader2 className="h-3 w-3 animate-spin text-orange-600" />
+                                      <Loader2 className="h-3 w-3 animate-spin text-warning" />
                                     ) : (
-                                      <Upload className="h-3 w-3 text-muted-foreground hover:text-orange-600" />
+                                      <Upload className="h-3 w-3 text-muted-foreground" />
                                     )}
                                     <input
                                       type="file"
@@ -1958,11 +2003,11 @@ export default function Vertraege() {
                               </div>
                               {hasPromo && (
                                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                                  <span className="text-xs text-success font-medium">
                                     🎉 Aktion bis {new Date(p.promo_end_date).toLocaleDateString("de-DE")}
                                   </span>
                                   {baseFeeWaived && (
-                                    <span className="text-xs text-green-600 dark:text-green-400">
+                                    <span className="text-xs text-success">
                                       Keine Grundgebühr bis {new Date(p.promo_base_fee_end_date).toLocaleDateString("de-DE")}
                                     </span>
                                   )}
@@ -2377,7 +2422,7 @@ export default function Vertraege() {
                 {/* Papiervertrag */}
                 <div className="flex items-center justify-between px-3 py-2.5 gap-3">
                   <div className="flex items-center gap-2 min-w-0">
-                    <FileSignature className="h-4 w-4 shrink-0" style={{ color: "rgb(234 88 12)" }} />
+                    <FileSignature className="h-4 w-4 shrink-0 text-warning" />
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-foreground">Papiervertrag (unterschrieben)</p>
                       <p className="text-xs text-muted-foreground truncate">
@@ -2391,8 +2436,7 @@ export default function Vertraege() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-7 text-xs gap-1"
-                        style={{ color: "rgb(234 88 12)" }}
+                        className="h-7 text-xs gap-1 text-warning"
                         onClick={async () => {
                           const { data, error } = await supabase.storage.from("contracts").createSignedUrl(editingContract.paper_contract_pdf_path, 300);
                           if (error || !data?.signedUrl) { toast({ title: "Fehler", variant: "destructive" }); return; }
