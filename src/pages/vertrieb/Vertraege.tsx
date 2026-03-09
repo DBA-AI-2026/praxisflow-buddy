@@ -1496,6 +1496,28 @@ export default function Vertraege() {
                               </Tooltip>
                             </TooltipProvider>
                           )}
+                          {/* Stripe payment confirmation indicator for paper contracts */}
+                          {c.notes?.startsWith("[Papier]") && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className={`inline-flex items-center gap-1 text-xs font-medium border rounded px-1.5 py-0.5 w-fit cursor-default ${
+                                    c.customer_confirmed_at
+                                      ? "text-success border-success/30 bg-success/5"
+                                      : "text-muted-foreground border-dashed"
+                                  }`}>
+                                    <CreditCard className="h-3 w-3" />
+                                    {c.customer_confirmed_at ? "Zahlung erfolgt" : "Zahlung ausstehend"}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {c.customer_confirmed_at
+                                    ? `Stripe-Zahlung bestätigt am ${format(new Date(c.customer_confirmed_at), "dd.MM.yyyy 'um' HH:mm", { locale: de })} Uhr`
+                                    : "Kunde hat noch nicht über Stripe bezahlt"}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
