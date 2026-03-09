@@ -203,9 +203,26 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+          reply_to: "info@hfx-honorarfuchs.de",
           to: [demo.email],
           subject: `⏰ Erinnerung: Ihre Testphase endet am ${testEndFormatted}`,
           html,
+          text: [
+            `Guten Tag${demo.contact_name ? ` ${demo.contact_name}` : ""},`,
+            "",
+            `Ihre Testphase für ${demo.product_name ?? "HFX-Produkt"}${demo.company_name ? ` (${demo.company_name})` : ""} endet in 3 Tagen – am ${testEndFormatted}.`,
+            "",
+            `Produkt: ${demo.product_name ?? "–"}`,
+            demo.hfx_customer_number ? `HFX-Nr.: ${demo.hfx_customer_number}` : null,
+            `Testende: ${testEndFormatted}`,
+            "",
+            stripeCheckoutUrl
+              ? `Jetzt direkt weiterbuchen: ${stripeCheckoutUrl}`
+              : "Möchten Sie HFX weiter nutzen? Sprechen Sie uns an – wir erstellen Ihnen gerne ein individuelles Angebot.",
+            "",
+            "Mit freundlichen Grüßen,",
+            "Ihr HFX Honorarfuchs Team",
+          ].filter(Boolean).join("\n"),
         }),
       }) : { ok: true };
 
