@@ -1513,6 +1513,30 @@ export default function Vertraege() {
                               </Tooltip>
                             </TooltipProvider>
                           )}
+                          {/* Resend confirmation email button for paper contracts */}
+                          {c.notes?.startsWith("[Papier]") && c.status === "eingegangen" && c.email && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 gap-1 text-[11px] px-2"
+                                    disabled={resendingConfirmationId === c.id}
+                                    onClick={() => handleResendConfirmation(c)}
+                                  >
+                                    {resendingConfirmationId === c.id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Mail className="h-3 w-3" />
+                                    )}
+                                    Bestätigungsmail erneut senden
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Bestätigungs-E-Mail mit Stripe-Buchungslink erneut an {c.email} senden</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                           {/* Stripe payment confirmation indicator for paper contracts */}
                           {c.notes?.startsWith("[Papier]") && (
                             <TooltipProvider>
