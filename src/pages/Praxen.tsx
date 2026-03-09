@@ -317,8 +317,9 @@ export default function Praxen() {
           <table className="data-table">
             <thead className="bg-muted/50">
               <tr>
-                <th>Kunde</th>
-                <th>MP-Nr</th>
+                <th>HFX-Nr.</th>
+                <th>Praxis / Name</th>
+                <th>E-Mail</th>
                 <th>Ort</th>
                 <th>Produkt</th>
                 <th>Preis/Monat</th>
@@ -331,27 +332,30 @@ export default function Praxen() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <td colSpan={10} className="text-center py-8 text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
                     Lade Kunden...
                   </td>
                 </tr>
               ) : filteredPraxen.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <td colSpan={10} className="text-center py-8 text-muted-foreground">
                     Keine Kunden gefunden
                   </td>
                 </tr>
               ) : (
                 filteredPraxen.map((praxis) => (
                   <tr key={`${praxis.source}-${praxis.id}`}>
+                    <td className="font-mono text-xs text-muted-foreground whitespace-nowrap">{praxis.hfxNr || "–"}</td>
                     <td>
                       <div>
                         <span className="font-medium text-foreground">{praxis.name}</span>
-                        <span className="block text-xs text-muted-foreground">{praxis.email}</span>
+                        {praxis.arztName && (
+                          <span className="block text-xs text-muted-foreground">{praxis.arztName}</span>
+                        )}
                       </div>
                     </td>
-                    <td className="font-mono text-xs text-muted-foreground">{praxis.mpNr}</td>
+                    <td className="text-xs text-muted-foreground">{praxis.email || "–"}</td>
                     <td className="text-muted-foreground">{praxis.plz} {praxis.ort}</td>
                     <td>
                       <span className="text-foreground">{praxis.produkt}</span>
