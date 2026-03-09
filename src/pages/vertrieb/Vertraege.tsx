@@ -1440,6 +1440,47 @@ export default function Vertraege() {
                    <tr key={c.id} className="hover:bg-muted/30 transition-colors">
                      <td className="py-3.5 px-4 text-xs text-muted-foreground font-mono whitespace-nowrap">{c.hfx_customer_number || "–"}</td>
                      <td className="py-3.5 px-4 font-medium text-foreground whitespace-nowrap">{c.customer_name}</td>
+                     <td className="py-3.5 px-4">
+                       <div className="space-y-0.5 min-w-[160px]">
+                         {c.email ? (
+                           <TooltipProvider>
+                             <Tooltip>
+                               <TooltipTrigger asChild>
+                                 <a
+                                   href={`mailto:${c.email}`}
+                                   className="text-xs text-foreground hover:text-primary hover:underline flex items-center gap-1 w-fit"
+                                   onClick={(e) => e.stopPropagation()}
+                                 >
+                                   <Mail className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                   <span className="truncate max-w-[180px]">{c.email}</span>
+                                 </a>
+                               </TooltipTrigger>
+                               <TooltipContent>Registrierungs-E-Mail (HFX-GOÄ Login)</TooltipContent>
+                             </Tooltip>
+                           </TooltipProvider>
+                         ) : (
+                           <span className="text-xs text-muted-foreground">–</span>
+                         )}
+                         {c.rechnungs_email && c.rechnungs_email !== c.email && (
+                           <TooltipProvider>
+                             <Tooltip>
+                               <TooltipTrigger asChild>
+                                 <a
+                                   href={`mailto:${c.rechnungs_email}`}
+                                   className="text-xs text-muted-foreground hover:text-primary hover:underline flex items-center gap-1 w-fit"
+                                   onClick={(e) => e.stopPropagation()}
+                                 >
+                                   <Mail className="h-3 w-3 shrink-0 opacity-50" />
+                                   <span className="truncate max-w-[180px]">{c.rechnungs_email}</span>
+                                   <span className="text-[10px] text-muted-foreground border border-border rounded px-1 shrink-0">Rechnung</span>
+                                 </a>
+                               </TooltipTrigger>
+                               <TooltipContent>Abweichende Rechnungs-E-Mail</TooltipContent>
+                             </Tooltip>
+                           </TooltipProvider>
+                         )}
+                       </div>
+                     </td>
                      <td className="py-3.5 px-4 text-muted-foreground text-sm">{c.mp_nr || "–"}</td>
                     <td className="py-3.5 px-4 max-w-[220px]">
                       <div className="space-y-1">
