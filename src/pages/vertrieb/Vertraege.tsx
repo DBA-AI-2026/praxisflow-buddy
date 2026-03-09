@@ -1592,14 +1592,17 @@ export default function Vertraege() {
                                   ) : (
                                     <Mail className="h-3 w-3" />
                                   )}
-                                  Per Mail senden
+                                  Vertrag per Mail senden
                                 </Button>
                               </TooltipTrigger>
-                              {!c.email && (
-                                <TooltipContent>Keine E-Mail-Adresse hinterlegt</TooltipContent>
-                              )}
+                              <TooltipContent>
+                                {c.email
+                                  ? `Sendet das Vertragsdokument als PDF-Anhang an ${c.email} – ohne Stripe-Zahlungslink`
+                                  : "Keine E-Mail-Adresse hinterlegt"}
+                              </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
+                          {/* Generiertes / digital signiertes Dokument */}
                           {c.document_url && (
                             <button
                               className="text-primary hover:underline text-xs flex items-center gap-1"
@@ -1615,7 +1618,26 @@ export default function Vertraege() {
                               }}
                             >
                               <Download className="h-3 w-3" />
-                              <span className="truncate max-w-[80px]">{c.document_name || "PDF"}</span>
+                              <span className="truncate max-w-[80px]">{c.document_name || "Vertrag PDF"}</span>
+                            </button>
+                          )}
+                          {/* Hochgeladener Papiervertrag */}
+                          {(c as any).paper_contract_pdf_path && (
+                            <button
+                              className="text-orange-600 hover:underline text-xs flex items-center gap-1"
+                              onClick={async () => {
+                                const { data, error } = await supabase.storage
+                                  .from("contracts")
+                                  .createSignedUrl((c as any).paper_contract_pdf_path, 300);
+                                if (error || !data?.signedUrl) {
+                                  toast({ title: "Fehler beim Laden des Papiervertrags", variant: "destructive" });
+                                  return;
+                                }
+                                window.open(data.signedUrl, "_blank");
+                              }}
+                            >
+                              <FileText className="h-3 w-3" />
+                              <span className="truncate max-w-[80px]">Papiervertrag</span>
                             </button>
                           )}
                        </div>
