@@ -724,6 +724,30 @@ export default function Vertraege() {
     }
   };
 
+  const uploadPaperContract = async (contractId: string, uploadFile: File) => {
+    setUploadingPaperId(contractId);
+    try {
+      const filePath = `${user?.id}/papier-${crypto.randomUUID()}-${uploadFile.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("contracts")
+        .upload(filePath, uploadFile);
+      if (uploadError) throw uploadError;
+
+      const { error: updateError } = await supabase
+        .from("contracts")
+        .update({ paper_contract_pdf_path: filePath } as any)
+        .eq("id", contractId);
+      if (updateError) throw updateError;
+
+      queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      toast({ title: "Papiervertrag hochgeladen", description: uploadFile.name });
+    } catch (err: any) {
+      toast({ title: "Upload fehlgeschlagen", description: err.message, variant: "destructive" });
+    } finally {
+      setUploadingPaperId(null);
+    }
+  };
+
   const closeDialog = () => {
     setDialogOpen(false);
     setEditId(null);
