@@ -40,7 +40,7 @@ const schema = z.object({
   plz: z.string().trim().min(4, "Pflichtfeld").max(10),
   ort: z.string().trim().max(100).default(""),
   adresse: z.string().trim().max(200).default(""),
-  abrechnungszentrum: z.string().default("nein"),
+  abrechnungszentrum: z.string().default("keins"),
   mp_nummer: z.string().trim().max(50).default(""),
   nachricht: z.string().trim().max(1000).default(""),
 });
@@ -68,7 +68,7 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
       plz: "",
       ort: "",
       adresse: "",
-      abrechnungszentrum: "nein",
+      abrechnungszentrum: "keins",
       mp_nummer: "",
       nachricht: "",
     },
@@ -260,13 +260,16 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="nein">Nein</SelectItem>
-                        <SelectItem value="PVS">PVS</SelectItem>
-                        <SelectItem value="DZR">DZR</SelectItem>
-                        <SelectItem value="ARZ">ARZ</SelectItem>
-                        <SelectItem value="Sonstiges">Sonstiges</SelectItem>
-                      </SelectContent>
+                        <SelectContent>
+                          <SelectItem value="keins">Keins</SelectItem>
+                          <SelectItem value="CareCapital">CareCapital</SelectItem>
+                          <SelectItem value="privadis">privadis</SelectItem>
+                          <SelectItem value="ZAB">ZAB</SelectItem>
+                          <SelectItem value="PVS">PVS</SelectItem>
+                          <SelectItem value="DZR">DZR</SelectItem>
+                          <SelectItem value="ARZ">ARZ</SelectItem>
+                          <SelectItem value="Sonstiges">Sonstiges</SelectItem>
+                        </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
