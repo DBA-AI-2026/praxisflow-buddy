@@ -8,17 +8,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-/** Returns a Set of German public holiday date strings (YYYY-MM-DD) for a given year */
 function getGermanHolidays(year: number): Set<string> {
   const fmt = (d: Date) => d.toISOString().split("T")[0];
   const fixed = [
-    `${year}-01-01`, // Neujahr
-    `${year}-05-01`, // Tag der Arbeit
-    `${year}-10-03`, // Tag der deutschen Einheit
-    `${year}-12-25`, // 1. Weihnachtstag
-    `${year}-12-26`, // 2. Weihnachtstag
+    `${year}-01-01`, `${year}-05-01`, `${year}-10-03`,
+    `${year}-12-25`, `${year}-12-26`,
   ];
-  // Easter (Gauss algorithm)
   const a = year % 19, b = Math.floor(year / 100), c = year % 100;
   const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
   const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
@@ -28,29 +23,14 @@ function getGermanHolidays(year: number): Set<string> {
   const month = Math.floor((h + l - 7 * m + 114) / 31);
   const day = ((h + l - 7 * m + 114) % 31) + 1;
   const easter = new Date(year, month - 1, day);
-
-  const addDays = (base: Date, days: number) => {
-    const d = new Date(base);
-    d.setDate(d.getDate() + days);
-    return d;
-  };
-
-  const movable = [
-    addDays(easter, -2),  // Karfreitag
-    addDays(easter, 1),   // Ostermontag
-    addDays(easter, 39),  // Christi Himmelfahrt
-    addDays(easter, 50),  // Pfingstmontag
-    addDays(easter, 60),  // Fronleichnam (nicht überall, aber bundesweit verbreitet)
-  ];
-
+  const addDays = (base: Date, days: number) => { const d = new Date(base); d.setDate(d.getDate() + days); return d; };
+  const movable = [addDays(easter, -2), addDays(easter, 1), addDays(easter, 39), addDays(easter, 50), addDays(easter, 60)];
   return new Set([...fixed, ...movable.map(fmt)]);
 }
 
-/** Returns next business day that is not a weekend or German public holiday */
 function addBusinessDays(from: Date, days: number): Date {
   const result = new Date(from);
   const holidays = getGermanHolidays(from.getFullYear());
-  // Also cover year boundary
   const holidaysNext = getGermanHolidays(from.getFullYear() + 1);
   const allHolidays = new Set([...holidays, ...holidaysNext]);
   let added = 0;
@@ -63,8 +43,6 @@ function addBusinessDays(from: Date, days: number): Date {
   return result;
 }
 
-
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -76,20 +54,19 @@ Deno.serve(async (req) => {
 
   try {
     const today = new Date();
-    const todayDay = today.getDate(); // day of month (1-31)
+    const todayDay = today.getDate();
     const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth() + 1; // 1-12
+    const currentMonth = today.getMonth() + 1;
+    const periodMonthStr = `${currentYear}-${String(currentMonth).padStart(2, "0")}`;
 
     console.log(`[auto-invoice] Running for ${today.toISOString()}, billing day: ${todayDay}`);
 
-    // Fetch all active contracts with a start_date where day matches today
     const { data: contracts, error: contractsError } = await supabase
       .from("contracts")
       .select("*")
       .eq("status", "aktiv");
 
     if (contractsError) throw contractsError;
-
     if (!contracts || contracts.length === 0) {
       console.log("[auto-invoice] No active contracts found.");
       return new Response(JSON.stringify({ success: true, processed: 0 }), {
@@ -103,25 +80,16 @@ Deno.serve(async (req) => {
 
     for (const contract of contracts) {
       try {
-        if (!contract.start_date) {
-          skipped++;
-          continue;
-        }
+        if (!contract.start_date) { skipped++; continue; }
 
         const startDate = new Date(contract.start_date);
         const billingDay = startDate.getDate();
-
-        // Only process if today matches the billing day
-        // Handle months with fewer days: if billing day > days in month, use last day
         const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
         const effectiveBillingDay = Math.min(billingDay, daysInMonth);
 
-        if (todayDay !== effectiveBillingDay) {
-          skipped++;
-          continue;
-        }
+        if (todayDay !== effectiveBillingDay) { skipped++; continue; }
 
-        // Check if invoice already exists for this contract in the current billing period
+        // Check for existing invoice in this billing period
         const periodStart = `${currentYear}-${String(currentMonth).padStart(2, "0")}-01`;
         const periodEnd = `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
 
@@ -134,45 +102,62 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         if (existing) {
-          console.log(`[auto-invoice] Invoice already exists for contract ${contract.id} in ${currentMonth}/${currentYear}, skipping.`);
-          skipped++;
-          continue;
+          console.log(`[auto-invoice] Invoice already exists for contract ${contract.id}, skipping.`);
+          skipped++; continue;
         }
 
         if (!contract.rechnungs_email && !contract.email) {
           console.log(`[auto-invoice] No email for contract ${contract.id}, skipping.`);
-          skipped++;
-          continue;
+          skipped++; continue;
         }
 
-        // Calculate amounts
-        const netAmount = Number(contract.monthly_price) || 0;
+        // Base monthly fee position
+        const baseNetAmount = Number(contract.monthly_price) || 0;
         const taxRate = 19;
-        const taxAmount = Math.round(netAmount * taxRate) / 100;
-        const grossAmount = Math.round((netAmount + taxAmount) * 100) / 100;
-
-        // Collection date = today + 3 business days (skip weekends & German holidays)
-        const collectionDate = addBusinessDays(today, 3);
-        const dueDateStr = collectionDate.toISOString().split("T")[0];
-        const collectionDateFormatted = collectionDate.toLocaleDateString("de-DE");
-
-        // Determine payment method (Stripe only)
-        const paymentMethodLabel = "Stripe";
-        const paymentMethodNote = `Der Betrag wird automatisch über Stripe von Ihrem hinterlegten Zahlungsmittel eingezogen.`;
-        const todayStr = today.toISOString().split("T")[0];
-
         const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
         const billingPeriod = `${monthNames[today.getMonth()]} ${currentYear}`;
 
-        const positions = [
+        const positions: { description: string; quantity: number; unit_price: number }[] = [
           {
             description: `${contract.product_name} – ${billingPeriod}`,
             quantity: contract.license_count || 1,
-            unit_price: netAmount / (contract.license_count || 1),
+            unit_price: baseNetAmount / (contract.license_count || 1),
           },
         ];
 
-        // Insert invoice record (invoice_number auto-assigned by trigger)
+        // Append pending usage charges for this HFX-Nr
+        let usageChargeIds: string[] = [];
+        if (contract.hfx_customer_number) {
+          const { data: usageCharges } = await supabase
+            .from("usage_charges")
+            .select("*")
+            .eq("hfx_customer_number", contract.hfx_customer_number)
+            .eq("status", "pending");
+
+          if (usageCharges && usageCharges.length > 0) {
+            usageChargeIds = usageCharges.map((u: any) => u.id);
+            for (const uc of usageCharges) {
+              positions.push({
+                description: `${uc.unit_description} (${new Date(uc.period_from).toLocaleDateString("de-DE")} – ${new Date(uc.period_to).toLocaleDateString("de-DE")})`,
+                quantity: uc.quantity,
+                unit_price: Number(uc.unit_price),
+              });
+            }
+          }
+        }
+
+        // Recalculate totals including usage
+        const netAmount = positions.reduce((s, p) => s + p.quantity * p.unit_price, 0);
+        const taxAmount = Math.round(netAmount * taxRate) / 100;
+        const grossAmount = Math.round((netAmount + taxAmount) * 100) / 100;
+
+        const collectionDate = addBusinessDays(today, 3);
+        const dueDateStr = collectionDate.toISOString().split("T")[0];
+        const collectionDateFormatted = collectionDate.toLocaleDateString("de-DE");
+        const todayStr = today.toISOString().split("T")[0];
+        const paymentMethodNote = `Der Betrag wird automatisch über Stripe von Ihrem hinterlegten Zahlungsmittel eingezogen.`;
+
+        // Insert invoice
         const { data: invoice, error: insertError } = await supabase
           .from("invoices")
           .insert({
@@ -201,9 +186,18 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // Mark usage charges as invoiced
+        if (usageChargeIds.length > 0) {
+          await supabase
+            .from("usage_charges")
+            .update({ status: "invoiced", invoice_id: invoice.id })
+            .in("id", usageChargeIds);
+          console.log(`[auto-invoice] Attached ${usageChargeIds.length} usage charges to invoice ${invoice.invoice_number}`);
+        }
+
         console.log(`[auto-invoice] Created invoice ${invoice.invoice_number} for contract ${contract.id}`);
 
-        // Build and send email
+        // Build email HTML
         const positionsHtml = positions.map((p) => `
           <tr>
             <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">${p.description}</td>
@@ -217,7 +211,7 @@ Deno.serve(async (req) => {
 <div style="max-width:600px;margin:0 auto;">
   <div style="background:linear-gradient(135deg,#0b367f,#1a4a9e);color:#fff;padding:30px 20px;border-radius:8px 8px 0 0;text-align:center;">
     <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg"
-      alt="Honorarfuchs" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin-bottom:12px;display:block;margin:0 auto 12px;"/>
+      alt="Honorarfuchs" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin:0 auto 12px;display:block;"/>
     <h1 style="margin:0;font-size:24px;">Rechnung ${invoice.invoice_number}</h1>
     <p style="margin:8px 0 0;opacity:0.9;font-size:14px;">Honorarfuchs – HFX Sales Portal</p>
   </div>
@@ -240,7 +234,7 @@ Deno.serve(async (req) => {
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #0b367f;margin-top:8px;font-size:16px;"><span><strong>Gesamtbetrag:</strong></span><strong style="color:#0b367f;">${grossAmount.toFixed(2)} €</strong></div>
     </div>
     <div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
-      <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug (${paymentMethodLabel})</strong></p>
+      <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug (Stripe)</strong></p>
       <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">${paymentMethodNote}</p>
       <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">📅 <strong>Einzugsdatum:</strong> ${collectionDateFormatted}</p>
     </div>
@@ -271,7 +265,7 @@ Deno.serve(async (req) => {
         const { data: revenueRow } = await supabase
           .from("customer_revenues")
           .insert({
-            user_id: "00000000-0000-0000-0000-000000000000", // system user placeholder
+            user_id: "00000000-0000-0000-0000-000000000000",
             invoice_number: invoice.invoice_number,
             invoice_date: todayStr,
             due_date: dueDateStr,
@@ -285,7 +279,7 @@ Deno.serve(async (req) => {
             tax_rate: taxRate,
             gross_amount: grossAmount,
             payment_status: "pending",
-            notes: `Auto-Rechnung ${billingPeriod}`,
+            notes: `Auto-Rechnung ${billingPeriod}${usageChargeIds.length > 0 ? ` + ${usageChargeIds.length} Nutzungsposten` : ""}`,
           })
           .select("id")
           .single();
@@ -293,12 +287,54 @@ Deno.serve(async (req) => {
         // Update invoice status
         await supabase
           .from("invoices")
-          .update({
-            status: "versendet",
-            email_sent_at: now,
-            revenue_id: revenueRow?.id ?? null,
-          })
+          .update({ status: "versendet", email_sent_at: now, revenue_id: revenueRow?.id ?? null })
           .eq("id", invoice.id);
+
+        // Auto-generate commission payout if contract has a sales partner
+        if (contract.sales_partner_id) {
+          const { data: productCommission } = await supabase
+            .from("product_commissions")
+            .select("*")
+            .eq("product_name", contract.product_name)
+            .eq("is_active", true)
+            .maybeSingle();
+
+          if (productCommission) {
+            let commissionAmount = 0;
+            if (productCommission.commission_type === "prozent") {
+              commissionAmount = Math.round(baseNetAmount * productCommission.commission_value) / 100;
+            } else if (productCommission.commission_type === "festbetrag") {
+              commissionAmount = Number(productCommission.commission_value);
+            } else {
+              commissionAmount = Number(productCommission.commission_value);
+            }
+
+            if (commissionAmount > 0) {
+              // Check if payout already exists for this invoice
+              const { data: existingPayout } = await supabase
+                .from("commission_payouts")
+                .select("id")
+                .eq("invoice_id", invoice.id)
+                .maybeSingle();
+
+              if (!existingPayout) {
+                await supabase.from("commission_payouts").insert({
+                  sales_partner_id: contract.sales_partner_id,
+                  sales_partner_name: contract.sales_partner_name || "Unbekannt",
+                  contract_id: contract.id,
+                  invoice_id: invoice.id,
+                  product_name: contract.product_name,
+                  commission_type: productCommission.commission_type,
+                  commission_rate: productCommission.commission_value,
+                  commission_amount: commissionAmount,
+                  period_month: periodMonthStr,
+                  status: "pending",
+                });
+                console.log(`[auto-invoice] Created commission payout ${commissionAmount} € for partner ${contract.sales_partner_name}`);
+              }
+            }
+          }
+        }
 
         console.log(`[auto-invoice] ✓ Sent invoice ${invoice.invoice_number} to ${emailTo}`);
         processed++;
