@@ -422,7 +422,8 @@ export default function Rechnungen() {
       const periodFrom = new Date(charge.period_from).toLocaleDateString("de-DE");
       const periodTo = new Date(charge.period_to).toLocaleDateString("de-DE");
 
-      const { error } = await supabase.from("invoices").insert({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any).from("invoices").insert({
         contract_id: charge.contract_id,
         customer_name: contractData?.customer_name || `HFX ${charge.hfx_customer_number}`,
         customer_number: charge.hfx_customer_number,
