@@ -310,8 +310,8 @@ export async function generateInvoicePdf(
   // ===== PAYMENT NOTICE =====
   ensureSpace(70);
   const payBoxH = 40;
-  page.drawRectangle({ x: M, y: y - payBoxH + 14, width: CW, height: payBoxH, color: rgb(0.93, 0.97, 0.93), borderRadius: 4 });
-  page.drawRectangle({ x: M, y: y - payBoxH + 14, width: 4, height: payBoxH, color: C_GREEN, borderRadius: 2 });
+  page.drawRectangle({ x: M, y: y - payBoxH + 14, width: CW, height: payBoxH, color: rgb(0.93, 0.97, 0.93) });
+  page.drawRectangle({ x: M, y: y - payBoxH + 14, width: 4, height: payBoxH, color: C_GREEN });
   text("Automatischer Einzug", M + 12, y, 9, fontBold, C_GREEN);
   y -= 14;
   const collectionFormatted = collectionDate.toLocaleDateString("de-DE");
