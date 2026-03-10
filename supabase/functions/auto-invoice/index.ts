@@ -204,10 +204,8 @@ Deno.serve(async (req) => {
 
             const finalizedInvoice = await stripe.invoices.finalizeInvoice(stripeInvoice.id);
 
-            // Trigger SEPA payment collection (3-day collection window)
-            await stripe.invoices.pay(finalizedInvoice.id, {
-              paid_out_of_band: false,
-            });
+            // Trigger SEPA payment collection via hinterlegter Zahlungsmethode
+            await stripe.invoices.pay(finalizedInvoice.id);
 
             stripeInvoiceId = stripeInvoice.id;
             console.log(`[auto-invoice] Stripe invoice ${stripeInvoice.id} created and payment initiated for contract ${contract.id}`);
