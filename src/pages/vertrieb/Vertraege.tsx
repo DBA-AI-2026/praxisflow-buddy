@@ -2373,6 +2373,38 @@ export default function Vertraege() {
                   )}
                 </div>
               </div>
+              {/* SEPA Mandate Consent */}
+              <div className="flex items-start gap-3 p-3 rounded-lg border border-input bg-background">
+                <Checkbox
+                  id="mandate_accepted"
+                  checked={!!(form as any).mandate_accepted}
+                  onCheckedChange={(checked) => set("mandate_accepted" as any, checked === true)}
+                  className="mt-0.5"
+                />
+                <div>
+                  <Label htmlFor="mandate_accepted" className="cursor-pointer font-medium text-foreground">
+                    Zustimmung zur automatischen Zahlung erteilt
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Der Kunde stimmt dem automatischen Einzug der fälligen Beträge über Stripe (SEPA-Lastschrift / Kreditkarte) zu. Diese Zustimmung wird datiert gespeichert.
+                  </p>
+                </div>
+              </div>
+              {/* Qodia Unit Price */}
+              <div className="grid gap-2">
+                <Label htmlFor="qodia_unit_price">Preis pro Qodia-Vorgang (€)</Label>
+                <Input
+                  id="qodia_unit_price"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={(form as any).qodia_unit_price ?? 0}
+                  onChange={(e) => set("qodia_unit_price" as any, parseFloat(e.target.value) || 0)}
+                  placeholder="z.B. 0.25"
+                  className="max-w-[180px]"
+                />
+                <p className="text-xs text-muted-foreground">Interner Stückpreis für variablen Qodia-Verbrauch. Wird von Qodia gemeldete Mengen multipliziert.</p>
+              </div>
             </div>
 
 
