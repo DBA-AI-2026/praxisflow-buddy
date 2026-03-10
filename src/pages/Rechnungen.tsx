@@ -917,7 +917,7 @@ export default function Rechnungen() {
 
       {/* Detail Dialog */}
       {showDetail && (
-        <Dialog open={!!showDetail} onOpenChange={() => setShowDetail(null)}>
+        <Dialog open={!!showDetail} onOpenChange={(o) => { setShowDetail(o ? showDetail : null); if (!o) setDetailEmail(""); }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -930,7 +930,16 @@ export default function Rechnungen() {
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                 <div><span className="text-muted-foreground">Kunde:</span> <span className="font-medium">{showDetail.customer_name}</span></div>
                 {showDetail.customer_number && <div><span className="text-muted-foreground">Nr.:</span> {showDetail.customer_number}</div>}
-                {showDetail.rechnungs_email && <div className="col-span-2"><span className="text-muted-foreground">E-Mail:</span> {showDetail.rechnungs_email}</div>}
+                <div className="col-span-2 space-y-1">
+                  <span className="text-muted-foreground">Rechnungs-E-Mail:</span>
+                  <Input
+                    type="email"
+                    placeholder="E-Mail für Rechnungsversand..."
+                    value={detailEmail !== "" ? detailEmail : (showDetail.rechnungs_email || "")}
+                    onChange={(e) => setDetailEmail(e.target.value)}
+                    className="mt-1 h-8 text-sm"
+                  />
+                </div>
                 <div><span className="text-muted-foreground">Datum:</span> {new Date(showDetail.invoice_date).toLocaleDateString("de-DE")}</div>
                 {showDetail.due_date && <div><span className="text-muted-foreground">Fällig:</span> {new Date(showDetail.due_date).toLocaleDateString("de-DE")}</div>}
               </div>
