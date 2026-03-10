@@ -68,6 +68,11 @@ Deno.serve(async (req) => {
       if (source === "paper_contract_confirmation") {
         await handlePaperContractPayment(supabase, stripe, session);
       }
+
+      // ─── SEPA MANDATE SETUP: Zahlungsmethode nach Setup speichern ───────
+      if (source === "sepa_mandate_setup") {
+        await handleSepaMandateSetup(supabase, stripe, session);
+      }
     }
 
     if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
