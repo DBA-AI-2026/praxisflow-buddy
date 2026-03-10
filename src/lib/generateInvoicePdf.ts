@@ -319,26 +319,27 @@ export async function generateInvoicePdf(
   text("Nettobetrag:", totalsLabelX, y, 9, font, C_MUTED);
   const netStr = formatCurrency(data.net_amount);
   text(netStr, totalsValueX - font.widthOfTextAtSize(netStr, 9), y, 9, font, C_TEXT);
-  y -= 18;
+  y -= 22;
 
   // MwSt
   const taxLabel = data.tax_rate === 0 ? "Steuerbefreit (§ 4 UStG):" : `MwSt. ${data.tax_rate}%:`;
   text(taxLabel, totalsLabelX, y, 9, font, C_MUTED);
   const taxStr = formatCurrency(data.tax_amount);
   text(taxStr, totalsValueX - font.widthOfTextAtSize(taxStr, 9), y, 9, font, C_TEXT);
-  y -= 12;
+  y -= 18;
 
   page.drawLine({ start: { x: totalsLabelX - 4, y: y }, end: { x: PAGE_W - M, y }, thickness: 0.5, color: C_LINE });
-  y -= 28;
+  y -= 14;
 
   // Gross total highlighted — fixed height box, text centred within
-  const grossBoxH = 32;
-  page.drawRectangle({ x: totalsLabelX - 8, y: y - 4, width: totalsW + 8, height: grossBoxH, color: C_NAVY });
-  const grossTextY = y + grossBoxH / 2 - 10;
+  const grossBoxH = 36;
+  const grossBoxY = y - grossBoxH;
+  page.drawRectangle({ x: totalsLabelX - 8, y: grossBoxY, width: totalsW + 8, height: grossBoxH, color: C_NAVY });
+  const grossTextY = grossBoxY + grossBoxH / 2 - 5;
   text("Gesamtbetrag (brutto):", totalsLabelX, grossTextY, 9.5, fontBold, C_WHITE);
   const grossStr = formatCurrency(data.gross_amount);
   text(grossStr, totalsValueX - fontBold.widthOfTextAtSize(grossStr, 12), grossTextY, 12, fontBold, C_WHITE);
-  y -= 28;
+  y = grossBoxY - 18;
 
   // ===== PAYMENT NOTICE =====
   ensureSpace(70);
