@@ -726,6 +726,7 @@ export type Database = {
           rechnungs_email: string | null
           revenue_id: string | null
           status: string
+          stripe_invoice_id: string | null
           tax_amount: number
           tax_rate: number
           updated_at: string
@@ -755,6 +756,7 @@ export type Database = {
           rechnungs_email?: string | null
           revenue_id?: string | null
           status?: string
+          stripe_invoice_id?: string | null
           tax_amount?: number
           tax_rate?: number
           updated_at?: string
@@ -784,6 +786,7 @@ export type Database = {
           rechnungs_email?: string | null
           revenue_id?: string | null
           status?: string
+          stripe_invoice_id?: string | null
           tax_amount?: number
           tax_rate?: number
           updated_at?: string
