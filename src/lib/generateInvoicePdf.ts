@@ -323,8 +323,8 @@ export async function generateInvoicePdf(
     ensureSpace(40);
     y -= 4;
     const noteBoxH = 22;
-    page.drawRectangle({ x: M, y: y - noteBoxH + 14, width: CW, height: noteBoxH, color: C_ACCENT, borderRadius: 4 });
-    page.drawRectangle({ x: M, y: y - noteBoxH + 14, width: 4, height: noteBoxH, color: C_NAVY, borderRadius: 2 });
+    page.drawRectangle({ x: M, y: y - noteBoxH + 14, width: CW, height: noteBoxH, color: C_ACCENT });
+    page.drawRectangle({ x: M, y: y - noteBoxH + 14, width: 4, height: noteBoxH, color: C_NAVY });
     text(data.notes, M + 12, y, 8, font, C_TEXT, CW - 20);
     y -= noteBoxH + 8;
   }
