@@ -40,6 +40,42 @@ function formatCurrency(value?: number | null): string {
   return value.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 }
 
+/** Returns German public holiday dates for a year */
+function getGermanHolidays(year: number): Set<string> {
+  const fmt = (d: Date) => d.toISOString().split("T")[0];
+  const fixed = [
+    `${year}-01-01`, `${year}-05-01`, `${year}-10-03`,
+    `${year}-12-25`, `${year}-12-26`,
+  ];
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+  const dv = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - dv - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  const easter = new Date(year, month - 1, day);
+  const add = (base: Date, days: number) => { const d = new Date(base); d.setDate(d.getDate() + days); return d; };
+  const movable = [add(easter, -2), add(easter, 1), add(easter, 39), add(easter, 50), add(easter, 60)];
+  return new Set([...fixed, ...movable.map(fmt)]);
+}
+
+function addBusinessDays(from: Date, days: number): Date {
+  const result = new Date(from);
+  const h1 = getGermanHolidays(from.getFullYear());
+  const h2 = getGermanHolidays(from.getFullYear() + 1);
+  const allHolidays = new Set([...h1, ...h2]);
+  let added = 0;
+  while (added < days) {
+    result.setDate(result.getDate() + 1);
+    const dow = result.getDay();
+    const ds = result.toISOString().split("T")[0];
+    if (dow !== 0 && dow !== 6 && !allHolidays.has(ds)) added++;
+  }
+  return result;
+}
+
 export async function generateInvoicePdf(
   data: InvoicePdfData,
   logoBytes?: ArrayBuffer
@@ -50,23 +86,26 @@ export async function generateInvoicePdf(
 
   const PAGE_W = 595.28; // A4
   const PAGE_H = 841.89;
-  const M = 48;
+  const M = 52;
   const CW = PAGE_W - 2 * M;
 
-  const C_NAVY = rgb(0.044, 0.212, 0.498);
-  const C_RED = rgb(0.714, 0.098, 0.239);
-  const C_TEXT = rgb(0.12, 0.12, 0.12);
-  const C_MUTED = rgb(0.4, 0.42, 0.48);
-  const C_LINE = rgb(0.82, 0.84, 0.88);
-  const C_BG_LIGHT = rgb(0.95, 0.96, 0.98);
-  const C_WHITE = rgb(1, 1, 1);
-  const C_GREEN = rgb(0.1, 0.6, 0.3);
+  const C_NAVY    = rgb(0.044, 0.212, 0.498);
+  const C_NAVY_MID = rgb(0.08, 0.30, 0.62);
+  const C_RED     = rgb(0.714, 0.098, 0.239);
+  const C_TEXT    = rgb(0.1, 0.1, 0.12);
+  const C_MUTED   = rgb(0.42, 0.44, 0.50);
+  const C_LINE    = rgb(0.85, 0.87, 0.91);
+  const C_BG_ROW  = rgb(0.96, 0.97, 0.99);
+  const C_WHITE   = rgb(1, 1, 1);
+  const C_GREEN   = rgb(0.09, 0.56, 0.28);
+  const C_ACCENT  = rgb(0.95, 0.96, 1.0);
 
   let page = doc.addPage([PAGE_W, PAGE_H]);
   let y = PAGE_H;
 
   const text = (t: string, x: number, yy: number, size: number, f = font, color = C_TEXT, maxW?: number) => {
-    page.drawText(t || "", { x, y: yy, size, font: f, color, maxWidth: maxW });
+    if (!t) return;
+    page.drawText(t, { x, y: yy, size, font: f, color, maxWidth: maxW });
   };
 
   const ensureSpace = (needed = 80) => {
@@ -78,191 +117,225 @@ export async function generateInvoicePdf(
   };
 
   const drawFooter = () => {
-    const fY = 30;
-    page.drawLine({ start: { x: M, y: fY + 12 }, end: { x: PAGE_W - M, y: fY + 12 }, thickness: 0.4, color: C_LINE });
-    text("HFX Honorarfuchs GmbH · Steuer-Nr: XX/XXX/XXXXX · USt-IdNr: DEXXXXXXXXX · IBAN: DEXX XXXX XXXX XXXX XXXX XX", M, fY, 5.5, font, C_MUTED);
+    const fY = 36;
+    page.drawLine({ start: { x: M, y: fY + 14 }, end: { x: PAGE_W - M, y: fY + 14 }, thickness: 0.5, color: C_LINE });
+    text("HFX Honorarfuchs GmbH  ·  Steuer-Nr: XX/XXX/XXXXX  ·  USt-IdNr: DEXXXXXXXXX  ·  IBAN: DEXX XXXX XXXX XXXX XXXX XX", M, fY + 4, 6, font, C_MUTED);
+    text(`Seite 1`, PAGE_W - M - 30, fY + 4, 6, font, C_MUTED);
   };
 
-  const divider = () => {
-    page.drawLine({ start: { x: M, y }, end: { x: PAGE_W - M, y }, thickness: 0.4, color: C_LINE });
-    y -= 10;
+  const hRule = (thickness = 0.5, color = C_LINE) => {
+    page.drawLine({ start: { x: M, y }, end: { x: PAGE_W - M, y }, thickness, color });
   };
 
-  // ===== HEADER =====
-  const headerH = 56;
-  page.drawRectangle({ x: 0, y: PAGE_H - headerH, width: PAGE_W, height: headerH, color: C_NAVY });
+  // ===== HEADER BAR =====
+  const headerH = 64;
+  // Gradient-like dual rectangles
+  page.drawRectangle({ x: 0, y: PAGE_H - headerH, width: PAGE_W * 0.6, height: headerH, color: C_NAVY });
+  page.drawRectangle({ x: PAGE_W * 0.6, y: PAGE_H - headerH, width: PAGE_W * 0.4, height: headerH, color: C_NAVY_MID });
 
-  let logoXEnd = M + 4;
+  // Accent bar bottom of header
+  page.drawRectangle({ x: 0, y: PAGE_H - headerH - 3, width: PAGE_W, height: 3, color: C_RED });
+
+  let logoXEnd = M;
   if (logoBytes) {
     try {
       const logoImage = await doc.embedJpg(logoBytes);
-      const logoH = 30;
+      const logoH = 36;
       const logoW = (logoImage.width / logoImage.height) * logoH;
-      page.drawImage(logoImage, { x: M, y: PAGE_H - headerH + 13, width: logoW, height: logoH });
-      logoXEnd = M + logoW + 10;
+      page.drawImage(logoImage, { x: M, y: PAGE_H - headerH + 14, width: logoW, height: logoH });
+      logoXEnd = M + logoW + 14;
     } catch {
       // continue without logo
     }
   }
 
-  text("HFX Honorarfuchs", logoXEnd, PAGE_H - headerH + 24, 16, fontBold, C_WHITE);
-  text("Rechnung", logoXEnd, PAGE_H - headerH + 10, 9, font, rgb(0.75, 0.8, 0.9));
+  text("HFX Honorarfuchs", logoXEnd, PAGE_H - headerH + 32, 17, fontBold, C_WHITE);
+  text("Rechnung / Invoice", logoXEnd, PAGE_H - headerH + 16, 8.5, font, rgb(0.72, 0.80, 0.94));
 
-  // Status badge
+  // Status badge (top-right of header)
   const statusLabels: Record<string, string> = {
     entwurf: "ENTWURF", versendet: "VERSENDET", bezahlt: "BEZAHLT", storniert: "STORNIERT",
   };
   const statusColors: Record<string, { bg: ReturnType<typeof rgb>; fg: ReturnType<typeof rgb> }> = {
-    entwurf: { bg: rgb(0.85, 0.86, 0.9), fg: C_NAVY },
-    versendet: { bg: rgb(0.2, 0.5, 0.85), fg: C_WHITE },
-    bezahlt: { bg: C_GREEN, fg: C_WHITE },
+    entwurf:   { bg: rgb(0.80, 0.84, 0.92), fg: C_NAVY },
+    versendet: { bg: rgb(0.18, 0.48, 0.84), fg: C_WHITE },
+    bezahlt:   { bg: C_GREEN, fg: C_WHITE },
     storniert: { bg: C_RED, fg: C_WHITE },
   };
   const st = data.status || "entwurf";
   const stLabel = statusLabels[st] || st.toUpperCase();
   const stColor = statusColors[st] || statusColors.entwurf;
-  const badgeW = font.widthOfTextAtSize(stLabel, 8) + 16;
+  const badgeW = font.widthOfTextAtSize(stLabel, 8) + 18;
   const badgeX = PAGE_W - M - badgeW;
-  page.drawRectangle({ x: badgeX, y: PAGE_H - headerH + 20, width: badgeW, height: 18, color: stColor.bg });
-  text(stLabel, badgeX + 8, PAGE_H - headerH + 24, 8, fontBold, stColor.fg);
+  const badgeY = PAGE_H - headerH + 22;
+  page.drawRectangle({ x: badgeX, y: badgeY - 2, width: badgeW, height: 18, color: stColor.bg });
+  text(stLabel, badgeX + 9, badgeY + 3, 8, fontBold, stColor.fg);
 
-  y = PAGE_H - headerH - 18;
+  y = PAGE_H - headerH - 3 - 22; // below header + accent bar
 
-  // ===== SENDER (Absender in kleiner Schrift über Empfängeradresse) =====
+  // ===== ADDRESS SECTION =====
+  // Sender line
   text("HFX Honorarfuchs GmbH · Musterstraße 1 · 12345 Musterstadt", M, y, 7, font, C_MUTED);
-  y -= 20;
+  y -= 4;
+  // Underline under sender
+  page.drawLine({ start: { x: M, y }, end: { x: M + 200, y }, thickness: 0.3, color: C_LINE });
+  y -= 16;
 
-  // ===== EMPFÄNGER-BLOCK =====
-  text(data.customer_name, M, y, 11, fontBold, C_TEXT);
-  y -= 14;
-  if (data.adresse) {
-    text(data.adresse, M, y, 9.5, font, C_TEXT);
-    y -= 13;
-  }
+  // Two-column layout: Recipient left, invoice details right
+  const colLeft = M;
+  const colRight = M + CW * 0.53;
+
+  // --- Recipient ---
+  const recipientStartY = y;
+  text(data.customer_name, colLeft, y, 11.5, fontBold, C_TEXT);
+  y -= 15;
+  if (data.adresse) { text(data.adresse, colLeft, y, 9.5, font, C_TEXT); y -= 13; }
   if (data.plz || data.ort) {
-    text([data.plz, data.ort].filter(Boolean).join(" "), M, y, 9.5, font, C_TEXT);
+    text([data.plz, data.ort].filter(Boolean).join(" "), colLeft, y, 9.5, font, C_TEXT);
     y -= 13;
   }
-  y -= 8;
+  if (data.rechnungs_email) { text(data.rechnungs_email, colLeft, y, 8.5, font, C_MUTED); y -= 13; }
 
-  // ===== RECHNUNGSDETAILS (rechtsbündig) =====
-  const detailX = M + CW / 2;
-  const detailLabelX = detailX;
-  const detailValueX = detailX + 80;
+  // --- Invoice metadata (right column) ---
+  const metaY = recipientStartY;
+  const metaLabelX = colRight;
+  const metaValueX = colRight + 90;
 
-  // Rechts neben Empfänger
-  const detailStartY = PAGE_H - headerH - 18 - 4;
-  page.drawLine({ start: { x: detailX - 10, y: detailStartY + 5 }, end: { x: detailX - 10, y: detailStartY - 65 }, thickness: 0.4, color: C_LINE });
+  // Box behind metadata
+  const metaBoxH = 80;
+  page.drawRectangle({ x: colRight - 8, y: metaY - metaBoxH + 14, width: CW - (colRight - M) + 8, height: metaBoxH, color: C_ACCENT });
 
-  text("Rechnungsnummer:", detailLabelX, detailStartY, 7, font, C_MUTED);
-  text(data.invoice_number, detailValueX, detailStartY, 9, fontBold, C_NAVY);
+  text("Rechnungsnummer:", metaLabelX, metaY, 7.5, font, C_MUTED);
+  text(data.invoice_number, metaValueX, metaY, 9.5, fontBold, C_NAVY);
 
-  text("Rechnungsdatum:", detailLabelX, detailStartY - 16, 7, font, C_MUTED);
-  text(formatDate(data.invoice_date), detailValueX, detailStartY - 16, 9, font, C_TEXT);
+  text("Rechnungsdatum:", metaLabelX, metaY - 16, 7.5, font, C_MUTED);
+  text(formatDate(data.invoice_date), metaValueX, metaY - 16, 9, font, C_TEXT);
 
-  if (data.due_date) {
-    text("Zahlungsziel:", detailLabelX, detailStartY - 32, 7, font, C_MUTED);
-    text(formatDate(data.due_date), detailValueX, detailStartY - 32, 9, font, C_TEXT);
-  }
+  // Collection date: invoice_date + 3 business days
+  const invoiceDateObj = new Date(data.invoice_date);
+  const collectionDate = addBusinessDays(invoiceDateObj, 3);
+  text("Einzugsdatum:", metaLabelX, metaY - 32, 7.5, font, C_MUTED);
+  text(formatDate(collectionDate.toISOString().split("T")[0]), metaValueX, metaY - 32, 9, font, C_TEXT);
 
   if (data.customer_number) {
-    text("Kundennummer:", detailLabelX, detailStartY - 48, 7, font, C_MUTED);
-    text(data.customer_number, detailValueX, detailStartY - 48, 9, font, C_TEXT);
+    text("Kundennummer:", metaLabelX, metaY - 48, 7.5, font, C_MUTED);
+    text(data.customer_number, metaValueX, metaY - 48, 9, font, C_TEXT);
   }
 
-  // Adjust y to be below both blocks
-  y = Math.min(y, PAGE_H - headerH - 18 - 75);
+  // Advance y to below both columns
+  y = Math.min(y, metaY - metaBoxH + 10);
+  y -= 20;
+
+  // Divider
+  hRule(0.6, C_LINE);
+  y -= 14;
+
+  // ===== SUBJECT LINE =====
+  text(`Rechnung ${data.invoice_number}`, M, y, 13.5, fontBold, C_NAVY);
   y -= 8;
-  divider();
-
-  // ===== TITEL =====
-  text(`Rechnung ${data.invoice_number}`, M, y, 13, fontBold, C_NAVY);
-  y -= 24;
-
-  // ===== POSITIONEN TABLE =====
-  // Header
-  const colDesc = M;
-  const colQty = M + CW * 0.55;
-  const colUnit = M + CW * 0.68;
-  const colTotal = M + CW * 0.85;
-
-  page.drawRectangle({ x: M, y: y - 4, width: CW, height: 18, color: C_NAVY });
-  text("Beschreibung", colDesc + 4, y + 1, 8, fontBold, C_WHITE);
-  text("Menge", colQty, y + 1, 8, fontBold, C_WHITE);
-  text("Einzelpreis", colUnit, y + 1, 8, fontBold, C_WHITE);
-  text("Gesamtpreis", colTotal, y + 1, 8, fontBold, C_WHITE);
+  text("Automatischer SEPA-Einzug / Stripe-Lastschrift", M, y, 8, font, C_MUTED);
   y -= 22;
+
+  // ===== POSITIONS TABLE =====
+  const COL_DESC  = M;
+  const COL_QTY   = M + CW * 0.55;
+  const COL_UNIT  = M + CW * 0.68;
+  const COL_TOTAL = M + CW * 0.84;
+  const TABLE_W   = CW;
+
+  // Table header
+  const theadH = 20;
+  page.drawRectangle({ x: M, y: y - theadH + 14, width: TABLE_W, height: theadH, color: C_NAVY });
+  text("Beschreibung",  COL_DESC  + 6, y, 8, fontBold, C_WHITE);
+  text("Menge",         COL_QTY,       y, 8, fontBold, C_WHITE);
+  text("Einzelpreis",   COL_UNIT,      y, 8, fontBold, C_WHITE);
+  text("Gesamtpreis",   COL_TOTAL,     y, 8, fontBold, C_WHITE);
+  y -= theadH + 2;
 
   // Rows
   let rowBg = false;
   for (const pos of data.positions) {
     ensureSpace(30);
-    const rowH = 18;
-    if (rowBg) {
-      page.drawRectangle({ x: M, y: y - 4, width: CW, height: rowH, color: C_BG_LIGHT });
-    }
     const lineTotal = pos.quantity * pos.unit_price;
-    text(pos.description, colDesc + 4, y + 1, 9, font, C_TEXT, colQty - colDesc - 8);
-    text(String(pos.quantity), colQty, y + 1, 9, font, C_TEXT);
-    text(formatCurrency(pos.unit_price), colUnit, y + 1, 9, font, C_TEXT);
-    text(formatCurrency(lineTotal), colTotal, y + 1, 9, fontBold, C_TEXT);
+    const rowH = 18;
+
+    if (rowBg) {
+      page.drawRectangle({ x: M, y: y - rowH + 14, width: TABLE_W, height: rowH, color: C_BG_ROW });
+    }
+
+    text(pos.description,                     COL_DESC  + 6, y, 8.5, font, C_TEXT, COL_QTY - COL_DESC - 10);
+    text(String(pos.quantity),                COL_QTY,       y, 8.5, font, C_TEXT);
+    text(formatCurrency(pos.unit_price),      COL_UNIT,      y, 8.5, font, C_TEXT);
+    text(formatCurrency(lineTotal),           COL_TOTAL,     y, 8.5, fontBold, C_TEXT);
+
     y -= rowH;
     rowBg = !rowBg;
   }
 
-  y -= 6;
-  divider();
+  // Bottom border of table
+  page.drawLine({ start: { x: M, y: y + 4 }, end: { x: M + TABLE_W, y: y + 4 }, thickness: 0.5, color: C_LINE });
+  y -= 10;
 
-  // ===== TOTALS =====
-  ensureSpace(80);
-  const totalLabelX = M + CW * 0.6;
-  const totalValueX = M + CW * 0.85;
+  // ===== TOTALS BLOCK =====
+  ensureSpace(90);
+  const totalsX = M + CW * 0.56;
+  const totalsLabelX = totalsX;
+  const totalsValueX = PAGE_W - M - 2;
+  const totalsW = PAGE_W - M - totalsX;
 
   // Netto
-  text("Nettobetrag:", totalLabelX, y, 9, font, C_MUTED);
-  text(formatCurrency(data.net_amount), totalValueX, y, 9, font, C_TEXT);
+  text("Nettobetrag:", totalsLabelX, y, 9, font, C_MUTED);
+  const netStr = formatCurrency(data.net_amount);
+  text(netStr, totalsValueX - font.widthOfTextAtSize(netStr, 9), y, 9, font, C_TEXT);
   y -= 14;
 
   // MwSt
-  const taxLabel = data.tax_rate === 0
-    ? "Umsatzsteuer (steuerfrei):"
-    : `Umsatzsteuer ${data.tax_rate}%:`;
-  text(taxLabel, totalLabelX, y, 9, font, C_MUTED);
-  text(formatCurrency(data.tax_amount), totalValueX, y, 9, font, C_TEXT);
-  y -= 2;
-  page.drawLine({ start: { x: totalLabelX - 4, y: y - 2 }, end: { x: PAGE_W - M, y: y - 2 }, thickness: 0.5, color: C_LINE });
+  const taxLabel = data.tax_rate === 0 ? "Steuerbefreit (§ 4 UStG):" : `MwSt. ${data.tax_rate}%:`;
+  text(taxLabel, totalsLabelX, y, 9, font, C_MUTED);
+  const taxStr = formatCurrency(data.tax_amount);
+  text(taxStr, totalsValueX - font.widthOfTextAtSize(taxStr, 9), y, 9, font, C_TEXT);
+  y -= 4;
+
+  page.drawLine({ start: { x: totalsLabelX - 4, y: y }, end: { x: PAGE_W - M, y }, thickness: 0.5, color: C_LINE });
   y -= 8;
 
-  // Brutto (highlighted box)
-  const grossBoxH = 24;
-  page.drawRectangle({ x: totalLabelX - 8, y: y - grossBoxH + 14, width: PAGE_W - M - totalLabelX + 8, height: grossBoxH, color: C_NAVY });
-  text("Gesamtbetrag (brutto):", totalLabelX, y, 9, fontBold, C_WHITE);
-  text(formatCurrency(data.gross_amount), totalValueX, y, 11, fontBold, C_WHITE);
-  y -= grossBoxH + 8;
+  // Gross total highlighted
+  const grossBoxH = 26;
+  page.drawRectangle({ x: totalsLabelX - 8, y: y - grossBoxH + 18, width: totalsW + 8, height: grossBoxH, color: C_NAVY });
+  text("Gesamtbetrag (brutto):", totalsLabelX, y, 9.5, fontBold, C_WHITE);
+  const grossStr = formatCurrency(data.gross_amount);
+  text(grossStr, totalsValueX - fontBold.widthOfTextAtSize(grossStr, 12), y, 12, fontBold, C_WHITE);
+  y -= grossBoxH + 14;
 
-  // ===== ZAHLUNGSHINWEIS =====
-  ensureSpace(60);
-  y -= 8;
-  if (data.due_date) {
-    const payNote = `Bitte überweisen Sie den Betrag von ${formatCurrency(data.gross_amount)} bis zum ${formatDate(data.due_date)} auf unser Konto.`;
-    text(payNote, M, y, 8.5, font, C_TEXT, CW);
-    y -= 16;
-  }
+  // ===== PAYMENT NOTICE =====
+  ensureSpace(70);
+  const payBoxH = 40;
+  page.drawRectangle({ x: M, y: y - payBoxH + 14, width: CW, height: payBoxH, color: rgb(0.93, 0.97, 0.93) });
+  page.drawRectangle({ x: M, y: y - payBoxH + 14, width: 4, height: payBoxH, color: C_GREEN });
+  text("Automatischer Einzug", M + 12, y, 9, fontBold, C_GREEN);
+  y -= 14;
+  const collectionFormatted = collectionDate.toLocaleDateString("de-DE");
+  text(`Der Betrag von ${formatCurrency(data.gross_amount)} wird automatisch am ${collectionFormatted} per SEPA-Lastschrift eingezogen.`, M + 12, y, 8, font, C_TEXT, CW - 20);
+  y -= payBoxH - 14 + 14;
 
+  // ===== NOTES =====
   if (data.notes) {
+    ensureSpace(40);
     y -= 4;
-    page.drawRectangle({ x: M, y: y - 4, width: CW, height: 18, color: C_BG_LIGHT });
-    page.drawRectangle({ x: M, y: y - 4, width: 3, height: 18, color: C_NAVY });
-    text(data.notes, M + 10, y + 1, 8, font, C_TEXT, CW - 14);
-    y -= 24;
+    const noteBoxH = 22;
+    page.drawRectangle({ x: M, y: y - noteBoxH + 14, width: CW, height: noteBoxH, color: C_ACCENT });
+    page.drawRectangle({ x: M, y: y - noteBoxH + 14, width: 4, height: noteBoxH, color: C_NAVY });
+    text(data.notes, M + 12, y, 8, font, C_TEXT, CW - 20);
+    y -= noteBoxH + 8;
   }
 
-  // Tax footer note
+  // ===== TAX NOTE =====
   y -= 8;
+  ensureSpace(20);
   if (data.tax_rate === 0) {
     text("Gemäß § 4 UStG ist diese Leistung umsatzsteuerfrei.", M, y, 7.5, font, C_MUTED, CW);
   } else {
-    text(`Im ausgewiesenen Betrag sind ${formatCurrency(data.tax_amount)} Umsatzsteuer (${data.tax_rate}%) enthalten.`, M, y, 7.5, font, C_MUTED, CW);
+    text(`Im ausgewiesenen Betrag sind ${formatCurrency(data.tax_amount)} Umsatzsteuer (${data.tax_rate} %) enthalten.`, M, y, 7.5, font, C_MUTED, CW);
   }
 
   drawFooter();

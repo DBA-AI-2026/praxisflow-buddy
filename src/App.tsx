@@ -39,6 +39,7 @@ import PlzMapping from "./pages/admin/PlzMapping";
 import Buchhaltung from "./pages/Buchhaltung";
 import DemoSuccess from "./pages/DemoSuccess";
 import ContractConfirmation from "./pages/ContractConfirmation";
+import MandateSuccess from "./pages/MandateSuccess";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const App = () => (
             <Route path="/demo-success" element={<DemoSuccess />} />
             <Route path="/demo-cancel" element={<NotFound />} />
             <Route path="/vertrag-bestaetigen" element={<ContractConfirmation />} />
+            <Route path="/mandate-success" element={<MandateSuccess />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/reservierungen" element={<ProtectedRoute><Reservierungen /></ProtectedRoute>} />
             <Route path="/praxen" element={<ProtectedRoute><Praxen /></ProtectedRoute>} />
