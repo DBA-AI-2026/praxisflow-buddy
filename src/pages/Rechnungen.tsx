@@ -143,8 +143,12 @@ export default function Rechnungen() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
+  const [usageCharges, setUsageCharges] = useState<UsageCharge[]>([]);
+  const [usageLoading, setUsageLoading] = useState(true);
+  const [invoicingChargeId, setInvoicingChargeId] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
+  const [usageSearch, setUsageSearch] = useState("");
 
   // Dialog states
   const [showCreate, setShowCreate] = useState(false);
@@ -195,9 +199,20 @@ export default function Rechnungen() {
     if (data) setContracts(data as Contract[]);
   };
 
+  const fetchUsageCharges = async () => {
+    setUsageLoading(true);
+    const { data, error } = await supabase
+      .from("usage_charges")
+      .select("*")
+      .order("received_at", { ascending: false });
+    if (!error && data) setUsageCharges(data as UsageCharge[]);
+    setUsageLoading(false);
+  };
+
   useEffect(() => {
     fetchInvoices();
     fetchContracts();
+    fetchUsageCharges();
   }, []);
 
   const handleContractSelect = (contractId: string) => {
