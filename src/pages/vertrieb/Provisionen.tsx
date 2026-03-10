@@ -146,7 +146,7 @@ async function generateCommissionPdf(
 
   // Total
   const total = payouts.reduce((s, p) => s + p.commission_amount, 0);
-  page.drawRectangle({ x: 40, y: y - 6, width: 515, height: 26, color: rgb(0.043, 0.212, 0.498, 0.1) });
+  page.drawRectangle({ x: 40, y: y - 6, width: 515, height: 26, color: rgb(0.9, 0.93, 1) });
   page.drawText("Gesamtbetrag", { x: cols[0], y: y + 4, size: 11, font: bold, color: blue });
   page.drawText(fmtEur(total), { x: cols[3], y: y + 4, size: 11, font: bold, color: blue });
   y -= 50;
