@@ -168,7 +168,7 @@ export async function generateInvoicePdf(
   const badgeW = font.widthOfTextAtSize(stLabel, 8) + 18;
   const badgeX = PAGE_W - M - badgeW;
   const badgeY = PAGE_H - headerH + 22;
-  page.drawRectangle({ x: badgeX, y: badgeY - 2, width: badgeW, height: 18, color: stColor.bg, borderRadius: 2 });
+  page.drawRectangle({ x: badgeX, y: badgeY - 2, width: badgeW, height: 18, color: stColor.bg });
   text(stLabel, badgeX + 9, badgeY + 3, 8, fontBold, stColor.fg);
 
   y = PAGE_H - headerH - 3 - 22; // below header + accent bar
