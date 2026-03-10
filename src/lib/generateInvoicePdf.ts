@@ -301,7 +301,7 @@ export async function generateInvoicePdf(
 
   // Gross total highlighted
   const grossBoxH = 26;
-  page.drawRectangle({ x: totalsLabelX - 8, y: y - grossBoxH + 18, width: totalsW + 8, height: grossBoxH, color: C_NAVY, borderRadius: 3 });
+  page.drawRectangle({ x: totalsLabelX - 8, y: y - grossBoxH + 18, width: totalsW + 8, height: grossBoxH, color: C_NAVY });
   text("Gesamtbetrag (brutto):", totalsLabelX, y, 9.5, fontBold, C_WHITE);
   const grossStr = formatCurrency(data.gross_amount);
   text(grossStr, totalsValueX - fontBold.widthOfTextAtSize(grossStr, 12), y, 12, fontBold, C_WHITE);
