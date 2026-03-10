@@ -315,10 +315,16 @@ export default function Rechnungen() {
     setPositions([{ ...EMPTY_POSITION }]);
   };
 
-  const handleSendEmail = async (invoice: Invoice) => {
-    if (!invoice.rechnungs_email) {
-      toast({ title: "Keine E-Mail-Adresse", description: "Bitte zuerst eine Rechnungs-E-Mail hinterlegen.", variant: "destructive" });
+  const handleSendEmail = async (invoice: Invoice, overrideEmail?: string) => {
+    const emailToUse = overrideEmail || invoice.rechnungs_email;
+    if (!emailToUse) {
+      toast({ title: "Keine E-Mail-Adresse", description: "Bitte eine Rechnungs-E-Mail eingeben.", variant: "destructive" });
       return;
+    }
+    // If email changed, save it first
+    if (overrideEmail && overrideEmail !== invoice.rechnungs_email) {
+      await supabase.from("invoices").update({ rechnungs_email: overrideEmail }).eq("id", invoice.id);
+      invoice = { ...invoice, rechnungs_email: overrideEmail };
     }
     setSendingId(invoice.id);
     try {
