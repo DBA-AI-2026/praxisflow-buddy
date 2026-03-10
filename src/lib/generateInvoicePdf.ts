@@ -232,7 +232,7 @@ export async function generateInvoicePdf(
 
   // ===== SUBJECT LINE =====
   text(`Rechnung ${data.invoice_number}`, M, y, 13.5, fontBold, C_NAVY);
-  y -= 8;
+  y -= 16;
   text("Automatischer SEPA-Einzug / Stripe-Lastschrift", M, y, 8, font, C_MUTED);
   y -= 22;
 
