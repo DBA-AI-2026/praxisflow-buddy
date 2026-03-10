@@ -437,6 +437,15 @@ export default function Vertraege() {
   const upsertMutation = useMutation({
     mutationFn: async (data: ContractFormData): Promise<string | null> => {
       if (!user?.id) throw new Error("Nicht authentifiziert – bitte neu einloggen.");
+
+      // Stripe-Mandat-Prüfung bei Aktivierung eines bestehenden Vertrags (Edit)
+      if (data.status === "aktiv" && editId) {
+        const existingContract = contracts.find((c: any) => c.id === editId);
+        if (existingContract && !existingContract.stripe_customer_id) {
+          throw new Error("SEPA_MANDATE_MISSING");
+        }
+      }
+
       let documentUrl: string | undefined;
       let documentName: string | undefined;
 
