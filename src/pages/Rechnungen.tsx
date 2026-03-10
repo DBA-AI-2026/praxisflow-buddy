@@ -956,7 +956,7 @@ export default function Rechnungen() {
                     className="h-8 text-sm"
                   />
                   {(detailEmail && detailEmail !== showDetail.rechnungs_email) && (
-                    <p className="text-xs text-amber-600">↑ Alternative Adresse wird verwendet</p>
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400">↑ Alternative Adresse wird verwendet</p>
                   )}
                 </div>
                 <div><span className="text-muted-foreground">Datum:</span> {new Date(showDetail.invoice_date).toLocaleDateString("de-DE")}</div>
