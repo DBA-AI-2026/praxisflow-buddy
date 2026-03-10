@@ -930,15 +930,34 @@ export default function Rechnungen() {
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                 <div><span className="text-muted-foreground">Kunde:</span> <span className="font-medium">{showDetail.customer_name}</span></div>
                 {showDetail.customer_number && <div><span className="text-muted-foreground">Nr.:</span> {showDetail.customer_number}</div>}
-                <div className="col-span-2 space-y-1">
+                <div className="col-span-2 space-y-2">
                   <span className="text-muted-foreground">Rechnungs-E-Mail:</span>
+                  {showDetail.rechnungs_email && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setDetailEmail(showDetail.rechnungs_email!)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                          (detailEmail === "" || detailEmail === showDetail.rechnungs_email)
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-muted text-muted-foreground border-border hover:bg-accent"
+                        }`}
+                      >
+                        {showDetail.rechnungs_email}
+                      </button>
+                      <span className="text-xs text-muted-foreground">oder alternative Adresse:</span>
+                    </div>
+                  )}
                   <Input
                     type="email"
-                    placeholder="E-Mail für Rechnungsversand..."
-                    value={detailEmail !== "" ? detailEmail : (showDetail.rechnungs_email || "")}
+                    placeholder={showDetail.rechnungs_email ? "Alternative E-Mail eingeben..." : "E-Mail für Rechnungsversand..."}
+                    value={detailEmail === showDetail.rechnungs_email ? "" : detailEmail}
                     onChange={(e) => setDetailEmail(e.target.value)}
-                    className="mt-1 h-8 text-sm"
+                    className="h-8 text-sm"
                   />
+                  {(detailEmail && detailEmail !== showDetail.rechnungs_email) && (
+                    <p className="text-xs text-amber-600">↑ Alternative Adresse wird verwendet</p>
+                  )}
                 </div>
                 <div><span className="text-muted-foreground">Datum:</span> {new Date(showDetail.invoice_date).toLocaleDateString("de-DE")}</div>
                 {showDetail.due_date && <div><span className="text-muted-foreground">Fällig:</span> {new Date(showDetail.due_date).toLocaleDateString("de-DE")}</div>}
