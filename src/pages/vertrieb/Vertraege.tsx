@@ -939,6 +939,18 @@ export default function Vertraege() {
     });
 
   const handleStatusChange = async (contractId: string, newStatus: string) => {
+    // Stripe-Mandat-Prüfung: Vertrag kann nur aktiviert werden wenn stripe_customer_id vorhanden
+    if (newStatus === "aktiv") {
+      const contract = contracts.find((c: any) => c.id === contractId);
+      if (!contract?.stripe_customer_id) {
+        toast({
+          title: "⚠️ SEPA-Mandat fehlt",
+          description: "Dieser Vertrag kann nicht aktiviert werden, da noch kein SEPA-Zahlungsmandat (Stripe) hinterlegt ist. Der Kunde erhält beim nächsten Abrechnungslauf automatisch einen Einrichtungslink.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     const updateData: Record<string, any> = { status: newStatus };
     if (newStatus === "aktiv") {
       updateData.approved_by = user?.id;
