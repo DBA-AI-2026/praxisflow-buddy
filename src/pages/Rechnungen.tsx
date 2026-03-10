@@ -40,6 +40,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus,
   Send,
@@ -53,6 +54,9 @@ import {
   Search,
   RefreshCw,
   Download,
+  Zap,
+  Receipt,
+  Link,
 } from "lucide-react";
 import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
 import { openPdfBlob } from "@/lib/openPdfBlob";
@@ -102,6 +106,23 @@ interface Contract {
   status: string;
 }
 
+interface UsageCharge {
+  id: string;
+  hfx_customer_number: string;
+  contract_id: string | null;
+  period_from: string;
+  period_to: string;
+  quantity: number;
+  unit_price: number;
+  net_amount: number;
+  unit_description: string;
+  status: string;
+  source: string;
+  notes: string | null;
+  received_at: string;
+  invoice_id: string | null;
+}
+
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ComponentType<any> }> = {
   entwurf: { label: "Entwurf", variant: "outline", icon: FileText },
   versendet: { label: "Versendet", variant: "secondary", icon: Send },
@@ -122,8 +143,12 @@ export default function Rechnungen() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
+  const [usageCharges, setUsageCharges] = useState<UsageCharge[]>([]);
+  const [usageLoading, setUsageLoading] = useState(true);
+  const [invoicingChargeId, setInvoicingChargeId] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
+  const [usageSearch, setUsageSearch] = useState("");
 
   // Dialog states
   const [showCreate, setShowCreate] = useState(false);
@@ -174,9 +199,20 @@ export default function Rechnungen() {
     if (data) setContracts(data as Contract[]);
   };
 
+  const fetchUsageCharges = async () => {
+    setUsageLoading(true);
+    const { data, error } = await supabase
+      .from("usage_charges")
+      .select("*")
+      .order("received_at", { ascending: false });
+    if (!error && data) setUsageCharges(data as UsageCharge[]);
+    setUsageLoading(false);
+  };
+
   useEffect(() => {
     fetchInvoices();
     fetchContracts();
+    fetchUsageCharges();
   }, []);
 
   const handleContractSelect = (contractId: string) => {
@@ -339,12 +375,89 @@ export default function Rechnungen() {
     inv.customer_name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const filteredUsage = usageCharges.filter((uc) =>
+    !usageSearch ||
+    uc.hfx_customer_number.toLowerCase().includes(usageSearch.toLowerCase()) ||
+    uc.unit_description.toLowerCase().includes(usageSearch.toLowerCase())
+  );
+
   const stats = {
     total: invoices.length,
     offen: invoices.filter((i) => i.status === "entwurf").length,
     versendet: invoices.filter((i) => i.status === "versendet").length,
     bezahlt: invoices.filter((i) => i.status === "bezahlt").length,
     volumen: invoices.filter((i) => i.status !== "storniert").reduce((s, i) => s + Number(i.gross_amount), 0),
+  };
+
+  const usageStats = {
+    pending: usageCharges.filter((u) => u.status === "pending").length,
+    invoiced: usageCharges.filter((u) => u.status === "invoiced").length,
+    pendingAmount: usageCharges.filter((u) => u.status === "pending").reduce((s, u) => s + Number(u.net_amount), 0),
+  };
+
+  const handleManualInvoice = async (charge: UsageCharge) => {
+    setInvoicingChargeId(charge.id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Find the linked contract for address data
+      let contractData: Contract | undefined;
+      if (charge.contract_id) {
+        contractData = contracts.find((c) => c.id === charge.contract_id);
+        if (!contractData) {
+          const { data } = await supabase
+            .from("contracts")
+            .select("id, customer_name, hfx_customer_number, rechnungs_email, adresse, plz, ort, monthly_price, product_name, status")
+            .eq("id", charge.contract_id)
+            .maybeSingle();
+          contractData = data as Contract | undefined;
+        }
+      }
+
+      const net = Number(charge.net_amount);
+      const taxRate = 19;
+      const taxAmount = Math.round(net * (taxRate / 100) * 100) / 100;
+      const grossAmount = net + taxAmount;
+
+      const periodFrom = new Date(charge.period_from).toLocaleDateString("de-DE");
+      const periodTo = new Date(charge.period_to).toLocaleDateString("de-DE");
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any).from("invoices").insert({
+        contract_id: charge.contract_id,
+        customer_name: contractData?.customer_name || `HFX ${charge.hfx_customer_number}`,
+        customer_number: charge.hfx_customer_number,
+        rechnungs_email: contractData?.rechnungs_email || null,
+        adresse: contractData?.adresse || null,
+        plz: contractData?.plz || null,
+        ort: contractData?.ort || null,
+        positions: [{
+          description: `${charge.unit_description} (${periodFrom} – ${periodTo})`,
+          quantity: charge.quantity,
+          unit_price: Number(charge.unit_price),
+        }],
+        net_amount: net,
+        tax_rate: taxRate,
+        tax_amount: taxAmount,
+        gross_amount: grossAmount,
+        invoice_date: new Date().toISOString().split("T")[0],
+        notes: `Manuell abgerechnete Nutzungsgebühr für HFX-Nr. ${charge.hfx_customer_number}`,
+        created_by: user?.id,
+      });
+
+      if (error) throw error;
+
+      // Mark usage charge as invoiced
+      await supabase.from("usage_charges").update({ status: "invoiced" }).eq("id", charge.id);
+
+      toast({ title: "Rechnung erstellt", description: `Nutzungsgebühr für ${charge.hfx_customer_number} wurde abgerechnet.` });
+      fetchInvoices();
+      fetchUsageCharges();
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    } finally {
+      setInvoicingChargeId(null);
+    }
   };
 
   return (
@@ -362,133 +475,273 @@ export default function Rechnungen() {
           </Button>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-4">
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <div className="text-xs text-muted-foreground mt-1">Gesamt</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="text-2xl font-bold text-amber-600">{stats.offen}</div>
-              <div className="text-xs text-muted-foreground mt-1">Entwürfe</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="text-2xl font-bold text-blue-600">{stats.versendet}</div>
-              <div className="text-xs text-muted-foreground mt-1">Versendet</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="text-2xl font-bold text-primary">{stats.volumen.toFixed(2)} €</div>
-              <div className="text-xs text-muted-foreground mt-1">Gesamtvolumen (brutto)</div>
-            </CardContent>
-          </Card>
-        </div>
+        <Tabs defaultValue="rechnungen">
+          <TabsList>
+            <TabsTrigger value="rechnungen" className="flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              Rechnungen
+              {stats.offen > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{stats.offen}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="nutzungsgebuehren" className="flex items-center gap-2">
+              <Zap className="h-4 w-4" />
+              Nutzungsgebühren
+              {usageStats.pending > 0 && (
+                <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-xs">{usageStats.pending}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Table */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Suchen..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Button variant="outline" size="icon" onClick={fetchInvoices}>
-                <RefreshCw className="h-4 w-4" />
-              </Button>
+          {/* ── Rechnungen Tab ── */}
+          <TabsContent value="rechnungen" className="space-y-4 mt-4">
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="text-2xl font-bold">{stats.total}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Gesamt</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="text-2xl font-bold text-warning">{stats.offen}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Entwürfe</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="text-2xl font-bold text-primary">{stats.versendet}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Versendet</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="text-2xl font-bold text-primary">{stats.volumen.toFixed(2)} €</div>
+                  <div className="text-xs text-muted-foreground mt-1">Gesamtvolumen (brutto)</div>
+                </CardContent>
+              </Card>
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Rechnungsnr.</TableHead>
-                   <TableHead>Kunde</TableHead>
-                   <TableHead>Datum</TableHead>
-                   <TableHead className="text-right">Brutto</TableHead>
-                   <TableHead>Zahlung</TableHead>
-                   <TableHead>Status</TableHead>
-                   <TableHead className="text-right">Aktionen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Laden...</TableCell>
-                  </TableRow>
-                ) : filtered.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      {search ? "Keine Rechnungen gefunden." : "Noch keine Rechnungen vorhanden."}
-                    </TableCell>
-                  </TableRow>
-                ) : filtered.map((inv) => {
-                  const s = STATUS_CONFIG[inv.status] || STATUS_CONFIG.entwurf;
-                  const StatusIcon = s.icon;
-                  return (
-                     <TableRow key={inv.id}>
-                      <TableCell className="font-mono font-medium">{inv.invoice_number}</TableCell>
-                      
-                      <TableCell>
-                        <div>{inv.customer_name}</div>
-                        {inv.customer_number && <div className="text-xs text-muted-foreground">{inv.customer_number}</div>}
-                      </TableCell>
-                      <TableCell>{new Date(inv.invoice_date).toLocaleDateString("de-DE")}</TableCell>
-                      <TableCell className="text-right font-medium">{Number(inv.gross_amount).toFixed(2)} €</TableCell>
-                       <TableCell>
-                         <Badge variant="outline" className="gap-1 text-xs border-accent/50 text-accent-foreground bg-accent/20">
-                           💳 Stripe
-                         </Badge>
-                       </TableCell>
-                       <TableCell>
-                        <Badge variant={s.variant} className="gap-1">
-                          <StatusIcon className="h-3 w-3" />
-                          {s.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => setShowDetail(inv)} title="Details">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDownloadPdf(inv)} title="PDF herunterladen">
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          {inv.status === "entwurf" && inv.rechnungs_email && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleSendEmail(inv)}
-                              disabled={sendingId === inv.id}
-                              title="Per E-Mail versenden"
-                            >
-                              <Send className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {inv.status === "entwurf" && (
-                            <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(inv)} title="Löschen">
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
+
+            {/* Table */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Suchen..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Button variant="outline" size="icon" onClick={fetchInvoices}>
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Rechnungsnr.</TableHead>
+                      <TableHead>Kunde</TableHead>
+                      <TableHead>Datum</TableHead>
+                      <TableHead className="text-right">Brutto</TableHead>
+                      <TableHead>Zahlung</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Aktionen</TableHead>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Laden...</TableCell>
+                      </TableRow>
+                    ) : filtered.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                          {search ? "Keine Rechnungen gefunden." : "Noch keine Rechnungen vorhanden."}
+                        </TableCell>
+                      </TableRow>
+                    ) : filtered.map((inv) => {
+                      const s = STATUS_CONFIG[inv.status] || STATUS_CONFIG.entwurf;
+                      const StatusIcon = s.icon;
+                      return (
+                        <TableRow key={inv.id}>
+                          <TableCell className="font-mono font-medium">{inv.invoice_number}</TableCell>
+                          <TableCell>
+                            <div>{inv.customer_name}</div>
+                            {inv.customer_number && <div className="text-xs text-muted-foreground">{inv.customer_number}</div>}
+                          </TableCell>
+                          <TableCell>{new Date(inv.invoice_date).toLocaleDateString("de-DE")}</TableCell>
+                          <TableCell className="text-right font-medium">{Number(inv.gross_amount).toFixed(2)} €</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="gap-1 text-xs">
+                              💳 Stripe
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={s.variant} className="gap-1">
+                              <StatusIcon className="h-3 w-3" />
+                              {s.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => setShowDetail(inv)} title="Details">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDownloadPdf(inv)} title="PDF herunterladen">
+                                <Download className="h-4 w-4" />
+                              </Button>
+                              {inv.status === "entwurf" && inv.rechnungs_email && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleSendEmail(inv)}
+                                  disabled={sendingId === inv.id}
+                                  title="Per E-Mail versenden"
+                                >
+                                  <Send className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {inv.status === "entwurf" && (
+                                <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(inv)} title="Löschen">
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── Nutzungsgebühren Tab ── */}
+          <TabsContent value="nutzungsgebuehren" className="space-y-4 mt-4">
+            {/* Usage stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="text-2xl font-bold text-destructive">{usageStats.pending}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Offen (ausstehend)</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="text-2xl font-bold text-primary">{usageStats.invoiced}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Abgerechnet</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="text-2xl font-bold">{usageStats.pendingAmount.toFixed(2)} €</div>
+                  <div className="text-xs text-muted-foreground mt-1">Offener Betrag (netto)</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="HFX-Nr. oder Beschreibung..."
+                      value={usageSearch}
+                      onChange={(e) => setUsageSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Button variant="outline" size="icon" onClick={fetchUsageCharges}>
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>HFX-Nr.</TableHead>
+                      <TableHead>Beschreibung</TableHead>
+                      <TableHead>Periode</TableHead>
+                      <TableHead className="text-right">Menge</TableHead>
+                      <TableHead className="text-right">Netto</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Aktion</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {usageLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Laden...</TableCell>
+                      </TableRow>
+                    ) : filteredUsage.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                          {usageSearch ? "Keine Einträge gefunden." : "Noch keine Nutzungsgebühren vorhanden."}
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredUsage.map((uc) => (
+                      <TableRow key={uc.id}>
+                        <TableCell className="font-mono font-medium">{uc.hfx_customer_number}</TableCell>
+                        <TableCell className="max-w-[200px] truncate" title={uc.unit_description}>
+                          {uc.unit_description}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          <div>{new Date(uc.period_from).toLocaleDateString("de-DE")}</div>
+                          <div className="text-muted-foreground">– {new Date(uc.period_to).toLocaleDateString("de-DE")}</div>
+                        </TableCell>
+                        <TableCell className="text-right">{uc.quantity}</TableCell>
+                        <TableCell className="text-right font-medium">{Number(uc.net_amount).toFixed(2)} €</TableCell>
+                        <TableCell>
+                          {uc.status === "pending" ? (
+                            <Badge variant="destructive" className="gap-1">
+                              <Clock className="h-3 w-3" />
+                              Ausstehend
+                            </Badge>
+                          ) : uc.status === "invoiced" ? (
+                            <Badge variant="default" className="gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Abgerechnet
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">{uc.status}</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {uc.status === "pending" ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleManualInvoice(uc)}
+                              disabled={invoicingChargeId === uc.id}
+                              className="gap-1"
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                              {invoicingChargeId === uc.id ? "Wird erstellt..." : "Manuell abrechnen"}
+                            </Button>
+                          ) : uc.invoice_id ? (
+                            <Badge variant="outline" className="gap-1 text-xs cursor-default">
+                              <Link className="h-3 w-3" />
+                              Rechnung verknüpft
+                            </Badge>
+                          ) : null}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Create Dialog */}
