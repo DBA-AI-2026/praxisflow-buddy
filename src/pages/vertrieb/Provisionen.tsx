@@ -333,7 +333,7 @@ const Provisionen = () => {
     setGeneratingPdf(key);
     try {
       const bytes = await generateCommissionPdf(group.partner, group.month, group.items);
-      const blob = new Blob([bytes], { type: "application/pdf" });
+      const blob = new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
