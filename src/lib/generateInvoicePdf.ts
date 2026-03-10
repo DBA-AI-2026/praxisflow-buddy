@@ -274,28 +274,28 @@ export async function generateInvoicePdf(
   let rowBg = false;
   const descMaxW = COL_QTY - COL_DESC - 14;
   const rowFontSize = 8.5;
-  const lineSpacing = 11;
-  const rowPadV = 6; // vertical padding top+bottom
+  const lineSpacing = 12;
+  const rowPadV = 7; // vertical padding top+bottom
 
   for (const pos of data.positions) {
     const lineTotal = pos.quantity * pos.unit_price;
     const descLines = wrapText(pos.description, rowFontSize, descMaxW);
-    const rowH = Math.max(18, descLines.length * lineSpacing + rowPadV * 2);
+    const rowH = Math.max(22, descLines.length * lineSpacing + rowPadV * 2);
 
-    ensureSpace(rowH + 4);
+    ensureSpace(rowH + 6);
 
     if (rowBg) {
       page.drawRectangle({ x: M, y: y - rowH + 14, width: TABLE_W, height: rowH, color: C_BG_ROW });
     }
 
-    // Draw description lines
-    const textTopY = y - rowPadV + lineSpacing * (descLines.length - 1) / 2 + 2;
+    // Draw description lines: start from top of row, padding down
+    const firstLineY = y - rowPadV;
     descLines.forEach((line, li) => {
-      text(line, COL_DESC + 6, textTopY - li * lineSpacing, rowFontSize, font, C_TEXT);
+      text(line, COL_DESC + 6, firstLineY - li * lineSpacing, rowFontSize, font, C_TEXT);
     });
 
     // Numeric columns: vertically centred in row
-    const midY = y - rowH / 2 + 7;
+    const midY = y - rowH / 2 + 5;
     text(String(pos.quantity),                COL_QTY,   midY, rowFontSize, font, C_TEXT);
     text(formatCurrency(pos.unit_price),      COL_UNIT,  midY, rowFontSize, font, C_TEXT);
     text(formatCurrency(lineTotal),           COL_TOTAL, midY, rowFontSize, fontBold, C_TEXT);

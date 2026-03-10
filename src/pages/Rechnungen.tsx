@@ -229,10 +229,11 @@ export default function Rechnungen() {
       ort: c.ort || "",
     }));
 
-    // Grundgebühr-Waiver: Verträge vor 30.06.2026 zahlen keine Grundgebühr bis 31.12.2026
+    // Grundgebühr-Waiver: Gilt nur für HFX GOÄ Verträge bis 31.12.2026
     const now = new Date();
     const waiverEndDate = new Date("2027-01-01");
-    const isInWaiverPeriod = now < waiverEndDate;
+    const isGoaeProduct = c.product_name?.toLowerCase().includes("goä") || c.product_name?.toLowerCase().includes("goa");
+    const isInWaiverPeriod = isGoaeProduct && now < waiverEndDate;
     const effectivePrice = isInWaiverPeriod ? 0 : c.monthly_price;
     const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
     const billingPeriod = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
