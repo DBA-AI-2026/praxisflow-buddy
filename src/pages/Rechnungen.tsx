@@ -104,6 +104,7 @@ interface Contract {
   monthly_price: number;
   product_name: string;
   status: string;
+  start_date: string;
 }
 
 interface UsageCharge {
