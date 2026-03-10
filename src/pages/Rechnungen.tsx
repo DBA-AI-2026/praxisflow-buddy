@@ -40,6 +40,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus,
   Send,
@@ -53,6 +54,9 @@ import {
   Search,
   RefreshCw,
   Download,
+  Zap,
+  Receipt,
+  Link,
 } from "lucide-react";
 import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
 import { openPdfBlob } from "@/lib/openPdfBlob";
