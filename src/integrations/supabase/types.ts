@@ -113,6 +113,81 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_payouts: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          commission_amount: number
+          commission_rate: number
+          commission_type: string
+          contract_id: string | null
+          created_at: string
+          exported_at: string | null
+          id: string
+          invoice_id: string | null
+          paid_at: string | null
+          pdf_path: string | null
+          period_month: string
+          product_name: string
+          sales_partner_id: string
+          sales_partner_name: string
+          status: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          commission_amount?: number
+          commission_rate?: number
+          commission_type?: string
+          contract_id?: string | null
+          created_at?: string
+          exported_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          paid_at?: string | null
+          pdf_path?: string | null
+          period_month: string
+          product_name: string
+          sales_partner_id: string
+          sales_partner_name: string
+          status?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          commission_amount?: number
+          commission_rate?: number
+          commission_type?: string
+          contract_id?: string | null
+          created_at?: string
+          exported_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          paid_at?: string | null
+          pdf_path?: string | null
+          period_month?: string
+          product_name?: string
+          sales_partner_id?: string
+          sales_partner_name?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_payouts_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_payouts_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           adresse: string | null
@@ -150,6 +225,7 @@ export type Database = {
           kontoinhaber_strasse: string | null
           lanr: string | null
           license_count: number
+          mandate_accepted_at: string | null
           modules: string[] | null
           monthly_price: number
           mp_nr: string | null
@@ -165,6 +241,7 @@ export type Database = {
           praxisanschrift: string | null
           praxissystem: string | null
           product_name: string
+          qodia_unit_price: number
           rechnungs_email: string | null
           rechtsform: string | null
           sales_partner_id: string | null
@@ -219,6 +296,7 @@ export type Database = {
           kontoinhaber_strasse?: string | null
           lanr?: string | null
           license_count?: number
+          mandate_accepted_at?: string | null
           modules?: string[] | null
           monthly_price?: number
           mp_nr?: string | null
@@ -234,6 +312,7 @@ export type Database = {
           praxisanschrift?: string | null
           praxissystem?: string | null
           product_name: string
+          qodia_unit_price?: number
           rechnungs_email?: string | null
           rechtsform?: string | null
           sales_partner_id?: string | null
@@ -288,6 +367,7 @@ export type Database = {
           kontoinhaber_strasse?: string | null
           lanr?: string | null
           license_count?: number
+          mandate_accepted_at?: string | null
           modules?: string[] | null
           monthly_price?: number
           mp_nr?: string | null
@@ -303,6 +383,7 @@ export type Database = {
           praxisanschrift?: string | null
           praxissystem?: string | null
           product_name?: string
+          qodia_unit_price?: number
           rechnungs_email?: string | null
           rechtsform?: string | null
           sales_partner_id?: string | null
@@ -1359,6 +1440,72 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      usage_charges: {
+        Row: {
+          contract_id: string | null
+          hfx_customer_number: string
+          id: string
+          invoice_id: string | null
+          net_amount: number
+          notes: string | null
+          period_from: string
+          period_to: string
+          quantity: number
+          received_at: string
+          source: string
+          status: string
+          unit_description: string
+          unit_price: number
+        }
+        Insert: {
+          contract_id?: string | null
+          hfx_customer_number: string
+          id?: string
+          invoice_id?: string | null
+          net_amount?: number
+          notes?: string | null
+          period_from: string
+          period_to: string
+          quantity?: number
+          received_at?: string
+          source?: string
+          status?: string
+          unit_description?: string
+          unit_price?: number
+        }
+        Update: {
+          contract_id?: string | null
+          hfx_customer_number?: string
+          id?: string
+          invoice_id?: string | null
+          net_amount?: number
+          notes?: string | null
+          period_from?: string
+          period_to?: string
+          quantity?: number
+          received_at?: string
+          source?: string
+          status?: string
+          unit_description?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_charges_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usage_charges_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_regional_assignments: {
         Row: {
