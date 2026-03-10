@@ -496,7 +496,7 @@ Deno.serve(async (req) => {
           }
         }
 
-        console.log(`[auto-invoice] ✓ Invoice ${invoice.invoice_number} sent to ${emailTo}${stripeInvoiceId ? ` | Stripe: ${stripeInvoiceId}` : hasStripeCustomer ? "" : " (kein Stripe – Überweisung)"}`);
+        console.log(`[auto-invoice] ✓ Invoice ${invoice.invoice_number} sent to ${emailTo}${stripeInvoiceId ? ` | Stripe: ${stripeInvoiceId}` : ""}`);
         processed++;
       } catch (contractErr) {
         console.error(`[auto-invoice] Error processing contract ${contract.id}:`, contractErr);
@@ -518,3 +518,56 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// EMAIL: SEPA-Mandatsanforderung
+// ────────────────────────────────────────────────────────────────────────────
+function buildMandateRequestEmail(params: {
+  customerName: string;
+  productName: string;
+  setupUrl: string;
+  billingPeriod: string;
+}) {
+  const { customerName, productName, setupUrl, billingPeriod } = params;
+  return `<!DOCTYPE html>
+<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f4f6fa;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fa;padding:40px 0;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+      <tr><td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:32px 40px;text-align:center;">
+        <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg"
+          alt="Honorarfuchs" style="width:56px;height:56px;border-radius:50%;object-fit:cover;margin:0 auto 12px;display:block;"/>
+        <p style="color:#ffffff;font-size:22px;font-weight:700;margin:0;">Zahlungsmethode hinterlegen</p>
+        <p style="color:rgba(255,255,255,0.85);font-size:13px;margin:6px 0 0;">HFX Honorarfuchs – Abrechnung ${billingPeriod}</p>
+      </td></tr>
+      <tr><td style="padding:40px;">
+        <p style="font-size:15px;color:#1a1a2e;margin:0 0 16px;">Sehr geehrte Damen und Herren,</p>
+        <p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 16px;">
+          für Ihren Vertrag <strong>${productName}</strong> bei Honorarfuchs ist noch keine SEPA-Zahlungsmethode hinterlegt.
+          Um Ihre monatliche Abrechnung für <strong>${billingPeriod}</strong> und alle folgenden Monate automatisch per SEPA-Lastschrift abwickeln zu können,
+          bitten wir Sie, Ihre Bankverbindung einmalig zu hinterlegen.
+        </p>
+        <div style="background:#f0f4ff;border-radius:8px;padding:20px;margin:24px 0;text-align:center;">
+          <p style="margin:0 0 6px;font-size:13px;color:#4b5563;">Sicher, schnell und einmalig – powered by Stripe</p>
+          <a href="${setupUrl}"
+            style="display:inline-block;background:#0b367f;color:#ffffff;font-size:15px;font-weight:700;padding:14px 32px;border-radius:6px;text-decoration:none;margin-top:8px;">
+            💳 SEPA-Lastschrift einrichten
+          </a>
+        </div>
+        <p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0 0 8px;">
+          Nach erfolgreicher Einrichtung wird Ihr monatlicher Beitrag automatisch eingezogen. Sie erhalten keine weiteren Aufforderungen.
+        </p>
+        <p style="font-size:13px;color:#9ca3af;margin:0;">
+          Bei Fragen wenden Sie sich bitte an <a href="mailto:buchhaltung@hfx-honorarfuchs.de" style="color:#0b367f;">buchhaltung@hfx-honorarfuchs.de</a>.
+        </p>
+        <p style="font-size:14px;color:#374151;margin-top:24px;">Mit freundlichen Grüßen,<br><strong>Ihr HFX Honorarfuchs Team</strong></p>
+      </td></tr>
+      <tr><td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 40px;text-align:center;">
+        <p style="color:#9ca3af;font-size:11px;margin:0;">© HFX Honorarfuchs • Diese E-Mail wurde automatisch generiert.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+}
