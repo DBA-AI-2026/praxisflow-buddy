@@ -100,6 +100,7 @@ async function generateCommissionPdf(
   const gray = rgb(0.4, 0.4, 0.4);
   const black = rgb(0, 0, 0);
   const white = rgb(1, 1, 1);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
 
   let y = 800;
 
