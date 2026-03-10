@@ -696,6 +696,14 @@ export default function Vertraege() {
     },
     onError: (err: Error) => {
       console.error("upsertMutation error:", err);
+      if (err.message === "SEPA_MANDATE_MISSING") {
+        toast({
+          title: "⚠️ SEPA-Mandat fehlt",
+          description: "Dieser Vertrag kann nicht aktiviert werden, da noch kein SEPA-Zahlungsmandat (Stripe) hinterlegt ist. Der Kunde erhält beim nächsten Abrechnungslauf automatisch einen Einrichtungslink.",
+          variant: "destructive",
+        });
+        return;
+      }
       toast({ title: "Fehler beim Speichern", description: err.message || "Unbekannter Fehler – bitte erneut versuchen.", variant: "destructive" });
     },
   });
