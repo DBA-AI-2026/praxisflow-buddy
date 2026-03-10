@@ -437,6 +437,15 @@ export default function Vertraege() {
   const upsertMutation = useMutation({
     mutationFn: async (data: ContractFormData): Promise<string | null> => {
       if (!user?.id) throw new Error("Nicht authentifiziert – bitte neu einloggen.");
+
+      // Stripe-Mandat-Prüfung bei Aktivierung eines bestehenden Vertrags (Edit)
+      if (data.status === "aktiv" && editId) {
+        const existingContract = contracts.find((c: any) => c.id === editId);
+        if (existingContract && !existingContract.stripe_customer_id) {
+          throw new Error("SEPA_MANDATE_MISSING");
+        }
+      }
+
       let documentUrl: string | undefined;
       let documentName: string | undefined;
 
@@ -687,6 +696,14 @@ export default function Vertraege() {
     },
     onError: (err: Error) => {
       console.error("upsertMutation error:", err);
+      if (err.message === "SEPA_MANDATE_MISSING") {
+        toast({
+          title: "⚠️ SEPA-Mandat fehlt",
+          description: "Dieser Vertrag kann nicht aktiviert werden, da noch kein SEPA-Zahlungsmandat (Stripe) hinterlegt ist. Der Kunde erhält beim nächsten Abrechnungslauf automatisch einen Einrichtungslink.",
+          variant: "destructive",
+        });
+        return;
+      }
       toast({ title: "Fehler beim Speichern", description: err.message || "Unbekannter Fehler – bitte erneut versuchen.", variant: "destructive" });
     },
   });
@@ -939,6 +956,18 @@ export default function Vertraege() {
     });
 
   const handleStatusChange = async (contractId: string, newStatus: string) => {
+    // Stripe-Mandat-Prüfung: Vertrag kann nur aktiviert werden wenn stripe_customer_id vorhanden
+    if (newStatus === "aktiv") {
+      const contract = contracts.find((c: any) => c.id === contractId);
+      if (!contract?.stripe_customer_id) {
+        toast({
+          title: "⚠️ SEPA-Mandat fehlt",
+          description: "Dieser Vertrag kann nicht aktiviert werden, da noch kein SEPA-Zahlungsmandat (Stripe) hinterlegt ist. Der Kunde erhält beim nächsten Abrechnungslauf automatisch einen Einrichtungslink.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     const updateData: Record<string, any> = { status: newStatus };
     if (newStatus === "aktiv") {
       updateData.approved_by = user?.id;
