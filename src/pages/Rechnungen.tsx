@@ -106,6 +106,23 @@ interface Contract {
   status: string;
 }
 
+interface UsageCharge {
+  id: string;
+  hfx_customer_number: string;
+  contract_id: string | null;
+  period_from: string;
+  period_to: string;
+  quantity: number;
+  unit_price: number;
+  net_amount: number;
+  unit_description: string;
+  status: string;
+  source: string;
+  notes: string | null;
+  received_at: string;
+  invoice_id: string | null;
+}
+
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ComponentType<any> }> = {
   entwurf: { label: "Entwurf", variant: "outline", icon: FileText },
   versendet: { label: "Versendet", variant: "secondary", icon: Send },
