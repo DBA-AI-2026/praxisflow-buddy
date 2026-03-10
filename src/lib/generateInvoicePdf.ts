@@ -203,7 +203,7 @@ export async function generateInvoicePdf(
 
   // Box behind metadata
   const metaBoxH = 80;
-  page.drawRectangle({ x: colRight - 8, y: metaY - metaBoxH + 14, width: CW - (colRight - M) + 8, height: metaBoxH, color: C_ACCENT, borderRadius: 4 });
+  page.drawRectangle({ x: colRight - 8, y: metaY - metaBoxH + 14, width: CW - (colRight - M) + 8, height: metaBoxH, color: C_ACCENT });
 
   text("Rechnungsnummer:", metaLabelX, metaY, 7.5, font, C_MUTED);
   text(data.invoice_number, metaValueX, metaY, 9.5, fontBold, C_NAVY);
