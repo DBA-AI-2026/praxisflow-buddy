@@ -531,28 +531,34 @@ export default function Buchhaltung() {
         <TabsContent value="provisionen" className="mt-4">
           <div className="card-elevated overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-border">
-              <h3 className="font-semibold text-foreground">Buchungssatz 2: Provisionen</h3>
-              <Button variant="outline" size="sm" onClick={exportCommissions}>
-                <Download className="h-4 w-4 mr-2" />CSV exportieren
-              </Button>
+              <div>
+                <h3 className="font-semibold text-foreground">Buchungssatz 2: Provisionen</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Freigegeben &amp; ausgezahlte Provisionen aus der Vertriebsabrechnung</p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={exportCommissions}>
+                  <Download className="h-4 w-4 mr-2" />CSV-Export (ohne Lexware)
+                </Button>
+              </div>
             </div>
             <div className="overflow-x-auto">
-              {commissions.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">Keine Provisionen berechnet.</div>
+              {realCommissions.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">Keine freigegebenen Provisionen im gewählten Zeitraum. Provisionen werden unter <strong>Vertrieb → Provisionen</strong> freigegeben.</div>
               ) : (
                 <table className="data-table">
                   <thead className="bg-muted/50">
-                    <tr><th>Vertriebler</th><th>Produkt</th><th>Kunde</th><th>Konto</th><th>Satz</th><th>Betrag</th></tr>
+                    <tr><th>Monat</th><th>Vertriebler</th><th>Produkt</th><th>Konto</th><th>Satz</th><th>Betrag</th><th>Status</th></tr>
                   </thead>
                   <tbody>
-                    {commissions.map((c: any) => (
+                    {realCommissions.map((c: any) => (
                       <tr key={c.id}>
+                        <td className="text-muted-foreground">{c.period_month}</td>
                         <td className="font-medium text-foreground">{c.sales_partner_name}</td>
                         <td className="text-muted-foreground">{c.product_name}</td>
-                        <td>{c.customer_name}</td>
                         <td className="font-mono text-xs text-muted-foreground">{COMMISSION_ACCOUNT}/{COMMISSION_CONTRA}</td>
-                        <td><Badge variant="outline">{c.commission_rate}</Badge></td>
-                        <td className="text-right font-semibold text-foreground">{fmtEur(c.commission_amount)}</td>
+                        <td><Badge variant="outline">{c.commission_type === "prozent" ? `${c.commission_rate}%` : `${fmtEur(c.commission_rate)}`}</Badge></td>
+                        <td className="text-right font-semibold text-foreground">{fmtEur(Number(c.commission_amount))}</td>
+                        <td><Badge variant="secondary" className={c.status === "paid" ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}>{c.status === "paid" ? "Ausgezahlt" : "Freigegeben"}</Badge></td>
                       </tr>
                     ))}
                   </tbody>

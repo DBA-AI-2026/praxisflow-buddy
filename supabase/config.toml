@@ -35,3 +35,7 @@ project_id = "gvsxentbbzuyanqbqvea"
     verify_jwt = false
   [functions.confirm-paper-contract]
     verify_jwt = false
+  [functions.receive-usage]
+    verify_jwt = false
+  [functions.auto-invoice]
+    verify_jwt = false
