@@ -400,7 +400,7 @@ Deno.serve(async (req) => {
           .eq("id", invoice.id);
 
         // Auto-generate commission payout if contract has a sales partner
-        if (contract.sales_partner_id && netAmount > 0) {
+        if (contract.sales_partner_id) {
           const { data: productCommission } = await supabase
             .from("product_commissions")
             .select("*")
