@@ -1,11 +1,15 @@
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import Stripe from "https://esm.sh/stripe@14.21.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+  apiVersion: "2024-06-20",
+});
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
 };
 
 function getGermanHolidays(year: number): Set<string> {
@@ -48,19 +52,29 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Validate cron secret for security
+  const cronSecret = req.headers.get("x-cron-secret");
+  const expectedSecret = Deno.env.get("CRON_SECRET");
+  if (expectedSecret && cronSecret !== expectedSecret) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, serviceKey);
 
   try {
     const today = new Date();
-    const todayDay = today.getDate();
     const currentYear = today.getFullYear();
     const currentMonth = today.getMonth() + 1;
     const periodMonthStr = `${currentYear}-${String(currentMonth).padStart(2, "0")}`;
 
-    console.log(`[auto-invoice] Running for ${today.toISOString()}, billing day: ${todayDay}`);
+    console.log(`[auto-invoice] Running for ${today.toISOString()} – billing period: ${periodMonthStr}`);
 
+    // Load all active contracts
     const { data: contracts, error: contractsError } = await supabase
       .from("contracts")
       .select("*")
@@ -80,17 +94,9 @@ Deno.serve(async (req) => {
 
     for (const contract of contracts) {
       try {
-        if (!contract.start_date) { skipped++; continue; }
-
-        const startDate = new Date(contract.start_date);
-        const billingDay = startDate.getDate();
-        const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-        const effectiveBillingDay = Math.min(billingDay, daysInMonth);
-
-        if (todayDay !== effectiveBillingDay) { skipped++; continue; }
-
-        // Check for existing invoice in this billing period
+        // Check if an invoice for this period already exists
         const periodStart = `${currentYear}-${String(currentMonth).padStart(2, "0")}-01`;
+        const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
         const periodEnd = `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
 
         const { data: existing } = await supabase
@@ -102,16 +108,18 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         if (existing) {
-          console.log(`[auto-invoice] Invoice already exists for contract ${contract.id}, skipping.`);
-          skipped++; continue;
+          console.log(`[auto-invoice] Invoice already exists for contract ${contract.id} in ${periodMonthStr}, skipping.`);
+          skipped++;
+          continue;
         }
 
         if (!contract.rechnungs_email && !contract.email) {
           console.log(`[auto-invoice] No email for contract ${contract.id}, skipping.`);
-          skipped++; continue;
+          skipped++;
+          continue;
         }
 
-        // Base monthly fee position
+        // Build invoice positions
         const baseNetAmount = Number(contract.monthly_price) || 0;
         const taxRate = 19;
         const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -125,7 +133,7 @@ Deno.serve(async (req) => {
           },
         ];
 
-        // Append pending usage charges for this HFX-Nr
+        // Collect pending usage charges for this HFX-Nr
         let usageChargeIds: string[] = [];
         if (contract.hfx_customer_number) {
           const { data: usageCharges } = await supabase
@@ -146,7 +154,7 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Recalculate totals including usage
+        // Recalculate totals
         const netAmount = positions.reduce((s, p) => s + p.quantity * p.unit_price, 0);
         const taxAmount = Math.round(netAmount * taxRate) / 100;
         const grossAmount = Math.round((netAmount + taxAmount) * 100) / 100;
@@ -155,9 +163,62 @@ Deno.serve(async (req) => {
         const dueDateStr = collectionDate.toISOString().split("T")[0];
         const collectionDateFormatted = collectionDate.toLocaleDateString("de-DE");
         const todayStr = today.toISOString().split("T")[0];
-        const paymentMethodNote = `Der Betrag wird automatisch über Stripe von Ihrem hinterlegten Zahlungsmittel eingezogen.`;
 
-        // Insert invoice
+        // ── Stripe SEPA payment ──────────────────────────────────────────
+        let stripeInvoiceId: string | null = null;
+        if (contract.stripe_customer_id) {
+          try {
+            // Create one invoice item per position
+            for (const pos of positions) {
+              await stripe.invoiceItems.create({
+                customer: contract.stripe_customer_id,
+                amount: Math.round(pos.quantity * pos.unit_price * 100), // Stripe uses cents
+                currency: "eur",
+                description: pos.description,
+                tax_rates: [],
+              });
+            }
+
+            // Add VAT as a separate item
+            await stripe.invoiceItems.create({
+              customer: contract.stripe_customer_id,
+              amount: Math.round(taxAmount * 100),
+              currency: "eur",
+              description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
+            });
+
+            // Create and finalize the Stripe invoice
+            const stripeInvoice = await stripe.invoices.create({
+              customer: contract.stripe_customer_id,
+              auto_advance: false,
+              collection_method: "charge_automatically",
+              description: `${contract.product_name} – ${billingPeriod}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}`,
+              metadata: {
+                hfx_contract_id: contract.id,
+                hfx_customer_number: contract.hfx_customer_number || "",
+                billing_period: periodMonthStr,
+              },
+            });
+
+            const finalizedInvoice = await stripe.invoices.finalizeInvoice(stripeInvoice.id);
+
+            // Trigger SEPA payment collection (3-day collection window)
+            await stripe.invoices.pay(finalizedInvoice.id, {
+              paid_out_of_band: false,
+            });
+
+            stripeInvoiceId = stripeInvoice.id;
+            console.log(`[auto-invoice] Stripe invoice ${stripeInvoice.id} created and payment initiated for contract ${contract.id}`);
+          } catch (stripeErr: any) {
+            // Don't abort the whole invoice if Stripe fails — log and continue
+            console.error(`[auto-invoice] Stripe error for contract ${contract.id}:`, stripeErr?.message);
+            errors.push(`Stripe [${contract.id}]: ${stripeErr?.message}`);
+          }
+        } else {
+          console.warn(`[auto-invoice] Contract ${contract.id} has no stripe_customer_id – skipping Stripe payment`);
+        }
+
+        // ── Insert invoice in DB ──────────────────────────────────────────
         const { data: invoice, error: insertError } = await supabase
           .from("invoices")
           .insert({
@@ -176,6 +237,7 @@ Deno.serve(async (req) => {
             tax_amount: taxAmount,
             gross_amount: grossAmount,
             status: "entwurf",
+            stripe_invoice_id: stripeInvoiceId,
             notes: `Automatisch generiert – Laufzeit: ${billingPeriod}`,
           })
           .select()
@@ -195,9 +257,7 @@ Deno.serve(async (req) => {
           console.log(`[auto-invoice] Attached ${usageChargeIds.length} usage charges to invoice ${invoice.invoice_number}`);
         }
 
-        console.log(`[auto-invoice] Created invoice ${invoice.invoice_number} for contract ${contract.id}`);
-
-        // Build email HTML
+        // ── Send invoice email ────────────────────────────────────────────
         const positionsHtml = positions.map((p) => `
           <tr>
             <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">${p.description}</td>
@@ -234,8 +294,8 @@ Deno.serve(async (req) => {
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #0b367f;margin-top:8px;font-size:16px;"><span><strong>Gesamtbetrag:</strong></span><strong style="color:#0b367f;">${grossAmount.toFixed(2)} €</strong></div>
     </div>
     <div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
-      <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug (Stripe)</strong></p>
-      <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">${paymentMethodNote}</p>
+      <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug (SEPA via Stripe)</strong></p>
+      <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">Der Betrag wird automatisch von Ihrem hinterlegten SEPA-Konto eingezogen.</p>
       <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">📅 <strong>Einzugsdatum:</strong> ${collectionDateFormatted}</p>
     </div>
     <p style="font-size:12px;color:#9ca3af;margin-top:8px;">Diese Rechnung wurde automatisch generiert.</p>
@@ -249,9 +309,11 @@ Deno.serve(async (req) => {
         const emailTo = contract.rechnungs_email || contract.email;
         const sendResult = await resend.emails.send({
           from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+          reply_to: "info@hfx-honorarfuchs.de",
           to: [emailTo],
           subject: `Rechnung ${invoice.invoice_number} – ${contract.customer_name}`,
           html: emailHtml,
+          text: `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nGesamtbetrag: ${grossAmount.toFixed(2)} €\nEinzugsdatum: ${collectionDateFormatted}\nDiese Rechnung wurde automatisch generiert.`,
         });
 
         if (sendResult.error) {
@@ -279,12 +341,12 @@ Deno.serve(async (req) => {
             tax_rate: taxRate,
             gross_amount: grossAmount,
             payment_status: "pending",
-            notes: `Auto-Rechnung ${billingPeriod}${usageChargeIds.length > 0 ? ` + ${usageChargeIds.length} Nutzungsposten` : ""}`,
+            notes: `Auto-Rechnung ${billingPeriod}${usageChargeIds.length > 0 ? ` + ${usageChargeIds.length} Nutzungsposten` : ""}${stripeInvoiceId ? ` | Stripe: ${stripeInvoiceId}` : ""}`,
           })
           .select("id")
           .single();
 
-        // Update invoice status
+        // Update invoice status to 'versendet'
         await supabase
           .from("invoices")
           .update({ status: "versendet", email_sent_at: now, revenue_id: revenueRow?.id ?? null })
@@ -303,14 +365,11 @@ Deno.serve(async (req) => {
             let commissionAmount = 0;
             if (productCommission.commission_type === "prozent") {
               commissionAmount = Math.round(baseNetAmount * productCommission.commission_value) / 100;
-            } else if (productCommission.commission_type === "festbetrag") {
-              commissionAmount = Number(productCommission.commission_value);
             } else {
               commissionAmount = Number(productCommission.commission_value);
             }
 
             if (commissionAmount > 0) {
-              // Check if payout already exists for this invoice
               const { data: existingPayout } = await supabase
                 .from("commission_payouts")
                 .select("id")
@@ -336,7 +395,7 @@ Deno.serve(async (req) => {
           }
         }
 
-        console.log(`[auto-invoice] ✓ Sent invoice ${invoice.invoice_number} to ${emailTo}`);
+        console.log(`[auto-invoice] ✓ Invoice ${invoice.invoice_number} sent to ${emailTo}${stripeInvoiceId ? ` | Stripe: ${stripeInvoiceId}` : " (no Stripe)"}`);
         processed++;
       } catch (contractErr) {
         console.error(`[auto-invoice] Error processing contract ${contract.id}:`, contractErr);
