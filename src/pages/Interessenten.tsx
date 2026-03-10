@@ -457,7 +457,11 @@ export default function Interessenten() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Abrechnungszentrum</p>
-                  <p className="font-medium">{selectedLead.abrechnungszentrum}</p>
+                  <p className="font-medium">
+                    {(selectedLead.abrechnungszentrum === "nein" || selectedLead.abrechnungszentrum === "keins")
+                      ? "–"
+                      : selectedLead.abrechnungszentrum}
+                  </p>
                 </div>
                 {selectedLead.mp_nummer && (
                   <div>
