@@ -228,10 +228,22 @@ export default function Rechnungen() {
       plz: c.plz || "",
       ort: c.ort || "",
     }));
+
+    // Grundgebühr-Waiver: Verträge vor 30.06.2026 zahlen keine Grundgebühr bis 31.12.2026
+    const now = new Date();
+    const waiverEndDate = new Date("2027-01-01");
+    const isInWaiverPeriod = now < waiverEndDate;
+    const effectivePrice = isInWaiverPeriod ? 0 : c.monthly_price;
+    const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+    const billingPeriod = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+    const description = isInWaiverPeriod
+      ? `${c.product_name} – ${billingPeriod} (Einführungsangebot: Grundgebühr entfällt bis 31.12.2026)`
+      : `${c.product_name} – ${billingPeriod}`;
+
     setPositions([{
-      description: `${c.product_name} – Monatliche Lizenzgebühr`,
+      description,
       quantity: 1,
-      unit_price: c.monthly_price,
+      unit_price: effectivePrice,
     }]);
   };
 

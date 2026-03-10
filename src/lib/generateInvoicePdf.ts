@@ -252,21 +252,53 @@ export async function generateInvoicePdf(
   text("Gesamtpreis",   COL_TOTAL,     y, 8, fontBold, C_WHITE);
   y -= theadH + 2;
 
+  // Helper: wrap text into lines respecting maxWidth
+  const wrapText = (t: string, size: number, maxW: number): string[] => {
+    const words = t.split(" ");
+    const lines: string[] = [];
+    let current = "";
+    for (const word of words) {
+      const test = current ? `${current} ${word}` : word;
+      if (font.widthOfTextAtSize(test, size) > maxW && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+    return lines.length > 0 ? lines : [""];
+  };
+
   // Rows
   let rowBg = false;
+  const descMaxW = COL_QTY - COL_DESC - 14;
+  const rowFontSize = 8.5;
+  const lineSpacing = 11;
+  const rowPadV = 6; // vertical padding top+bottom
+
   for (const pos of data.positions) {
-    ensureSpace(30);
     const lineTotal = pos.quantity * pos.unit_price;
-    const rowH = 18;
+    const descLines = wrapText(pos.description, rowFontSize, descMaxW);
+    const rowH = Math.max(18, descLines.length * lineSpacing + rowPadV * 2);
+
+    ensureSpace(rowH + 4);
 
     if (rowBg) {
       page.drawRectangle({ x: M, y: y - rowH + 14, width: TABLE_W, height: rowH, color: C_BG_ROW });
     }
 
-    text(pos.description,                     COL_DESC  + 6, y, 8.5, font, C_TEXT, COL_QTY - COL_DESC - 10);
-    text(String(pos.quantity),                COL_QTY,       y, 8.5, font, C_TEXT);
-    text(formatCurrency(pos.unit_price),      COL_UNIT,      y, 8.5, font, C_TEXT);
-    text(formatCurrency(lineTotal),           COL_TOTAL,     y, 8.5, fontBold, C_TEXT);
+    // Draw description lines
+    const textTopY = y - rowPadV + lineSpacing * (descLines.length - 1) / 2 + 2;
+    descLines.forEach((line, li) => {
+      text(line, COL_DESC + 6, textTopY - li * lineSpacing, rowFontSize, font, C_TEXT);
+    });
+
+    // Numeric columns: vertically centred in row
+    const midY = y - rowH / 2 + 7;
+    text(String(pos.quantity),                COL_QTY,   midY, rowFontSize, font, C_TEXT);
+    text(formatCurrency(pos.unit_price),      COL_UNIT,  midY, rowFontSize, font, C_TEXT);
+    text(formatCurrency(lineTotal),           COL_TOTAL, midY, rowFontSize, fontBold, C_TEXT);
 
     y -= rowH;
     rowBg = !rowBg;
