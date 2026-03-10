@@ -121,19 +121,45 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // ── Grundgebühr-Waiver-Logik ─────────────────────────────────────────
+        // Verträge abgeschlossen vor 30.06.2026 zahlen keine Grundgebühr bis 01.01.2027
+        const contractSignedAt = new Date(contract.created_at || contract.start_date);
+        const waiverCutoffDate = new Date("2026-06-30");
+        const waiverEndDate = new Date("2027-01-01");
+        const isInWaiverPeriod = contractSignedAt <= waiverCutoffDate && today < waiverEndDate;
+
+        let baseNetAmount = Number(contract.monthly_price) || 0;
+        if (isInWaiverPeriod && baseNetAmount > 0) {
+          console.log(`[auto-invoice] Grundgebühr-Waiver aktiv für Vertrag ${contract.id} (abgeschlossen: ${contractSignedAt.toISOString().split("T")[0]}): ${baseNetAmount} € → 0 €`);
+          baseNetAmount = 0;
+        }
+
         // Build invoice positions
-        const baseNetAmount = Number(contract.monthly_price) || 0;
         const taxRate = 19;
         const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
         const billingPeriod = `${monthNames[today.getMonth()]} ${currentYear}`;
 
-        const positions: { description: string; quantity: number; unit_price: number }[] = [
-          {
+        const positions: { description: string; quantity: number; unit_price: number }[] = [];
+
+        if (baseNetAmount > 0) {
+          positions.push({
             description: `${contract.product_name} – ${billingPeriod}`,
             quantity: contract.license_count || 1,
             unit_price: baseNetAmount / (contract.license_count || 1),
-          },
-        ];
+          });
+        } else if (isInWaiverPeriod) {
+          positions.push({
+            description: `${contract.product_name} – ${billingPeriod} (Einführungsangebot: Grundgebühr entfällt bis 31.12.2026)`,
+            quantity: contract.license_count || 1,
+            unit_price: 0,
+          });
+        } else {
+          positions.push({
+            description: `${contract.product_name} – ${billingPeriod}`,
+            quantity: contract.license_count || 1,
+            unit_price: 0,
+          });
+        }
 
         // Collect pending usage charges for this HFX-Nr
         let usageChargeIds: string[] = [];
@@ -166,22 +192,24 @@ Deno.serve(async (req) => {
         const collectionDateFormatted = collectionDate.toLocaleDateString("de-DE");
         const todayStr = today.toISOString().split("T")[0];
 
-        // ── Stripe SEPA payment ──────────────────────────────────────────
+        // ── Stripe SEPA payment ──────────────────────────────────────────────
+        // Nur wenn Stripe-Kunde hinterlegt UND tatsächlich ein Betrag fällig ist
         let stripeInvoiceId: string | null = null;
-        if (contract.stripe_customer_id) {
+        const hasStripeCustomer = !!contract.stripe_customer_id;
+
+        if (hasStripeCustomer && grossAmount > 0) {
           try {
-            // Create one invoice item per position
             for (const pos of positions) {
+              if (pos.quantity * pos.unit_price <= 0) continue;
               await stripe.invoiceItems.create({
                 customer: contract.stripe_customer_id,
-                amount: Math.round(pos.quantity * pos.unit_price * 100), // Stripe uses cents
+                amount: Math.round(pos.quantity * pos.unit_price * 100),
                 currency: "eur",
                 description: pos.description,
                 tax_rates: [],
               });
             }
 
-            // Add VAT as a separate item
             await stripe.invoiceItems.create({
               customer: contract.stripe_customer_id,
               amount: Math.round(taxAmount * 100),
@@ -189,7 +217,6 @@ Deno.serve(async (req) => {
               description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
             });
 
-            // Create and finalize the Stripe invoice
             const stripeInvoice = await stripe.invoices.create({
               customer: contract.stripe_customer_id,
               auto_advance: false,
@@ -203,22 +230,21 @@ Deno.serve(async (req) => {
             });
 
             const finalizedInvoice = await stripe.invoices.finalizeInvoice(stripeInvoice.id);
-
-            // Trigger SEPA payment collection via hinterlegter Zahlungsmethode
             await stripe.invoices.pay(finalizedInvoice.id);
 
             stripeInvoiceId = stripeInvoice.id;
             console.log(`[auto-invoice] Stripe invoice ${stripeInvoice.id} created and payment initiated for contract ${contract.id}`);
           } catch (stripeErr: any) {
-            // Don't abort the whole invoice if Stripe fails — log and continue
             console.error(`[auto-invoice] Stripe error for contract ${contract.id}:`, stripeErr?.message);
             errors.push(`Stripe [${contract.id}]: ${stripeErr?.message}`);
           }
-        } else {
-          console.warn(`[auto-invoice] Contract ${contract.id} has no stripe_customer_id – skipping Stripe payment`);
+        } else if (!hasStripeCustomer) {
+          console.warn(`[auto-invoice] Contract ${contract.id} has no stripe_customer_id – Rechnung per E-Mail ohne automatischen Einzug`);
+        } else if (grossAmount === 0) {
+          console.log(`[auto-invoice] Contract ${contract.id} – Gesamtbetrag 0 €, kein Stripe-Einzug nötig`);
         }
 
-        // ── Insert invoice in DB ──────────────────────────────────────────
+        // ── Insert invoice in DB ──────────────────────────────────────────────
         const { data: invoice, error: insertError } = await supabase
           .from("invoices")
           .insert({
@@ -238,7 +264,7 @@ Deno.serve(async (req) => {
             gross_amount: grossAmount,
             status: "entwurf",
             stripe_invoice_id: stripeInvoiceId,
-            notes: `Automatisch generiert – Laufzeit: ${billingPeriod}`,
+            notes: `Automatisch generiert – Laufzeit: ${billingPeriod}${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv" : ""}`,
           })
           .select()
           .single();
@@ -257,14 +283,36 @@ Deno.serve(async (req) => {
           console.log(`[auto-invoice] Attached ${usageChargeIds.length} usage charges to invoice ${invoice.invoice_number}`);
         }
 
-        // ── Send invoice email ────────────────────────────────────────────
-        const positionsHtml = positions.map((p) => `
+        // ── Send invoice email ────────────────────────────────────────────────
+        const positionsHtml = positions
+          .filter(p => p.unit_price > 0 || isInWaiverPeriod) // Zeige Waiver-Positionen mit 0 € an
+          .map((p) => `
           <tr>
             <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">${p.description}</td>
             <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${p.quantity}</td>
             <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${Number(p.unit_price).toFixed(2)} €</td>
             <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${(p.quantity * p.unit_price).toFixed(2)} €</td>
           </tr>`).join("");
+
+        // ── Zahlungshinweis: je nach Zahlungsmethode unterschiedlicher Block ──
+        const paymentBlockHtml = hasStripeCustomer && grossAmount > 0
+          ? `<div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
+              <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug (SEPA via Stripe)</strong></p>
+              <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">Der Betrag wird automatisch von Ihrem hinterlegten SEPA-Konto eingezogen.</p>
+              <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">📅 <strong>Einzugsdatum:</strong> ${collectionDateFormatted}</p>
+            </div>`
+          : grossAmount === 0
+          ? `<div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
+              <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>✅ Diese Rechnung weist keinen Zahlbetrag aus.</strong></p>
+              <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">Es sind keine Zahlungen erforderlich. Diese Abrechnung dient als Nachweis für den aktuellen Abrechnungszeitraum.</p>
+            </div>`
+          : `<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:14px 16px;margin-top:20px;">
+              <p style="margin:0;font-size:14px;color:#8a6d00;"><strong>💳 Zahlung per Überweisung</strong></p>
+              <p style="margin:6px 0 0;font-size:13px;color:#8a6d00;">Bitte überweisen Sie den Gesamtbetrag bis zum <strong>${collectionDateFormatted}</strong> auf folgendes Konto:</p>
+              <p style="margin:8px 0 0;font-size:13px;color:#5d4700;"><strong>Empfänger:</strong> Honorarfuchs GmbH</p>
+              <p style="margin:4px 0 0;font-size:13px;color:#5d4700;"><strong>Verwendungszweck:</strong> ${invoice.invoice_number} – ${contract.hfx_customer_number || contract.customer_name}</p>
+              <p style="margin:8px 0 0;font-size:11px;color:#8a6d00;">Bankverbindung auf Anfrage unter <a href="mailto:buchhaltung@hfx-honorarfuchs.de" style="color:#8a6d00;">buchhaltung@hfx-honorarfuchs.de</a></p>
+            </div>`;
 
         const emailHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"/></head><body style="margin:0;padding:0;background:#ffffff;font-family:Arial,sans-serif;">
@@ -293,11 +341,7 @@ Deno.serve(async (req) => {
       <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#6b7280;"><span>MwSt. (19%):</span><span>${taxAmount.toFixed(2)} €</span></div>
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #0b367f;margin-top:8px;font-size:16px;"><span><strong>Gesamtbetrag:</strong></span><strong style="color:#0b367f;">${grossAmount.toFixed(2)} €</strong></div>
     </div>
-    <div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
-      <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug (SEPA via Stripe)</strong></p>
-      <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">Der Betrag wird automatisch von Ihrem hinterlegten SEPA-Konto eingezogen.</p>
-      <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">📅 <strong>Einzugsdatum:</strong> ${collectionDateFormatted}</p>
-    </div>
+    ${paymentBlockHtml}
     <p style="font-size:12px;color:#9ca3af;margin-top:8px;">Diese Rechnung wurde automatisch generiert.</p>
   </div>
   <div style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
@@ -307,13 +351,16 @@ Deno.serve(async (req) => {
 </body></html>`;
 
         const emailTo = contract.rechnungs_email || contract.email;
+        const subjectSuffix = grossAmount === 0 ? " (kein Zahlbetrag)" : "";
         const sendResult = await resend.emails.send({
           from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
           reply_to: "info@hfx-honorarfuchs.de",
           to: [emailTo],
-          subject: `Rechnung ${invoice.invoice_number} – ${contract.customer_name}`,
+          subject: `Rechnung ${invoice.invoice_number} – ${contract.customer_name}${subjectSuffix}`,
           html: emailHtml,
-          text: `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nGesamtbetrag: ${grossAmount.toFixed(2)} €\nEinzugsdatum: ${collectionDateFormatted}\nDiese Rechnung wurde automatisch generiert.`,
+          text: grossAmount > 0
+            ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nGesamtbetrag: ${grossAmount.toFixed(2)} €\n${hasStripeCustomer ? `Einzugsdatum: ${collectionDateFormatted}` : `Bitte überweisen Sie bis zum ${collectionDateFormatted}.`}\nDiese Rechnung wurde automatisch generiert.`
+            : `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nDiese Rechnung weist keinen Zahlbetrag aus (Einführungsangebot aktiv).\nDiese Rechnung wurde automatisch generiert.`,
         });
 
         if (sendResult.error) {
@@ -340,8 +387,8 @@ Deno.serve(async (req) => {
             tax_amount: taxAmount,
             tax_rate: taxRate,
             gross_amount: grossAmount,
-            payment_status: "pending",
-            notes: `Auto-Rechnung ${billingPeriod}${usageChargeIds.length > 0 ? ` + ${usageChargeIds.length} Nutzungsposten` : ""}${stripeInvoiceId ? ` | Stripe: ${stripeInvoiceId}` : ""}`,
+            payment_status: grossAmount === 0 ? "paid" : "pending",
+            notes: `Auto-Rechnung ${billingPeriod}${isInWaiverPeriod ? " | Grundgebühr-Waiver" : ""}${usageChargeIds.length > 0 ? ` + ${usageChargeIds.length} Nutzungsposten` : ""}${stripeInvoiceId ? ` | Stripe: ${stripeInvoiceId}` : ""}`,
           })
           .select("id")
           .single();
@@ -353,7 +400,7 @@ Deno.serve(async (req) => {
           .eq("id", invoice.id);
 
         // Auto-generate commission payout if contract has a sales partner
-        if (contract.sales_partner_id) {
+        if (contract.sales_partner_id && netAmount > 0) {
           const { data: productCommission } = await supabase
             .from("product_commissions")
             .select("*")
@@ -395,7 +442,7 @@ Deno.serve(async (req) => {
           }
         }
 
-        console.log(`[auto-invoice] ✓ Invoice ${invoice.invoice_number} sent to ${emailTo}${stripeInvoiceId ? ` | Stripe: ${stripeInvoiceId}` : " (no Stripe)"}`);
+        console.log(`[auto-invoice] ✓ Invoice ${invoice.invoice_number} sent to ${emailTo}${stripeInvoiceId ? ` | Stripe: ${stripeInvoiceId}` : hasStripeCustomer ? "" : " (kein Stripe – Überweisung)"}`);
         processed++;
       } catch (contractErr) {
         console.error(`[auto-invoice] Error processing contract ${contract.id}:`, contractErr);
