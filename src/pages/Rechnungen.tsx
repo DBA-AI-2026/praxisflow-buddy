@@ -157,6 +157,7 @@ export default function Rechnungen() {
   const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [detailEmail, setDetailEmail] = useState<string>("");
 
   // Create form
   const [form, setForm] = useState({
@@ -314,10 +315,16 @@ export default function Rechnungen() {
     setPositions([{ ...EMPTY_POSITION }]);
   };
 
-  const handleSendEmail = async (invoice: Invoice) => {
-    if (!invoice.rechnungs_email) {
-      toast({ title: "Keine E-Mail-Adresse", description: "Bitte zuerst eine Rechnungs-E-Mail hinterlegen.", variant: "destructive" });
+  const handleSendEmail = async (invoice: Invoice, overrideEmail?: string) => {
+    const emailToUse = overrideEmail || invoice.rechnungs_email;
+    if (!emailToUse) {
+      toast({ title: "Keine E-Mail-Adresse", description: "Bitte eine Rechnungs-E-Mail eingeben.", variant: "destructive" });
       return;
+    }
+    // If email changed, save it first
+    if (overrideEmail && overrideEmail !== invoice.rechnungs_email) {
+      await supabase.from("invoices").update({ rechnungs_email: overrideEmail }).eq("id", invoice.id);
+      invoice = { ...invoice, rechnungs_email: overrideEmail };
     }
     setSendingId(invoice.id);
     try {
@@ -910,7 +917,7 @@ export default function Rechnungen() {
 
       {/* Detail Dialog */}
       {showDetail && (
-        <Dialog open={!!showDetail} onOpenChange={() => setShowDetail(null)}>
+        <Dialog open={!!showDetail} onOpenChange={(o) => { setShowDetail(o ? showDetail : null); if (!o) setDetailEmail(""); }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -923,7 +930,16 @@ export default function Rechnungen() {
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                 <div><span className="text-muted-foreground">Kunde:</span> <span className="font-medium">{showDetail.customer_name}</span></div>
                 {showDetail.customer_number && <div><span className="text-muted-foreground">Nr.:</span> {showDetail.customer_number}</div>}
-                {showDetail.rechnungs_email && <div className="col-span-2"><span className="text-muted-foreground">E-Mail:</span> {showDetail.rechnungs_email}</div>}
+                <div className="col-span-2 space-y-1">
+                  <span className="text-muted-foreground">Rechnungs-E-Mail:</span>
+                  <Input
+                    type="email"
+                    placeholder="E-Mail für Rechnungsversand..."
+                    value={detailEmail !== "" ? detailEmail : (showDetail.rechnungs_email || "")}
+                    onChange={(e) => setDetailEmail(e.target.value)}
+                    className="mt-1 h-8 text-sm"
+                  />
+                </div>
                 <div><span className="text-muted-foreground">Datum:</span> {new Date(showDetail.invoice_date).toLocaleDateString("de-DE")}</div>
                 {showDetail.due_date && <div><span className="text-muted-foreground">Fällig:</span> {new Date(showDetail.due_date).toLocaleDateString("de-DE")}</div>}
               </div>
@@ -982,18 +998,18 @@ export default function Rechnungen() {
               )}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDetail(null)}>Schließen</Button>
+              <Button variant="outline" onClick={() => { setShowDetail(null); setDetailEmail(""); }}>Schließen</Button>
               <Button variant="outline" onClick={() => handleDownloadPdf(showDetail)}>
                 <Download className="h-4 w-4 mr-2" />
                 PDF herunterladen
               </Button>
-              {showDetail.rechnungs_email && showDetail.status === "entwurf" && (
+              {showDetail.status !== "storniert" && (
                 <Button
-                  onClick={() => handleSendEmail(showDetail)}
-                  disabled={sendingId === showDetail.id}
+                  onClick={() => handleSendEmail(showDetail, detailEmail || showDetail.rechnungs_email || undefined)}
+                  disabled={sendingId === showDetail.id || !(detailEmail || showDetail.rechnungs_email)}
                 >
                   <Send className="h-4 w-4 mr-2" />
-                  {sendingId === showDetail.id ? "Wird versendet..." : "Per E-Mail versenden"}
+                  {sendingId === showDetail.id ? "Wird versendet..." : showDetail.email_sent_at ? "Erneut versenden" : "Per E-Mail versenden"}
                 </Button>
               )}
             </DialogFooter>
