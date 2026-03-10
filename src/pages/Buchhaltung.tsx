@@ -542,7 +542,7 @@ export default function Buchhaltung() {
               </div>
             </div>
             <div className="overflow-x-auto">
-              {realCommissions.length === 0 ? (
+              {commissions.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">Keine freigegebenen Provisionen im gewählten Zeitraum. Provisionen werden unter <strong>Vertrieb → Provisionen</strong> freigegeben.</div>
               ) : (
                 <table className="data-table">
@@ -550,7 +550,7 @@ export default function Buchhaltung() {
                     <tr><th>Monat</th><th>Vertriebler</th><th>Produkt</th><th>Konto</th><th>Satz</th><th>Betrag</th><th>Status</th></tr>
                   </thead>
                   <tbody>
-                    {realCommissions.map((c: any) => (
+                    {commissions.map((c: any) => (
                       <tr key={c.id}>
                         <td className="text-muted-foreground">{c.period_month}</td>
                         <td className="font-medium text-foreground">{c.sales_partner_name}</td>
