@@ -326,18 +326,19 @@ export async function generateInvoicePdf(
   text(taxLabel, totalsLabelX, y, 9, font, C_MUTED);
   const taxStr = formatCurrency(data.tax_amount);
   text(taxStr, totalsValueX - font.widthOfTextAtSize(taxStr, 9), y, 9, font, C_TEXT);
-  y -= 4;
+  y -= 6;
 
   page.drawLine({ start: { x: totalsLabelX - 4, y: y }, end: { x: PAGE_W - M, y }, thickness: 0.5, color: C_LINE });
-  y -= 8;
+  y -= 20;
 
-  // Gross total highlighted
-  const grossBoxH = 26;
-  page.drawRectangle({ x: totalsLabelX - 8, y: y - grossBoxH + 18, width: totalsW + 8, height: grossBoxH, color: C_NAVY });
-  text("Gesamtbetrag (brutto):", totalsLabelX, y, 9.5, fontBold, C_WHITE);
+  // Gross total highlighted — rectangle anchored at text baseline with fixed padding
+  const grossBoxH = 28;
+  const grossTextY = y;
+  page.drawRectangle({ x: totalsLabelX - 8, y: grossTextY - 6, width: totalsW + 8, height: grossBoxH, color: C_NAVY });
+  text("Gesamtbetrag (brutto):", totalsLabelX, grossTextY + 8, 9.5, fontBold, C_WHITE);
   const grossStr = formatCurrency(data.gross_amount);
-  text(grossStr, totalsValueX - fontBold.widthOfTextAtSize(grossStr, 12), y, 12, fontBold, C_WHITE);
-  y -= grossBoxH + 14;
+  text(grossStr, totalsValueX - fontBold.widthOfTextAtSize(grossStr, 12), grossTextY + 8, 12, fontBold, C_WHITE);
+  y -= 22;
 
   // ===== PAYMENT NOTICE =====
   ensureSpace(70);
