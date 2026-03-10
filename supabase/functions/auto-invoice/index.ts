@@ -193,9 +193,65 @@ Deno.serve(async (req) => {
         const todayStr = today.toISOString().split("T")[0];
 
         // ── Stripe SEPA payment ──────────────────────────────────────────────
-        // Nur wenn Stripe-Kunde hinterlegt UND tatsächlich ein Betrag fällig ist
         let stripeInvoiceId: string | null = null;
         const hasStripeCustomer = !!contract.stripe_customer_id;
+
+        // Kein SEPA-Mandat vorhanden → Checkout-Setup-Link senden und Rechnung überspringen
+        if (!hasStripeCustomer) {
+          console.warn(`[auto-invoice] Contract ${contract.id} (${contract.customer_name}) hat kein Stripe-Mandat – sende Mandatsanforderungs-E-Mail`);
+          try {
+            const emailRecipient = contract.rechnungs_email || contract.email;
+            if (emailRecipient) {
+              // Stripe-Kunden anlegen
+              const stripeCustomer = await stripe.customers.create({
+                name: contract.customer_name,
+                email: emailRecipient,
+                metadata: { hfx_contract_id: contract.id, hfx_customer_number: contract.hfx_customer_number || "" },
+              });
+
+              // stripe_customer_id sofort am Vertrag speichern
+              await supabase
+                .from("contracts")
+                .update({ stripe_customer_id: stripeCustomer.id } as any)
+                .eq("id", contract.id);
+
+              // Checkout-Session im Setup-Modus für SEPA-Lastschrift
+              const setupSession = await stripe.checkout.sessions.create({
+                mode: "setup",
+                customer: stripeCustomer.id,
+                payment_method_types: ["sepa_debit"],
+                success_url: "https://praxisflow-buddy.lovable.app/mandate-success?session_id={CHECKOUT_SESSION_ID}",
+                cancel_url: "https://praxisflow-buddy.lovable.app/",
+                metadata: {
+                  source: "sepa_mandate_setup",
+                  contract_id: contract.id,
+                  hfx_customer_number: contract.hfx_customer_number || "",
+                },
+              });
+
+              // Mandatsanforderungs-E-Mail versenden
+              const mandateEmailHtml = buildMandateRequestEmail({
+                customerName: contract.customer_name,
+                productName: contract.product_name,
+                setupUrl: setupSession.url!,
+                billingPeriod,
+              });
+              await resend.emails.send({
+                from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+                reply_to: "info@hfx-honorarfuchs.de",
+                to: [emailRecipient],
+                subject: `Zahlungsmethode hinterlegen – ${contract.customer_name}`,
+                html: mandateEmailHtml,
+              });
+              console.log(`[auto-invoice] Mandatsanforderung gesendet an ${emailRecipient} (Contract: ${contract.id})`);
+            }
+          } catch (mandateErr: any) {
+            console.error(`[auto-invoice] Mandate request error for contract ${contract.id}:`, mandateErr?.message);
+            errors.push(`Mandate [${contract.id}]: ${mandateErr?.message}`);
+          }
+          skipped++;
+          continue; // Keine Rechnung erstellen bis Mandat vorliegt
+        }
 
         if (hasStripeCustomer && grossAmount > 0) {
           try {
@@ -238,8 +294,6 @@ Deno.serve(async (req) => {
             console.error(`[auto-invoice] Stripe error for contract ${contract.id}:`, stripeErr?.message);
             errors.push(`Stripe [${contract.id}]: ${stripeErr?.message}`);
           }
-        } else if (!hasStripeCustomer) {
-          console.warn(`[auto-invoice] Contract ${contract.id} has no stripe_customer_id – Rechnung per E-Mail ohne automatischen Einzug`);
         } else if (grossAmount === 0) {
           console.log(`[auto-invoice] Contract ${contract.id} – Gesamtbetrag 0 €, kein Stripe-Einzug nötig`);
         }
