@@ -289,7 +289,7 @@ export default function Interessenten() {
                       </TableCell>
                       <TableCell className="text-sm">{lead.email}</TableCell>
                       <TableCell>{lead.plz}</TableCell>
-                      <TableCell className="text-sm">{lead.abrechnungszentrum === "nein" ? "–" : lead.abrechnungszentrum}</TableCell>
+                      <TableCell className="text-sm">{(lead.abrechnungszentrum === "nein" || lead.abrechnungszentrum === "keins") ? "–" : lead.abrechnungszentrum}</TableCell>
                       <TableCell>
                         <Select
                           value={lead.status}
