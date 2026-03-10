@@ -245,7 +245,7 @@ export async function generateInvoicePdf(
 
   // Table header
   const theadH = 20;
-  page.drawRectangle({ x: M, y: y - theadH + 14, width: TABLE_W, height: theadH, color: C_NAVY, borderRadius: 3 });
+  page.drawRectangle({ x: M, y: y - theadH + 14, width: TABLE_W, height: theadH, color: C_NAVY });
   text("Beschreibung",  COL_DESC  + 6, y, 8, fontBold, C_WHITE);
   text("Menge",         COL_QTY,       y, 8, fontBold, C_WHITE);
   text("Einzelpreis",   COL_UNIT,      y, 8, fontBold, C_WHITE);
