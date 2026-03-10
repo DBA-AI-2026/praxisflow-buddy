@@ -998,18 +998,18 @@ export default function Rechnungen() {
               )}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDetail(null)}>Schließen</Button>
+              <Button variant="outline" onClick={() => { setShowDetail(null); setDetailEmail(""); }}>Schließen</Button>
               <Button variant="outline" onClick={() => handleDownloadPdf(showDetail)}>
                 <Download className="h-4 w-4 mr-2" />
                 PDF herunterladen
               </Button>
-              {showDetail.rechnungs_email && showDetail.status === "entwurf" && (
+              {showDetail.status !== "storniert" && (
                 <Button
-                  onClick={() => handleSendEmail(showDetail)}
-                  disabled={sendingId === showDetail.id}
+                  onClick={() => handleSendEmail(showDetail, detailEmail || showDetail.rechnungs_email || undefined)}
+                  disabled={sendingId === showDetail.id || !(detailEmail || showDetail.rechnungs_email)}
                 >
                   <Send className="h-4 w-4 mr-2" />
-                  {sendingId === showDetail.id ? "Wird versendet..." : "Per E-Mail versenden"}
+                  {sendingId === showDetail.id ? "Wird versendet..." : showDetail.email_sent_at ? "Erneut versenden" : "Per E-Mail versenden"}
                 </Button>
               )}
             </DialogFooter>
