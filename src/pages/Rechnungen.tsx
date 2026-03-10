@@ -157,6 +157,7 @@ export default function Rechnungen() {
   const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [detailEmail, setDetailEmail] = useState<string>("");
 
   // Create form
   const [form, setForm] = useState({
