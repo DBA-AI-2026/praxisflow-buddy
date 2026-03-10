@@ -384,6 +384,63 @@ async function handlePaperContractPayment(
 
 
 // ────────────────────────────────────────────────────────────────────────────
+// SEPA MANDATE SETUP: Nach erfolgreichem Setup Zahlungsmethode speichern
+// ────────────────────────────────────────────────────────────────────────────
+async function handleSepaMandateSetup(
+  supabase: ReturnType<typeof createClient>,
+  stripe: Stripe,
+  session: Stripe.Checkout.Session
+) {
+  const contractId = session.metadata?.contract_id;
+  if (!contractId) {
+    console.error("[stripe-webhook] sepa_mandate_setup missing contract_id");
+    return;
+  }
+
+  const stripeCustomerId = typeof session.customer === "string"
+    ? session.customer
+    : (session.customer as any)?.id;
+
+  if (!stripeCustomerId) {
+    console.error("[stripe-webhook] sepa_mandate_setup missing customer id");
+    return;
+  }
+
+  // SetupIntent abrufen und Zahlungsmethode als Standard setzen
+  if (session.setup_intent) {
+    const setupIntentId = typeof session.setup_intent === "string"
+      ? session.setup_intent
+      : (session.setup_intent as any).id;
+    try {
+      const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
+      if (setupIntent.payment_method) {
+        const pmId = typeof setupIntent.payment_method === "string"
+          ? setupIntent.payment_method
+          : (setupIntent.payment_method as any).id;
+        await stripe.customers.update(stripeCustomerId, {
+          invoice_settings: { default_payment_method: pmId },
+        });
+        log("SEPA payment method set as default", { stripeCustomerId, pmId });
+      }
+    } catch (err) {
+      console.error("[stripe-webhook] Could not set default payment method:", err);
+    }
+  }
+
+  // stripe_customer_id am Vertrag sichern
+  const { error } = await supabase
+    .from("contracts")
+    .update({ stripe_customer_id: stripeCustomerId } as any)
+    .eq("id", contractId);
+
+  if (error) {
+    console.error("[stripe-webhook] failed to save stripe_customer_id after mandate setup:", error);
+  } else {
+    log("SEPA mandate setup completed", { contractId, stripeCustomerId });
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 function buildConfirmationEmail(params: {
   contactName: string;
   companyName: string;
