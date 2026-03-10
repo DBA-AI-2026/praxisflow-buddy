@@ -122,18 +122,45 @@ Deno.serve(async (req) => {
         }
 
         // Build invoice positions
-        const baseNetAmount = Number(contract.monthly_price) || 0;
         const taxRate = 19;
         const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
         const billingPeriod = `${monthNames[today.getMonth()]} ${currentYear}`;
 
-        const positions: { description: string; quantity: number; unit_price: number }[] = [
-          {
+        // ── Grundgebühr-Waiver-Logik ─────────────────────────────────────────
+        // Verträge abgeschlossen vor 30.06.2026 zahlen keine Grundgebühr bis 01.01.2027
+        const contractSignedAt = new Date(contract.created_at || contract.start_date);
+        const waiverCutoffDate = new Date("2026-06-30");  // Vertrag muss bis zu diesem Datum abgeschlossen sein
+        const waiverEndDate = new Date("2027-01-01");      // Grundgebühr-Freiheit gilt bis zu diesem Datum
+        const isInWaiverPeriod = contractSignedAt <= waiverCutoffDate && today < waiverEndDate;
+
+        let baseNetAmount = Number(contract.monthly_price) || 0;
+        if (isInWaiverPeriod && baseNetAmount > 0) {
+          console.log(`[auto-invoice] Grundgebühr-Waiver aktiv für Vertrag ${contract.id} (abgeschlossen: ${contractSignedAt.toISOString().split("T")[0]}): Grundgebühr ${baseNetAmount} € → 0 €`);
+          baseNetAmount = 0;
+        }
+
+        const positions: { description: string; quantity: number; unit_price: number }[] = [];
+
+        if (baseNetAmount > 0) {
+          positions.push({
             description: `${contract.product_name} – ${billingPeriod}`,
             quantity: contract.license_count || 1,
             unit_price: baseNetAmount / (contract.license_count || 1),
-          },
-        ];
+          });
+        } else if (isInWaiverPeriod) {
+          // Grundgebühr ausgewiesen mit 0 € (Transparenz für den Kunden)
+          positions.push({
+            description: `${contract.product_name} – ${billingPeriod} (Einführungsangebot: Grundgebühr entfällt bis 31.12.2026)`,
+            quantity: contract.license_count || 1,
+            unit_price: 0,
+          });
+        } else {
+          positions.push({
+            description: `${contract.product_name} – ${billingPeriod}`,
+            quantity: contract.license_count || 1,
+            unit_price: 0,
+          });
+        }
 
         // Collect pending usage charges for this HFX-Nr
         let usageChargeIds: string[] = [];
