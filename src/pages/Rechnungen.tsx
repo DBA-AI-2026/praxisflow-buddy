@@ -1024,7 +1024,7 @@ export default function Rechnungen() {
               </Button>
               {showDetail.status !== "storniert" && (
                 <Button
-                  onClick={() => handleSendEmail(showDetail, detailEmail || showDetail.rechnungs_email || undefined)}
+                  onClick={() => handleSendEmail(showDetail, (detailEmail && detailEmail !== showDetail.rechnungs_email ? detailEmail : undefined) || showDetail.rechnungs_email || undefined)}
                   disabled={sendingId === showDetail.id || !(detailEmail || showDetail.rechnungs_email)}
                 >
                   <Send className="h-4 w-4 mr-2" />
