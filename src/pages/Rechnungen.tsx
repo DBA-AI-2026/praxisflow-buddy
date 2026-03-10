@@ -194,7 +194,7 @@ export default function Rechnungen() {
   const fetchContracts = async () => {
     const { data } = await supabase
       .from("contracts")
-      .select("id, customer_name, hfx_customer_number, rechnungs_email, adresse, plz, ort, monthly_price, product_name, status")
+      .select("id, customer_name, hfx_customer_number, rechnungs_email, adresse, plz, ort, monthly_price, product_name, status, start_date")
       .eq("status", "aktiv")
       .order("customer_name");
     if (data) setContracts(data as Contract[]);
