@@ -7,6 +7,7 @@ import { Loader2, ShieldX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MfaChallenge } from "@/pages/MfaChallenge";
+import { useRolePreview } from "@/contexts/RolePreviewContext";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
