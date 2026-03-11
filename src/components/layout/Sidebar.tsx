@@ -135,7 +135,18 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
-  const { role: userRole, isAdmin } = useUserRole();
+  const { role: userRole, isAdmin, actualRole } = useUserRole();
+  const { previewRole, setPreviewRole, isPreviewActive } = useRolePreview();
+
+  const roleLabels: Record<AppRole, string> = {
+    admin: "Administrator",
+    sales_lead: "Vertriebsleitung",
+    regional_lead: "Regionalleiter",
+    sales_partner: "Vertriebspartner",
+    user: "Gebietsleiter",
+    vertragsabteilung: "Vertragsabteilung",
+    tippgeber: "Tippgeber",
+  };
 
   const handleLogout = async () => {
     await signOut();
