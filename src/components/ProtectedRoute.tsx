@@ -7,6 +7,7 @@ import { Loader2, ShieldX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MfaChallenge } from "@/pages/MfaChallenge";
+import { useRolePreview } from "@/contexts/RolePreviewContext";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,7 +16,8 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps) {
   const { user, session, isLoading: authLoading } = useAuth();
-  const { role, isLoading: roleLoading } = useUserRole();
+  const { role, actualRole, isLoading: roleLoading } = useUserRole();
+  const { isPreviewActive } = useRolePreview();
   const location = useLocation();
   const hasLoggedRef = useRef(false);
   const [mfaState, setMfaState] = useState<"checking" | "required" | "verified" | "not_enrolled">("checking");
@@ -59,14 +61,20 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
     checkMfa();
   }, [session, authLoading]);
 
-  // Check role-based access
-  const hasAccess = requiredRoles
-    ? role && requiredRoles.includes(role)
-    : canAccessRoute(location.pathname, role);
+  // Check role-based access.
+  // During role preview: grant access if EITHER the preview role OR the actual
+  // admin role has permission. This lets admins navigate role-specific pages
+  // without losing access to their own admin-only routes.
+  const roleHasAccess = (r: AppRole | null) =>
+    requiredRoles ? !!(r && requiredRoles.includes(r)) : canAccessRoute(location.pathname, r);
 
-  // Log failed access attempts
+  const hasAccess = isPreviewActive && actualRole === "admin"
+    ? roleHasAccess(role) || roleHasAccess(actualRole)
+    : roleHasAccess(role);
+
+  // Log failed access attempts (skip during admin role preview – not a real denial)
   useEffect(() => {
-    if (!authLoading && !roleLoading && session && user && !hasAccess && !hasLoggedRef.current) {
+    if (!authLoading && !roleLoading && session && user && !hasAccess && !hasLoggedRef.current && !isPreviewActive) {
       hasLoggedRef.current = true;
       logAuditEvent({
         action: "ACCESS_DENIED",
@@ -75,7 +83,7 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
         details: `User with role '${role || "none"}' attempted to access ${location.pathname}`,
       });
     }
-  }, [authLoading, roleLoading, session, user, hasAccess, role, location.pathname]);
+  }, [authLoading, roleLoading, session, user, hasAccess, role, location.pathname, isPreviewActive]);
 
   // Reset the log flag when path changes
   useEffect(() => {
