@@ -16,6 +16,7 @@ import { format, formatDistanceToNow, subHours } from "date-fns";
 import { de } from "date-fns/locale";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
 import { Button } from "@/components/ui/button";
+import { useRolePreview } from "@/contexts/RolePreviewContext";
 
 interface ActivityItem {
   id: string;
