@@ -16,7 +16,8 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps) {
   const { user, session, isLoading: authLoading } = useAuth();
-  const { role, isLoading: roleLoading } = useUserRole();
+  const { role, actualRole, isLoading: roleLoading } = useUserRole();
+  const { isPreviewActive } = useRolePreview();
   const location = useLocation();
   const hasLoggedRef = useRef(false);
   const [mfaState, setMfaState] = useState<"checking" | "required" | "verified" | "not_enrolled">("checking");
