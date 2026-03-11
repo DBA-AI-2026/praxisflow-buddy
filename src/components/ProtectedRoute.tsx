@@ -72,9 +72,9 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
     ? roleHasAccess(role) || roleHasAccess(actualRole)
     : roleHasAccess(role);
 
-  // Log failed access attempts
+  // Log failed access attempts (skip during admin role preview – not a real denial)
   useEffect(() => {
-    if (!authLoading && !roleLoading && session && user && !hasAccess && !hasLoggedRef.current) {
+    if (!authLoading && !roleLoading && session && user && !hasAccess && !hasLoggedRef.current && !isPreviewActive) {
       hasLoggedRef.current = true;
       logAuditEvent({
         action: "ACCESS_DENIED",
@@ -83,7 +83,7 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
         details: `User with role '${role || "none"}' attempted to access ${location.pathname}`,
       });
     }
-  }, [authLoading, roleLoading, session, user, hasAccess, role, location.pathname]);
+  }, [authLoading, roleLoading, session, user, hasAccess, role, location.pathname, isPreviewActive]);
 
   // Reset the log flag when path changes
   useEffect(() => {
