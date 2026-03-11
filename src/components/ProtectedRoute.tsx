@@ -61,10 +61,16 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
     checkMfa();
   }, [session, authLoading]);
 
-  // Check role-based access
-  const hasAccess = requiredRoles
-    ? role && requiredRoles.includes(role)
-    : canAccessRoute(location.pathname, role);
+  // Check role-based access.
+  // During role preview: grant access if EITHER the preview role OR the actual
+  // admin role has permission. This lets admins navigate role-specific pages
+  // without losing access to their own admin-only routes.
+  const roleHasAccess = (r: AppRole | null) =>
+    requiredRoles ? !!(r && requiredRoles.includes(r)) : canAccessRoute(location.pathname, r);
+
+  const hasAccess = isPreviewActive && actualRole === "admin"
+    ? roleHasAccess(role) || roleHasAccess(actualRole)
+    : roleHasAccess(role);
 
   // Log failed access attempts
   useEffect(() => {
