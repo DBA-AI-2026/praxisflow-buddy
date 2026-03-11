@@ -181,12 +181,12 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       {/* Admin Role Preview Banner */}
       {actualRole === "admin" && (
-        <div className={`px-3 py-2 border-b border-sidebar-border ${isPreviewActive ? "bg-amber-500/15" : "bg-sidebar-accent/50"}`}>
+        <div className={`px-3 py-2 border-b border-sidebar-border ${isPreviewActive ? "bg-warning/10" : "bg-sidebar-accent/50"}`}>
           <div className="flex items-center gap-2">
-            <Eye className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+            <Eye className="h-3.5 w-3.5 text-warning flex-shrink-0" />
             <span className="text-xs text-sidebar-foreground/70 flex-1 truncate">
               {isPreviewActive ? (
-                <span className="font-medium text-amber-600 dark:text-amber-400">Ansicht: {roleLabels[previewRole!]}</span>
+                <span className="font-medium text-warning">{roleLabels[previewRole!]}</span>
               ) : (
                 "Rollenvorschau"
               )}
