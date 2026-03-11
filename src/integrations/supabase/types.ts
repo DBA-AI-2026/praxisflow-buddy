@@ -1564,6 +1564,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_in_regional_lead_team: {
+        Args: { _regional_lead_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
