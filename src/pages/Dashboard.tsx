@@ -295,6 +295,33 @@ export default function Dashboard() {
 
   return (
     <MainLayout title="" subtitle="">
+      {/* === ROLLENVORSCHAU-BANNER === */}
+      {isPreviewActive && previewRole && (
+        <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-warning/20 text-warning">
+              <Eye className="h-3.5 w-3.5" />
+            </span>
+            <p className="text-sm font-medium text-warning-foreground">
+              <span className="font-semibold">Rollenvorschau aktiv:</span>{" "}
+              Du siehst das Dashboard als{" "}
+              <span className="rounded-md bg-warning/20 px-1.5 py-0.5 font-semibold">
+                {getRoleLabel(previewRole)}
+              </span>
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPreviewRole(null)}
+            className="shrink-0 border-warning/40 text-warning hover:bg-warning/20 hover:text-warning"
+          >
+            <X className="mr-1.5 h-3.5 w-3.5" />
+            Vorschau beenden
+          </Button>
+        </div>
+      )}
+
       {/* === HEADER: Personalisierte Begrüßung === */}
       <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
