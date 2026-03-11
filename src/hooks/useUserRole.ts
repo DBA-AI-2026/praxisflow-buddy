@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { useRolePreview } from "@/contexts/RolePreviewContext";
 import type { Database } from "@/integrations/supabase/types";
 
 export type AppRole = Database["public"]["Enums"]["app_role"];
@@ -17,15 +18,16 @@ interface UseUserRoleResult {
   isTippgeber: boolean;
 }
 
-export function useUserRole(): UseUserRoleResult & { isRegionalLead: boolean } {
+export function useUserRole(): UseUserRoleResult & { isRegionalLead: boolean; actualRole: AppRole | null } {
   const { user, isLoading: authLoading } = useAuth();
-  const [role, setRole] = useState<AppRole | null>(null);
+  const [actualRole, setActualRole] = useState<AppRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { previewRole } = useRolePreview();
 
   useEffect(() => {
     const fetchRole = async () => {
       if (!user) {
-        setRole(null);
+        setActualRole(null);
         setIsLoading(false);
         return;
       }
@@ -38,13 +40,13 @@ export function useUserRole(): UseUserRoleResult & { isRegionalLead: boolean } {
           .maybeSingle();
 
         if (data && !error) {
-          setRole(data.role);
+          setActualRole(data.role);
         } else {
-          setRole(null);
+          setActualRole(null);
         }
       } catch (error) {
         console.error("Error fetching user role:", error);
-        setRole(null);
+        setActualRole(null);
       } finally {
         setIsLoading(false);
       }
@@ -55,15 +57,19 @@ export function useUserRole(): UseUserRoleResult & { isRegionalLead: boolean } {
     }
   }, [user, authLoading]);
 
+  // Admins can preview as another role; actual role is always preserved
+  const role = (actualRole === "admin" && previewRole) ? previewRole : actualRole;
+
   return {
     role,
+    actualRole,
     isLoading: authLoading || isLoading,
-    isAdmin: role === "admin",
+    isAdmin: actualRole === "admin", // always based on real role
     isVertragsabteilung: role === "vertragsabteilung",
     isSalesLead: role === "sales_lead",
     isRegionalLead: role === "regional_lead",
-  isSalesPartner: role === "sales_partner",
-  isUser: role === "user",
-  isTippgeber: role === "tippgeber",
+    isSalesPartner: role === "sales_partner",
+    isUser: role === "user",
+    isTippgeber: role === "tippgeber",
   };
 }

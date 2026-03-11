@@ -23,6 +23,8 @@ import {
   Lightbulb,
   MapPin,
   Mail,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import logo from "@/assets/fox-logo.jpeg";
 import { useState } from "react";
@@ -30,6 +32,14 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole, AppRole } from "@/hooks/useUserRole";
+import { useRolePreview } from "@/contexts/RolePreviewContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const allRoles: AppRole[] = ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "tippgeber", "admin"];
 
@@ -125,7 +135,18 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
-  const { role: userRole, isAdmin } = useUserRole();
+  const { role: userRole, isAdmin, actualRole } = useUserRole();
+  const { previewRole, setPreviewRole, isPreviewActive } = useRolePreview();
+
+  const roleLabels: Record<AppRole, string> = {
+    admin: "Administrator",
+    sales_lead: "Vertriebsleitung",
+    regional_lead: "Regionalleiter",
+    sales_partner: "Vertriebspartner",
+    user: "Gebietsleiter",
+    vertragsabteilung: "Vertragsabteilung",
+    tippgeber: "Tippgeber",
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -157,6 +178,51 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <span className="text-xs block text-sidebar-foreground/60">das Portal für den Vertrieb</span>
         </div>
       </div>
+
+      {/* Admin Role Preview Banner */}
+      {actualRole === "admin" && (
+        <div className={`px-3 py-2 border-b border-sidebar-border ${isPreviewActive ? "bg-warning/10" : "bg-sidebar-accent/50"}`}>
+          <div className="flex items-center gap-2">
+            <Eye className="h-3.5 w-3.5 text-warning flex-shrink-0" />
+            <span className="text-xs text-sidebar-foreground/70 flex-1 truncate">
+              {isPreviewActive ? (
+                <span className="font-medium text-warning">{roleLabels[previewRole!]}</span>
+              ) : (
+                "Rollenvorschau"
+              )}
+            </span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="text-xs px-2 py-0.5 rounded border border-sidebar-border bg-background/50 hover:bg-background/80 text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors flex-shrink-0">
+                  {isPreviewActive ? "Ändern" : "Auswählen"}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {(Object.entries(roleLabels) as [AppRole, string][])
+                  .filter(([r]) => r !== "admin")
+                  .map(([r, label]) => (
+                    <DropdownMenuItem
+                      key={r}
+                      onClick={() => setPreviewRole(r)}
+                      className={previewRole === r ? "bg-accent font-medium" : ""}
+                    >
+                      {label}
+                    </DropdownMenuItem>
+                  ))}
+                {isPreviewActive && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setPreviewRole(null)} className="text-destructive">
+                      <EyeOff className="h-4 w-4 mr-2" />
+                      Vorschau beenden
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-2 lg:px-3 py-4 overflow-y-auto">
