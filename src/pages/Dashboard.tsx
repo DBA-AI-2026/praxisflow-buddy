@@ -152,6 +152,7 @@ const onboardingConfig: Partial<Record<AppRole, { icon: React.ElementType; title
 export default function Dashboard() {
   const { profile } = useAuth();
   const { role, isAdmin, isVertragsabteilung } = useUserRole();
+  const { previewRole, isPreviewActive, setPreviewRole } = useRolePreview();
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
 
