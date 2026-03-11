@@ -16,6 +16,7 @@ import { format, formatDistanceToNow, subHours } from "date-fns";
 import { de } from "date-fns/locale";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
 import { Button } from "@/components/ui/button";
+import { useRolePreview } from "@/contexts/RolePreviewContext";
 
 interface ActivityItem {
   id: string;
@@ -151,6 +152,7 @@ const onboardingConfig: Partial<Record<AppRole, { icon: React.ElementType; title
 export default function Dashboard() {
   const { profile } = useAuth();
   const { role, isAdmin, isVertragsabteilung } = useUserRole();
+  const { previewRole, isPreviewActive, setPreviewRole } = useRolePreview();
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
 
@@ -293,6 +295,33 @@ export default function Dashboard() {
 
   return (
     <MainLayout title="" subtitle="">
+      {/* === ROLLENVORSCHAU-BANNER === */}
+      {isPreviewActive && previewRole && (
+        <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border-2 border-warning/60 bg-warning/10 px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-warning text-warning-foreground shadow-sm">
+              <Eye className="h-4 w-4" />
+            </span>
+            <p className="text-sm font-medium text-foreground">
+              <span className="font-semibold text-warning">Rollenvorschau aktiv –</span>{" "}
+              Du siehst das Dashboard als{" "}
+              <span className="rounded-md bg-warning/25 px-1.5 py-0.5 font-semibold text-foreground">
+                {getRoleLabel(previewRole)}
+              </span>
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPreviewRole(null)}
+            className="shrink-0 border-warning/50 text-warning hover:bg-warning/15 hover:text-warning"
+          >
+            <X className="mr-1.5 h-3.5 w-3.5" />
+            Vorschau beenden
+          </Button>
+        </div>
+      )}
+
       {/* === HEADER: Personalisierte Begrüßung === */}
       <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
