@@ -297,15 +297,15 @@ export default function Dashboard() {
     <MainLayout title="" subtitle="">
       {/* === ROLLENVORSCHAU-BANNER === */}
       {isPreviewActive && previewRole && (
-        <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3">
+        <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border-2 border-warning/60 bg-warning/10 px-4 py-3">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-warning/20 text-warning">
-              <Eye className="h-3.5 w-3.5" />
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-warning text-warning-foreground shadow-sm">
+              <Eye className="h-4 w-4" />
             </span>
-            <p className="text-sm font-medium text-warning-foreground">
-              <span className="font-semibold">Rollenvorschau aktiv:</span>{" "}
+            <p className="text-sm font-medium text-foreground">
+              <span className="font-semibold text-warning">Rollenvorschau aktiv –</span>{" "}
               Du siehst das Dashboard als{" "}
-              <span className="rounded-md bg-warning/20 px-1.5 py-0.5 font-semibold">
+              <span className="rounded-md bg-warning/25 px-1.5 py-0.5 font-semibold text-foreground">
                 {getRoleLabel(previewRole)}
               </span>
             </p>
@@ -314,7 +314,7 @@ export default function Dashboard() {
             variant="outline"
             size="sm"
             onClick={() => setPreviewRole(null)}
-            className="shrink-0 border-warning/40 text-warning hover:bg-warning/20 hover:text-warning"
+            className="shrink-0 border-warning/50 text-warning hover:bg-warning/15 hover:text-warning"
           >
             <X className="mr-1.5 h-3.5 w-3.5" />
             Vorschau beenden
