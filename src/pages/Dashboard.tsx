@@ -451,6 +451,11 @@ export default function Dashboard() {
                     <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${statusBadge(l.status)}`}>
                       {l.status}
                     </span>
+                    {l.qodia_synced ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                    ) : (
+                      <XCircle className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {l.vorname} {l.nachname} · {l.abrechnungszentrum}
