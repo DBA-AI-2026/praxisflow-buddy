@@ -158,6 +158,19 @@ export default function Praxen() {
       }));
 
     setPraxen([...praxenList, ...contractEntries]);
+
+    // Fetch qodia status from leads
+    const { data: leadsData } = await supabase
+      .from("leads")
+      .select("id, hfx_customer_number, qodia_synced");
+    const byHfx: Record<string, boolean> = {};
+    const byLeadId: Record<string, boolean> = {};
+    (leadsData || []).forEach((l: any) => {
+      if (l.hfx_customer_number) byHfx[l.hfx_customer_number] = l.qodia_synced;
+      if (l.id) byLeadId[l.id] = l.qodia_synced;
+    });
+    setLeadQodiaMap({ byHfx, byLeadId });
+
     setLoading(false);
   };
 
