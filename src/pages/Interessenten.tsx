@@ -104,6 +104,7 @@ export default function Interessenten() {
   });
 
   const [resending, setResending] = useState(false);
+  const [syncingQodia, setSyncingQodia] = useState(false);
 
   const resendCredentials = async (leadId: string) => {
     setResending(true);
@@ -117,6 +118,32 @@ export default function Interessenten() {
       toast({ title: "Fehler", description: err.message || "Versand fehlgeschlagen", variant: "destructive" });
     } finally {
       setResending(false);
+    }
+  };
+
+  const syncToQodia = async (leadId: string) => {
+    setSyncingQodia(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-lead-qodia", {
+        body: { leadId },
+      });
+      if (error) throw error;
+      if (data?.already_synced) {
+        toast({ title: "Bereits synchronisiert", description: data.message });
+      } else if (data?.success) {
+        toast({ title: "Qodia-Sync erfolgreich", description: data.message });
+        queryClient.invalidateQueries({ queryKey: ["leads"] });
+        // Refresh selectedLead if open
+        if (selectedLead?.id === leadId) {
+          setSelectedLead((prev: any) => prev ? { ...prev, qodia_synced: true } : prev);
+        }
+      } else {
+        toast({ title: "Qodia-Fehler", description: data?.error || "Unbekannter Fehler", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Fehler", description: err.message || "Sync fehlgeschlagen", variant: "destructive" });
+    } finally {
+      setSyncingQodia(false);
     }
   };
 
