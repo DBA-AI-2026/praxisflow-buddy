@@ -535,7 +535,11 @@ function buildInvoiceHtml() {
     <p style="font-size:12px;color:#6b7280;margin-top:4px;">📎 Das PDF dieser Rechnung ist als Anhang beigefügt.</p>
   </div>
   <div style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
-    <p style="font-size:11px;color:#9ca3af;margin:0;">Diese Rechnung wurde automatisch erstellt. © Honorarfuchs – HFX Sales Portal</p>
+    <p style="font-size:11px;color:#374151;font-weight:600;margin:0;">HFX Honorarfuchs – ein Geschäftsbereich von MCC Medical CareCapital GmbH</p>
+    <p style="font-size:11px;color:#6b7280;margin:4px 0 0;">Hohenzollernstr. 47, 47799 Krefeld</p>
+    <p style="font-size:11px;color:#6b7280;margin:4px 0 0;">Geschäftsführung: Olaf Hagelkruys, Thilo Wiers-Keiser, Robbin Zielke &nbsp;·&nbsp; Amtsgericht Krefeld, HRB 14709</p>
+    <p style="font-size:11px;color:#6b7280;margin:4px 0 0;">USt-Id-Nr: DE 227 420 712 &nbsp;·&nbsp; <a href="https://www.hfx-honorarfuchs.de" style="color:#0b367f;">www.hfx-honorarfuchs.de</a></p>
+    <p style="font-size:10px;color:#9ca3af;margin:8px 0 0;">Diese Rechnung wurde automatisch aus dem HFX Sales Portal erstellt.</p>
   </div>
 </div>
 </body></html>`;
