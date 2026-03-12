@@ -1892,7 +1892,7 @@ export default function Vertraege() {
                                 {syncingQodiaId === c.id ? (
                                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                 ) : (
-                                  <CheckCircle className="h-4 w-4 mr-2 text-orange-500" />
+                                  <CheckCircle className="h-4 w-4 mr-2 text-warning" />
                                 )}
                                 Bei Qodia registrieren
                               </DropdownMenuItem>
