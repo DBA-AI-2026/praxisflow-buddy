@@ -227,7 +227,7 @@ function KundenTab({ search }: { search: string }) {
   });
 
   // Fetch qodia_synced from leads via converted_from_lead_id
-  const { data: leadQodiaByLeadId = {} } = useQuery({
+  const { data: leadQodiaByLeadId = { byId: {} as Record<string, boolean>, byHfx: {} as Record<string, boolean> } } = useQuery({
     queryKey: ["journey-praxen-qodia"],
     queryFn: async () => {
       const { data } = await supabase
