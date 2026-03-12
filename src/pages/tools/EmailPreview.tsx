@@ -609,7 +609,12 @@ function buildInvoicePdfPreviewHtml() {
     <p style="margin-top:16px;font-size:12px;color:#555;">Bitte überweisen Sie den Betrag bis zum <strong>${due_date}</strong> auf unser Konto.</p>
     <p style="font-size:10px;color:#9ca3af;margin-top:4px;">Im ausgewiesenen Betrag sind 28,50 € Umsatzsteuer (19%) enthalten.</p>
   </div>
-  <div class="footer">HFX Honorarfuchs GmbH · Steuer-Nr: XX/XXX/XXXXX · USt-IdNr: DEXXXXXXXXX · IBAN: DEXX XXXX XXXX XXXX XXXX XX</div>
+  <div class="footer">
+    <p style="margin:0;font-weight:600;color:#374151;">HFX Honorarfuchs – ein Geschäftsbereich von MCC Medical CareCapital GmbH</p>
+    <p style="margin:3px 0 0;">Hohenzollernstr. 47, 47799 Krefeld</p>
+    <p style="margin:3px 0 0;">Geschäftsführung: Olaf Hagelkruys, Thilo Wiers-Keiser, Robbin Zielke &nbsp;·&nbsp; Amtsgericht Krefeld, HRB 14709</p>
+    <p style="margin:3px 0 0;">USt-Id-Nr: DE 227 420 712 &nbsp;·&nbsp; www.hfx-honorarfuchs.de</p>
+  </div>
 </div>
 </body></html>`;
 }
