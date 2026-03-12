@@ -225,6 +225,7 @@ export default function Interessenten() {
               <SelectItem value="kontaktiert">Kontaktiert</SelectItem>
               <SelectItem value="qualifiziert">Qualifiziert</SelectItem>
               <SelectItem value="vertrag">Vertrag</SelectItem>
+              <SelectItem value="kein_abschluss">Kein Abschluss</SelectItem>
               <SelectItem value="abgelehnt">Abgelehnt</SelectItem>
             </SelectContent>
           </Select>
