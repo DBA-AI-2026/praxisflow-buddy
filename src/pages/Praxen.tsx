@@ -471,7 +471,6 @@ export default function Praxen() {
                         <span className="text-xs text-muted-foreground">Direkt</span>
                       )}
                     </td>
-                    </td>
                     <td className="text-center" onClick={(e) => e.stopPropagation()}>
                       <TooltipProvider>
                         <Tooltip>
