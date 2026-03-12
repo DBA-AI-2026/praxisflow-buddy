@@ -38,6 +38,7 @@ import { PdfViewerOverlay } from "@/components/PdfViewerOverlay";
 import Documentation from "./pages/admin/Documentation";
 import PlzMapping from "./pages/admin/PlzMapping";
 import Buchhaltung from "./pages/Buchhaltung";
+import PraxenJourney from "./pages/PraxenJourney";
 import DemoSuccess from "./pages/DemoSuccess";
 import ContractConfirmation from "./pages/ContractConfirmation";
 import MandateSuccess from "./pages/MandateSuccess";
@@ -91,6 +92,7 @@ const App = () => (
             <Route path="/admin/documentation" element={<ProtectedRoute><Documentation /></ProtectedRoute>} />
             <Route path="/admin/plz-mapping" element={<ProtectedRoute><PlzMapping /></ProtectedRoute>} />
             <Route path="/buchhaltung" element={<ProtectedRoute><Buchhaltung /></ProtectedRoute>} />
+            <Route path="/praxen-journey" element={<ProtectedRoute><PraxenJourney /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

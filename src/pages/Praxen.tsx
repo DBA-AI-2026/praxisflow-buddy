@@ -23,8 +23,11 @@ import {
   Plus, Search, Download, MoreHorizontal, Pencil, Trash2, RefreshCw,
   Loader2, UserCheck, FileText, Eye, Building2, Mail, Phone, MapPin,
   Calendar, Euro, Package, GitMerge, CircleCheck, CircleOff, ArchiveX,
-  ShieldBan, FilePen, Upload, FileSignature,
+  ShieldBan, FilePen, Upload, FileSignature, CheckCircle2, XCircle,
 } from "lucide-react";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,6 +86,9 @@ export default function Praxen() {
   const [praxisContracts, setPraxisContracts] = useState<any[]>([]);
   const [loadingContracts, setLoadingContracts] = useState(false);
   const { connection: sfConnection } = useSalesforceConnection();
+
+  // Qodia sync status from leads, keyed by hfx_customer_number and lead id
+  const [leadQodiaMap, setLeadQodiaMap] = useState<{ byHfx: Record<string, boolean>; byLeadId: Record<string, boolean> }>({ byHfx: {}, byLeadId: {} });
 
   const fetchPraxen = async () => {
     setLoading(true);
@@ -155,6 +161,19 @@ export default function Praxen() {
       }));
 
     setPraxen([...praxenList, ...contractEntries]);
+
+    // Fetch qodia status from leads
+    const { data: leadsData } = await supabase
+      .from("leads")
+      .select("id, hfx_customer_number, qodia_synced");
+    const byHfx: Record<string, boolean> = {};
+    const byLeadId: Record<string, boolean> = {};
+    (leadsData || []).forEach((l: any) => {
+      if (l.hfx_customer_number) byHfx[l.hfx_customer_number] = l.qodia_synced;
+      if (l.id) byLeadId[l.id] = l.qodia_synced;
+    });
+    setLeadQodiaMap({ byHfx, byLeadId });
+
     setLoading(false);
   };
 
@@ -379,6 +398,7 @@ export default function Praxen() {
                 <th>Buchung</th>
                 <th>Status</th>
                 <th>Herkunft</th>
+                <th className="text-center w-16">Qodia</th>
                 <th className="w-12"></th>
               </tr>
             </thead>
@@ -450,6 +470,30 @@ export default function Praxen() {
                       ) : (
                         <span className="text-xs text-muted-foreground">Direkt</span>
                       )}
+                    </td>
+                    <td className="text-center" onClick={(e) => e.stopPropagation()}>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            {(() => {
+                              const qodiaSynced = praxis.convertedFromLeadId
+                                ? leadQodiaMap.byLeadId[praxis.convertedFromLeadId] ?? (praxis.hfxNr ? leadQodiaMap.byHfx[praxis.hfxNr] ?? false : false)
+                                : (praxis.hfxNr ? leadQodiaMap.byHfx[praxis.hfxNr] ?? false : false);
+                              return qodiaSynced
+                                ? <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
+                                : <XCircle className="h-4 w-4 text-muted-foreground/40 mx-auto" />;
+                            })()}
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {(() => {
+                              const qodiaSynced = praxis.convertedFromLeadId
+                                ? leadQodiaMap.byLeadId[praxis.convertedFromLeadId] ?? (praxis.hfxNr ? leadQodiaMap.byHfx[praxis.hfxNr] ?? false : false)
+                                : (praxis.hfxNr ? leadQodiaMap.byHfx[praxis.hfxNr] ?? false : false);
+                              return qodiaSynced ? "Bei Qodia registriert" : "Noch nicht bei Qodia registriert";
+                            })()}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>

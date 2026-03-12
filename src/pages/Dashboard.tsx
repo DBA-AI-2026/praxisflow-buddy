@@ -9,7 +9,7 @@ import {
   Building2, FlaskConical, TrendingUp, FileText,
   ArrowRight, Clock, Users,
   PlusCircle, Eye, FileSignature, Lightbulb, MapPin, BarChart3, BookMarked,
-  X, Sparkles, Activity, FileCheck, UserPlus, MessageSquare,
+  X, Sparkles, Activity, FileCheck, UserPlus, MessageSquare, CheckCircle2, XCircle,
 } from "lucide-react";
 import type { AppRole } from "@/hooks/useUserRole";
 import { format, formatDistanceToNow, subHours } from "date-fns";
@@ -199,7 +199,7 @@ export default function Dashboard() {
     queryFn: async () => {
       const { data } = await supabase
         .from("leads")
-        .select("id, praxis_name, vorname, nachname, status, created_at, abrechnungszentrum")
+        .select("id, praxis_name, vorname, nachname, status, created_at, abrechnungszentrum, qodia_synced")
         .order("created_at", { ascending: false })
         .limit(5);
       return data ?? [];
@@ -451,6 +451,11 @@ export default function Dashboard() {
                     <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${statusBadge(l.status)}`}>
                       {l.status}
                     </span>
+                    {l.qodia_synced ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                    ) : (
+                      <XCircle className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {l.vorname} {l.nachname} · {l.abrechnungszentrum}
