@@ -301,6 +301,7 @@ export default function Vertraege() {
       if (data?.success) {
         toast({ title: "Qodia-Sync erfolgreich", description: data.message || `${contract.hfx_customer_number} erfolgreich bei Qodia registriert.` });
         queryClient.invalidateQueries({ queryKey: ["leads"] });
+        queryClient.invalidateQueries({ queryKey: ["leads-qodia-map"] });
       } else {
         toast({ title: "Qodia-Fehler", description: data?.error || "Unbekannter Fehler", variant: "destructive" });
       }
