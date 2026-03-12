@@ -23,8 +23,11 @@ import {
   Plus, Search, Download, MoreHorizontal, Pencil, Trash2, RefreshCw,
   Loader2, UserCheck, FileText, Eye, Building2, Mail, Phone, MapPin,
   Calendar, Euro, Package, GitMerge, CircleCheck, CircleOff, ArchiveX,
-  ShieldBan, FilePen, Upload, FileSignature,
+  ShieldBan, FilePen, Upload, FileSignature, CheckCircle2, XCircle,
 } from "lucide-react";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
