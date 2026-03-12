@@ -325,7 +325,7 @@ export default function Interessenten() {
                           value={lead.status}
                           onValueChange={(val) => {
                             // Statusübergänge einschränken: kein Sprung zurück auf "neu"
-                            const order = ["neu", "kontaktiert", "qualifiziert", "vertrag", "abgelehnt"];
+                            const order = ["neu", "kontaktiert", "qualifiziert", "vertrag", "kein_abschluss", "abgelehnt"];
                             const currentIdx = order.indexOf(lead.status);
                             const newIdx = order.indexOf(val);
                             // Rücksprung auf "neu" nur wenn aktuell "kontaktiert"
