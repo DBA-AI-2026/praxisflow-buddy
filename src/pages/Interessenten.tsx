@@ -276,13 +276,13 @@ export default function Interessenten() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={canAssign ? 10 : 9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={canAssign ? 11 : 10} className="text-center py-8 text-muted-foreground">
                     Lade Interessenten...
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={canAssign ? 10 : 9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={canAssign ? 11 : 10} className="text-center py-8 text-muted-foreground">
                     Keine Interessenten gefunden
                   </TableCell>
                 </TableRow>
