@@ -9,7 +9,7 @@ import {
   Building2, FlaskConical, TrendingUp, FileText,
   ArrowRight, Clock, Users,
   PlusCircle, Eye, FileSignature, Lightbulb, MapPin, BarChart3, BookMarked,
-  X, Sparkles, Activity, FileCheck, UserPlus, MessageSquare,
+  X, Sparkles, Activity, FileCheck, UserPlus, MessageSquare, CheckCircle2, XCircle,
 } from "lucide-react";
 import type { AppRole } from "@/hooks/useUserRole";
 import { format, formatDistanceToNow, subHours } from "date-fns";
