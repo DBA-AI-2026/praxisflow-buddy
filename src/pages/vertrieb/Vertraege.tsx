@@ -446,6 +446,23 @@ export default function Vertraege() {
     },
   });
 
+  // Map hfx_customer_number -> qodia_synced for status icons
+  const { data: leadQodiaMap = {} } = useQuery({
+    queryKey: ["leads-qodia-map"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("leads")
+        .select("hfx_customer_number, qodia_synced")
+        .not("hfx_customer_number", "is", null);
+      if (error) throw error;
+      const map: Record<string, boolean> = {};
+      for (const l of data || []) {
+        if (l.hfx_customer_number) map[l.hfx_customer_number] = l.qodia_synced;
+      }
+      return map;
+    },
+  });
+
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
