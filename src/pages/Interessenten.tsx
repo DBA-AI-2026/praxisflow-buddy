@@ -29,7 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Eye, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, Send, UserCheck, FilePlus, UserPlus, Upload } from "lucide-react";
+import { Search, Eye, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, Send, UserCheck, FilePlus, UserPlus, Upload, RefreshCw } from "lucide-react";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
 import { UploadPaperContractDialog } from "@/components/leads/UploadPaperContractDialog";
 import {
@@ -104,6 +104,7 @@ export default function Interessenten() {
   });
 
   const [resending, setResending] = useState(false);
+  const [syncingQodia, setSyncingQodia] = useState(false);
 
   const resendCredentials = async (leadId: string) => {
     setResending(true);
@@ -117,6 +118,32 @@ export default function Interessenten() {
       toast({ title: "Fehler", description: err.message || "Versand fehlgeschlagen", variant: "destructive" });
     } finally {
       setResending(false);
+    }
+  };
+
+  const syncToQodia = async (leadId: string) => {
+    setSyncingQodia(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-lead-qodia", {
+        body: { leadId },
+      });
+      if (error) throw error;
+      if (data?.already_synced) {
+        toast({ title: "Bereits synchronisiert", description: data.message });
+      } else if (data?.success) {
+        toast({ title: "Qodia-Sync erfolgreich", description: data.message });
+        queryClient.invalidateQueries({ queryKey: ["leads"] });
+        // Refresh selectedLead if open
+        if (selectedLead?.id === leadId) {
+          setSelectedLead((prev: any) => prev ? { ...prev, qodia_synced: true } : prev);
+        }
+      } else {
+        toast({ title: "Qodia-Fehler", description: data?.error || "Unbekannter Fehler", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Fehler", description: err.message || "Sync fehlgeschlagen", variant: "destructive" });
+    } finally {
+      setSyncingQodia(false);
     }
   };
 
@@ -240,21 +267,22 @@ export default function Interessenten() {
                 <TableHead>Abr.-Zentrum</TableHead>
                 <TableHead>Status</TableHead>
                 {canAssign && <TableHead>AD-Zuteilung</TableHead>}
-                <TableHead className="text-center">SF</TableHead>
-                <TableHead>Datum</TableHead>
+                        <TableHead className="text-center">SF</TableHead>
+                        <TableHead className="text-center">Qodia</TableHead>
+                        <TableHead>Datum</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={canAssign ? 10 : 9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={canAssign ? 11 : 10} className="text-center py-8 text-muted-foreground">
                     Lade Interessenten...
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={canAssign ? 10 : 9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={canAssign ? 11 : 10} className="text-center py-8 text-muted-foreground">
                     Keine Interessenten gefunden
                   </TableCell>
                 </TableRow>
@@ -352,6 +380,30 @@ export default function Interessenten() {
                         ) : (
                           <XCircle className="h-4 w-4 text-muted-foreground/40 mx-auto" />
                         )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              {lead.qodia_synced ? (
+                                <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 mx-auto text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                  disabled={syncingQodia}
+                                  onClick={() => syncToQodia(lead.id)}
+                                >
+                                  <RefreshCw className={`h-3.5 w-3.5 ${syncingQodia ? "animate-spin" : ""}`} />
+                                </Button>
+                              )}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {lead.qodia_synced ? "Bei Qodia registriert" : "Noch nicht bei Qodia – klicken zum Synchronisieren"}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {format(new Date(lead.created_at), "dd.MM.yy HH:mm", { locale: de })}
@@ -502,18 +554,40 @@ export default function Interessenten() {
                   HonorarPlus
                 </span>
               </div>
-              <div className="flex gap-2 pt-2 border-t">
+              <div className="flex flex-col gap-2 pt-2 border-t">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    disabled={resending}
+                    onClick={() => resendCredentials(selectedLead.id)}
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {resending ? "Wird gesendet…" : "Zugangsdaten erneut senden"}
+                  </Button>
+                  {!selectedLead.qodia_synced && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="flex-1 border-amber-400 text-amber-700 hover:bg-amber-50"
+                            disabled={syncingQodia}
+                            onClick={() => syncToQodia(selectedLead.id)}
+                          >
+                            <RefreshCw className={`h-4 w-4 mr-2 ${syncingQodia ? "animate-spin" : ""}`} />
+                            {syncingQodia ? "Synchronisiere…" : "Bei Qodia registrieren"}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Lead manuell bei Qodia registrieren (qodia_synced = false)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
                 <Button
-                  variant="outline"
-                  className="flex-1"
-                  disabled={resending}
-                  onClick={() => resendCredentials(selectedLead.id)}
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  {resending ? "Wird gesendet…" : "Zugangsdaten erneut senden"}
-                </Button>
-                <Button
-                  className="flex-1"
+                  className="w-full"
                   onClick={() => {
                     const lead = selectedLead;
                     setSelectedLead(null);
