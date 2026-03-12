@@ -1489,6 +1489,43 @@ export default function Vertraege() {
         </div>
       )}
 
+      {/* Banner: Eingegangen ohne Bestätigungsmail */}
+      {(() => {
+        const pending = contracts.filter(
+          (c: any) => c.status === "eingegangen" && !c.confirmation_email_sent_at
+        );
+        if (pending.length === 0) return null;
+        return (
+          <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/8 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-400">
+                {pending.length} {pending.length === 1 ? "Vertrag" : "Verträge"} ohne Bestätigungsmail
+              </p>
+              <p className="text-xs text-amber-700 dark:text-amber-500 mt-0.5">
+                {pending.length === 1
+                  ? "Folgender Vertrag hat Status „Eingegangen", aber die Bestätigungs-E-Mail mit Stripe-Link wurde noch nicht gesendet:"
+                  : "Folgende Verträge haben Status „Eingegangen", aber die Bestätigungs-E-Mail mit Stripe-Link wurde noch nicht gesendet:"}
+              </p>
+              <ul className="mt-1.5 space-y-0.5">
+                {pending.map((c: any) => (
+                  <li key={c.id} className="text-xs text-amber-700 dark:text-amber-500 font-medium">
+                    • {c.customer_name || c.praxis || "–"}{c.hfx_customer_number ? ` (${c.hfx_customer_number})` : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("eingegangen")}
+              className="shrink-0 text-xs font-medium text-amber-700 dark:text-amber-400 underline underline-offset-2 hover:no-underline whitespace-nowrap"
+            >
+              Anzeigen
+            </button>
+          </div>
+        );
+      })()}
+
       {/* Table */}
       <div className="card-elevated overflow-hidden">
         <div className="overflow-x-auto">
