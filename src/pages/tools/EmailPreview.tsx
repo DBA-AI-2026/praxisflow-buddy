@@ -40,9 +40,11 @@ interface Template {
   from: string;
   type: "email" | "pdf";
   description: string;
+  category: "kunden" | "intern";
 }
 
 const TEMPLATES: Template[] = [
+  // ── Kunden-Mails ──────────────────────────────────────────────────────────
   {
     id: "lead-confirmation",
     label: "Lead-Bestätigung",
@@ -50,22 +52,16 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "E-Mail an neuen Interessenten mit Zugangsdaten",
+    category: "kunden",
   },
   {
-    id: "contract-customer",
-    label: "Vertrag (Kunde)",
-    subject: "Ihr Vertrag mit HFX Honorarfuchs",
+    id: "demo-expiry-customer",
+    label: "Testphase läuft ab",
+    subject: "⏰ Erinnerung: Ihre Testphase endet am 01.04.2026",
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
-    description: "Vertragsbestätigung an Kunden nach Aktivierung",
-  },
-  {
-    id: "contract-customer-pdf-send",
-    label: "Vertrag + Vorschau per Mail (Kunde)",
-    subject: "Ihre Vertragsunterlagen – HFX EBM, HFX GOÄ",
-    from: "noreply@hfx-honorarfuchs.de",
-    type: "email",
-    description: "Manueller E-Mail-Versand an Kunden: Vertragsdokument + Produktvorschau als Anhang",
+    description: "Erinnerungsmail an den Interessenten 3 Tage vor Ablauf der Testphase – mit Stripe-Buchungslink",
+    category: "kunden",
   },
   {
     id: "contract-paper-confirmation",
@@ -74,14 +70,25 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "E-Mail an Kunden nach Papiervertrag-Upload durch AD – einziger Button 'Verbindlich buchen' → Stripe. Vertrag aktiviert sich nach Zahlung automatisch.",
+    category: "kunden",
   },
   {
-    id: "contract-partner",
-    label: "Vertrag (Vertrieb)",
-    subject: "Neuer Vertrag abgeschlossen – HFX Sales Portal",
+    id: "contract-customer",
+    label: "Vertrag (Kunde)",
+    subject: "Ihr Vertrag mit HFX Honorarfuchs",
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
-    description: "Benachrichtigung an Vertriebspartner",
+    description: "Vertragsbestätigung an Kunden nach Aktivierung",
+    category: "kunden",
+  },
+  {
+    id: "contract-customer-pdf-send",
+    label: "Vertrag + Vorschau per Mail (Kunde)",
+    subject: "Ihre Vertragsunterlagen – HFX EBM, HFX GOÄ",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "Manueller E-Mail-Versand an Kunden: Vertragsdokument + Produktvorschau als Anhang",
+    category: "kunden",
   },
   {
     id: "invoice",
@@ -90,7 +97,9 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "Rechnungs-E-Mail mit PDF-Anhang",
+    category: "kunden",
   },
+  // ── Interne Mails ─────────────────────────────────────────────────────────
   {
     id: "dashboard-credentials",
     label: "Dashboard-Zugangsdaten",
@@ -98,30 +107,16 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "Zugangsdaten für neue interne Dashboard-Nutzer",
+    category: "intern",
   },
   {
-    id: "demo-expiry-customer",
-    label: "Interessent: Testphase läuft ab",
-    subject: "⏰ Erinnerung: Ihre Testphase endet am 01.04.2026",
+    id: "contract-partner",
+    label: "Vertrag (Vertrieb)",
+    subject: "Neuer Vertrag abgeschlossen – HFX Sales Portal",
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
-    description: "Erinnerungsmail an den Interessenten 3 Tage vor Ablauf der Testphase – mit Stripe-Buchungslink",
-  },
-  {
-    id: "ad-tipp-lead",
-    label: "AD: Neuer Tipp-Lead",
-    subject: "Neuer Lead-Tipp: Praxis Mustermann (PLZ 80331)",
-    from: "noreply@hfx-honorarfuchs.de",
-    type: "email",
-    description: "Benachrichtigung an AD bei neuem Tipp-Lead durch Tippgeber",
-  },
-  {
-    id: "ad-demo-reminder",
-    label: "AD: Testphasen-Ablauf",
-    subject: "⏰ Testphase endet bald: Testpraxis GmbH (01.04.2026)",
-    from: "noreply@hfx-honorarfuchs.de",
-    type: "email",
-    description: "AD-Benachrichtigung parallel zur Kunden-Erinnerung bei Demo-Ablauf",
+    description: "Benachrichtigung an Vertriebspartner nach Vertragsabschluss",
+    category: "intern",
   },
   {
     id: "ad-new-lead",
@@ -130,6 +125,7 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "Benachrichtigung an AD wenn ein neuer Interessent über die HFX-Webseite eingeht",
+    category: "intern",
   },
   {
     id: "ad-lead-assignment",
@@ -138,6 +134,25 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "Benachrichtigung an AD wenn ihm ein Lead manuell im Portal zugewiesen wird",
+    category: "intern",
+  },
+  {
+    id: "ad-tipp-lead",
+    label: "AD: Neuer Tipp-Lead",
+    subject: "Neuer Lead-Tipp: Praxis Mustermann (PLZ 80331)",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "Benachrichtigung an AD bei neuem Tipp-Lead durch Tippgeber",
+    category: "intern",
+  },
+  {
+    id: "ad-demo-reminder",
+    label: "AD: Testphasen-Ablauf",
+    subject: "⏰ Testphase endet bald: Testpraxis GmbH (01.04.2026)",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "AD-Benachrichtigung parallel zur Kunden-Erinnerung bei Demo-Ablauf",
+    category: "intern",
   },
 ];
 
