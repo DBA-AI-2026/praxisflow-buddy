@@ -40,9 +40,11 @@ interface Template {
   from: string;
   type: "email" | "pdf";
   description: string;
+  category: "kunden" | "intern";
 }
 
 const TEMPLATES: Template[] = [
+  // ── Kunden-Mails ──────────────────────────────────────────────────────────
   {
     id: "lead-confirmation",
     label: "Lead-Bestätigung",
@@ -50,22 +52,16 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "E-Mail an neuen Interessenten mit Zugangsdaten",
+    category: "kunden",
   },
   {
-    id: "contract-customer",
-    label: "Vertrag (Kunde)",
-    subject: "Ihr Vertrag mit HFX Honorarfuchs",
+    id: "demo-expiry-customer",
+    label: "Testphase läuft ab",
+    subject: "⏰ Erinnerung: Ihre Testphase endet am 01.04.2026",
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
-    description: "Vertragsbestätigung an Kunden nach Aktivierung",
-  },
-  {
-    id: "contract-customer-pdf-send",
-    label: "Vertrag + Vorschau per Mail (Kunde)",
-    subject: "Ihre Vertragsunterlagen – HFX EBM, HFX GOÄ",
-    from: "noreply@hfx-honorarfuchs.de",
-    type: "email",
-    description: "Manueller E-Mail-Versand an Kunden: Vertragsdokument + Produktvorschau als Anhang",
+    description: "Erinnerungsmail an den Interessenten 3 Tage vor Ablauf der Testphase – mit Stripe-Buchungslink",
+    category: "kunden",
   },
   {
     id: "contract-paper-confirmation",
@@ -74,14 +70,25 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "E-Mail an Kunden nach Papiervertrag-Upload durch AD – einziger Button 'Verbindlich buchen' → Stripe. Vertrag aktiviert sich nach Zahlung automatisch.",
+    category: "kunden",
   },
   {
-    id: "contract-partner",
-    label: "Vertrag (Vertrieb)",
-    subject: "Neuer Vertrag abgeschlossen – HFX Sales Portal",
+    id: "contract-customer",
+    label: "Vertrag (Kunde)",
+    subject: "Ihr Vertrag mit HFX Honorarfuchs",
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
-    description: "Benachrichtigung an Vertriebspartner",
+    description: "Vertragsbestätigung an Kunden nach Aktivierung",
+    category: "kunden",
+  },
+  {
+    id: "contract-customer-pdf-send",
+    label: "Vertrag + Vorschau per Mail (Kunde)",
+    subject: "Ihre Vertragsunterlagen – HFX EBM, HFX GOÄ",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "Manueller E-Mail-Versand an Kunden: Vertragsdokument + Produktvorschau als Anhang",
+    category: "kunden",
   },
   {
     id: "invoice",
@@ -90,7 +97,9 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "Rechnungs-E-Mail mit PDF-Anhang",
+    category: "kunden",
   },
+  // ── Interne Mails ─────────────────────────────────────────────────────────
   {
     id: "dashboard-credentials",
     label: "Dashboard-Zugangsdaten",
@@ -98,30 +107,16 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "Zugangsdaten für neue interne Dashboard-Nutzer",
+    category: "intern",
   },
   {
-    id: "demo-expiry-customer",
-    label: "Interessent: Testphase läuft ab",
-    subject: "⏰ Erinnerung: Ihre Testphase endet am 01.04.2026",
+    id: "contract-partner",
+    label: "Vertrag (Vertrieb)",
+    subject: "Neuer Vertrag abgeschlossen – HFX Sales Portal",
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
-    description: "Erinnerungsmail an den Interessenten 3 Tage vor Ablauf der Testphase – mit Stripe-Buchungslink",
-  },
-  {
-    id: "ad-tipp-lead",
-    label: "AD: Neuer Tipp-Lead",
-    subject: "Neuer Lead-Tipp: Praxis Mustermann (PLZ 80331)",
-    from: "noreply@hfx-honorarfuchs.de",
-    type: "email",
-    description: "Benachrichtigung an AD bei neuem Tipp-Lead durch Tippgeber",
-  },
-  {
-    id: "ad-demo-reminder",
-    label: "AD: Testphasen-Ablauf",
-    subject: "⏰ Testphase endet bald: Testpraxis GmbH (01.04.2026)",
-    from: "noreply@hfx-honorarfuchs.de",
-    type: "email",
-    description: "AD-Benachrichtigung parallel zur Kunden-Erinnerung bei Demo-Ablauf",
+    description: "Benachrichtigung an Vertriebspartner nach Vertragsabschluss",
+    category: "intern",
   },
   {
     id: "ad-new-lead",
@@ -130,6 +125,7 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "Benachrichtigung an AD wenn ein neuer Interessent über die HFX-Webseite eingeht",
+    category: "intern",
   },
   {
     id: "ad-lead-assignment",
@@ -138,6 +134,25 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "Benachrichtigung an AD wenn ihm ein Lead manuell im Portal zugewiesen wird",
+    category: "intern",
+  },
+  {
+    id: "ad-tipp-lead",
+    label: "AD: Neuer Tipp-Lead",
+    subject: "Neuer Lead-Tipp: Praxis Mustermann (PLZ 80331)",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "Benachrichtigung an AD bei neuem Tipp-Lead durch Tippgeber",
+    category: "intern",
+  },
+  {
+    id: "ad-demo-reminder",
+    label: "AD: Testphasen-Ablauf",
+    subject: "⏰ Testphase endet bald: Testpraxis GmbH (01.04.2026)",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "AD-Benachrichtigung parallel zur Kunden-Erinnerung bei Demo-Ablauf",
+    category: "intern",
   },
 ];
 
@@ -1213,100 +1228,120 @@ export default function EmailPreview() {
           {!isAdmin && <Lock className="w-4 h-4 text-muted-foreground" />}
         </div>
 
-        {/* Template cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {TEMPLATES.map((tpl) => (
-            <div key={tpl.id} className="rounded-xl border border-border bg-card p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Mail className="w-4 h-4 text-primary" />
-                  <span className="font-semibold text-foreground">{tpl.label}</span>
-                  {(hasCustom(tpl, "email") || (tpl.id === "invoice" && hasCustom(tpl, "pdf"))) && (
-                    <span className="ml-auto text-[10px] font-medium bg-warning/20 text-warning-foreground px-1.5 py-0.5 rounded border border-warning/30">Bearbeitet</span>
-                  )}
+        {/* Template groups */}
+        {(["kunden", "intern"] as const).map((cat) => {
+          const groupTemplates = TEMPLATES.filter((t) => t.category === cat);
+          const groupLabel = cat === "kunden" ? "Kunden-Mails" : "Interne Mails";
+          const groupDesc = cat === "kunden"
+            ? "E-Mails, die direkt an Interessenten und Kunden gesendet werden"
+            : "Benachrichtigungen an Vertriebsmitarbeiter und interne Nutzer";
+          return (
+            <div key={cat}>
+              <div className="flex items-center gap-3 mb-4">
+                <div>
+                  <h3 className="text-base font-semibold text-foreground">{groupLabel}</h3>
+                  <p className="text-xs text-muted-foreground">{groupDesc}</p>
                 </div>
-                <p className="text-xs text-muted-foreground">{tpl.description}</p>
-                <p className="text-xs text-muted-foreground mt-1 font-mono truncate">Betreff: {tpl.subject}</p>
+                <span className="ml-auto text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                  {groupTemplates.length} Vorlagen
+                </span>
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {groupTemplates.map((tpl) => (
+                  <div key={tpl.id} className="rounded-xl border border-border bg-card p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Mail className="w-4 h-4 text-primary" />
+                        <span className="font-semibold text-foreground">{tpl.label}</span>
+                        {(hasCustom(tpl, "email") || (tpl.id === "invoice" && hasCustom(tpl, "pdf"))) && (
+                          <span className="ml-auto text-[10px] font-medium bg-warning/20 text-warning-foreground px-1.5 py-0.5 rounded border border-warning/30">Bearbeitet</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{tpl.description}</p>
+                      <p className="text-xs text-muted-foreground mt-1 font-mono truncate">Betreff: {tpl.subject}</p>
+                    </div>
 
-              {/* E-Mail row */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 gap-1.5"
-                  onClick={() => setActiveModal({ template: tpl, mode: "email" })}
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  E-Mail
-                </Button>
-                {isAdmin && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={() => openEdit(tpl, "email")}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      Bearbeiten
-                    </Button>
-                    {hasCustom(tpl, "email") && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="px-2 text-muted-foreground"
-                        title="Zurücksetzen"
-                        onClick={() => resetTemplate(tpl, "email")}
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* PDF row – only for invoice */}
-              {tpl.id === "invoice" && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 gap-1.5"
-                    onClick={() => setActiveModal({ template: tpl, mode: "pdf" })}
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    PDF
-                  </Button>
-                  {isAdmin && (
-                    <>
+                    {/* E-Mail row */}
+                    <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="gap-1.5"
-                        onClick={() => openEdit(tpl, "pdf")}
+                        className="flex-1 gap-1.5"
+                        onClick={() => setActiveModal({ template: tpl, mode: "email" })}
                       >
-                        <Pencil className="w-3.5 h-3.5" />
-                        Bearbeiten
+                        <Eye className="w-3.5 h-3.5" />
+                        E-Mail
                       </Button>
-                      {hasCustom(tpl, "pdf") && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="px-2 text-muted-foreground"
-                          title="Zurücksetzen"
-                          onClick={() => resetTemplate(tpl, "pdf")}
-                        >
-                          <RotateCcw className="w-3.5 h-3.5" />
-                        </Button>
+                      {isAdmin && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={() => openEdit(tpl, "email")}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            Bearbeiten
+                          </Button>
+                          {hasCustom(tpl, "email") && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="px-2 text-muted-foreground"
+                              title="Zurücksetzen"
+                              onClick={() => resetTemplate(tpl, "email")}
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
-                </div>
-              )}
+                    </div>
+
+                    {/* PDF row – only for invoice */}
+                    {tpl.id === "invoice" && (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 gap-1.5"
+                          onClick={() => setActiveModal({ template: tpl, mode: "pdf" })}
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          PDF
+                        </Button>
+                        {isAdmin && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5"
+                              onClick={() => openEdit(tpl, "pdf")}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              Bearbeiten
+                            </Button>
+                            {hasCustom(tpl, "pdf") && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="px-2 text-muted-foreground"
+                                title="Zurücksetzen"
+                                onClick={() => resetTemplate(tpl, "pdf")}
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       {/* ── Preview Modal ── */}
