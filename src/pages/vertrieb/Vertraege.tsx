@@ -25,7 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye, CheckCircle,
   FilePen, FileSignature, CircleCheck, CircleOff, ArchiveX, ShieldBan, ArrowUpDown, ArrowUp, ArrowDown,
-  GitMerge,
+  GitMerge, AlertTriangle,
 } from "lucide-react";
 // Check and ChevronsUpDown already imported above via combobox imports
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
@@ -1488,6 +1488,40 @@ export default function Vertraege() {
           </button>
         </div>
       )}
+
+      {/* Banner: Eingegangen ohne Bestätigungsmail */}
+      {contracts.filter((c: any) => c.status === "eingegangen" && !c.confirmation_email_sent_at).length > 0 && (() => {
+        const pending = contracts.filter((c: any) => c.status === "eingegangen" && !c.confirmation_email_sent_at);
+        return (
+          <div className="mb-4 flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/5 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-warning">
+                {pending.length} {pending.length === 1 ? "Vertrag" : "Verträge"} ohne Bestätigungsmail
+              </p>
+              <p className="text-xs text-warning/80 mt-0.5">
+                {pending.length === 1
+                  ? "Folgender Vertrag hat Status \u201eEingegangen\u201c, aber die Best\u00e4tigungs-E-Mail mit Stripe-Link wurde noch nicht gesendet:"
+                  : "Folgende Vertr\u00e4ge haben Status \u201eEingegangen\u201c, aber die Best\u00e4tigungs-E-Mail mit Stripe-Link wurde noch nicht gesendet:"}
+              </p>
+              <ul className="mt-1.5 space-y-0.5">
+                {pending.map((c: any) => (
+                  <li key={c.id} className="text-xs text-warning/80 font-medium">
+                    &bull; {c.customer_name || c.praxis || "\u2013"}{c.hfx_customer_number ? ` (${c.hfx_customer_number})` : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("eingegangen")}
+              className="shrink-0 text-xs font-medium text-warning underline underline-offset-2 hover:no-underline whitespace-nowrap"
+            >
+              Anzeigen
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Table */}
       <div className="card-elevated overflow-hidden">
