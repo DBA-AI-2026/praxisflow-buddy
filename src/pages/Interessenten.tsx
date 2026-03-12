@@ -29,7 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Eye, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, Send, UserCheck, FilePlus, UserPlus, Upload, RefreshCw } from "lucide-react";
+import { Search, Eye, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, Send, UserCheck, FilePlus, UserPlus, Upload, RefreshCw, Phone, FileSignature, ArrowRight, Ban } from "lucide-react";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
 import { UploadPaperContractDialog } from "@/components/leads/UploadPaperContractDialog";
 import {
@@ -50,6 +50,31 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   abgelehnt: { label: "Abgelehnt", variant: "destructive" },
   kunde: { label: "Kunde", variant: "default" },
 };
+
+type NextStep = {
+  label: string;
+  icon: React.ReactNode;
+  color: string;
+  action?: "contact" | "qualify" | "contract" | "paper" | "none";
+};
+
+function getNextStep(lead: any): NextStep {
+  switch (lead.status) {
+    case "neu":
+      return { label: "Kontaktieren", icon: <Phone className="h-3 w-3" />, color: "bg-primary/10 text-primary border-primary/30", action: "contact" };
+    case "kontaktiert":
+      return { label: "Qualifizieren", icon: <UserCheck className="h-3 w-3" />, color: "bg-accent/10 text-accent border-accent/30", action: "qualify" };
+    case "qualifiziert":
+      return { label: "Vertrag erstellen", icon: <FilePlus className="h-3 w-3" />, color: "bg-success/10 text-success border-success/30", action: "contract" };
+    case "vertrag":
+      return { label: "Papiervertrag einreichen", icon: <Upload className="h-3 w-3" />, color: "bg-warning/10 text-warning border-warning/30", action: "paper" };
+    case "kein_abschluss":
+    case "abgelehnt":
+      return { label: "Abgeschlossen", icon: <Ban className="h-3 w-3" />, color: "bg-muted text-muted-foreground border-border", action: "none" };
+    default:
+      return { label: "Kontaktieren", icon: <Phone className="h-3 w-3" />, color: "bg-primary/10 text-primary border-primary/30", action: "contact" };
+  }
+}
 
 export default function Interessenten() {
   const [search, setSearch] = useState("");
@@ -268,10 +293,11 @@ export default function Interessenten() {
                 <TableHead>PLZ</TableHead>
                 <TableHead>Abr.-Zentrum</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Nächster Schritt</TableHead>
                 {canAssign && <TableHead>AD-Zuteilung</TableHead>}
-                        <TableHead className="text-center">SF</TableHead>
-                        <TableHead className="text-center">Qodia</TableHead>
-                        <TableHead>Datum</TableHead>
+                <TableHead className="text-center">SF</TableHead>
+                <TableHead className="text-center">Qodia</TableHead>
+                <TableHead>Datum</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
@@ -344,6 +370,69 @@ export default function Interessenten() {
                               ))}
                           </SelectContent>
                         </Select>
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const step = getNextStep(lead);
+                          if (step.action === "none") {
+                            return (
+                              <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full border ${step.color}`}>
+                                {step.icon}
+                                {step.label}
+                              </span>
+                            );
+                          }
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full border cursor-pointer transition-opacity hover:opacity-80 ${step.color}`}
+                                    onClick={() => {
+                                      if (step.action === "contact") {
+                                        updateStatusMutation.mutate({ id: lead.id, status: "kontaktiert" });
+                                      } else if (step.action === "qualify") {
+                                        updateStatusMutation.mutate({ id: lead.id, status: "qualifiziert" });
+                                      } else if (step.action === "contract") {
+                                        updateStatusMutation.mutate({ id: lead.id, status: "vertrag" });
+                                        navigate("/vertrieb/vertraege", {
+                                          state: {
+                                            fromLead: {
+                                              lead_id: lead.id,
+                                              hfx_customer_number: lead.hfx_customer_number,
+                                              praxis: lead.praxis_name,
+                                              vorname: lead.vorname,
+                                              nachname: lead.nachname,
+                                              email: lead.email,
+                                              plz: lead.plz,
+                                              ort: lead.ort || "",
+                                              adresse: lead.adresse || "",
+                                              telefon: lead.mobilnummer,
+                                              mp_nr: lead.mp_nummer || "",
+                                              nachricht: lead.nachricht || "",
+                                            },
+                                          },
+                                        });
+                                      } else if (step.action === "paper") {
+                                        setUploadContractLead(lead);
+                                      }
+                                    }}
+                                  >
+                                    {step.icon}
+                                    {step.label}
+                                    <ArrowRight className="h-2.5 w-2.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {step.action === "contact" && "Status auf 'Kontaktiert' setzen"}
+                                  {step.action === "qualify" && "Status auf 'Qualifiziert' setzen"}
+                                  {step.action === "contract" && "Digitalen Vertrag erstellen"}
+                                  {step.action === "paper" && "Papiervertrag einreichen"}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })()}
                       </TableCell>
                       {canAssign && (
                         <TableCell>
