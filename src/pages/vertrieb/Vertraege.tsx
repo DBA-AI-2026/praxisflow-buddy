@@ -1882,6 +1882,22 @@ export default function Vertraege() {
                               </DropdownMenuItem>
                             </>
                           )}
+                          {isAdmin && c.hfx_customer_number && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => syncLeadQodia(c)}
+                                disabled={syncingQodiaId === c.id}
+                              >
+                                {syncingQodiaId === c.id ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="h-4 w-4 mr-2 text-orange-500" />
+                                )}
+                                Bei Qodia registrieren
+                              </DropdownMenuItem>
+                            </>
+                          )}
                           {isAdmin && (
                             <>
                               <DropdownMenuSeparator />
