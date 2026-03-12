@@ -371,6 +371,69 @@ export default function Interessenten() {
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const step = getNextStep(lead);
+                          if (step.action === "none") {
+                            return (
+                              <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full border ${step.color}`}>
+                                {step.icon}
+                                {step.label}
+                              </span>
+                            );
+                          }
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full border cursor-pointer transition-opacity hover:opacity-80 ${step.color}`}
+                                    onClick={() => {
+                                      if (step.action === "contact") {
+                                        updateStatusMutation.mutate({ id: lead.id, status: "kontaktiert" });
+                                      } else if (step.action === "qualify") {
+                                        updateStatusMutation.mutate({ id: lead.id, status: "qualifiziert" });
+                                      } else if (step.action === "contract") {
+                                        updateStatusMutation.mutate({ id: lead.id, status: "vertrag" });
+                                        navigate("/vertrieb/vertraege", {
+                                          state: {
+                                            fromLead: {
+                                              lead_id: lead.id,
+                                              hfx_customer_number: lead.hfx_customer_number,
+                                              praxis: lead.praxis_name,
+                                              vorname: lead.vorname,
+                                              nachname: lead.nachname,
+                                              email: lead.email,
+                                              plz: lead.plz,
+                                              ort: lead.ort || "",
+                                              adresse: lead.adresse || "",
+                                              telefon: lead.mobilnummer,
+                                              mp_nr: lead.mp_nummer || "",
+                                              nachricht: lead.nachricht || "",
+                                            },
+                                          },
+                                        });
+                                      } else if (step.action === "paper") {
+                                        setUploadContractLead(lead);
+                                      }
+                                    }}
+                                  >
+                                    {step.icon}
+                                    {step.label}
+                                    <ArrowRight className="h-2.5 w-2.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {step.action === "contact" && "Status auf 'Kontaktiert' setzen"}
+                                  {step.action === "qualify" && "Status auf 'Qualifiziert' setzen"}
+                                  {step.action === "contract" && "Digitalen Vertrag erstellen"}
+                                  {step.action === "paper" && "Papiervertrag einreichen"}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })()}
+                      </TableCell>
                       {canAssign && (
                         <TableCell>
                           <Select
