@@ -20,6 +20,7 @@ const leadStatusMap: Record<string, { label: string; cls: string }> = {
   kontaktiert:  { label: "Kontaktiert",  cls: "bg-secondary text-secondary-foreground" },
   qualifiziert: { label: "Qualifiziert", cls: "bg-amber-500/10 text-amber-700" },
   vertrag:      { label: "Vertrag",      cls: "bg-blue-500/10 text-blue-700" },
+  kein_abschluss: { label: "Kein Abschluss", cls: "bg-orange-500/10 text-orange-700" },
   abgelehnt:    { label: "Abgelehnt",   cls: "bg-destructive/10 text-destructive" },
 };
 

@@ -46,6 +46,7 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   kontaktiert: { label: "Kontaktiert", variant: "secondary" },
   qualifiziert: { label: "Qualifiziert", variant: "outline" },
   vertrag: { label: "Vertrag", variant: "outline" },
+  kein_abschluss: { label: "Kein Abschluss", variant: "destructive" },
   abgelehnt: { label: "Abgelehnt", variant: "destructive" },
   kunde: { label: "Kunde", variant: "default" },
 };
@@ -224,6 +225,7 @@ export default function Interessenten() {
               <SelectItem value="kontaktiert">Kontaktiert</SelectItem>
               <SelectItem value="qualifiziert">Qualifiziert</SelectItem>
               <SelectItem value="vertrag">Vertrag</SelectItem>
+              <SelectItem value="kein_abschluss">Kein Abschluss</SelectItem>
               <SelectItem value="abgelehnt">Abgelehnt</SelectItem>
             </SelectContent>
           </Select>
@@ -323,7 +325,7 @@ export default function Interessenten() {
                           value={lead.status}
                           onValueChange={(val) => {
                             // Statusübergänge einschränken: kein Sprung zurück auf "neu"
-                            const order = ["neu", "kontaktiert", "qualifiziert", "vertrag", "abgelehnt"];
+                            const order = ["neu", "kontaktiert", "qualifiziert", "vertrag", "kein_abschluss", "abgelehnt"];
                             const currentIdx = order.indexOf(lead.status);
                             const newIdx = order.indexOf(val);
                             // Rücksprung auf "neu" nur wenn aktuell "kontaktiert"
