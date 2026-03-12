@@ -199,7 +199,7 @@ export default function Dashboard() {
     queryFn: async () => {
       const { data } = await supabase
         .from("leads")
-        .select("id, praxis_name, vorname, nachname, status, created_at, abrechnungszentrum")
+        .select("id, praxis_name, vorname, nachname, status, created_at, abrechnungszentrum, qodia_synced")
         .order("created_at", { ascending: false })
         .limit(5);
       return data ?? [];
