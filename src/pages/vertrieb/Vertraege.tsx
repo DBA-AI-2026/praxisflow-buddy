@@ -301,6 +301,7 @@ export default function Vertraege() {
       if (data?.success) {
         toast({ title: "Qodia-Sync erfolgreich", description: data.message || `${contract.hfx_customer_number} erfolgreich bei Qodia registriert.` });
         queryClient.invalidateQueries({ queryKey: ["leads"] });
+        queryClient.invalidateQueries({ queryKey: ["leads-qodia-map"] });
       } else {
         toast({ title: "Qodia-Fehler", description: data?.error || "Unbekannter Fehler", variant: "destructive" });
       }
@@ -443,6 +444,23 @@ export default function Vertraege() {
         .order("full_name");
       if (error) throw error;
       return data || [];
+    },
+  });
+
+  // Map hfx_customer_number -> qodia_synced for status icons
+  const { data: leadQodiaMap = {} } = useQuery({
+    queryKey: ["leads-qodia-map"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("leads")
+        .select("hfx_customer_number, qodia_synced")
+        .not("hfx_customer_number", "is", null);
+      if (error) throw error;
+      const map: Record<string, boolean> = {};
+      for (const l of data || []) {
+        if (l.hfx_customer_number) map[l.hfx_customer_number] = l.qodia_synced;
+      }
+      return map;
     },
   });
 
@@ -1513,7 +1531,31 @@ export default function Vertraege() {
               <tbody className="divide-y divide-border/50">
                  {filtered.map((c: any) => (
                    <tr key={c.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="py-3.5 px-4 text-xs text-muted-foreground font-mono whitespace-nowrap">{c.hfx_customer_number || "–"}</td>
+                       <td className="py-3.5 px-4 text-xs text-muted-foreground font-mono whitespace-nowrap">
+                         <div className="flex items-center gap-1.5">
+                           <span>{c.hfx_customer_number || "–"}</span>
+                           {c.hfx_customer_number && (
+                             <TooltipProvider>
+                               <Tooltip>
+                                 <TooltipTrigger asChild>
+                                   <span className="inline-flex shrink-0">
+                                     {leadQodiaMap[c.hfx_customer_number] === true ? (
+                                       <CheckCircle className="h-3.5 w-3.5 text-success" />
+                                     ) : leadQodiaMap[c.hfx_customer_number] === false ? (
+                                       <CircleOff className="h-3.5 w-3.5 text-muted-foreground/40" />
+                                     ) : null}
+                                   </span>
+                                 </TooltipTrigger>
+                                 <TooltipContent>
+                                   {leadQodiaMap[c.hfx_customer_number] === true
+                                     ? "Bei Qodia registriert"
+                                     : "Noch nicht bei Qodia registriert"}
+                                 </TooltipContent>
+                               </Tooltip>
+                             </TooltipProvider>
+                           )}
+                         </div>
+                       </td>
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         <p className="font-medium text-foreground leading-tight">{c.praxis || c.customer_name}</p>
                         {c.praxis && (c.vorname || c.nachname) && (
