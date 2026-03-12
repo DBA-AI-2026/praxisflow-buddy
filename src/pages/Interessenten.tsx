@@ -529,18 +529,40 @@ export default function Interessenten() {
                   HonorarPlus
                 </span>
               </div>
-              <div className="flex gap-2 pt-2 border-t">
+              <div className="flex flex-col gap-2 pt-2 border-t">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    disabled={resending}
+                    onClick={() => resendCredentials(selectedLead.id)}
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {resending ? "Wird gesendet…" : "Zugangsdaten erneut senden"}
+                  </Button>
+                  {!selectedLead.qodia_synced && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="flex-1 border-amber-400 text-amber-700 hover:bg-amber-50"
+                            disabled={syncingQodia}
+                            onClick={() => syncToQodia(selectedLead.id)}
+                          >
+                            <RefreshCw className={`h-4 w-4 mr-2 ${syncingQodia ? "animate-spin" : ""}`} />
+                            {syncingQodia ? "Synchronisiere…" : "Bei Qodia registrieren"}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Lead manuell bei Qodia registrieren (qodia_synced = false)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
                 <Button
-                  variant="outline"
-                  className="flex-1"
-                  disabled={resending}
-                  onClick={() => resendCredentials(selectedLead.id)}
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  {resending ? "Wird gesendet…" : "Zugangsdaten erneut senden"}
-                </Button>
-                <Button
-                  className="flex-1"
+                  className="w-full"
                   onClick={() => {
                     const lead = selectedLead;
                     setSelectedLead(null);
