@@ -38,6 +38,7 @@ import { PdfViewerOverlay } from "@/components/PdfViewerOverlay";
 import Documentation from "./pages/admin/Documentation";
 import PlzMapping from "./pages/admin/PlzMapping";
 import Buchhaltung from "./pages/Buchhaltung";
+import PraxenJourney from "./pages/PraxenJourney";
 import DemoSuccess from "./pages/DemoSuccess";
 import ContractConfirmation from "./pages/ContractConfirmation";
 import MandateSuccess from "./pages/MandateSuccess";

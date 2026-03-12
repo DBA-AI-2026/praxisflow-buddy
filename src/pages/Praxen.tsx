@@ -379,6 +379,7 @@ export default function Praxen() {
                 <th>Buchung</th>
                 <th>Status</th>
                 <th>Herkunft</th>
+                <th className="text-center w-16">Qodia</th>
                 <th className="w-12"></th>
               </tr>
             </thead>
