@@ -471,6 +471,31 @@ export default function Praxen() {
                         <span className="text-xs text-muted-foreground">Direkt</span>
                       )}
                     </td>
+                    </td>
+                    <td className="text-center" onClick={(e) => e.stopPropagation()}>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            {(() => {
+                              const qodiaSynced = praxis.convertedFromLeadId
+                                ? leadQodiaMap.byLeadId[praxis.convertedFromLeadId] ?? (praxis.hfxNr ? leadQodiaMap.byHfx[praxis.hfxNr] ?? false : false)
+                                : (praxis.hfxNr ? leadQodiaMap.byHfx[praxis.hfxNr] ?? false : false);
+                              return qodiaSynced
+                                ? <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
+                                : <XCircle className="h-4 w-4 text-muted-foreground/40 mx-auto" />;
+                            })()}
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {(() => {
+                              const qodiaSynced = praxis.convertedFromLeadId
+                                ? leadQodiaMap.byLeadId[praxis.convertedFromLeadId] ?? (praxis.hfxNr ? leadQodiaMap.byHfx[praxis.hfxNr] ?? false : false)
+                                : (praxis.hfxNr ? leadQodiaMap.byHfx[praxis.hfxNr] ?? false : false);
+                              return qodiaSynced ? "Bei Qodia registriert" : "Noch nicht bei Qodia registriert";
+                            })()}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </td>
                     <td onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
