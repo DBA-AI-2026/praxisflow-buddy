@@ -198,8 +198,11 @@ Deno.serve(async (req) => {
     ${invoice.notes ? `<p style="color:#6b7280;font-size:14px;margin-top:12px;">${invoice.notes}</p>` : ""}
   </div>
   <div class="footer">
-    <p>Diese Rechnung wurde automatisch aus dem HFX Sales Portal erstellt.</p>
-    <p>© Honorarfuchs – HFX Sales Portal</p>
+    <p style="font-weight:600;color:#374151;">HFX Honorarfuchs – ein Geschäftsbereich von MCC Medical CareCapital GmbH</p>
+    <p>Hohenzollernstr. 47, 47799 Krefeld</p>
+    <p>Geschäftsführung: Olaf Hagelkruys, Thilo Wiers-Keiser, Robbin Zielke &nbsp;·&nbsp; Amtsgericht Krefeld, HRB 14709</p>
+    <p>USt-Id-Nr: DE 227 420 712 &nbsp;·&nbsp; <a href="https://www.hfx-honorarfuchs.de" style="color:#0b367f;">www.hfx-honorarfuchs.de</a></p>
+    <p style="margin-top:8px;color:#9ca3af;">Diese Rechnung wurde automatisch aus dem HFX Sales Portal erstellt.</p>
   </div>
 </div>
 </body></html>`;
