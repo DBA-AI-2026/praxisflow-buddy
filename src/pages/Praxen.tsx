@@ -84,6 +84,9 @@ export default function Praxen() {
   const [loadingContracts, setLoadingContracts] = useState(false);
   const { connection: sfConnection } = useSalesforceConnection();
 
+  // Qodia sync status from leads, keyed by hfx_customer_number and lead id
+  const [leadQodiaMap, setLeadQodiaMap] = useState<{ byHfx: Record<string, boolean>; byLeadId: Record<string, boolean> }>({ byHfx: {}, byLeadId: {} });
+
   const fetchPraxen = async () => {
     setLoading(true);
 
