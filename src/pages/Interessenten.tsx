@@ -51,6 +51,31 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   kunde: { label: "Kunde", variant: "default" },
 };
 
+type NextStep = {
+  label: string;
+  icon: React.ReactNode;
+  color: string;
+  action?: "contact" | "qualify" | "contract" | "paper" | "none";
+};
+
+function getNextStep(lead: any): NextStep {
+  switch (lead.status) {
+    case "neu":
+      return { label: "Kontaktieren", icon: <Phone className="h-3 w-3" />, color: "bg-primary/10 text-primary border-primary/30", action: "contact" };
+    case "kontaktiert":
+      return { label: "Qualifizieren", icon: <UserCheck className="h-3 w-3" />, color: "bg-accent/10 text-accent border-accent/30", action: "qualify" };
+    case "qualifiziert":
+      return { label: "Vertrag erstellen", icon: <FilePlus className="h-3 w-3" />, color: "bg-success/10 text-success border-success/30", action: "contract" };
+    case "vertrag":
+      return { label: "Papiervertrag einreichen", icon: <Upload className="h-3 w-3" />, color: "bg-warning/10 text-warning border-warning/30", action: "paper" };
+    case "kein_abschluss":
+    case "abgelehnt":
+      return { label: "Abgeschlossen", icon: <Ban className="h-3 w-3" />, color: "bg-muted text-muted-foreground border-border", action: "none" };
+    default:
+      return { label: "Kontaktieren", icon: <Phone className="h-3 w-3" />, color: "bg-primary/10 text-primary border-primary/30", action: "contact" };
+  }
+}
+
 export default function Interessenten() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("alle");
