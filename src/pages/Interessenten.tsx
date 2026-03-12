@@ -293,10 +293,11 @@ export default function Interessenten() {
                 <TableHead>PLZ</TableHead>
                 <TableHead>Abr.-Zentrum</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Nächster Schritt</TableHead>
                 {canAssign && <TableHead>AD-Zuteilung</TableHead>}
-                        <TableHead className="text-center">SF</TableHead>
-                        <TableHead className="text-center">Qodia</TableHead>
-                        <TableHead>Datum</TableHead>
+                <TableHead className="text-center">SF</TableHead>
+                <TableHead className="text-center">Qodia</TableHead>
+                <TableHead>Datum</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
