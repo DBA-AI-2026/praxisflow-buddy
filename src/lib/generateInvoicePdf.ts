@@ -175,7 +175,7 @@ export async function generateInvoicePdf(
 
   // ===== ADDRESS SECTION =====
   // Sender line
-  text("HFX Honorarfuchs GmbH · Musterstraße 1 · 12345 Musterstadt", M, y, 7, font, C_MUTED);
+  text("HFX Honorarfuchs – MCC Medical CareCapital GmbH · Hohenzollernstr. 47 · 47799 Krefeld", M, y, 7, font, C_MUTED);
   y -= 4;
   // Underline under sender
   page.drawLine({ start: { x: M, y }, end: { x: M + 200, y }, thickness: 0.3, color: C_LINE });
