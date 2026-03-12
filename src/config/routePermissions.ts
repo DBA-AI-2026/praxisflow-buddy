@@ -23,7 +23,7 @@ export const routePermissions: RoutePermission[] = [
   { path: "/interessenten", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
 
   // Journey-Übersicht (Tab-Vorschau)
-  { path: "/praxen-journey", allowedRoles: ["sales_partner", "sales_lead", "regional_lead", "admin"] },
+  { path: "/praxen-journey", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
   
   // Demo-Tracking
   { path: "/demo-tracking", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
