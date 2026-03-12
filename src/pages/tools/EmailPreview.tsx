@@ -1228,100 +1228,120 @@ export default function EmailPreview() {
           {!isAdmin && <Lock className="w-4 h-4 text-muted-foreground" />}
         </div>
 
-        {/* Template cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {TEMPLATES.map((tpl) => (
-            <div key={tpl.id} className="rounded-xl border border-border bg-card p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Mail className="w-4 h-4 text-primary" />
-                  <span className="font-semibold text-foreground">{tpl.label}</span>
-                  {(hasCustom(tpl, "email") || (tpl.id === "invoice" && hasCustom(tpl, "pdf"))) && (
-                    <span className="ml-auto text-[10px] font-medium bg-warning/20 text-warning-foreground px-1.5 py-0.5 rounded border border-warning/30">Bearbeitet</span>
-                  )}
+        {/* Template groups */}
+        {(["kunden", "intern"] as const).map((cat) => {
+          const groupTemplates = TEMPLATES.filter((t) => t.category === cat);
+          const groupLabel = cat === "kunden" ? "Kunden-Mails" : "Interne Mails";
+          const groupDesc = cat === "kunden"
+            ? "E-Mails, die direkt an Interessenten und Kunden gesendet werden"
+            : "Benachrichtigungen an Vertriebsmitarbeiter und interne Nutzer";
+          return (
+            <div key={cat}>
+              <div className="flex items-center gap-3 mb-4">
+                <div>
+                  <h3 className="text-base font-semibold text-foreground">{groupLabel}</h3>
+                  <p className="text-xs text-muted-foreground">{groupDesc}</p>
                 </div>
-                <p className="text-xs text-muted-foreground">{tpl.description}</p>
-                <p className="text-xs text-muted-foreground mt-1 font-mono truncate">Betreff: {tpl.subject}</p>
+                <span className="ml-auto text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                  {groupTemplates.length} Vorlagen
+                </span>
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {groupTemplates.map((tpl) => (
+                  <div key={tpl.id} className="rounded-xl border border-border bg-card p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Mail className="w-4 h-4 text-primary" />
+                        <span className="font-semibold text-foreground">{tpl.label}</span>
+                        {(hasCustom(tpl, "email") || (tpl.id === "invoice" && hasCustom(tpl, "pdf"))) && (
+                          <span className="ml-auto text-[10px] font-medium bg-warning/20 text-warning-foreground px-1.5 py-0.5 rounded border border-warning/30">Bearbeitet</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{tpl.description}</p>
+                      <p className="text-xs text-muted-foreground mt-1 font-mono truncate">Betreff: {tpl.subject}</p>
+                    </div>
 
-              {/* E-Mail row */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 gap-1.5"
-                  onClick={() => setActiveModal({ template: tpl, mode: "email" })}
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  E-Mail
-                </Button>
-                {isAdmin && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={() => openEdit(tpl, "email")}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      Bearbeiten
-                    </Button>
-                    {hasCustom(tpl, "email") && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="px-2 text-muted-foreground"
-                        title="Zurücksetzen"
-                        onClick={() => resetTemplate(tpl, "email")}
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* PDF row – only for invoice */}
-              {tpl.id === "invoice" && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 gap-1.5"
-                    onClick={() => setActiveModal({ template: tpl, mode: "pdf" })}
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    PDF
-                  </Button>
-                  {isAdmin && (
-                    <>
+                    {/* E-Mail row */}
+                    <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="gap-1.5"
-                        onClick={() => openEdit(tpl, "pdf")}
+                        className="flex-1 gap-1.5"
+                        onClick={() => setActiveModal({ template: tpl, mode: "email" })}
                       >
-                        <Pencil className="w-3.5 h-3.5" />
-                        Bearbeiten
+                        <Eye className="w-3.5 h-3.5" />
+                        E-Mail
                       </Button>
-                      {hasCustom(tpl, "pdf") && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="px-2 text-muted-foreground"
-                          title="Zurücksetzen"
-                          onClick={() => resetTemplate(tpl, "pdf")}
-                        >
-                          <RotateCcw className="w-3.5 h-3.5" />
-                        </Button>
+                      {isAdmin && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={() => openEdit(tpl, "email")}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            Bearbeiten
+                          </Button>
+                          {hasCustom(tpl, "email") && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="px-2 text-muted-foreground"
+                              title="Zurücksetzen"
+                              onClick={() => resetTemplate(tpl, "email")}
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
-                </div>
-              )}
+                    </div>
+
+                    {/* PDF row – only for invoice */}
+                    {tpl.id === "invoice" && (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 gap-1.5"
+                          onClick={() => setActiveModal({ template: tpl, mode: "pdf" })}
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          PDF
+                        </Button>
+                        {isAdmin && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5"
+                              onClick={() => openEdit(tpl, "pdf")}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              Bearbeiten
+                            </Button>
+                            {hasCustom(tpl, "pdf") && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="px-2 text-muted-foreground"
+                                title="Zurücksetzen"
+                                onClick={() => resetTemplate(tpl, "pdf")}
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       {/* ── Preview Modal ── */}
