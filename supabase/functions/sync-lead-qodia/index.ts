@@ -2,8 +2,30 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+function generatePassword(length = 12): string {
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghjkmnpqrstuvwxyz";
+  const digits = "23456789";
+  const special = "!@#$%&*";
+  const all = upper + lower + digits + special;
+  const arr = new Uint8Array(length);
+  crypto.getRandomValues(arr);
+  const result = [
+    upper[arr[0] % upper.length],
+    lower[arr[1] % lower.length],
+    digits[arr[2] % digits.length],
+    special[arr[3] % special.length],
+  ];
+  for (let i = 4; i < length; i++) result.push(all[arr[i] % all.length]);
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = arr[i] % (i + 1);
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result.join("");
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -62,11 +84,22 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!lead.generated_password) {
-      return new Response(
-        JSON.stringify({ error: "Kein generiertes Passwort vorhanden. Bitte zuerst Zugangsdaten neu senden." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // If no password is stored, generate a new one and update it in Auth + DB
+    let password = lead.generated_password;
+    if (!password) {
+      console.log(`No stored password for ${lead.hfx_customer_number}, generating new one...`);
+      password = generatePassword(12);
+
+      // Find and update the auth user's password
+      const { data: listData } = await supabase.auth.admin.listUsers();
+      const authUser = listData?.users?.find((u: any) => u.email?.toLowerCase() === lead.email.toLowerCase());
+      if (authUser) {
+        await supabase.auth.admin.updateUserById(authUser.id, { password });
+      }
+
+      // Store the new password so future syncs can reuse it
+      await supabase.from("leads").update({ generated_password: password }).eq("id", lead.id);
+      console.log(`New password generated and stored for ${lead.hfx_customer_number}`);
     }
 
     const QODIA_SIGNUP_URL = "https://auth.qodia.de/api/external/sign-up";
@@ -82,7 +115,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         email: lead.email,
-        password: lead.generated_password,
+        password: password,
         name: lead.hfx_customer_number,
       }),
     });
