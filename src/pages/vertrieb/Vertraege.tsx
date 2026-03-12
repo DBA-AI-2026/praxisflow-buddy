@@ -25,7 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye, CheckCircle,
   FilePen, FileSignature, CircleCheck, CircleOff, ArchiveX, ShieldBan, ArrowUpDown, ArrowUp, ArrowDown,
-  GitMerge,
+  GitMerge, AlertTriangle,
 } from "lucide-react";
 // Check and ChevronsUpDown already imported above via combobox imports
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
