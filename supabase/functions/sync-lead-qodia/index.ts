@@ -84,11 +84,22 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!lead.generated_password) {
-      return new Response(
-        JSON.stringify({ error: "Kein generiertes Passwort vorhanden. Bitte zuerst Zugangsdaten neu senden." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // If no password is stored, generate a new one and update it in Auth + DB
+    let password = lead.generated_password;
+    if (!password) {
+      console.log(`No stored password for ${lead.hfx_customer_number}, generating new one...`);
+      password = generatePassword(12);
+
+      // Find and update the auth user's password
+      const { data: listData } = await supabase.auth.admin.listUsers();
+      const authUser = listData?.users?.find((u: any) => u.email?.toLowerCase() === lead.email.toLowerCase());
+      if (authUser) {
+        await supabase.auth.admin.updateUserById(authUser.id, { password });
+      }
+
+      // Store the new password so future syncs can reuse it
+      await supabase.from("leads").update({ generated_password: password }).eq("id", lead.id);
+      console.log(`New password generated and stored for ${lead.hfx_customer_number}`);
     }
 
     const QODIA_SIGNUP_URL = "https://auth.qodia.de/api/external/sign-up";
@@ -104,7 +115,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         email: lead.email,
-        password: lead.generated_password,
+        password: password,
         name: lead.hfx_customer_number,
       }),
     });
