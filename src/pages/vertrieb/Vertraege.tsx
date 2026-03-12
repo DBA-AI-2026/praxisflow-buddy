@@ -262,10 +262,54 @@ export default function Vertraege() {
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
   const [resendingConfirmationId, setResendingConfirmationId] = useState<string | null>(null);
   const [emailConfirmContract, setEmailConfirmContract] = useState<any | null>(null);
+  const [syncingQodiaId, setSyncingQodiaId] = useState<string | null>(null);
   const { user, profile } = useAuth();
   const { isAdmin, isVertragsabteilung } = useUserRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const syncLeadQodia = async (contract: any) => {
+    if (!contract.hfx_customer_number) {
+      toast({ title: "Keine HFX-Nummer", description: "Diesem Vertrag ist keine HFX-Kundennummer zugewiesen.", variant: "destructive" });
+      return;
+    }
+    setSyncingQodiaId(contract.id);
+    try {
+      // Find the lead by hfx_customer_number
+      const { data: lead, error: leadError } = await supabase
+        .from("leads")
+        .select("id, qodia_synced")
+        .eq("hfx_customer_number", contract.hfx_customer_number)
+        .maybeSingle();
+
+      if (leadError || !lead) {
+        toast({ title: "Lead nicht gefunden", description: `Kein Interessent mit HFX-Nr. ${contract.hfx_customer_number} gefunden.`, variant: "destructive" });
+        return;
+      }
+
+      if (lead.qodia_synced) {
+        toast({ title: "Bereits synchronisiert", description: `${contract.hfx_customer_number} ist bereits bei Qodia registriert.` });
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data, error } = await supabase.functions.invoke("sync-lead-qodia", {
+        body: { leadId: lead.id },
+      });
+
+      if (error) throw error;
+      if (data?.success) {
+        toast({ title: "Qodia-Sync erfolgreich", description: data.message || `${contract.hfx_customer_number} erfolgreich bei Qodia registriert.` });
+        queryClient.invalidateQueries({ queryKey: ["leads"] });
+      } else {
+        toast({ title: "Qodia-Fehler", description: data?.error || "Unbekannter Fehler", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Fehler", description: err.message || "Unbekannter Fehler", variant: "destructive" });
+    } finally {
+      setSyncingQodiaId(null);
+    }
+  };
   const location = useLocation();
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const signaturePadRef = useRef<SignaturePad | null>(null);
