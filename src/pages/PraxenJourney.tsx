@@ -738,7 +738,11 @@ function KundenTab({ search }: { search: string }) {
               const arztLabel = [c.vorname, c.nachname].filter(Boolean).join(" ");
               const qodia = !!(c.hfx_customer_number ? qodiaMap[c.hfx_customer_number] : false);
               return (
-                <tr key={c.id} className="hover:bg-muted/20 transition-colors group">
+                <tr
+                  key={c.id}
+                  ref={highlightId === c.id ? highlightRef : null}
+                  className={`hover:bg-muted/20 transition-colors group ${highlightId === c.id ? "bg-primary/5 ring-1 ring-primary/30" : ""}`}
+                >
                   <td className="py-3 px-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
                     {c.hfx_customer_number || <span className="text-muted-foreground/40">—</span>}
                   </td>
