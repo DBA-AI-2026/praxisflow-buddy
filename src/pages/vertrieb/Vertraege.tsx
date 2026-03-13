@@ -2775,7 +2775,7 @@ export default function Vertraege() {
                     <TooltipContent side="top" className="max-w-xs">
                       {!form.email
                         ? "E-Mail-Adresse erforderlich"
-                        : "Speichert als „Eingegangen" und sendet den digitalen Buchungslink an den Kunden"}
+                        : "Speichert als Eingegangen und sendet den digitalen Buchungslink an den Kunden"}
                     </TooltipContent>
                   </Tooltip>
                   </TooltipProvider>
