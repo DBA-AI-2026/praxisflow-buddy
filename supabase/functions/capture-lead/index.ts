@@ -1,33 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 
-const ALLOWED_ORIGINS = [
-  "https://praxisflow-buddy.lovable.app",
-  "https://id-preview--f9dcf8ed-b381-4f00-af4c-2993b99115fa.lovable.app",
-  "https://www.honorarfuchs.de",
-  "https://honorarfuchs.de",
-  "http://localhost:5173",
-  "http://localhost:3000",
-];
-
-function getCorsHeaders(origin: string | null) {
-  // Server-to-server requests (no origin header) are allowed
-  if (!origin) {
-    return {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-    };
-  }
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : null;
-  if (!allowedOrigin) {
-    return null; // Origin not allowed
-  }
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-    "Access-Control-Allow-Credentials": "true",
-  };
-}
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
 
 /**
  * Maps CF7 to Webhook / CF7 to Any API field names to our internal format.
@@ -265,22 +242,11 @@ Geschäftsführer:<br />Olaf Hagelkruys, Thilo Wiers-Keiser und Robbin Zielke<br
 }
 
 Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  const corsHeaders = getCorsHeaders(origin);
-
-  // Block browser requests from unknown origins
-  if (origin && !corsHeaders) {
-    return new Response(
-      JSON.stringify({ error: "Origin not allowed" }),
-      { status: 403, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  const headers = corsHeaders || {};
-
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers });
+    return new Response(null, { headers: corsHeaders });
   }
+
+  const headers = corsHeaders;
 
   try {
     const rawBody = await req.json();
@@ -700,11 +666,9 @@ Deno.serve(async (req) => {
     );
   } catch (error: any) {
     console.error("Error in capture-lead:", error);
-    const origin2 = req.headers.get("origin");
-    const fallbackHeaders = getCorsHeaders(origin2) || {};
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...fallbackHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
