@@ -665,12 +665,16 @@ function KundenTab({ search }: { search: string }) {
 
   const s = search.toLowerCase();
 
-  // Deduplicate: one row per hfx_customer_number (keep most recent contract)
-  const seenHfx = new Set<string>();
+  // Deduplicate: one row per customer — keyed by hfx_customer_number if present,
+  // otherwise by normalised customer_name (lowercase trim) to catch duplicates
+  // without an HFX number (e.g. "Praxis Freitag" twice).
+  const seenKeys = new Set<string>();
   const rows = activeContracts.filter((c: any) => {
-    const key = c.hfx_customer_number || c.id;
-    if (seenHfx.has(key)) return false;
-    seenHfx.add(key);
+    const key = c.hfx_customer_number
+      ? `hfx:${c.hfx_customer_number}`
+      : `name:${(c.praxis || c.customer_name || "").toLowerCase().trim()}`;
+    if (seenKeys.has(key)) return false;
+    seenKeys.add(key);
     return true;
   });
 
