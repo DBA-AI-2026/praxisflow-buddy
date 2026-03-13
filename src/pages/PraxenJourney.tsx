@@ -728,7 +728,7 @@ function KundenTab({ search }: { search: string }) {
               <TH>Produkt</TH>
               <TH right>Qodia</TH>
               <TH>Buchung</TH>
-              <TH></TH>
+              <TH>{""}</TH>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
