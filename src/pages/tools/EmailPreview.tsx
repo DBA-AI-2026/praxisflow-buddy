@@ -1452,7 +1452,7 @@ export default function EmailPreview() {
                       )}
                     </div>
 
-                    {/* PDF row – only for invoice */}
+                    {/* PDF row – invoice (editable HTML) */}
                     {tpl.id === "invoice" && (
                       <div className="flex gap-2">
                         <Button
@@ -1490,6 +1490,21 @@ export default function EmailPreview() {
                         )}
                       </div>
                     )}
+
+                    {/* PDF row – live pdf-lib preview (booking-link + post-payment-contract-pdf) */}
+                    {PDF_PREVIEW_TEMPLATE_IDS.includes(tpl.id) && (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 gap-1.5"
+                          onClick={() => openPdfPreview(tpl)}
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          Vertragszusammenfassung PDF
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1522,6 +1537,40 @@ export default function EmailPreview() {
                 className="w-full border-0"
                 style={{ height: 700, minWidth: 0 }}
               />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Contract PDF Preview Modal (pdf-lib live render) ── */}
+      <Dialog open={!!pdfModal} onOpenChange={closePdfModal}>
+        <DialogContent className="max-w-4xl w-full p-0 gap-0 overflow-hidden" style={{ maxHeight: "92vh" }}>
+          <DialogHeader className="px-5 py-3 border-b border-border bg-muted/40 flex-row items-center justify-between space-y-0">
+            <div className="flex flex-col gap-0.5">
+              <DialogTitle className="text-sm font-semibold">
+                📄 Vertragszusammenfassung (PDF) — Live-Vorschau mit Musterdaten
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground">
+                Wird nach erfolgreicher Stripe-Zahlung automatisch generiert und als Anhang verschickt.
+              </p>
+            </div>
+          </DialogHeader>
+          <div className="flex items-center justify-center bg-muted/30" style={{ height: "calc(92vh - 72px)" }}>
+            {pdfLoading && (
+              <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                <Loader2 className="w-8 h-8 animate-spin" />
+                <span className="text-sm">PDF wird generiert…</span>
+              </div>
+            )}
+            {!pdfLoading && pdfBlobUrl && (
+              <iframe
+                src={pdfBlobUrl}
+                title="Vertragszusammenfassung PDF"
+                className="w-full h-full border-0"
+              />
+            )}
+            {!pdfLoading && !pdfBlobUrl && (
+              <p className="text-sm text-muted-foreground">PDF konnte nicht geladen werden.</p>
             )}
           </div>
         </DialogContent>
