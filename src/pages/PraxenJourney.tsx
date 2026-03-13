@@ -841,7 +841,7 @@ export default function PraxenJourney() {
       const [l, c, k] = await Promise.all([
         supabase.from("leads").select("id", { count: "exact", head: true }).neq("status", "kunde"),
         supabase.from("contracts").select("id", { count: "exact", head: true }).neq("status", "aktiv"),
-        supabase.from("praxen").select("id", { count: "exact", head: true }).eq("status", "aktiv"),
+        supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "aktiv"),
       ]);
       return { leads: l.count ?? 0, contracts: c.count ?? 0, kunden: k.count ?? 0 };
     },
