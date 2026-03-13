@@ -353,7 +353,7 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
                   <td className="py-3 px-4">
                     <SourceBadge source={src} />
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground">
+                  <td className="py-3 px-4 text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-2">
                       <span>{lead.email}</span>
                       {lead.hfx_customer_number && (
