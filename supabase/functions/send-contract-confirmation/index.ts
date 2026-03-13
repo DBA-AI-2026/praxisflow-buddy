@@ -258,9 +258,7 @@ Deno.serve(async (req) => {
           `Monatspreis: ${priceFormatted}`,
           "Kündigung: Unbefristet, 6 Monate Frist zum Monatsende",
           "",
-          stripeCheckoutUrl
-            ? `Bitte schließen Sie die Buchung verbindlich ab:\n${stripeCheckoutUrl}`
-            : "Ihr Außendienstmitarbeiter wird sich in Kürze bei Ihnen melden, um die Zahlung einzurichten.",
+          `Bitte schließen Sie die Buchung verbindlich ab:\n${buchenUrl}`,
           "",
           "Bei Fragen: info@hfx-honorarfuchs.de",
           "",
