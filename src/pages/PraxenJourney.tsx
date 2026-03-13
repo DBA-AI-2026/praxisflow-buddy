@@ -606,19 +606,41 @@ function VertraegeTab({ search, highlightId, missingEmailCount }: { search: stri
                     {c.created_at ? format(new Date(c.created_at), "dd.MM.yy", { locale: de }) : "–"}
                   </td>
                   <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={() => navigate(`/vertrieb/vertraege?contractId=${c.id}`)}
-                            className="text-primary hover:text-primary/70 transition-colors"
-                          >
-                            <ArrowRight className="h-3.5 w-3.5" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>In Vertragsübersicht öffnen</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <div className="flex items-center gap-2">
+                      {/* Buchungsmail senden – shown for eingegangen contracts without sent email */}
+                      {c.status === "eingegangen" && !c.confirmation_email_sent_at && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={(e) => sendBuchungsmail(c, e)}
+                                disabled={sendingBuchungsmail === c.id}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 disabled:opacity-50 transition-colors whitespace-nowrap"
+                              >
+                                {sendingBuchungsmail === c.id
+                                  ? <Loader2 className="h-3 w-3 animate-spin" />
+                                  : <Send className="h-3 w-3" />}
+                                Buchungsmail
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Digitalen Buchungslink an Kunden senden</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => navigate(`/vertrieb/vertraege?contractId=${c.id}`)}
+                              className="text-primary hover:text-primary/70 transition-colors"
+                            >
+                              <ArrowRight className="h-3.5 w-3.5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>In Vertragsübersicht öffnen</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </td>
                 </tr>
               );
