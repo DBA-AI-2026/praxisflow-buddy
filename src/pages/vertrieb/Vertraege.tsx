@@ -1247,15 +1247,6 @@ export default function Vertraege() {
 
   const handleTemplatePdf = async (contractData: Record<string, any>) => {
     try {
-      // Capture signatures from pads if available
-      let sigData = contractData.signature_data;
-      if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
-        sigData = signaturePadRef.current.toDataURL();
-      }
-      let vertriebSigData = contractData.vertrieb_signature_data;
-      if (vertriebSignaturePadRef.current && !vertriebSignaturePadRef.current.isEmpty()) {
-        vertriebSigData = vertriebSignaturePadRef.current.toDataURL();
-      }
       // Load the template PDF
       const templateRes = await fetch("/templates/vertrag-honorarfuchs.pdf");
       const templateBytes = await templateRes.arrayBuffer();
