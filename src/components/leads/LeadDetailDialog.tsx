@@ -30,12 +30,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Loader2,
@@ -44,10 +38,10 @@ import {
   RefreshCw,
   CheckCircle2,
   XCircle,
-  Clock,
   Globe,
   UserPlus,
   FilePlus,
+  Play,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -94,6 +88,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
   const [saving, setSaving] = useState(false);
   const [resending, setResending] = useState(false);
   const [syncingQodia, setSyncingQodia] = useState(false);
+  const [sendingConfirmEmail, setSendingConfirmEmail] = useState(false);
 
   const form = useForm<EditValues>({
     resolver: zodResolver(editSchema),
@@ -184,6 +179,28 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
     }
   };
 
+  const sendConfirmationEmail = async () => {
+    setSendingConfirmEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("resend-lead-credentials", {
+        body: { leadId: lead.id },
+      });
+      if (error) throw error;
+      // Mark as sent in DB
+      await supabase
+        .from("leads")
+        .update({ confirmation_email_sent: true })
+        .eq("id", lead.id);
+      toast({ title: "Bestätigungs-E-Mail gesendet", description: data?.message || "E-Mail wurde erfolgreich verschickt." });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      onClose();
+    } catch (err: any) {
+      toast({ title: "Fehler", description: err.message || "E-Mail-Versand fehlgeschlagen", variant: "destructive" });
+    } finally {
+      setSendingConfirmEmail(false);
+    }
+  };
+
   const sc = statusConfig[lead.status] || statusConfig.neu;
   const sourceLabel = lead.source === "manual" ? "Manuell erfasst" : "Homepage";
   const sourceIcon = lead.source === "manual"
@@ -195,6 +212,38 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
     const p = gebietsleiter.find((g: any) => g.user_id === assigned_to);
     return p ? p.full_name : "–";
   };
+
+  // Sync items definition: key, label, trigger action (null = not triggerable)
+  const syncItems: Array<{
+    key: string;
+    label: string;
+    onTrigger?: () => void;
+    triggering?: boolean;
+    triggerLabel?: string;
+  }> = [
+    {
+      key: "confirmation_email_sent",
+      label: "Bestätigungs-E-Mail",
+      onTrigger: sendConfirmationEmail,
+      triggering: sendingConfirmEmail,
+      triggerLabel: "E-Mail senden",
+    },
+    {
+      key: "qodia_synced",
+      label: "Qodia",
+      onTrigger: !lead.qodia_synced ? syncToQodia : undefined,
+      triggering: syncingQodia,
+      triggerLabel: "Registrieren",
+    },
+    {
+      key: "salesforce_synced",
+      label: "Salesforce",
+    },
+    {
+      key: "honorarplus_synced",
+      label: "HonorarPlus",
+    },
+  ];
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -388,24 +437,42 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
               )}
             </div>
 
-            {/* Sync-Status */}
+            {/* Sync-Status – each row is clickable if an action exists */}
             <div className="rounded-lg border border-border p-3">
               <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Sync-Status</p>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                {[
-                  { key: "confirmation_email_sent", label: "Bestätigungs-E-Mail" },
-                  { key: "salesforce_synced", label: "Salesforce" },
-                  { key: "qodia_synced", label: "Qodia" },
-                  { key: "honorarplus_synced", label: "HonorarPlus" },
-                ].map(({ key, label }) => (
-                  <div key={key} className="flex items-center gap-2">
-                    {(lead as any)[key]
-                      ? <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                      : <XCircle className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-                    }
-                    <span className={(lead as any)[key] ? "text-foreground" : "text-muted-foreground"}>{label}</span>
-                  </div>
-                ))}
+              <div className="space-y-2">
+                {syncItems.map(({ key, label, onTrigger, triggering, triggerLabel }) => {
+                  const isSynced = !!(lead as any)[key];
+                  return (
+                    <div
+                      key={key}
+                      className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted/40 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        {isSynced
+                          ? <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                          : <XCircle className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                        }
+                        <span className={isSynced ? "text-foreground" : "text-muted-foreground"}>{label}</span>
+                      </div>
+                      {onTrigger && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs gap-1 text-primary hover:text-primary hover:bg-primary/10"
+                          onClick={onTrigger}
+                          disabled={triggering}
+                        >
+                          {triggering
+                            ? <Loader2 className="h-3 w-3 animate-spin" />
+                            : <Play className="h-3 w-3" />
+                          }
+                          {triggerLabel}
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
