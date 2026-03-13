@@ -39,3 +39,5 @@ project_id = "gvsxentbbzuyanqbqvea"
     verify_jwt = false
   [functions.auto-invoice]
     verify_jwt = false
+  [functions.initiate-booking]
+    verify_jwt = false

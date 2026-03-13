@@ -42,6 +42,7 @@ import PraxenJourney from "./pages/PraxenJourney";
 import DemoSuccess from "./pages/DemoSuccess";
 import ContractConfirmation from "./pages/ContractConfirmation";
 import MandateSuccess from "./pages/MandateSuccess";
+import Buchen from "./pages/Buchen";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,7 @@ const App = () => (
             <Route path="/demo-cancel" element={<NotFound />} />
             <Route path="/vertrag-bestaetigen" element={<ContractConfirmation />} />
             <Route path="/mandate-success" element={<MandateSuccess />} />
+            <Route path="/buchen" element={<Buchen />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/reservierungen" element={<ProtectedRoute><Reservierungen /></ProtectedRoute>} />
             <Route path="/praxen" element={<ProtectedRoute><Praxen /></ProtectedRoute>} />

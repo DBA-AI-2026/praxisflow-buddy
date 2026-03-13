@@ -85,56 +85,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Build Stripe checkout session
-    let stripeCheckoutUrl: string | null = null;
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    const productName = contract.product_name;
-
-    // HFX GOÄ promo: 100% off base fee until 31.12.2026 for contracts signed before 30.06.2026
-    const GOA_PROMO_COUPON_ID = "Z6xkvF0U";
-    const GOA_PROMO_PRICE_ID = "price_1T7z2Z6v0qHdbOipvyPDB9mB";
-    const GOA_PROMO_DEADLINE = new Date("2026-06-30T23:59:59Z");
-
-    if (stripeKey && productName && STRIPE_PRODUCT_MAP[productName]) {
-      try {
-        const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-        const priceInfo = STRIPE_PRODUCT_MAP[productName];
-
-        // Check if this GOÄ contract qualifies for the promo coupon
-        const isGoaPromoEligible =
-          priceInfo.price_id === GOA_PROMO_PRICE_ID &&
-          priceInfo.recurring &&
-          new Date() <= GOA_PROMO_DEADLINE;
-
-        const sessionParams: any = {
-          customer_email: contract.email,
-          line_items: [{ price: priceInfo.price_id, quantity: 1 }],
-          mode: priceInfo.recurring ? "subscription" : "payment",
-          payment_method_types: ["card", "sepa_debit"],
-          success_url: `${APP_URL}/vertrag-bestaetigen?status=success&contract_id=${contract.id}`,
-          cancel_url: `${APP_URL}/vertrag-bestaetigen?status=cancelled`,
-          metadata: {
-            source: "paper_contract_confirmation",
-            contract_id: contract.id,
-          },
-          subscription_data: priceInfo.recurring
-            ? { metadata: { contract_id: contract.id } }
-            : undefined,
-        };
-
-        // Apply promo coupon automatically for eligible GOÄ contracts
-        if (isGoaPromoEligible) {
-          sessionParams.discounts = [{ coupon: GOA_PROMO_COUPON_ID }];
-          console.log(`[send-contract-confirmation] Applying GOÄ promo coupon ${GOA_PROMO_COUPON_ID}`);
-        }
-
-        const session = await stripe.checkout.sessions.create(sessionParams);
-        stripeCheckoutUrl = session.url;
-        console.log(`[send-contract-confirmation] Stripe session created: ${session.id}`);
-      } catch (stripeErr) {
-        console.error("[send-contract-confirmation] Stripe error:", stripeErr);
-      }
-    }
+    // Build the /buchen page URL for the customer
+    const buchenUrl = `${APP_URL}/buchen?contract_id=${contract.id}&product=${encodeURIComponent(contract.product_name)}`;
 
     const startDateFormatted = contract.start_date
       ? new Date(contract.start_date + "T00:00:00").toLocaleDateString("de-DE", {
@@ -146,21 +98,20 @@ Deno.serve(async (req) => {
       ? `${Number(contract.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/Monat`
       : "–";
 
-    // CTA block — only shown if Stripe URL is available
-    const ctaBlock = stripeCheckoutUrl
-      ? `
+    // CTA block — links to /buchen page where customer fills in Fachrichtung + Rechtsform
+    const ctaBlock = `
         <!-- Buchungs-CTA -->
         <tr>
           <td style="padding:0 40px 28px;">
             <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#0b367f,#1a4a9e);border-radius:10px;overflow:hidden;">
               <tr><td style="padding:28px 32px;text-align:center;">
                 <p style="color:rgba(255,255,255,0.9);font-size:14px;line-height:1.6;margin:0 0 20px;">
-                  Ihr Außendienstmitarbeiter hat Ihren Vertragsabschluss vorbereitet.<br>
+                  Ihr Vertrag wurde für Sie vorbereitet.<br>
                   Bitte schließen Sie die Buchung verbindlich ab – Ihre Zahlung aktiviert den Vertrag automatisch.
                 </p>
                 <table cellpadding="0" cellspacing="0" align="center">
                   <tr><td style="background:#ffffff;border-radius:8px;padding:0;">
-                    <a href="${stripeCheckoutUrl}"
+                    <a href="${buchenUrl}"
                        style="display:block;padding:16px 40px;color:#0b367f;font-size:16px;font-weight:700;text-decoration:none;letter-spacing:0.01em;">
                       Verbindlich buchen →
                     </a>
@@ -168,20 +119,6 @@ Deno.serve(async (req) => {
                 </table>
                 <p style="color:rgba(255,255,255,0.6);font-size:11px;margin:14px 0 0;">
                   Sichere Zahlung via Stripe · Kreditkarte oder SEPA-Lastschrift · SSL-verschlüsselt
-                </p>
-              </td></tr>
-            </table>
-          </td>
-        </tr>`
-      : `
-        <!-- Hinweis ohne Stripe -->
-        <tr>
-          <td style="padding:0 40px 28px;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef9ec;border-radius:8px;border:1px solid #fcd34d;">
-              <tr><td style="padding:20px 24px;">
-                <p style="color:#92400e;font-size:14px;font-weight:600;margin:0 0 6px;">ℹ️ Zahlung wird manuell eingerichtet</p>
-                <p style="color:#374151;font-size:13px;line-height:1.5;margin:0;">
-                  Ihr Außendienstmitarbeiter wird sich in Kürze bei Ihnen melden, um die Zahlung einzurichten.
                 </p>
               </td></tr>
             </table>
@@ -321,9 +258,7 @@ Deno.serve(async (req) => {
           `Monatspreis: ${priceFormatted}`,
           "Kündigung: Unbefristet, 6 Monate Frist zum Monatsende",
           "",
-          stripeCheckoutUrl
-            ? `Bitte schließen Sie die Buchung verbindlich ab:\n${stripeCheckoutUrl}`
-            : "Ihr Außendienstmitarbeiter wird sich in Kürze bei Ihnen melden, um die Zahlung einzurichten.",
+          `Bitte schließen Sie die Buchung verbindlich ab:\n${buchenUrl}`,
           "",
           "Bei Fragen: info@hfx-honorarfuchs.de",
           "",
