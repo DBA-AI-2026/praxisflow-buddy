@@ -339,8 +339,9 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
               return (
                 <tr
                   key={lead.id}
-                  ref={highlightId === lead.id ? highlightRef : null}
-                  className={`hover:bg-muted/20 transition-colors group ${highlightId === lead.id ? "bg-primary/5 ring-1 ring-primary/30" : ""}`}
+                  ref={highlightId === lead.id ? (highlightRef as any) : null}
+                  onClick={() => setSelectedLead(lead)}
+                  className={`hover:bg-muted/30 transition-colors group cursor-pointer ${highlightId === lead.id ? "bg-primary/5 ring-1 ring-primary/30" : ""}`}
                 >
                   <td className="py-3 px-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
                     {lead.hfx_customer_number || <span className="text-muted-foreground/40">—</span>}
