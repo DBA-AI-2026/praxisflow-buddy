@@ -20,9 +20,6 @@ import { UploadPaperContractDialog } from "@/components/leads/UploadPaperContrac
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 
 // ─── Status configs ──────────────────────────────────────────────────────────
 
