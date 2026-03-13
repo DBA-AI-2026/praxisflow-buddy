@@ -267,7 +267,7 @@ export default function Dashboard() {
             .limit(8);
           (leads ?? []).forEach((r) => items.push({
             id: r.id, type: "lead", label: r.praxis_name, sub: `${r.vorname} ${r.nachname}`.trim(),
-            status: r.status, time: r.updated_at, link: "/interessenten",
+            status: r.status, time: r.updated_at, link: `/praxen-journey?tab=leads&id=${r.id}`,
           }));
         }
       }
