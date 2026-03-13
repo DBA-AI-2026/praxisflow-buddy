@@ -1170,6 +1170,52 @@ function buildBookingLinkHtml() {
 </html>`;
 }
 
+// ─── Mock data for PDF preview ─────────────────────────────────────────────────
+const MOCK_CONTRACT_PDF_DATA = {
+  hfx_customer_number: "HFX-I01019",
+  praxis: "Testpraxis Dr. Müller",
+  fachrichtung: "Allgemeinmedizin",
+  vorname: "Max",
+  nachname: "Mustermann",
+  adresse: "Musterstraße 12, 80331 München",
+  telefon: "+49 89 1234567",
+  email: "max.mustermann@example.com",
+  mp_nr: "MP-001019",
+  sales_partner_name: "Uwe Waldenmeyer",
+  product_name: "HFX EBM",
+  modules: ["HFX EBM", "HFX GOÄ"],
+  license_count: 1,
+  start_date: new Date().toISOString().split("T")[0],
+  end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+  duration_months: 12,
+  cancellation_period_months: 6,
+  auto_renewal: true,
+  monthly_price: 99.0,
+  one_time_fee: 0,
+  discount_percent: 0,
+  payment_interval: "monatlich",
+  kontoinhaber: "Max Mustermann",
+  iban: "DE89 3704 0044 0532 0130 00",
+  bic: "COBADEFFXXX",
+  status: "aktiv",
+  notes: "Muster-Vertrag zur Vorschau. Kein rechtlich bindendes Dokument.",
+  product_price_details: [
+    {
+      name: "HFX EBM",
+      monthly_price: 79.0,
+      price_per_unit: 0.05,
+      price_per_unit_label: "GOÄ-Ziffer",
+      has_active_promo: false,
+    },
+    {
+      name: "HFX GOÄ",
+      monthly_price: 20.0,
+      price_per_unit: null,
+      has_active_promo: false,
+    },
+  ],
+};
+
 const DEFAULT_HTML: Record<string, () => string> = {
   "lead-confirmation": buildLeadConfirmationHtml,
   "contract-customer": buildContractCustomerHtml,
@@ -1190,6 +1236,9 @@ const DEFAULT_HTML: Record<string, () => string> = {
 function getHtmlForTemplate(id: TemplateId) {
   return DEFAULT_HTML[id]?.() ?? "";
 }
+
+/** IDs where we show the live pdf-lib PDF preview button */
+const PDF_PREVIEW_TEMPLATE_IDS: TemplateId[] = ["booking-link", "post-payment-contract-pdf"];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function EmailPreview() {
