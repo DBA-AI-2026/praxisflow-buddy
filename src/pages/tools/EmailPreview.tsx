@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,6 +9,7 @@ import CodeMirror from "@uiw/react-codemirror";
 import { html } from "@codemirror/lang-html";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { useUserRole } from "@/hooks/useUserRole";
+import { generateContractPdf } from "@/lib/generateContractPdf";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK = {
@@ -31,7 +32,7 @@ const MOCK = {
 };
 
 // ─── Templates ────────────────────────────────────────────────────────────────
-type TemplateId = "lead-confirmation" | "contract-customer" | "contract-customer-pdf-send" | "contract-partner" | "contract-paper-confirmation" | "booking-link" | "invoice" | "invoice-pdf" | "dashboard-credentials" | "demo-expiry-customer" | "ad-tipp-lead" | "ad-demo-reminder" | "ad-new-lead" | "ad-lead-assignment";
+type TemplateId = "lead-confirmation" | "contract-customer" | "contract-customer-pdf-send" | "contract-partner" | "contract-paper-confirmation" | "booking-link" | "post-payment-contract-pdf" | "invoice" | "invoice-pdf" | "dashboard-credentials" | "demo-expiry-customer" | "ad-tipp-lead" | "ad-demo-reminder" | "ad-new-lead" | "ad-lead-assignment";
 
 interface Template {
   id: TemplateId;
@@ -41,6 +42,7 @@ interface Template {
   type: "email" | "pdf";
   description: string;
   category: "kunden" | "intern";
+  hasPdfPreview?: boolean;
 }
 
 const TEMPLATES: Template[] = [
@@ -80,6 +82,17 @@ const TEMPLATES: Template[] = [
     type: "email",
     description: "Wird vom Vertrieb manuell ausgelöst: sendet dem Interessenten einen Buchungslink zur /buchen-Seite. Dort gibt der Kunde Fachrichtung, Rechtsform und ggf. BSNR/LANR an und zahlt via Stripe – der Vertrag aktiviert sich automatisch.",
     category: "kunden",
+    hasPdfPreview: true,
+  },
+  {
+    id: "post-payment-contract-pdf",
+    label: "Vertragszusammenfassung (PDF nach Zahlung)",
+    subject: "— PDF-Anhang (kein separater Versand) —",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "pdf",
+    description: "Nach erfolgreicher Stripe-Zahlung wird diese Vertragszusammenfassung automatisch als PDF-Anhang in der Bestätigungs-E-Mail mitgeschickt (zusammen mit den AGB). Das PDF wird via pdf-lib dynamisch generiert.",
+    category: "kunden",
+    hasPdfPreview: true,
   },
   {
     id: "contract-customer",
@@ -1157,6 +1170,52 @@ function buildBookingLinkHtml() {
 </html>`;
 }
 
+// ─── Mock data for PDF preview ─────────────────────────────────────────────────
+const MOCK_CONTRACT_PDF_DATA = {
+  hfx_customer_number: "HFX-I01019",
+  praxis: "Testpraxis Dr. Müller",
+  fachrichtung: "Allgemeinmedizin",
+  vorname: "Max",
+  nachname: "Mustermann",
+  adresse: "Musterstraße 12, 80331 München",
+  telefon: "+49 89 1234567",
+  email: "max.mustermann@example.com",
+  mp_nr: "MP-001019",
+  sales_partner_name: "Uwe Waldenmeyer",
+  product_name: "HFX EBM",
+  modules: ["HFX EBM", "HFX GOÄ"],
+  license_count: 1,
+  start_date: new Date().toISOString().split("T")[0],
+  end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+  duration_months: 12,
+  cancellation_period_months: 6,
+  auto_renewal: true,
+  monthly_price: 99.0,
+  one_time_fee: 0,
+  discount_percent: 0,
+  payment_interval: "monatlich",
+  kontoinhaber: "Max Mustermann",
+  iban: "DE89 3704 0044 0532 0130 00",
+  bic: "COBADEFFXXX",
+  status: "aktiv",
+  notes: "Muster-Vertrag zur Vorschau. Kein rechtlich bindendes Dokument.",
+  product_price_details: [
+    {
+      name: "HFX EBM",
+      monthly_price: 79.0,
+      price_per_unit: 0.05,
+      price_per_unit_label: "GOÄ-Ziffer",
+      has_active_promo: false,
+    },
+    {
+      name: "HFX GOÄ",
+      monthly_price: 20.0,
+      price_per_unit: null,
+      has_active_promo: false,
+    },
+  ],
+};
+
 const DEFAULT_HTML: Record<string, () => string> = {
   "lead-confirmation": buildLeadConfirmationHtml,
   "contract-customer": buildContractCustomerHtml,
@@ -1178,6 +1237,9 @@ function getHtmlForTemplate(id: TemplateId) {
   return DEFAULT_HTML[id]?.() ?? "";
 }
 
+/** IDs where we show the live pdf-lib PDF preview button */
+const PDF_PREVIEW_TEMPLATE_IDS: TemplateId[] = ["booking-link", "post-payment-contract-pdf"];
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function EmailPreview() {
   const { isAdmin } = useUserRole();
@@ -1190,6 +1252,44 @@ export default function EmailPreview() {
   const [editorValue, setEditorValue] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // PDF blob for the contract PDF preview
+  const [pdfModal, setPdfModal] = useState<{ template: Template } | null>(null);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const prevPdfBlobUrl = useRef<string | null>(null);
+
+  const openPdfPreview = async (tpl: Template) => {
+    setPdfModal({ template: tpl });
+    setPdfLoading(true);
+    setPdfBlobUrl(null);
+    try {
+      // Fetch logo for the PDF header
+      let logoBytes: ArrayBuffer | undefined;
+      try {
+        const logoRes = await fetch("/logo.jpeg");
+        if (logoRes.ok) logoBytes = await logoRes.arrayBuffer();
+      } catch { /* proceed without logo */ }
+
+      const pdfBytes = await generateContractPdf(MOCK_CONTRACT_PDF_DATA, logoBytes);
+      const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      // Revoke previous
+      if (prevPdfBlobUrl.current) URL.revokeObjectURL(prevPdfBlobUrl.current);
+      prevPdfBlobUrl.current = url;
+      setPdfBlobUrl(url);
+    } catch (err) {
+      console.error("PDF preview error:", err);
+      toast.error("PDF konnte nicht generiert werden.");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const closePdfModal = () => {
+    setPdfModal(null);
+    setPdfBlobUrl(null);
+  };
 
   // Load saved templates on mount
   useEffect(() => {
@@ -1305,7 +1405,7 @@ export default function EmailPreview() {
                   <div key={tpl.id} className="rounded-xl border border-border bg-card p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <Mail className="w-4 h-4 text-primary" />
+                        {tpl.type === "pdf" ? <FileText className="w-4 h-4 text-primary" /> : <Mail className="w-4 h-4 text-primary" />}
                         <span className="font-semibold text-foreground">{tpl.label}</span>
                         {(hasCustom(tpl, "email") || (tpl.id === "invoice" && hasCustom(tpl, "pdf"))) && (
                           <span className="ml-auto text-[10px] font-medium bg-warning/20 text-warning-foreground px-1.5 py-0.5 rounded border border-warning/30">Bearbeitet</span>
@@ -1315,7 +1415,8 @@ export default function EmailPreview() {
                       <p className="text-xs text-muted-foreground mt-1 font-mono truncate">Betreff: {tpl.subject}</p>
                     </div>
 
-                    {/* E-Mail row */}
+                    {/* E-Mail row — only for email-type templates */}
+                    {tpl.type === "email" && (
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
@@ -1351,8 +1452,9 @@ export default function EmailPreview() {
                         </>
                       )}
                     </div>
+                    )}
 
-                    {/* PDF row – only for invoice */}
+                    {/* PDF row – invoice (editable HTML) */}
                     {tpl.id === "invoice" && (
                       <div className="flex gap-2">
                         <Button
@@ -1390,6 +1492,21 @@ export default function EmailPreview() {
                         )}
                       </div>
                     )}
+
+                    {/* PDF row – live pdf-lib preview (booking-link + post-payment-contract-pdf) */}
+                    {PDF_PREVIEW_TEMPLATE_IDS.includes(tpl.id) && (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 gap-1.5"
+                          onClick={() => openPdfPreview(tpl)}
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          Vertragszusammenfassung PDF
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1422,6 +1539,40 @@ export default function EmailPreview() {
                 className="w-full border-0"
                 style={{ height: 700, minWidth: 0 }}
               />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Contract PDF Preview Modal (pdf-lib live render) ── */}
+      <Dialog open={!!pdfModal} onOpenChange={closePdfModal}>
+        <DialogContent className="max-w-4xl w-full p-0 gap-0 overflow-hidden" style={{ maxHeight: "92vh" }}>
+          <DialogHeader className="px-5 py-3 border-b border-border bg-muted/40 flex-row items-center justify-between space-y-0">
+            <div className="flex flex-col gap-0.5">
+              <DialogTitle className="text-sm font-semibold">
+                📄 Vertragszusammenfassung (PDF) — Live-Vorschau mit Musterdaten
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground">
+                Wird nach erfolgreicher Stripe-Zahlung automatisch generiert und als Anhang verschickt.
+              </p>
+            </div>
+          </DialogHeader>
+          <div className="flex items-center justify-center bg-muted/30" style={{ height: "calc(92vh - 72px)" }}>
+            {pdfLoading && (
+              <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                <Loader2 className="w-8 h-8 animate-spin" />
+                <span className="text-sm">PDF wird generiert…</span>
+              </div>
+            )}
+            {!pdfLoading && pdfBlobUrl && (
+              <iframe
+                src={pdfBlobUrl}
+                title="Vertragszusammenfassung PDF"
+                className="w-full h-full border-0"
+              />
+            )}
+            {!pdfLoading && !pdfBlobUrl && (
+              <p className="text-sm text-muted-foreground">PDF konnte nicht geladen werden.</p>
             )}
           </div>
         </DialogContent>
