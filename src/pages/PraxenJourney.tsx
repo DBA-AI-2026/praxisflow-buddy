@@ -859,8 +859,13 @@ function JourneySteps({ activeTab, onSelect }: { activeTab: string; onSelect: (t
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function PraxenJourney() {
+  const [searchParams] = useSearchParams();
+  const urlTab = searchParams.get("tab");
+  const urlId = searchParams.get("id") ?? undefined;
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"leads" | "vertraege" | "kunden">("leads");
+  const [tab, setTab] = useState<"leads" | "vertraege" | "kunden">(
+    urlTab === "vertraege" ? "vertraege" : urlTab === "kunden" ? "kunden" : "leads"
+  );
 
   const { data: counts = { leads: 0, contracts: 0, kunden: 0 } } = useQuery({
     queryKey: ["journey-counts"],
