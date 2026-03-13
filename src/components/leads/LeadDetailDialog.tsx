@@ -89,6 +89,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
   const [resending, setResending] = useState(false);
   const [syncingQodia, setSyncingQodia] = useState(false);
   const [sendingConfirmEmail, setSendingConfirmEmail] = useState(false);
+  const [sendingCredentials, setSendingCredentials] = useState(false);
 
   const form = useForm<EditValues>({
     resolver: zodResolver(editSchema),
@@ -150,6 +151,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
       });
       if (error) throw error;
       toast({ title: "Zugangsdaten versendet", description: data?.message });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
     } catch (err: any) {
       toast({ title: "Fehler", description: err.message || "Versand fehlgeschlagen", variant: "destructive" });
     } finally {
@@ -201,6 +203,22 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
     }
   };
 
+  const sendCredentialsSync = async () => {
+    setSendingCredentials(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("resend-lead-credentials", {
+        body: { leadId: lead.id },
+      });
+      if (error) throw error;
+      toast({ title: "Zugangsdaten versendet", description: data?.message });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    } catch (err: any) {
+      toast({ title: "Fehler", description: err.message || "Versand fehlgeschlagen", variant: "destructive" });
+    } finally {
+      setSendingCredentials(false);
+    }
+  };
+
   const sc = statusConfig[lead.status] || statusConfig.neu;
   const sourceLabel = lead.source === "manual" ? "Manuell erfasst" : "Homepage";
   const sourceIcon = lead.source === "manual"
@@ -217,6 +235,8 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
   const syncItems: Array<{
     key: string;
     label: string;
+    value?: boolean | null;
+    timestamp?: string | null;
     onTrigger?: () => void;
     triggering?: boolean;
     triggerLabel?: string;
@@ -224,13 +244,24 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
     {
       key: "confirmation_email_sent",
       label: "Bestätigungs-E-Mail",
+      value: lead.confirmation_email_sent,
       onTrigger: sendConfirmationEmail,
       triggering: sendingConfirmEmail,
       triggerLabel: "E-Mail senden",
     },
     {
+      key: "credentials_sent_at",
+      label: "Zugangsdaten versendet",
+      value: !!lead.credentials_sent_at,
+      timestamp: lead.credentials_sent_at,
+      onTrigger: sendCredentialsSync,
+      triggering: sendingCredentials,
+      triggerLabel: "Zugangsdaten senden",
+    },
+    {
       key: "qodia_synced",
       label: "Qodia",
+      value: lead.qodia_synced,
       onTrigger: !lead.qodia_synced ? syncToQodia : undefined,
       triggering: syncingQodia,
       triggerLabel: "Registrieren",
@@ -238,10 +269,12 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
     {
       key: "salesforce_synced",
       label: "Salesforce",
+      value: lead.salesforce_synced,
     },
     {
       key: "honorarplus_synced",
       label: "HonorarPlus",
+      value: lead.honorarplus_synced,
     },
   ];
 
@@ -441,25 +474,32 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
             <div className="rounded-lg border border-border p-3">
               <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Sync-Status</p>
               <div className="space-y-2">
-                {syncItems.map(({ key, label, onTrigger, triggering, triggerLabel }) => {
-                  const isSynced = !!(lead as any)[key];
+                {syncItems.map(({ key, label, value, timestamp, onTrigger, triggering, triggerLabel }) => {
+                  const isSynced = !!value;
                   return (
                     <div
                       key={key}
                       className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted/40 transition-colors"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         {isSynced
-                          ? <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                          ? <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
                           : <XCircle className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                         }
-                        <span className={isSynced ? "text-foreground" : "text-muted-foreground"}>{label}</span>
+                        <div className="min-w-0">
+                          <span className={isSynced ? "text-foreground" : "text-muted-foreground"}>{label}</span>
+                          {isSynced && timestamp && (
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(timestamp), "dd.MM.yyyy HH:mm", { locale: de })}
+                            </p>
+                          )}
+                        </div>
                       </div>
                       {onTrigger && (
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-7 px-2 text-xs gap-1 text-primary hover:text-primary hover:bg-muted"
+                          className="h-7 px-2 text-xs gap-1 text-primary hover:text-primary hover:bg-muted shrink-0"
                           onClick={onTrigger}
                           disabled={triggering}
                         >

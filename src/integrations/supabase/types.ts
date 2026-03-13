@@ -815,6 +815,7 @@ export type Database = {
           assigned_to: string | null
           confirmation_email_sent: boolean
           created_at: string
+          credentials_sent_at: string | null
           email: string
           generated_password: string | null
           hfx_customer_number: string | null
@@ -842,6 +843,7 @@ export type Database = {
           assigned_to?: string | null
           confirmation_email_sent?: boolean
           created_at?: string
+          credentials_sent_at?: string | null
           email: string
           generated_password?: string | null
           hfx_customer_number?: string | null
@@ -869,6 +871,7 @@ export type Database = {
           assigned_to?: string | null
           confirmation_email_sent?: boolean
           created_at?: string
+          credentials_sent_at?: string | null
           email?: string
           generated_password?: string | null
           hfx_customer_number?: string | null
