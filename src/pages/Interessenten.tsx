@@ -293,6 +293,7 @@ export default function Interessenten() {
                 <TableHead>E-Mail</TableHead>
                 <TableHead>PLZ</TableHead>
                 <TableHead>Abr.-Zentrum</TableHead>
+                <TableHead>Quelle</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Nächster Schritt</TableHead>
                 {canAssign && <TableHead>AD-Zuteilung</TableHead>}
