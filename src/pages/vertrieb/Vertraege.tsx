@@ -313,6 +313,7 @@ export default function Vertraege() {
   };
   const location = useLocation();
   // Also store lead_id for back-linking
+  const [fromLeadId, setFromLeadId] = useState<string | null>(null);
 
   const { data: contracts = [], isLoading } = useQuery({
     queryKey: ["contracts"],
