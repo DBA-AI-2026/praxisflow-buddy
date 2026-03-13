@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useUserRole } from "@/hooks/useUserRole";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
 import { UploadPaperContractDialog } from "@/components/leads/UploadPaperContractDialog";
+import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
