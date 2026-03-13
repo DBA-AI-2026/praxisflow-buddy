@@ -56,7 +56,7 @@ const dashboardNav: NavItem[] = [
 ];
 
 const vertriebNavigation: NavItem[] = [
-  { name: "Praxen & Leads", href: "/praxen-journey", icon: Building2, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
+  { name: "Kunden-Journey", href: "/praxen-journey", icon: Building2, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
   { name: "Reservierungen", href: "/reservierungen", icon: BookMarked, roles: ["user", "sales_partner", "regional_lead", "admin"] },
   { name: "HFX EBM Lizenzen", href: "/lizenzen", icon: Key, roles: allRoles },
   { name: "Demo-Tracking", href: "/demo-tracking", icon: FlaskConical, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
