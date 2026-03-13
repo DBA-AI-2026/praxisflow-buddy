@@ -450,6 +450,8 @@ function VertraegeTab({ search, highlightId }: { search: string; highlightId?: s
       setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
     }
   }, [highlightId]);
+
+  const { data: contracts = [] } = useQuery({
     queryKey: ["journey-contracts-pending"],
     queryFn: async () => {
       const { data } = await supabase
