@@ -242,22 +242,11 @@ Geschäftsführer:<br />Olaf Hagelkruys, Thilo Wiers-Keiser und Robbin Zielke<br
 }
 
 Deno.serve(async (req) => {
-  const origin = req.headers.get("origin");
-  const corsHeaders = getCorsHeaders(origin);
-
-  // Block browser requests from unknown origins
-  if (origin && !corsHeaders) {
-    return new Response(
-      JSON.stringify({ error: "Origin not allowed" }),
-      { status: 403, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  const headers = corsHeaders || {};
-
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers });
+    return new Response(null, { headers: corsHeaders });
   }
+
+  const headers = corsHeaders;
 
   try {
     const rawBody = await req.json();
