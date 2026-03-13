@@ -578,13 +578,33 @@ export default function Praxen() {
       <Dialog open={!!selectedPraxis} onOpenChange={(open) => { if (!open) { setSelectedPraxis(null); setPraxisContracts([]); } }}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-primary" />
-              {selectedPraxis?.name}
-            </DialogTitle>
-            {selectedPraxis?.hfxNr && (
-              <p className="text-xs font-mono text-muted-foreground pt-1">{selectedPraxis.hfxNr}</p>
-            )}
+            <div className="flex items-start justify-between gap-3 pr-8">
+              <div>
+                <DialogTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  {selectedPraxis?.name}
+                </DialogTitle>
+                {selectedPraxis?.hfxNr && (
+                  <p className="text-xs font-mono text-muted-foreground pt-1">{selectedPraxis.hfxNr}</p>
+                )}
+              </div>
+              {selectedPraxis?.email && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0 mt-0.5"
+                  disabled={sendingCredentialsId === selectedPraxis.id}
+                  onClick={() => sendCredentials(selectedPraxis)}
+                >
+                  {sendingCredentialsId === selectedPraxis.id ? (
+                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-1.5" />
+                  )}
+                  Zugangsdaten senden
+                </Button>
+              )}
+            </div>
           </DialogHeader>
 
           {selectedPraxis && (
