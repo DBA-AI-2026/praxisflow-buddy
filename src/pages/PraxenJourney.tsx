@@ -20,9 +20,6 @@ import { UploadPaperContractDialog } from "@/components/leads/UploadPaperContrac
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 
 // ─── Status configs ──────────────────────────────────────────────────────────
 
@@ -623,39 +620,28 @@ function VertraegeTab({ search }: { search: string }) {
 function KundenTab({ search }: { search: string }) {
   const [sendingId, setSendingId] = useState<string | null>(null);
 
-  const { data: praxen = [], isLoading } = useQuery({
+  // Primary source: active contracts (single source of truth for customers)
+  // Each unique hfx_customer_number = one customer row (deduplicated)
+  const { data: activeContracts = [], isLoading } = useQuery({
     queryKey: ["journey-kunden"],
     queryFn: async () => {
       const { data } = await supabase
-        .from("praxen")
-        .select("id, name, mp_nr, email, plz, ort, produkt, status, buchungs_datum, converted_from_lead_id")
-        .eq("status", "aktiv")
-        .order("created_at", { ascending: false });
-      return data ?? [];
-    },
-  });
-
-  // Also include active contracts without praxen entry
-  const { data: activeContracts = [] } = useQuery({
-    queryKey: ["journey-kunden-contracts"],
-    queryFn: async () => {
-      const { data } = await supabase
         .from("contracts")
-        .select("id, customer_name, hfx_customer_number, email, praxis, vorname, nachname, product_name, monthly_price, start_date, plz, ort")
+        .select("id, customer_name, hfx_customer_number, mp_nr, email, praxis, vorname, nachname, product_name, monthly_price, start_date, plz, ort, customer_id, sales_partner_name")
         .eq("status", "aktiv")
-        .order("created_at", { ascending: false });
+        .order("start_date", { ascending: false });
       return data ?? [];
     },
   });
 
+  // Qodia sync status from leads (keyed by hfx_customer_number)
   const { data: qodiaMap = {} } = useQuery({
     queryKey: ["journey-kunden-qodia"],
     queryFn: async () => {
-      const { data } = await supabase.from("leads").select("id, hfx_customer_number, qodia_synced");
+      const { data } = await supabase.from("leads").select("hfx_customer_number, qodia_synced");
       const map: Record<string, boolean> = {};
       (data ?? []).forEach((l: any) => {
         if (l.hfx_customer_number) map[l.hfx_customer_number] = !!l.qodia_synced;
-        if (l.id) map[l.id] = !!l.qodia_synced;
       });
       return map;
     },
@@ -679,36 +665,26 @@ function KundenTab({ search }: { search: string }) {
 
   const s = search.toLowerCase();
 
-  // Merge praxen + contracts
-  const praxenIds = new Set(praxen.map((p: any) => p.mp_nr || p.id));
-  const contractRows = activeContracts.filter((c: any) => !praxenIds.has(c.hfx_customer_number));
+  // Deduplicate: one row per hfx_customer_number (keep most recent contract)
+  const seenHfx = new Set<string>();
+  const rows = activeContracts.filter((c: any) => {
+    const key = c.hfx_customer_number || c.id;
+    if (seenHfx.has(key)) return false;
+    seenHfx.add(key);
+    return true;
+  });
 
-  type Row = { id: string; name: string; hfxNr: string; email: string; plz: string; ort: string; produkt: string; buchungsDatum: string; convertedLeadId: string | null };
-
-  const rows: Row[] = [
-    ...praxen.map((p: any): Row => ({
-      id: p.id, name: p.name, hfxNr: p.mp_nr || "", email: p.email || "",
-      plz: p.plz || "", ort: p.ort || "", produkt: p.produkt || "",
-      buchungsDatum: p.buchungs_datum || "", convertedLeadId: p.converted_from_lead_id,
-    })),
-    ...contractRows.map((c: any): Row => ({
-      id: c.id, name: c.praxis || c.customer_name,
-      hfxNr: c.hfx_customer_number || "",
-      email: c.email || "", plz: c.plz || "", ort: c.ort || "",
-      produkt: c.product_name || "", buchungsDatum: c.start_date || "",
-      convertedLeadId: null,
-    })),
-  ];
-
-  const filtered = rows.filter((r) => {
+  const filtered = rows.filter((c: any) => {
     if (!s) return true;
+    const praxisName = c.praxis || c.customer_name || "";
     return (
-      r.name?.toLowerCase().includes(s) ||
-      r.hfxNr?.toLowerCase().includes(s) ||
-      r.email?.toLowerCase().includes(s) ||
-      r.plz?.includes(s) ||
-      r.ort?.toLowerCase().includes(s) ||
-      r.produkt?.toLowerCase().includes(s)
+      praxisName.toLowerCase().includes(s) ||
+      c.hfx_customer_number?.toLowerCase().includes(s) ||
+      c.mp_nr?.toLowerCase().includes(s) ||
+      c.email?.toLowerCase().includes(s) ||
+      c.plz?.includes(s) ||
+      c.ort?.toLowerCase().includes(s) ||
+      c.product_name?.toLowerCase().includes(s)
     );
   });
 
@@ -722,41 +698,50 @@ function KundenTab({ search }: { search: string }) {
           <thead>
             <tr>
               <TH>HFX-Nr.</TH>
+              <TH>MP-Nr.</TH>
               <TH>Praxis</TH>
               <TH>E-Mail</TH>
               <TH>PLZ / Ort</TH>
               <TH>Produkt</TH>
               <TH right>Qodia</TH>
-              <TH>Buchung</TH>
+              <TH>Seit</TH>
               <TH>{""}</TH>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={8} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              <tr><td colSpan={9} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : filtered.length === 0 ? (
               <EmptyState icon={Building2} title="Keine aktiven Kunden" sub="Aktivierte Verträge erscheinen hier automatisch" />
-            ) : filtered.map((r) => {
-              const qodia = !!(r.convertedLeadId ? qodiaMap[r.convertedLeadId] : qodiaMap[r.hfxNr]);
+            ) : (filtered as any[]).map((c) => {
+              const praxisLabel = c.praxis || c.customer_name || "–";
+              const arztLabel = [c.vorname, c.nachname].filter(Boolean).join(" ");
+              const qodia = !!(c.hfx_customer_number ? qodiaMap[c.hfx_customer_number] : false);
               return (
-                <tr key={r.id} className="hover:bg-muted/20 transition-colors group">
+                <tr key={c.id} className="hover:bg-muted/20 transition-colors group">
                   <td className="py-3 px-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
-                    {r.hfxNr || <span className="text-muted-foreground/40">—</span>}
+                    {c.hfx_customer_number || <span className="text-muted-foreground/40">—</span>}
                   </td>
-                  <td className="py-3 px-4 font-semibold text-foreground">{r.name}</td>
+                  <td className="py-3 px-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
+                    {c.mp_nr || <span className="text-muted-foreground/40">—</span>}
+                  </td>
+                  <td className="py-3 px-4">
+                    <p className="font-semibold text-foreground leading-tight">{praxisLabel}</p>
+                    {arztLabel && <p className="text-xs text-muted-foreground mt-0.5">{arztLabel}</p>}
+                  </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground">
                     <div className="flex items-center gap-2">
-                      <span>{r.email || "–"}</span>
-                      {r.email && (
+                      <span>{c.email || "–"}</span>
+                      {c.email && c.hfx_customer_number && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button
-                                onClick={() => sendCredentials(r.email, r.name, r.hfxNr, r.id)}
-                                disabled={sendingId === r.id}
+                                onClick={() => sendCredentials(c.email, c.customer_name, c.hfx_customer_number, c.id)}
+                                disabled={sendingId === c.id}
                                 className="opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-primary/70"
                               >
-                                {sendingId === r.id
+                                {sendingId === c.id
                                   ? <Loader2 className="h-3 w-3 animate-spin" />
                                   : <Send className="h-3 w-3" />}
                               </button>
@@ -768,22 +753,22 @@ function KundenTab({ search }: { search: string }) {
                     </div>
                   </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
-                    {r.plz}{r.ort ? ` ${r.ort}` : ""}
+                    {c.plz}{c.ort ? ` ${c.ort}` : ""}
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground">{r.produkt || "–"}</td>
+                  <td className="py-3 px-4 text-xs text-muted-foreground">{c.product_name || "–"}</td>
                   <td className="py-3 px-4 text-right"><QodiaIcon synced={qodia} /></td>
                   <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
-                    {r.buchungsDatum ? format(new Date(r.buchungsDatum), "dd.MM.yy", { locale: de }) : "–"}
+                    {c.start_date ? format(new Date(c.start_date), "dd.MM.yy", { locale: de }) : "–"}
                   </td>
                   <td className="py-3 px-4">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <a href="/praxen" className="text-primary hover:text-primary/70 transition-colors">
+                          <a href="/vertrieb/vertraege" className="text-primary hover:text-primary/70 transition-colors">
                             <ArrowRight className="h-3.5 w-3.5" />
                           </a>
                         </TooltipTrigger>
-                        <TooltipContent>In Kundenübersicht öffnen</TooltipContent>
+                        <TooltipContent>Vertrag öffnen</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </td>
@@ -853,7 +838,7 @@ export default function PraxenJourney() {
       const [l, c, k] = await Promise.all([
         supabase.from("leads").select("id", { count: "exact", head: true }).neq("status", "kunde"),
         supabase.from("contracts").select("id", { count: "exact", head: true }).neq("status", "aktiv"),
-        supabase.from("praxen").select("id", { count: "exact", head: true }).eq("status", "aktiv"),
+        supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "aktiv"),
       ]);
       return { leads: l.count ?? 0, contracts: c.count ?? 0, kunden: k.count ?? 0 };
     },
