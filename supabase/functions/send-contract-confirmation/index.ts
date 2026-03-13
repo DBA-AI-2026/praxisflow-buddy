@@ -261,6 +261,15 @@ Deno.serve(async (req) => {
 
         ${ctaBlock}
 
+        <!-- AGB-Download -->
+        <tr>
+          <td style="padding:0 40px 16px;">
+            <p style="color:#6b7280;font-size:12px;line-height:1.6;margin:0;">
+              📄 <a href="https://praxisflow-buddy.lovable.app/templates/vertrag-honorarfuchs.pdf" style="color:#0b367f;">Allgemeine Geschäftsbedingungen (AGB) herunterladen</a>
+            </p>
+          </td>
+        </tr>
+
         <!-- Sign-off -->
         <tr>
           <td style="padding:0 40px 32px;">
