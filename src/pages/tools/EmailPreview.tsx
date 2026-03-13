@@ -1272,7 +1272,7 @@ export default function EmailPreview() {
       } catch { /* proceed without logo */ }
 
       const pdfBytes = await generateContractPdf(MOCK_CONTRACT_PDF_DATA, logoBytes);
-      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       // Revoke previous
       if (prevPdfBlobUrl.current) URL.revokeObjectURL(prevPdfBlobUrl.current);
