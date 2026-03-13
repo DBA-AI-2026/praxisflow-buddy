@@ -25,7 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye, CheckCircle,
   FilePen, FileSignature, CircleCheck, CircleOff, ArchiveX, ShieldBan, ArrowUpDown, ArrowUp, ArrowDown,
-  GitMerge, AlertTriangle,
+  GitMerge, AlertTriangle, Send,
 } from "lucide-react";
 // Check and ChevronsUpDown already imported above via combobox imports
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
@@ -1078,6 +1078,100 @@ export default function Vertraege() {
     }
     const draftForm = { ...form, status: "entwurf" };
     upsertMutation.mutate(draftForm);
+  };
+
+  const [sendingBuchungsmailDialog, setSendingBuchungsmailDialog] = useState(false);
+
+  const handleSaveWithBuchungsmail = async () => {
+    if (!form.email) {
+      toast({ title: "E-Mail fehlt", description: "Bitte eine E-Mail-Adresse hinterlegen, damit die Buchungsmail gesendet werden kann.", variant: "destructive" });
+      return;
+    }
+    const hasMinimum = form.praxis.trim() !== "" || form.vorname.trim() !== "" || form.nachname.trim() !== "";
+    if (!hasMinimum) {
+      toast({ title: "Mindestangabe fehlt", description: "Bitte mindestens Praxis oder einen Namen angeben.", variant: "destructive" });
+      return;
+    }
+    setSendingBuchungsmailDialog(true);
+    try {
+      // Save as "eingegangen"
+      const eingegangeneForm = { ...form, status: "eingegangen" };
+      let contractId: string | null = editId;
+      if (editId) {
+        const { error } = await supabase.from("contracts").update({
+          status: "eingegangen",
+          email: form.email || null,
+          praxis: form.praxis || null,
+          vorname: form.vorname || null,
+          nachname: form.nachname || null,
+          product_name: form.selected_products.join(", ") || "Entwurf",
+          modules: form.selected_products,
+          monthly_price: form.monthly_price,
+          plz: form.plz || null,
+          ort: form.ort || null,
+          adresse: form.adresse || null,
+          telefon: form.telefon || null,
+          notes: form.notes || null,
+          start_date: form.start_date,
+          sales_partner_name: form.sales_partner_name || profile?.full_name || null,
+        } as any).eq("id", editId);
+        if (error) throw error;
+      } else {
+        // Insert new contract as eingegangen
+        const record: any = {
+          customer_name: `${form.vorname} ${form.nachname}`.trim() || form.praxis || "Entwurf",
+          sales_partner_id: user?.id,
+          sales_partner_name: form.sales_partner_name || profile?.full_name || "",
+          mp_nr: form.mp_nr || null,
+          praxis: form.praxis || null,
+          fachrichtung: form.fachrichtung || null,
+          vorname: form.vorname || null,
+          nachname: form.nachname || null,
+          adresse: form.adresse || null,
+          plz: form.plz || null,
+          ort: form.ort || null,
+          telefon: form.telefon || null,
+          email: form.email,
+          product_name: form.selected_products.join(", ") || "Entwurf",
+          modules: form.selected_products,
+          license_count: form.license_count,
+          start_date: form.start_date,
+          duration_months: 0,
+          end_date: "2099-12-31",
+          cancellation_period_months: 6,
+          auto_renewal: false,
+          monthly_price: form.monthly_price,
+          one_time_fee: form.one_time_fee,
+          discount_percent: form.discount_percent,
+          payment_interval: form.payment_interval,
+          notes: form.notes || null,
+          rechtsform: form.rechtsform || null,
+          bsnr: form.bsnr || null,
+          lanr: [form.lanr, form.lanr_2, form.lanr_3].filter(Boolean).join(", ") || null,
+          selected_addon_modules: form.selected_modules.length > 0 ? form.selected_modules : [],
+          status: "eingegangen",
+          created_by: user?.id,
+          ...(leadHfxNumber ? { hfx_customer_number: leadHfxNumber } : {}),
+        };
+        const { data: inserted, error } = await supabase.from("contracts").insert(record).select("id").single();
+        if (error) throw error;
+        contractId = inserted.id;
+      }
+
+      // Send booking confirmation email
+      const { error: mailError } = await supabase.functions.invoke("send-contract-confirmation", {
+        body: { contract_id: contractId },
+      });
+      if (mailError) throw mailError;
+
+      queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      toast({ title: "✅ Buchungsmail gesendet", description: `Digitaler Buchungslink an ${form.email} gesendet. Vertrag steht auf „Eingegangen".` });
+      closeDialog();
+    } catch (err: any) {
+      toast({ title: "Fehler", description: err.message || "Unbekannter Fehler", variant: "destructive" });
+    } finally {
+      setSendingBuchungsmailDialog(false);
+    }
   };
 
   const handleStripeCheckout = async (contractId: string) => {
@@ -2653,15 +2747,44 @@ export default function Vertraege() {
               {/* Zeile 2: Speichern-Aktionen */}
               <div className="flex flex-wrap gap-2 justify-end">
                 <Button type="button" variant="outline" size="sm" onClick={closeDialog} className="flex-1 sm:flex-none">Abbrechen</Button>
-                <Button type="button" variant="secondary" size="sm" onClick={handleSaveDraft} disabled={upsertMutation.isPending} className="flex-1 sm:flex-none">
+                <Button type="button" variant="secondary" size="sm" onClick={handleSaveDraft} disabled={upsertMutation.isPending || sendingBuchungsmailDialog} className="flex-1 sm:flex-none">
                   {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
                   Als Entwurf
                 </Button>
+                {/* Buchungsmail senden – saves as eingegangen + triggers booking email */}
+                {!editId && (
+                  <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0} className="flex-1 sm:flex-none">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSaveWithBuchungsmail}
+                          disabled={upsertMutation.isPending || sendingBuchungsmailDialog || !form.email}
+                          className="w-full gap-1.5 border-primary/40 text-primary hover:bg-primary/5"
+                        >
+                          {sendingBuchungsmailDialog
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <Send className="h-4 w-4" />}
+                          Buchungsmail senden
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      {!form.email
+                        ? "E-Mail-Adresse erforderlich"
+                        : "Speichert als Eingegangen und sendet den digitalen Buchungslink an den Kunden"}
+                    </TooltipContent>
+                  </Tooltip>
+                  </TooltipProvider>
+                )}
                 <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span tabIndex={0} className="flex-1 sm:flex-none">
-                      <Button type="submit" size="sm" disabled={upsertMutation.isPending || !isFormComplete} className="w-full">
+                      <Button type="submit" size="sm" disabled={upsertMutation.isPending || sendingBuchungsmailDialog || !isFormComplete} className="w-full">
                         {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
                         {editId ? "Speichern" : "Digitaler Vertragsabschluss"}
                       </Button>
