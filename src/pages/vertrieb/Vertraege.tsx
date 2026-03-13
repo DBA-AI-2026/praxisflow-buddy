@@ -431,15 +431,8 @@ export default function Vertraege() {
         documentName = file.name;
       }
 
-      // Get signature data from pads
-      let sigData = data.signature_data;
-      if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
-        sigData = signaturePadRef.current.toDataURL();
-      }
-      let vertriebSigData = data.vertrieb_signature_data;
-      if (vertriebSignaturePadRef.current && !vertriebSignaturePadRef.current.isEmpty()) {
-        vertriebSigData = vertriebSignaturePadRef.current.toDataURL();
-      }
+      const sigData = data.signature_data || null;
+      const vertriebSigData = data.vertrieb_signature_data || null;
 
       const record = {
         customer_name: `${data.vorname} ${data.nachname}`.trim() || data.praxis || "Entwurf",
