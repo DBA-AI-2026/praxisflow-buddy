@@ -320,7 +320,7 @@ export default function Interessenten() {
                 filtered.map((lead: any) => {
                   const sc = statusConfig[lead.status] || statusConfig.neu;
                   return (
-                    <TableRow key={lead.id}>
+                    <TableRow key={lead.id} className="cursor-pointer" onClick={() => setSelectedLead(lead)}>
                       <TableCell className="font-mono text-sm font-medium">{lead.hfx_customer_number}</TableCell>
                       <TableCell>
                         <div className="flex items-start gap-2">
@@ -358,15 +358,12 @@ export default function Interessenten() {
                           {lead.source === "manual" ? "Manuell" : "Homepage"}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Select
                           value={lead.status}
                           onValueChange={(val) => {
-                            // Statusübergänge einschränken: kein Sprung zurück auf "neu"
                             const order = ["neu", "kontaktiert", "qualifiziert", "vertrag", "kein_abschluss", "abgelehnt"];
                             const currentIdx = order.indexOf(lead.status);
-                            const newIdx = order.indexOf(val);
-                            // Rücksprung auf "neu" nur wenn aktuell "kontaktiert"
                             if (val === "neu" && currentIdx > 1) return;
                             updateStatusMutation.mutate({ id: lead.id, status: val });
                           }}
@@ -376,14 +373,14 @@ export default function Interessenten() {
                           </SelectTrigger>
                           <SelectContent>
                             {Object.entries(statusConfig)
-                              .filter(([key]) => key !== "kunde") // "kunde" wird automatisch gesetzt
+                              .filter(([key]) => key !== "kunde")
                               .map(([key, cfg]) => (
                                 <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
                               ))}
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         {(() => {
                           const step = getNextStep(lead);
                           if (step.action === "none") {
@@ -447,7 +444,7 @@ export default function Interessenten() {
                         })()}
                       </TableCell>
                       {canAssign && (
-                        <TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <Select
                             value={lead.assigned_to || "none"}
                             onValueChange={(val) =>
@@ -477,7 +474,7 @@ export default function Interessenten() {
                           </Select>
                         </TableCell>
                       )}
-                      <TableCell className="text-center">
+                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                         {lead.salesforce_synced ? (
                           <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
                         ) : (
@@ -511,11 +508,8 @@ export default function Interessenten() {
                       <TableCell className="text-sm text-muted-foreground">
                         {format(new Date(lead.created_at), "dd.MM.yy HH:mm", { locale: de })}
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => setSelectedLead(lead)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
