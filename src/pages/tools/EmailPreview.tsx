@@ -31,7 +31,7 @@ const MOCK = {
 };
 
 // ─── Templates ────────────────────────────────────────────────────────────────
-type TemplateId = "lead-confirmation" | "contract-customer" | "contract-customer-pdf-send" | "contract-partner" | "contract-paper-confirmation" | "invoice" | "invoice-pdf" | "dashboard-credentials" | "demo-expiry-customer" | "ad-tipp-lead" | "ad-demo-reminder" | "ad-new-lead" | "ad-lead-assignment";
+type TemplateId = "lead-confirmation" | "contract-customer" | "contract-customer-pdf-send" | "contract-partner" | "contract-paper-confirmation" | "booking-link" | "invoice" | "invoice-pdf" | "dashboard-credentials" | "demo-expiry-customer" | "ad-tipp-lead" | "ad-demo-reminder" | "ad-new-lead" | "ad-lead-assignment";
 
 interface Template {
   id: TemplateId;
@@ -70,6 +70,15 @@ const TEMPLATES: Template[] = [
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "E-Mail an Kunden nach Papiervertrag-Upload durch AD – einziger Button 'Verbindlich buchen' → Stripe. Vertrag aktiviert sich nach Zahlung automatisch.",
+    category: "kunden",
+  },
+  {
+    id: "booking-link",
+    label: "Digitaler Vertragsabschluss (Buchungslink)",
+    subject: "Ihre HFX-Vertragsbestätigung (HFX-I01019)",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "Wird vom Vertrieb manuell ausgelöst: sendet dem Interessenten einen Buchungslink zur /buchen-Seite. Dort gibt der Kunde Fachrichtung, Rechtsform und ggf. BSNR/LANR an und zahlt via Stripe – der Vertrag aktiviert sich automatisch.",
     category: "kunden",
   },
   {
@@ -1095,12 +1104,66 @@ function buildContractPaperConfirmationHtml() {
 </html>`;
 }
 
+function buildBookingLinkHtml() {
+  const year = new Date().getFullYear();
+  const buchenUrl = `https://praxisflow-buddy.lovable.app/buchen?contract_id=demo&product=${encodeURIComponent("HFX EBM")}`;
+  return `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f4f6fa;font-family:Verdana,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fa;padding:40px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.10);max-width:600px;">
+  <tr><td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:36px 40px;text-align:center;">
+    <p style="color:#ffffff;font-size:24px;font-weight:700;margin:0;">🦊 HFX Honorarfuchs</p>
+    <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:6px 0 0;">Ihr Vertrag wartet auf Ihre Buchung</p>
+  </td></tr>
+  <tr><td style="padding:36px 40px 24px;">
+    <p style="color:#1a1a2e;font-size:16px;margin:0 0 12px;">Guten Tag ${MOCK.vorname} ${MOCK.nachname},</p>
+    <p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 12px;">wir haben Ihren Vertrag erhalten und für Sie vorbereitet. Mit einem Klick auf den Button unten schließen Sie die Buchung kostenpflichtig ab – Ihr Vertrag wird danach automatisch aktiviert.</p>
+  </td></tr>
+  <tr><td style="padding:0 40px 28px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+      <tr><td style="background:#0b367f;padding:12px 20px;"><p style="color:#fff;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin:0;">📋 Ihre Vertragsdetails</p></td></tr>
+      <tr><td style="padding:20px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="padding:6px 0;font-size:13px;color:#6b7280;width:160px;">HFX-Kundennummer</td><td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;font-family:monospace;">${MOCK.hfx_customer_number}</td></tr>
+          <tr><td style="padding:6px 0;font-size:13px;color:#6b7280;">Produkt</td><td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">HFX EBM</td></tr>
+          <tr><td style="padding:6px 0;font-size:13px;color:#6b7280;">Praxis</td><td style="padding:6px 0;font-size:13px;color:#111827;">${MOCK.praxis_name}</td></tr>
+          <tr><td style="padding:6px 0;font-size:13px;color:#6b7280;">Monatspreis</td><td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">99,00 €/Monat</td></tr>
+          <tr><td style="padding:6px 0;font-size:13px;color:#6b7280;">Kündigung</td><td style="padding:6px 0;font-size:13px;color:#111827;">Unbefristet · 6 Monate Frist zum Monatsende</td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </td></tr>
+  <tr><td style="padding:0 40px 28px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#0b367f,#1a4a9e);border-radius:10px;">
+      <tr><td style="padding:28px 32px;text-align:center;">
+        <p style="color:rgba(255,255,255,0.9);font-size:14px;line-height:1.6;margin:0 0 20px;">Ihr Vertrag wurde für Sie vorbereitet.<br>Bitte schließen Sie die Buchung verbindlich ab – Ihre Zahlung aktiviert den Vertrag automatisch.</p>
+        <table cellpadding="0" cellspacing="0" align="center"><tr><td style="background:#ffffff;border-radius:8px;">
+          <a href="${buchenUrl}" style="display:block;padding:16px 40px;color:#0b367f;font-size:16px;font-weight:700;text-decoration:none;">Verbindlich buchen →</a>
+        </td></tr></table>
+        <p style="color:rgba(255,255,255,0.6);font-size:11px;margin:14px 0 0;">Sichere Zahlung via Stripe · Kreditkarte oder SEPA-Lastschrift · SSL-verschlüsselt</p>
+      </td></tr>
+    </table>
+  </td></tr>
+  <tr><td style="padding:0 40px 16px;"><p style="color:#6b7280;font-size:12px;margin:0;">📄 <a href="https://praxisflow-buddy.lovable.app/templates/vertrag-honorarfuchs.pdf" style="color:#0b367f;">AGB herunterladen</a></p></td></tr>
+  <tr><td style="padding:0 40px 32px;"><p style="color:#374151;font-size:14px;line-height:1.7;margin:0;">Bei Fragen: <a href="mailto:info@hfx-honorarfuchs.de" style="color:#0b367f;">info@hfx-honorarfuchs.de</a><br><br>Mit freundlichen Grüßen,<br><strong>Ihr HFX Honorarfuchs Team</strong></p></td></tr>
+  <tr><td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;"><p style="color:#9ca3af;font-size:11px;margin:0;">HFX Honorarfuchs • Diese E-Mail wurde automatisch generiert.<br>© ${year} HFX Honorarfuchs GmbH</p></td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
 const DEFAULT_HTML: Record<string, () => string> = {
   "lead-confirmation": buildLeadConfirmationHtml,
   "contract-customer": buildContractCustomerHtml,
   "contract-customer-pdf-send": buildContractCustomerPdfSendHtml,
   "contract-partner": buildContractPartnerHtml,
   "contract-paper-confirmation": buildContractPaperConfirmationHtml,
+  "booking-link": buildBookingLinkHtml,
   "invoice": buildInvoiceHtml,
   "invoice-pdf": buildInvoicePdfPreviewHtml,
   "dashboard-credentials": buildDashboardCredentialsHtml,

@@ -314,6 +314,45 @@ export default function Vertraege() {
   const location = useLocation();
   // Also store lead_id for back-linking
   const [fromLeadId, setFromLeadId] = useState<string | null>(null);
+  const [sendingBuchungsmail, setSendingBuchungsmail] = useState<string | null>(null);
+  const [autoOpenContractId, setAutoOpenContractId] = useState<string | null>(null);
+
+  // ── Read URL params on mount: auto-open dialog with lead prefill ──────────
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const leadId = params.get("leadId");
+    const contractId = params.get("contractId");
+
+    if (leadId) {
+      // Fetch lead and prefill form
+      (async () => {
+        const { data: lead } = await supabase
+          .from("leads")
+          .select("*")
+          .eq("id", leadId)
+          .maybeSingle();
+        if (!lead) return;
+        setFromLeadId(leadId);
+        setLeadHfxNumber(lead.hfx_customer_number || null);
+        setForm({
+          ...emptyForm,
+          praxis: lead.praxis_name || "",
+          vorname: lead.vorname || "",
+          nachname: lead.nachname || "",
+          email: lead.email || "",
+          plz: lead.plz || "",
+          ort: lead.ort || "",
+          adresse: lead.adresse || "",
+          telefon: lead.mobilnummer || "",
+        });
+        setDialogOpen(true);
+      })();
+    } else if (contractId) {
+      // Will be handled when contracts are loaded — store for deferred open
+      setAutoOpenContractId(contractId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   const { data: contracts = [], isLoading } = useQuery({
     queryKey: ["contracts"],
@@ -326,6 +365,18 @@ export default function Vertraege() {
       return data;
     },
   });
+
+  // Open contract edit dialog once contracts are loaded and autoOpenContractId is set
+  useEffect(() => {
+    if (autoOpenContractId && contracts.length > 0) {
+      const c = contracts.find((x: any) => x.id === autoOpenContractId);
+      if (c) {
+        openEdit(c);
+        setAutoOpenContractId(null);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenContractId, contracts]);
 
   const { data: profilesMap = {} } = useQuery({
     queryKey: ["profiles-map"],
