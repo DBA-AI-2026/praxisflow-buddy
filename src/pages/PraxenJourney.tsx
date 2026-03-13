@@ -623,39 +623,28 @@ function VertraegeTab({ search }: { search: string }) {
 function KundenTab({ search }: { search: string }) {
   const [sendingId, setSendingId] = useState<string | null>(null);
 
-  const { data: praxen = [], isLoading } = useQuery({
+  // Primary source: active contracts (single source of truth for customers)
+  // Each unique hfx_customer_number = one customer row (deduplicated)
+  const { data: activeContracts = [], isLoading } = useQuery({
     queryKey: ["journey-kunden"],
     queryFn: async () => {
       const { data } = await supabase
-        .from("praxen")
-        .select("id, name, mp_nr, email, plz, ort, produkt, status, buchungs_datum, converted_from_lead_id")
-        .eq("status", "aktiv")
-        .order("created_at", { ascending: false });
-      return data ?? [];
-    },
-  });
-
-  // Also include active contracts without praxen entry
-  const { data: activeContracts = [] } = useQuery({
-    queryKey: ["journey-kunden-contracts"],
-    queryFn: async () => {
-      const { data } = await supabase
         .from("contracts")
-        .select("id, customer_name, hfx_customer_number, email, praxis, vorname, nachname, product_name, monthly_price, start_date, plz, ort")
+        .select("id, customer_name, hfx_customer_number, mp_nr, email, praxis, vorname, nachname, product_name, monthly_price, start_date, plz, ort, customer_id, sales_partner_name")
         .eq("status", "aktiv")
-        .order("created_at", { ascending: false });
+        .order("start_date", { ascending: false });
       return data ?? [];
     },
   });
 
+  // Qodia sync status from leads (keyed by hfx_customer_number)
   const { data: qodiaMap = {} } = useQuery({
     queryKey: ["journey-kunden-qodia"],
     queryFn: async () => {
-      const { data } = await supabase.from("leads").select("id, hfx_customer_number, qodia_synced");
+      const { data } = await supabase.from("leads").select("hfx_customer_number, qodia_synced");
       const map: Record<string, boolean> = {};
       (data ?? []).forEach((l: any) => {
         if (l.hfx_customer_number) map[l.hfx_customer_number] = !!l.qodia_synced;
-        if (l.id) map[l.id] = !!l.qodia_synced;
       });
       return map;
     },
@@ -679,26 +668,14 @@ function KundenTab({ search }: { search: string }) {
 
   const s = search.toLowerCase();
 
-  // Merge praxen + contracts
-  const praxenIds = new Set(praxen.map((p: any) => p.mp_nr || p.id));
-  const contractRows = activeContracts.filter((c: any) => !praxenIds.has(c.hfx_customer_number));
-
-  type Row = { id: string; name: string; hfxNr: string; email: string; plz: string; ort: string; produkt: string; buchungsDatum: string; convertedLeadId: string | null };
-
-  const rows: Row[] = [
-    ...praxen.map((p: any): Row => ({
-      id: p.id, name: p.name, hfxNr: p.mp_nr || "", email: p.email || "",
-      plz: p.plz || "", ort: p.ort || "", produkt: p.produkt || "",
-      buchungsDatum: p.buchungs_datum || "", convertedLeadId: p.converted_from_lead_id,
-    })),
-    ...contractRows.map((c: any): Row => ({
-      id: c.id, name: c.praxis || c.customer_name,
-      hfxNr: c.hfx_customer_number || "",
-      email: c.email || "", plz: c.plz || "", ort: c.ort || "",
-      produkt: c.product_name || "", buchungsDatum: c.start_date || "",
-      convertedLeadId: null,
-    })),
-  ];
+  // Deduplicate: one row per hfx_customer_number (keep most recent contract)
+  const seenHfx = new Set<string>();
+  const rows = activeContracts.filter((c: any) => {
+    const key = c.hfx_customer_number || c.id;
+    if (seenHfx.has(key)) return false;
+    seenHfx.add(key);
+    return true;
+  });
 
   const filtered = rows.filter((r) => {
     if (!s) return true;
