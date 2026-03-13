@@ -493,7 +493,11 @@ export default function Dashboard() {
             {recentContracts.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">Noch keine Verträge vorhanden.</p>
             ) : recentContracts.map((c) => (
-              <div key={c.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+              <button
+                key={c.id}
+                onClick={() => navigate(`/praxen-journey?tab=vertraege&id=${c.id}`)}
+                className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left group"
+              >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-foreground text-sm truncate">{c.customer_name}</span>
@@ -501,20 +505,25 @@ export default function Dashboard() {
                       {c.status}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{c.product_name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {c.product_name}{c.hfx_customer_number ? ` · ${c.hfx_customer_number}` : ""}
+                  </p>
                 </div>
-                <div className="text-right text-xs text-muted-foreground ml-2 shrink-0">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {format(new Date(c.created_at), "dd.MM.yy")}
-                  </div>
-                  {c.monthly_price > 0 && (
-                    <div className="font-medium text-foreground mt-0.5">
-                      {c.monthly_price.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}/Mo.
+                <div className="text-right text-xs text-muted-foreground ml-2 shrink-0 flex items-center gap-2">
+                  <div>
+                    <div className="flex items-center gap-1 justify-end">
+                      <Clock className="h-3 w-3" />
+                      {format(new Date(c.created_at), "dd.MM.yy")}
                     </div>
-                  )}
+                    {c.monthly_price > 0 && (
+                      <div className="font-medium text-foreground mt-0.5">
+                        {c.monthly_price.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}/Mo.
+                      </div>
+                    )}
+                  </div>
+                  <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
