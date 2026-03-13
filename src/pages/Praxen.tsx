@@ -82,6 +82,7 @@ export default function Praxen() {
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [sendingCredentialsId, setSendingCredentialsId] = useState<string | null>(null);
   const [selectedPraxis, setSelectedPraxis] = useState<Praxis | null>(null);
   const [praxisContracts, setPraxisContracts] = useState<any[]>([]);
   const [loadingContracts, setLoadingContracts] = useState(false);
