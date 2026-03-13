@@ -452,6 +452,7 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
 
 function VertraegeTab({ search, highlightId }: { search: string; highlightId?: string }) {
   const [statusFilter, setStatusFilter] = useState<string>("alle");
+  const navigate = useNavigate();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
 
   useEffect(() => {
@@ -573,7 +574,11 @@ function VertraegeTab({ search, highlightId }: { search: string; highlightId?: s
               const praxisLabel = c.praxis || c.customer_name || "–";
               const arztLabel = [c.vorname, c.nachname].filter(Boolean).join(" ") || null;
               return (
-                <tr key={c.id} className="hover:bg-muted/20 transition-colors">
+                <tr
+                  key={c.id}
+                  onClick={() => navigate(`/vertrieb/vertraege?contractId=${c.id}`)}
+                  className="hover:bg-muted/30 transition-colors cursor-pointer"
+                >
                   <td className="py-3 px-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
                     {c.hfx_customer_number || <span className="text-muted-foreground/40">—</span>}
                   </td>
@@ -620,13 +625,16 @@ function VertraegeTab({ search, highlightId }: { search: string; highlightId?: s
                   <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
                     {c.created_at ? format(new Date(c.created_at), "dd.MM.yy", { locale: de }) : "–"}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <a href="/vertrieb/vertraege" className="text-primary hover:text-primary/70 transition-colors">
+                          <button
+                            onClick={() => navigate(`/vertrieb/vertraege?contractId=${c.id}`)}
+                            className="text-primary hover:text-primary/70 transition-colors"
+                          >
                             <ArrowRight className="h-3.5 w-3.5" />
-                          </a>
+                          </button>
                         </TooltipTrigger>
                         <TooltipContent>In Vertragsübersicht öffnen</TooltipContent>
                       </Tooltip>
