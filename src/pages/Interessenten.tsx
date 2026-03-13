@@ -474,7 +474,7 @@ export default function Interessenten() {
                           </Select>
                         </TableCell>
                       )}
-                      <TableCell className="text-center">
+                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                         {lead.salesforce_synced ? (
                           <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
                         ) : (
