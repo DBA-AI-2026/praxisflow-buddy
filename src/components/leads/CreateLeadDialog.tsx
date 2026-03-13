@@ -29,7 +29,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Loader2, UserPlus } from "lucide-react";
+import { Loader2, UserPlus, Mail } from "lucide-react";
 
 const schema = z.object({
   praxis_name: z.string().trim().min(2, "Pflichtfeld").max(200),
@@ -43,6 +43,7 @@ const schema = z.object({
   abrechnungszentrum: z.string().default("keins"),
   mp_nummer: z.string().trim().max(50).default(""),
   nachricht: z.string().trim().max(1000).default(""),
+  send_confirmation_email: z.boolean().default(true),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -71,33 +72,47 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
       abrechnungszentrum: "keins",
       mp_nummer: "",
       nachricht: "",
+      send_confirmation_email: true,
     },
   });
 
   const onSubmit = async (values: FormValues) => {
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("leads").insert({
-        praxis_name: values.praxis_name,
-        vorname: values.vorname,
-        nachname: values.nachname,
-        email: values.email,
-        mobilnummer: values.mobilnummer || "–",
-        plz: values.plz,
-        ort: values.ort || null,
-        adresse: values.adresse || null,
-        abrechnungszentrum: values.abrechnungszentrum,
-        mp_nummer: values.mp_nummer || null,
-        nachricht: values.nachricht || null,
-        status: "neu",
+      // Use the capture-lead Edge Function so the same email/Qodia/PLZ-assignment
+      // flow runs for manual leads just as for homepage leads.
+      const { data, error } = await supabase.functions.invoke("capture-lead", {
+        body: {
+          praxis_name: values.praxis_name,
+          vorname: values.vorname,
+          nachname: values.nachname,
+          email: values.email,
+          mobilnummer: values.mobilnummer || "",
+          plz: values.plz,
+          ort: values.ort || null,
+          adresse: values.adresse || null,
+          abrechnungszentrum: values.abrechnungszentrum,
+          mp_nummer: values.mp_nummer || null,
+          nachricht: values.nachricht || null,
+          source: "manual",
+          send_confirmation_email: values.send_confirmation_email,
+        },
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-      toast({
-        title: "Interessent erstellt",
-        description: `${values.vorname} ${values.nachname} (${values.praxis_name}) wurde erfolgreich angelegt.`,
-      });
+      if (data?.duplicate) {
+        toast({
+          title: "Bereits vorhanden",
+          description: data.message,
+        });
+      } else {
+        toast({
+          title: "Interessent erstellt",
+          description: `${values.vorname} ${values.nachname} (${values.praxis_name}) wurde angelegt. HFX-Nr.: ${data?.hfx_customer_number}${values.send_confirmation_email ? " – Bestätigungs-E-Mail versendet." : ""}`,
+        });
+      }
 
       form.reset();
       onOpenChange(false);
@@ -304,6 +319,33 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
                     />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Email option */}
+            <FormField
+              control={form.control}
+              name="send_confirmation_email"
+              render={({ field }) => (
+                <FormItem className="flex items-center gap-3 rounded-lg border border-border p-3 bg-muted/30">
+                  <FormControl>
+                    <input
+                      type="checkbox"
+                      checked={field.value}
+                      onChange={field.onChange}
+                      className="h-4 w-4 accent-primary"
+                    />
+                  </FormControl>
+                  <div className="flex-1">
+                    <FormLabel className="flex items-center gap-2 cursor-pointer mb-0">
+                      <Mail className="h-4 w-4 text-primary" />
+                      Bestätigungs-E-Mail mit Zugangsdaten senden
+                    </FormLabel>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Gleicher Flow wie Homepage-Lead: E-Mail, Qodia-Sync, PLZ-Zuweisung
+                    </p>
+                  </div>
                 </FormItem>
               )}
             />

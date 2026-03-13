@@ -285,9 +285,10 @@ Deno.serve(async (req) => {
   try {
     const rawBody = await req.json();
     
-    // Log source for debugging
-    const source = origin ? `browser:${origin}` : "server-to-server";
-    console.log(`Lead request from: ${source}`);
+    // Detect whether this is a manual internal entry or a homepage submission
+    const leadSource: string = rawBody.source === "manual" ? "manual" : "homepage";
+    const sendConfirmationEmail: boolean = rawBody.send_confirmation_email !== false; // default true
+    console.log(`Lead request – source: ${leadSource}, sendEmail: ${sendConfirmationEmail}`);
     console.log(`Raw body received:`, JSON.stringify(rawBody));
 
     // Map CF7 field names to our internal format
@@ -322,8 +323,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate abrechnungszentrum values
-    const validAbrechnungszentren = ["nein", "CareCapital", "privadis", "anderes"];
+    // For homepage submissions, validate abrechnungszentrum strictly.
+    // Manual entries (internal) can use any of the extended list.
+    const validAbrechnungszentrenHomepage = ["nein", "CareCapital", "privadis", "anderes"];
+    const validAbrechnungszentrenManual = ["nein", "keins", "CareCapital", "privadis", "anderes", "ZAB", "PVS", "DZR", "ARZ", "Sonstiges"];
+    const validAbrechnungszentren = leadSource === "manual" ? validAbrechnungszentrenManual : validAbrechnungszentrenHomepage;
     if (!validAbrechnungszentren.includes(abrechnungszentrum)) {
       return new Response(
         JSON.stringify({ error: "Ungültiges Abrechnungszentrum" }),
@@ -331,8 +335,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // MP-Nummer validation: must be exactly 5 digits if provided
-    if (mp_nummer && !/^\d{5}$/.test(mp_nummer.trim())) {
+    // MP-Nummer validation: must be exactly 5 digits if provided (homepage only; manual entries allow free text)
+    if (leadSource === "homepage" && mp_nummer && !/^\d{5}$/.test(mp_nummer.trim())) {
       return new Response(
         JSON.stringify({ error: "MP-Nummer muss genau 5-stellig sein (nur Ziffern)" }),
         { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
@@ -471,6 +475,7 @@ Deno.serve(async (req) => {
         ort: ort?.trim().slice(0, 100) || null,
         generated_password: generatedPassword,
         assigned_to: assignedTo,
+        source: leadSource,
       })
       .select("id, hfx_customer_number")
       .single();
@@ -483,31 +488,35 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Lead created: ${lead.hfx_customer_number} for ${email}`);
+    console.log(`Lead created: ${lead.hfx_customer_number} for ${email} (source: ${leadSource})`);
 
-    // Send confirmation email via Resend
-    try {
-      const resendApiKey = Deno.env.get("RESEND_API_KEY");
-      if (resendApiKey) {
-        const resend = new Resend(resendApiKey);
-        const emailHtml = buildConfirmationEmailHtml({ praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht, hfx_customer_number: lead.hfx_customer_number, generated_password: generatedPassword });
+    // Send confirmation email via Resend (skipped if sendConfirmationEmail=false)
+    if (sendConfirmationEmail) {
+      try {
+        const resendApiKey = Deno.env.get("RESEND_API_KEY");
+        if (resendApiKey) {
+          const resend = new Resend(resendApiKey);
+          const emailHtml = buildConfirmationEmailHtml({ praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht, hfx_customer_number: lead.hfx_customer_number, generated_password: generatedPassword });
 
-        await resend.emails.send({
-          from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
-          to: [email],
-          subject: `Danke für Ihr Interesse am Honorarfuchs!`,
-          html: emailHtml,
-        });
+          await resend.emails.send({
+            from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+            to: [email],
+            subject: `Danke für Ihr Interesse am Honorarfuchs!`,
+            html: emailHtml,
+          });
 
-        await supabase
-          .from("leads")
-          .update({ confirmation_email_sent: true })
-          .eq("id", lead.id);
+          await supabase
+            .from("leads")
+            .update({ confirmation_email_sent: true })
+            .eq("id", lead.id);
 
-        console.log(`Confirmation email sent to ${email}`);
+          console.log(`Confirmation email sent to ${email}`);
+        }
+      } catch (emailErr) {
+        console.error("Error sending confirmation email:", emailErr);
       }
-    } catch (emailErr) {
-      console.error("Error sending confirmation email:", emailErr);
+    } else {
+      console.log(`Confirmation email skipped (send_confirmation_email=false) for ${email}`);
     }
 
     // Notify assigned AD (Außendienst / Gebietsleiter) about the new lead
