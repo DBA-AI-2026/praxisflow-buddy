@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { CheckCircle2, Loader2, AlertCircle, ExternalLink } from "lucide-react";
+import { CheckCircle2, Loader2, AlertCircle, ExternalLink, CreditCard, FileText, PartyPopper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,66 @@ interface ContractSummary {
   rechtsform: string | null;
 }
 
+const STEPS = [
+  { id: 1, label: "Angaben", icon: FileText },
+  { id: 2, label: "Zahlung", icon: CreditCard },
+  { id: 3, label: "Bestätigung", icon: PartyPopper },
+];
+
+function StepIndicator({ currentStep }: { currentStep: number }) {
+  return (
+    <div className="w-full flex items-center justify-center mb-8">
+      {STEPS.map((step, idx) => {
+        const isDone = currentStep > step.id;
+        const isActive = currentStep === step.id;
+        const Icon = step.icon;
+
+        return (
+          <div key={step.id} className="flex items-center">
+            {/* Step circle */}
+            <div className="flex flex-col items-center gap-1.5">
+              <div
+                className={[
+                  "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 border-2",
+                  isDone
+                    ? "bg-primary border-primary text-primary-foreground"
+                    : isActive
+                    ? "bg-primary/10 border-primary text-primary"
+                    : "bg-muted border-border text-muted-foreground",
+                ].join(" ")}
+              >
+                {isDone ? (
+                  <CheckCircle2 className="h-5 w-5" />
+                ) : (
+                  <Icon className="h-4 w-4" />
+                )}
+              </div>
+              <span
+                className={[
+                  "text-xs font-medium whitespace-nowrap",
+                  isActive ? "text-primary" : isDone ? "text-primary/70" : "text-muted-foreground",
+                ].join(" ")}
+              >
+                {step.label}
+              </span>
+            </div>
+
+            {/* Connector */}
+            {idx < STEPS.length - 1 && (
+              <div
+                className={[
+                  "h-0.5 w-16 sm:w-24 mx-2 mb-5 transition-all duration-500",
+                  currentStep > step.id ? "bg-primary" : "bg-border",
+                ].join(" ")}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Buchen() {
   const [searchParams] = useSearchParams();
   const contractId = searchParams.get("contract_id");
@@ -50,6 +110,9 @@ export default function Buchen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+
+  // currentStep: 1 = Angaben, 2 = Zahlung (redirecting), 3 = Bestätigung
+  const [currentStep, setCurrentStep] = useState(1);
 
   // Form state
   const [fachrichtung, setFachrichtung] = useState("");
@@ -101,6 +164,7 @@ export default function Buchen() {
 
     setSubmitting(true);
     setError(null);
+    setCurrentStep(2);
 
     try {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
@@ -127,15 +191,16 @@ export default function Buchen() {
       if (json.stripe_url) {
         window.location.href = json.stripe_url;
       } else {
-        setError("Kein Zahlungslink erhalten. Bitte versuchen Sie es erneut.");
-        setSubmitting(false);
+        throw new Error("Kein Zahlungslink erhalten. Bitte versuchen Sie es erneut.");
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Ein Fehler ist aufgetreten.");
       setSubmitting(false);
+      setCurrentStep(1);
     }
   }
 
+  // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -144,6 +209,7 @@ export default function Buchen() {
     );
   }
 
+  // ── Not found ─────────────────────────────────────────────────────────────
   if (notFound) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
@@ -167,14 +233,55 @@ export default function Buchen() {
     );
   }
 
+  // ── Step 2: Redirecting to Stripe ─────────────────────────────────────────
+  if (currentStep === 2 && submitting) {
+    return (
+      <div className="min-h-screen bg-background py-12 px-4">
+        <div className="max-w-lg mx-auto space-y-8">
+          <div className="text-center">
+            <p className="text-2xl font-bold text-primary">🦊 HFX Honorarfuchs</p>
+            <p className="text-sm text-muted-foreground mt-1">Verbindliche Buchung</p>
+          </div>
+          <StepIndicator currentStep={2} />
+          <div className="bg-card border rounded-xl p-10 text-center space-y-4 shadow-sm">
+            <div className="flex items-center justify-center">
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <CreditCard className="h-7 w-7 text-primary" />
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                  <Loader2 className="h-3.5 w-3.5 text-primary-foreground animate-spin" />
+                </div>
+              </div>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Weiterleitung zu Stripe</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Sie werden zur sicheren Zahlungsseite weitergeleitet…
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <span>🔒</span>
+              <span>SSL-verschlüsselt · Kreditkarte & SEPA-Lastschrift</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Step 1: Form ──────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background py-12 px-4">
-      <div className="max-w-lg mx-auto space-y-8">
+      <div className="max-w-lg mx-auto space-y-6">
         {/* Brand header */}
         <div className="text-center">
           <p className="text-2xl font-bold text-primary">🦊 HFX Honorarfuchs</p>
           <p className="text-sm text-muted-foreground mt-1">Verbindliche Buchung</p>
         </div>
+
+        {/* Step indicator */}
+        <StepIndicator currentStep={currentStep} />
 
         {/* Contract summary card */}
         <div className="bg-card border rounded-lg overflow-hidden shadow-sm">
@@ -317,7 +424,7 @@ export default function Buchen() {
                 Weiterleitung zu Stripe…
               </>
             ) : (
-              "Verbindlich buchen →"
+              "Weiter zur Zahlung →"
             )}
           </Button>
 
