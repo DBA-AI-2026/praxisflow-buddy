@@ -254,7 +254,7 @@ export default function Dashboard() {
           .limit(8);
         (contracts ?? []).forEach((r) => items.push({
           id: r.id, type: "contract", label: r.customer_name, sub: r.product_name,
-          status: r.status, time: r.updated_at, link: "/vertrieb/vertraege",
+          status: r.status, time: r.updated_at, link: `/praxen-journey?tab=vertraege&id=${r.id}`,
         }));
 
         // Leads always shown in else-branch (tippgeber is already handled above)
