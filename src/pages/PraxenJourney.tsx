@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useUserRole } from "@/hooks/useUserRole";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
 import { UploadPaperContractDialog } from "@/components/leads/UploadPaperContractDialog";
+import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -120,6 +121,7 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("aktiv");
   const [createOpen, setCreateOpen] = useState(false);
   const [uploadLead, setUploadLead] = useState<any>(null);
+  const [selectedLead, setSelectedLead] = useState<any>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
 
@@ -337,8 +339,9 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
               return (
                 <tr
                   key={lead.id}
-                  ref={highlightId === lead.id ? highlightRef : null}
-                  className={`hover:bg-muted/20 transition-colors group ${highlightId === lead.id ? "bg-primary/5 ring-1 ring-primary/30" : ""}`}
+                  ref={highlightId === lead.id ? (highlightRef as any) : null}
+                  onClick={() => setSelectedLead(lead)}
+                  className={`hover:bg-muted/30 transition-colors group cursor-pointer ${highlightId === lead.id ? "bg-primary/5 ring-1 ring-primary/30" : ""}`}
                 >
                   <td className="py-3 px-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
                     {lead.hfx_customer_number || <span className="text-muted-foreground/40">—</span>}
@@ -350,7 +353,7 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
                   <td className="py-3 px-4">
                     <SourceBadge source={src} />
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground">
+                  <td className="py-3 px-4 text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-2">
                       <span>{lead.email}</span>
                       {lead.hfx_customer_number && (
@@ -379,7 +382,7 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
                   <td className="py-3 px-4">
                     <StatusPill label={sc.label} cls={sc.cls} />
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                     {!isClosed && nextStep ? (
                       <button
                         onClick={nextStep.action}
@@ -394,7 +397,7 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
                       </span>
                     ) : null}
                   </td>
-                  <td className="py-3 px-4 text-center">
+                  <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-1">
                       <QodiaIcon synced={!!lead.qodia_synced} />
                       {!lead.qodia_synced && lead.hfx_customer_number && (
@@ -427,6 +430,12 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
         </table>
       </div>
 
+      {selectedLead && (
+        <LeadDetailDialog
+          lead={selectedLead}
+          onClose={() => { setSelectedLead(null); queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); }}
+        />
+      )}
       <CreateLeadDialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); }} />
       {uploadLead && (
         <UploadPaperContractDialog
