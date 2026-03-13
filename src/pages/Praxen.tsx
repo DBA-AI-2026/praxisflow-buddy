@@ -246,6 +246,31 @@ export default function Praxen() {
     }
   };
 
+  const sendCredentials = async (praxis: Praxis) => {
+    if (!praxis.email) {
+      toast.error("Für diesen Kunden ist keine E-Mail-Adresse hinterlegt.");
+      return;
+    }
+    setSendingCredentialsId(praxis.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("resend-lead-credentials", {
+        body: {
+          email: praxis.email,
+          vorname: "",
+          nachname: praxis.name,
+          hfxCustomerNumber: praxis.hfxNr || praxis.mpNr || "",
+        },
+      });
+      if (error) throw error;
+      if (data?.error) toast.error(data.error);
+      else toast.success(`Zugangsdaten wurden an ${praxis.email} gesendet.`);
+    } catch (err: any) {
+      toast.error(err.message || "Fehler beim Versenden der Zugangsdaten");
+    } finally {
+      setSendingCredentialsId(null);
+    }
+  };
+
   const filteredPraxen = praxen.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
