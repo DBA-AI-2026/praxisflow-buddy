@@ -604,13 +604,7 @@ export default function Vertraege() {
             const templateRes = await fetch("/templates/vertrag-honorarfuchs.pdf");
             const templateBytes = await templateRes.arrayBuffer();
             let sigData = form.signature_data;
-            if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
-              sigData = signaturePadRef.current.toDataURL();
-            }
-            let vertriebSigData = form.vertrieb_signature_data;
-            if (vertriebSignaturePadRef.current && !vertriebSignaturePadRef.current.isEmpty()) {
-              vertriebSigData = vertriebSignaturePadRef.current.toDataURL();
-            }
+            const vertriebSigData = form.vertrieb_signature_data;
             const pdfBytes = await fillContractTemplate(templateBytes, {
               mp_nr: form.mp_nr, praxis: form.praxis, fachrichtung: form.fachrichtung,
               rechtsform: form.rechtsform, vorname: form.vorname, nachname: form.nachname,
