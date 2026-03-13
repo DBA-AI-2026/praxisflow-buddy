@@ -221,6 +221,54 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
     }
   };
 
+  const sendBuchungsmail = async () => {
+    setSendingBuchungsmail(true);
+    try {
+      // Find the contract with status 'eingegangen' linked to this lead's email or hfx_customer_number
+      const { data: contracts, error: contractError } = await supabase
+        .from("contracts")
+        .select("id, product_name, email, hfx_customer_number, confirmation_email_sent_at")
+        .eq("status", "eingegangen")
+        .or(`email.eq.${lead.email},hfx_customer_number.eq.${lead.hfx_customer_number}`)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (contractError) throw contractError;
+
+      if (!contracts || contracts.length === 0) {
+        toast({
+          title: "Kein Vertrag gefunden",
+          description: "Es wurde kein Vertrag mit Status 'Eingegangen' für diesen Interessenten gefunden. Bitte zuerst einen Vertrag anlegen.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const contract = contracts[0];
+
+      const { data, error } = await supabase.functions.invoke("send-contract-confirmation", {
+        body: { contract_id: contract.id },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Buchungsmail versendet",
+        description: `Die Buchungs-E-Mail wurde erfolgreich an ${contract.email} gesendet.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["contracts"] });
+    } catch (err: any) {
+      toast({
+        title: "Fehler beim E-Mail-Versand",
+        description: err.message || "E-Mail konnte nicht gesendet werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingBuchungsmail(false);
+    }
+  };
+
   const sc = statusConfig[lead.status] || statusConfig.neu;
   const sourceLabel = lead.source === "manual" ? "Manuell erfasst" : "Homepage";
   const sourceIcon = lead.source === "manual"
