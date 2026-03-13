@@ -397,7 +397,7 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
                       </span>
                     ) : null}
                   </td>
-                  <td className="py-3 px-4 text-center">
+                  <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-1">
                       <QodiaIcon synced={!!lead.qodia_synced} />
                       {!lead.qodia_synced && lead.hfx_customer_number && (
