@@ -534,6 +534,17 @@ export default function Praxen() {
                             Details anzeigen
                           </DropdownMenuItem>
                           <DropdownMenuItem
+                            onClick={() => sendCredentials(praxis)}
+                            disabled={sendingCredentialsId === praxis.id || !praxis.email}
+                          >
+                            {sendingCredentialsId === praxis.id ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Send className="h-4 w-4 mr-2" />
+                            )}
+                            Zugangsdaten senden
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={() => syncToSalesforce(praxis)}
                             disabled={syncingId === praxis.id || !sfConnection.isConnected}
                           >
