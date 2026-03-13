@@ -335,7 +335,11 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
               const nextStep = getNextStepAction(lead);
               const isClosed = CLOSED_LEAD_STATUSES.includes(lead.status);
               return (
-                <tr key={lead.id} className="hover:bg-muted/20 transition-colors group">
+                <tr
+                  key={lead.id}
+                  ref={highlightId === lead.id ? highlightRef : null}
+                  className={`hover:bg-muted/20 transition-colors group ${highlightId === lead.id ? "bg-primary/5 ring-1 ring-primary/30" : ""}`}
+                >
                   <td className="py-3 px-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
                     {lead.hfx_customer_number || <span className="text-muted-foreground/40">—</span>}
                   </td>
