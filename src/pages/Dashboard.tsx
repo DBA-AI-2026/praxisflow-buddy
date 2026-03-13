@@ -153,6 +153,7 @@ export default function Dashboard() {
   const { profile } = useAuth();
   const { role, isAdmin, isVertragsabteilung } = useUserRole();
   const { previewRole, isPreviewActive, setPreviewRole } = useRolePreview();
+  const navigate = useNavigate();
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
 
