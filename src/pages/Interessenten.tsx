@@ -320,7 +320,7 @@ export default function Interessenten() {
                 filtered.map((lead: any) => {
                   const sc = statusConfig[lead.status] || statusConfig.neu;
                   return (
-                    <TableRow key={lead.id}>
+                    <TableRow key={lead.id} className="cursor-pointer" onClick={() => setSelectedLead(lead)}>
                       <TableCell className="font-mono text-sm font-medium">{lead.hfx_customer_number}</TableCell>
                       <TableCell>
                         <div className="flex items-start gap-2">
