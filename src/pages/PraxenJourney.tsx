@@ -633,7 +633,13 @@ function VertraegeTab({ search, highlightId }: { search: string; highlightId?: s
 
 // ─── Tab: Kunden ──────────────────────────────────────────────────────────────
 
-function KundenTab({ search }: { search: string }) {
+function KundenTab({ search, highlightId }: { search: string; highlightId?: string }) {
+  const highlightRef = useRef<HTMLTableRowElement | null>(null);
+  useEffect(() => {
+    if (highlightId && highlightRef.current) {
+      setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+    }
+  }, [highlightId]);
   const [sendingId, setSendingId] = useState<string | null>(null);
 
   // Primary source: active contracts (single source of truth for customers)
