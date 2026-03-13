@@ -98,21 +98,20 @@ Deno.serve(async (req) => {
       ? `${Number(contract.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/Monat`
       : "–";
 
-    // CTA block — only shown if Stripe URL is available
-    const ctaBlock = stripeCheckoutUrl
-      ? `
+    // CTA block — links to /buchen page where customer fills in Fachrichtung + Rechtsform
+    const ctaBlock = `
         <!-- Buchungs-CTA -->
         <tr>
           <td style="padding:0 40px 28px;">
             <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#0b367f,#1a4a9e);border-radius:10px;overflow:hidden;">
               <tr><td style="padding:28px 32px;text-align:center;">
                 <p style="color:rgba(255,255,255,0.9);font-size:14px;line-height:1.6;margin:0 0 20px;">
-                  Ihr Außendienstmitarbeiter hat Ihren Vertragsabschluss vorbereitet.<br>
+                  Ihr Vertrag wurde für Sie vorbereitet.<br>
                   Bitte schließen Sie die Buchung verbindlich ab – Ihre Zahlung aktiviert den Vertrag automatisch.
                 </p>
                 <table cellpadding="0" cellspacing="0" align="center">
                   <tr><td style="background:#ffffff;border-radius:8px;padding:0;">
-                    <a href="${stripeCheckoutUrl}"
+                    <a href="${buchenUrl}"
                        style="display:block;padding:16px 40px;color:#0b367f;font-size:16px;font-weight:700;text-decoration:none;letter-spacing:0.01em;">
                       Verbindlich buchen →
                     </a>
@@ -120,20 +119,6 @@ Deno.serve(async (req) => {
                 </table>
                 <p style="color:rgba(255,255,255,0.6);font-size:11px;margin:14px 0 0;">
                   Sichere Zahlung via Stripe · Kreditkarte oder SEPA-Lastschrift · SSL-verschlüsselt
-                </p>
-              </td></tr>
-            </table>
-          </td>
-        </tr>`
-      : `
-        <!-- Hinweis ohne Stripe -->
-        <tr>
-          <td style="padding:0 40px 28px;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef9ec;border-radius:8px;border:1px solid #fcd34d;">
-              <tr><td style="padding:20px 24px;">
-                <p style="color:#92400e;font-size:14px;font-weight:600;margin:0 0 6px;">ℹ️ Zahlung wird manuell eingerichtet</p>
-                <p style="color:#374151;font-size:13px;line-height:1.5;margin:0;">
-                  Ihr Außendienstmitarbeiter wird sich in Kürze bei Ihnen melden, um die Zahlung einzurichten.
                 </p>
               </td></tr>
             </table>
