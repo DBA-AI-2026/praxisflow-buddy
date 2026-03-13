@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useUserRole } from "@/hooks/useUserRole";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
