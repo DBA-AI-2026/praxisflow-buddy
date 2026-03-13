@@ -121,6 +121,7 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("aktiv");
   const [createOpen, setCreateOpen] = useState(false);
   const [uploadLead, setUploadLead] = useState<any>(null);
+  const [selectedLead, setSelectedLead] = useState<any>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
 
