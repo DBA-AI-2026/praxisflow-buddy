@@ -140,11 +140,11 @@ Deno.serve(async (req) => {
       console.log(`New auth user created for manually captured lead: ${newAuthUser.user.id}`);
     }
 
-    // Clear the stored plaintext password from the leads table (security hygiene) — only for lead-based requests
+    // Update lead record: clear stored password + set credentials_sent_at timestamp
     if (leadId) {
       await supabaseAdmin
         .from("leads")
-        .update({ generated_password: null })
+        .update({ generated_password: null, credentials_sent_at: new Date().toISOString() })
         .eq("id", leadId);
     }
 

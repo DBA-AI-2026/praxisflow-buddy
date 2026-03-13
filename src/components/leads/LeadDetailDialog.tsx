@@ -150,6 +150,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
       });
       if (error) throw error;
       toast({ title: "Zugangsdaten versendet", description: data?.message });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
     } catch (err: any) {
       toast({ title: "Fehler", description: err.message || "Versand fehlgeschlagen", variant: "destructive" });
     } finally {
