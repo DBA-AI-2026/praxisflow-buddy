@@ -459,7 +459,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-7 px-2 text-xs gap-1 text-primary hover:text-primary hover:bg-primary/10"
+                          className="h-7 px-2 text-xs gap-1 text-primary hover:text-primary hover:bg-muted"
                           onClick={onTrigger}
                           disabled={triggering}
                         >
