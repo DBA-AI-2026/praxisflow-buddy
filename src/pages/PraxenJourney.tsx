@@ -441,10 +441,15 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
 
 // ─── Tab: Verträge (ausstehend) ───────────────────────────────────────────────
 
-function VertraegeTab({ search }: { search: string }) {
+function VertraegeTab({ search, highlightId }: { search: string; highlightId?: string }) {
   const [statusFilter, setStatusFilter] = useState<string>("alle");
+  const highlightRef = useRef<HTMLTableRowElement | null>(null);
 
-  const { data: contracts = [], isLoading } = useQuery({
+  useEffect(() => {
+    if (highlightId && highlightRef.current) {
+      setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+    }
+  }, [highlightId]);
     queryKey: ["journey-contracts-pending"],
     queryFn: async () => {
       const { data } = await supabase
