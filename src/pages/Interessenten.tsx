@@ -508,11 +508,8 @@ export default function Interessenten() {
                       <TableCell className="text-sm text-muted-foreground">
                         {format(new Date(lead.created_at), "dd.MM.yy HH:mm", { locale: de })}
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => setSelectedLead(lead)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
