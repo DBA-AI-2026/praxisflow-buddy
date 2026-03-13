@@ -380,6 +380,199 @@ async function handlePaperContractPayment(
     await supabase.from("praxen").insert(praxisData);
     log("Praxen entry created for paper contract", { contractId });
   }
+
+  // Send post-payment Vertragsbestätigung email with PDF attachments
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (resendKey && contract.email) {
+    try {
+      await sendVertragsbestaetigung(contract, resendKey);
+      log("Vertragsbestätigung email sent", { contractId });
+    } catch (mailErr) {
+      console.error("[stripe-webhook] Failed to send Vertragsbestätigung:", mailErr);
+    }
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// POST-PAYMENT EMAIL: Vertragsbestätigung with summary PDF + AGB PDF
+// ────────────────────────────────────────────────────────────────────────────
+async function sendVertragsbestaetigung(
+  contract: Record<string, any>,
+  resendKey: string
+) {
+  const { PDFDocument, rgb, StandardFonts } = await import("npm:pdf-lib");
+
+  const monthlyNet = Number(contract.monthly_price) || 0;
+  const monthlyGross = monthlyNet * 1.19;
+  const startFormatted = contract.start_date
+    ? new Date(contract.start_date + "T00:00:00").toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })
+    : "–";
+  const grossFormatted = monthlyGross.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const netFormatted = monthlyNet.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // ── Generate contract summary PDF ──────────────────────────────────────────
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([595, 842]); // A4
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  const navy = rgb(0.043, 0.212, 0.498);
+  const black = rgb(0.067, 0.067, 0.173);
+  const gray = rgb(0.42, 0.44, 0.5);
+  const white = rgb(1, 1, 1);
+
+  const { width, height } = page.getSize();
+  const margin = 50;
+
+  // Header background
+  page.drawRectangle({ x: 0, y: height - 90, width, height: 90, color: navy });
+  page.drawText("🦊 HFX Honorarfuchs", { x: margin, y: height - 45, size: 22, font: boldFont, color: white });
+  page.drawText("Vertragsbestätigung", { x: margin, y: height - 65, size: 13, font: regularFont, color: rgb(0.85, 0.9, 1) });
+
+  let y = height - 130;
+  const lineH = 22;
+  const labelX = margin;
+  const valueX = margin + 200;
+
+  const drawRow = (label: string, value: string, bold = false) => {
+    page.drawText(label, { x: labelX, y, size: 11, font: regularFont, color: gray });
+    page.drawText(value || "–", { x: valueX, y, size: 11, font: bold ? boldFont : regularFont, color: black });
+    y -= lineH;
+  };
+
+  page.drawText("Ihre Vertragsdetails", { x: margin, y, size: 14, font: boldFont, color: navy });
+  y -= lineH * 1.5;
+
+  if (contract.hfx_customer_number) drawRow("HFX-Kundennummer", contract.hfx_customer_number, true);
+  drawRow("Praxis", contract.praxis || contract.customer_name);
+  drawRow("Ansprechpartner", [contract.vorname, contract.nachname].filter(Boolean).join(" ") || "–");
+  drawRow("Produkt", contract.product_name);
+  if (contract.fachrichtung) drawRow("Fachrichtung", contract.fachrichtung);
+  if (contract.rechtsform) drawRow("Rechtsform", contract.rechtsform);
+  if (contract.bsnr) drawRow("BSNR", contract.bsnr);
+  if (contract.lanr) drawRow("LANR", contract.lanr);
+
+  y -= 10;
+  page.drawLine({ start: { x: margin, y }, end: { x: width - margin, y }, thickness: 0.5, color: rgb(0.85, 0.88, 0.92) });
+  y -= lineH;
+
+  page.drawText("Konditionen", { x: margin, y, size: 14, font: boldFont, color: navy });
+  y -= lineH * 1.5;
+
+  drawRow("Vertragsbeginn", startFormatted);
+  drawRow("Monatspreis netto", `${netFormatted} €`);
+  drawRow("Monatspreis brutto (inkl. 19% MwSt.)", `${grossFormatted} €`, true);
+  drawRow("Laufzeit", "Unbefristet");
+  drawRow("Kündigungsfrist", "6 Monate zum Monatsende");
+  drawRow("Zahlung", "Automatisch via Stripe (monatlich)");
+
+  y -= 20;
+  page.drawText("Mit Ihrer Zahlung haben Sie die AGB der HFX Honorarfuchs GmbH akzeptiert.", {
+    x: margin, y, size: 10, font: regularFont, color: gray,
+  });
+  y -= 16;
+  page.drawText("Eine Kündigung ist jederzeit mit 6 Monaten Frist zum Monatsende möglich.", {
+    x: margin, y, size: 10, font: regularFont, color: gray,
+  });
+
+  // Footer
+  page.drawRectangle({ x: 0, y: 0, width, height: 40, color: rgb(0.97, 0.98, 0.99) });
+  page.drawText("HFX Honorarfuchs GmbH  ·  info@hfx-honorarfuchs.de  ·  www.hfx-honorarfuchs.de", {
+    x: margin, y: 14, size: 9, font: regularFont, color: gray,
+  });
+
+  const summaryPdfBytes = await pdfDoc.save();
+  const summaryPdfBase64 = btoa(String.fromCharCode(...summaryPdfBytes));
+
+  // ── Fetch AGB PDF ──────────────────────────────────────────────────────────
+  const attachments: Array<{ filename: string; content: string }> = [
+    { filename: "Vertragsbestaetigung-HFX.pdf", content: summaryPdfBase64 },
+  ];
+
+  try {
+    const agbUrl = "https://praxisflow-buddy.lovable.app/templates/vertrag-honorarfuchs.pdf";
+    const agbRes = await fetch(agbUrl);
+    if (agbRes.ok) {
+      const agbBytes = new Uint8Array(await agbRes.arrayBuffer());
+      const agbBase64 = btoa(String.fromCharCode(...agbBytes));
+      attachments.push({ filename: "AGB-HFX-Honorarfuchs.pdf", content: agbBase64 });
+    }
+  } catch (agbErr) {
+    console.error("[stripe-webhook] Could not fetch AGB PDF:", agbErr);
+  }
+
+  const greeting = contract.vorname ? `${contract.vorname} ${contract.nachname || ""}`.trim() : contract.customer_name;
+  const html = `<!DOCTYPE html>
+<html lang="de"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f4f6fa;font-family:Verdana,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fa;padding:40px 0;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.1);max-width:600px;">
+      <tr><td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:36px 40px;text-align:center;">
+        <p style="color:#fff;font-size:24px;font-weight:700;margin:0;">🦊 HFX Honorarfuchs</p>
+        <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:6px 0 0;">✅ Ihr Vertrag ist jetzt aktiv</p>
+      </td></tr>
+      <tr><td style="padding:36px 40px 24px;">
+        <p style="color:#1a1a2e;font-size:16px;margin:0 0 12px;">Guten Tag ${greeting},</p>
+        <p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 12px;">
+          vielen Dank für Ihre Buchung! Ihre Zahlung war erfolgreich und Ihr Vertrag ist nun aktiv.<br>
+          Im Anhang finden Sie Ihre <strong>Vertragsbestätigung als PDF</strong> sowie die <strong>Allgemeinen Geschäftsbedingungen</strong>.
+        </p>
+      </td></tr>
+      <tr><td style="padding:0 40px 28px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+          <tr><td style="background:#0b367f;padding:12px 20px;">
+            <p style="color:#fff;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin:0;">📋 Ihre Buchungsübersicht</p>
+          </td></tr>
+          <tr><td style="padding:20px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              ${contract.hfx_customer_number ? `<tr><td style="padding:5px 0;font-size:13px;color:#6b7280;width:180px;">HFX-Kundennummer</td><td style="font-size:13px;color:#111827;font-family:monospace;font-weight:600;">${contract.hfx_customer_number}</td></tr>` : ""}
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Produkt</td><td style="font-size:13px;color:#111827;font-weight:600;">${contract.product_name}</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Monatspreis brutto</td><td style="font-size:13px;color:#0b367f;font-weight:700;">${grossFormatted} €</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Vertragsbeginn</td><td style="font-size:13px;color:#111827;">${startFormatted}</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Kündigung</td><td style="font-size:13px;color:#111827;">Unbefristet · 6 Monate Frist</td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:0 40px 32px;">
+        <p style="color:#374151;font-size:14px;line-height:1.7;margin:0;">
+          Bei Fragen stehen wir Ihnen gerne unter <a href="mailto:info@hfx-honorarfuchs.de" style="color:#0b367f;">info@hfx-honorarfuchs.de</a> zur Verfügung.<br><br>
+          Mit freundlichen Grüßen,<br><strong>Ihr HFX Honorarfuchs Team</strong>
+        </p>
+      </td></tr>
+      <tr><td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
+        <p style="color:#9ca3af;font-size:11px;margin:0;">HFX Honorarfuchs • Diese E-Mail wurde automatisch generiert.<br>© ${new Date().getFullYear()} HFX Honorarfuchs GmbH</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+  const emailRes = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${resendKey}`,
+    },
+    body: JSON.stringify({
+      from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+      reply_to: "info@hfx-honorarfuchs.de",
+      to: [contract.email],
+      subject: `✅ Vertragsbestätigung HFX${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}`,
+      html,
+      attachments: attachments.map(({ filename, content }) => ({
+        filename,
+        content,
+        type: "application/pdf",
+      })),
+    }),
+  });
+
+  if (!emailRes.ok) {
+    const errText = await emailRes.text();
+    throw new Error(`Resend error: ${errText}`);
+  }
 }
 
 
