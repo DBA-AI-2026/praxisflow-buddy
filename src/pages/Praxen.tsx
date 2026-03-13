@@ -23,7 +23,7 @@ import {
   Plus, Search, Download, MoreHorizontal, Pencil, Trash2, RefreshCw,
   Loader2, UserCheck, FileText, Eye, Building2, Mail, Phone, MapPin,
   Calendar, Euro, Package, GitMerge, CircleCheck, CircleOff, ArchiveX,
-  ShieldBan, FilePen, Upload, FileSignature, CheckCircle2, XCircle,
+  ShieldBan, FilePen, Upload, FileSignature, CheckCircle2, XCircle, Send,
 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -82,6 +82,7 @@ export default function Praxen() {
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [sendingCredentialsId, setSendingCredentialsId] = useState<string | null>(null);
   const [selectedPraxis, setSelectedPraxis] = useState<Praxis | null>(null);
   const [praxisContracts, setPraxisContracts] = useState<any[]>([]);
   const [loadingContracts, setLoadingContracts] = useState(false);
@@ -242,6 +243,31 @@ export default function Praxen() {
       toast.error("Fehler bei der Synchronisation");
     } finally {
       setSyncingId(null);
+    }
+  };
+
+  const sendCredentials = async (praxis: Praxis) => {
+    if (!praxis.email) {
+      toast.error("Für diesen Kunden ist keine E-Mail-Adresse hinterlegt.");
+      return;
+    }
+    setSendingCredentialsId(praxis.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("resend-lead-credentials", {
+        body: {
+          email: praxis.email,
+          vorname: "",
+          nachname: praxis.name,
+          hfxCustomerNumber: praxis.hfxNr || praxis.mpNr || "",
+        },
+      });
+      if (error) throw error;
+      if (data?.error) toast.error(data.error);
+      else toast.success(`Zugangsdaten wurden an ${praxis.email} gesendet.`);
+    } catch (err: any) {
+      toast.error(err.message || "Fehler beim Versenden der Zugangsdaten");
+    } finally {
+      setSendingCredentialsId(null);
     }
   };
 
@@ -508,6 +534,17 @@ export default function Praxen() {
                             Details anzeigen
                           </DropdownMenuItem>
                           <DropdownMenuItem
+                            onClick={() => sendCredentials(praxis)}
+                            disabled={sendingCredentialsId === praxis.id || !praxis.email}
+                          >
+                            {sendingCredentialsId === praxis.id ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Send className="h-4 w-4 mr-2" />
+                            )}
+                            Zugangsdaten senden
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={() => syncToSalesforce(praxis)}
                             disabled={syncingId === praxis.id || !sfConnection.isConnected}
                           >
@@ -541,13 +578,33 @@ export default function Praxen() {
       <Dialog open={!!selectedPraxis} onOpenChange={(open) => { if (!open) { setSelectedPraxis(null); setPraxisContracts([]); } }}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-primary" />
-              {selectedPraxis?.name}
-            </DialogTitle>
-            {selectedPraxis?.hfxNr && (
-              <p className="text-xs font-mono text-muted-foreground pt-1">{selectedPraxis.hfxNr}</p>
-            )}
+            <div className="flex items-start justify-between gap-3 pr-8">
+              <div>
+                <DialogTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  {selectedPraxis?.name}
+                </DialogTitle>
+                {selectedPraxis?.hfxNr && (
+                  <p className="text-xs font-mono text-muted-foreground pt-1">{selectedPraxis.hfxNr}</p>
+                )}
+              </div>
+              {selectedPraxis?.email && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0 mt-0.5"
+                  disabled={sendingCredentialsId === selectedPraxis.id}
+                  onClick={() => sendCredentials(selectedPraxis)}
+                >
+                  {sendingCredentialsId === selectedPraxis.id ? (
+                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-1.5" />
+                  )}
+                  Zugangsdaten senden
+                </Button>
+              )}
+            </div>
           </DialogHeader>
 
           {selectedPraxis && (
