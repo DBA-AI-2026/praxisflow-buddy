@@ -536,7 +536,7 @@ function VertraegeTab({ search }: { search: string }) {
               <TH>Zahlung</TH>
               <TH>Vertrieb</TH>
               <TH>Datum</TH>
-              <TH></TH>
+              <TH>{""}</TH>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
