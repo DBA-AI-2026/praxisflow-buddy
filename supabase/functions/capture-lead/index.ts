@@ -285,9 +285,10 @@ Deno.serve(async (req) => {
   try {
     const rawBody = await req.json();
     
-    // Log source for debugging
-    const source = origin ? `browser:${origin}` : "server-to-server";
-    console.log(`Lead request from: ${source}`);
+    // Detect whether this is a manual internal entry or a homepage submission
+    const leadSource: string = rawBody.source === "manual" ? "manual" : "homepage";
+    const sendConfirmationEmail: boolean = rawBody.send_confirmation_email !== false; // default true
+    console.log(`Lead request – source: ${leadSource}, sendEmail: ${sendConfirmationEmail}`);
     console.log(`Raw body received:`, JSON.stringify(rawBody));
 
     // Map CF7 field names to our internal format
@@ -322,8 +323,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate abrechnungszentrum values
-    const validAbrechnungszentren = ["nein", "CareCapital", "privadis", "anderes"];
+    // For homepage submissions, validate abrechnungszentrum strictly.
+    // Manual entries (internal) can use any of the extended list.
+    const validAbrechnungszentrenHomepage = ["nein", "CareCapital", "privadis", "anderes"];
+    const validAbrechnungszentrenManual = ["nein", "keins", "CareCapital", "privadis", "anderes", "ZAB", "PVS", "DZR", "ARZ", "Sonstiges"];
+    const validAbrechnungszentren = leadSource === "manual" ? validAbrechnungszentrenManual : validAbrechnungszentrenHomepage;
     if (!validAbrechnungszentren.includes(abrechnungszentrum)) {
       return new Response(
         JSON.stringify({ error: "Ungültiges Abrechnungszentrum" }),
@@ -331,8 +335,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // MP-Nummer validation: must be exactly 5 digits if provided
-    if (mp_nummer && !/^\d{5}$/.test(mp_nummer.trim())) {
+    // MP-Nummer validation: must be exactly 5 digits if provided (homepage only; manual entries allow free text)
+    if (leadSource === "homepage" && mp_nummer && !/^\d{5}$/.test(mp_nummer.trim())) {
       return new Response(
         JSON.stringify({ error: "MP-Nummer muss genau 5-stellig sein (nur Ziffern)" }),
         { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
