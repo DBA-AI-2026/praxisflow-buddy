@@ -677,15 +677,17 @@ function KundenTab({ search }: { search: string }) {
     return true;
   });
 
-  const filtered = rows.filter((r) => {
+  const filtered = rows.filter((c: any) => {
     if (!s) return true;
+    const praxisName = c.praxis || c.customer_name || "";
     return (
-      r.name?.toLowerCase().includes(s) ||
-      r.hfxNr?.toLowerCase().includes(s) ||
-      r.email?.toLowerCase().includes(s) ||
-      r.plz?.includes(s) ||
-      r.ort?.toLowerCase().includes(s) ||
-      r.produkt?.toLowerCase().includes(s)
+      praxisName.toLowerCase().includes(s) ||
+      c.hfx_customer_number?.toLowerCase().includes(s) ||
+      c.mp_nr?.toLowerCase().includes(s) ||
+      c.email?.toLowerCase().includes(s) ||
+      c.plz?.includes(s) ||
+      c.ort?.toLowerCase().includes(s) ||
+      c.product_name?.toLowerCase().includes(s)
     );
   });
 
@@ -699,41 +701,50 @@ function KundenTab({ search }: { search: string }) {
           <thead>
             <tr>
               <TH>HFX-Nr.</TH>
+              <TH>MP-Nr.</TH>
               <TH>Praxis</TH>
               <TH>E-Mail</TH>
               <TH>PLZ / Ort</TH>
               <TH>Produkt</TH>
               <TH right>Qodia</TH>
-              <TH>Buchung</TH>
+              <TH>Seit</TH>
               <TH>{""}</TH>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={8} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              <tr><td colSpan={9} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : filtered.length === 0 ? (
               <EmptyState icon={Building2} title="Keine aktiven Kunden" sub="Aktivierte Verträge erscheinen hier automatisch" />
-            ) : filtered.map((r) => {
-              const qodia = !!(r.convertedLeadId ? qodiaMap[r.convertedLeadId] : qodiaMap[r.hfxNr]);
+            ) : (filtered as any[]).map((c) => {
+              const praxisLabel = c.praxis || c.customer_name || "–";
+              const arztLabel = [c.vorname, c.nachname].filter(Boolean).join(" ");
+              const qodia = !!(c.hfx_customer_number ? qodiaMap[c.hfx_customer_number] : false);
               return (
-                <tr key={r.id} className="hover:bg-muted/20 transition-colors group">
+                <tr key={c.id} className="hover:bg-muted/20 transition-colors group">
                   <td className="py-3 px-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
-                    {r.hfxNr || <span className="text-muted-foreground/40">—</span>}
+                    {c.hfx_customer_number || <span className="text-muted-foreground/40">—</span>}
                   </td>
-                  <td className="py-3 px-4 font-semibold text-foreground">{r.name}</td>
+                  <td className="py-3 px-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
+                    {c.mp_nr || <span className="text-muted-foreground/40">—</span>}
+                  </td>
+                  <td className="py-3 px-4">
+                    <p className="font-semibold text-foreground leading-tight">{praxisLabel}</p>
+                    {arztLabel && <p className="text-xs text-muted-foreground mt-0.5">{arztLabel}</p>}
+                  </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground">
                     <div className="flex items-center gap-2">
-                      <span>{r.email || "–"}</span>
-                      {r.email && (
+                      <span>{c.email || "–"}</span>
+                      {c.email && c.hfx_customer_number && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button
-                                onClick={() => sendCredentials(r.email, r.name, r.hfxNr, r.id)}
-                                disabled={sendingId === r.id}
+                                onClick={() => sendCredentials(c.email, c.customer_name, c.hfx_customer_number, c.id)}
+                                disabled={sendingId === c.id}
                                 className="opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-primary/70"
                               >
-                                {sendingId === r.id
+                                {sendingId === c.id
                                   ? <Loader2 className="h-3 w-3 animate-spin" />
                                   : <Send className="h-3 w-3" />}
                               </button>
@@ -745,22 +756,22 @@ function KundenTab({ search }: { search: string }) {
                     </div>
                   </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
-                    {r.plz}{r.ort ? ` ${r.ort}` : ""}
+                    {c.plz}{c.ort ? ` ${c.ort}` : ""}
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground">{r.produkt || "–"}</td>
+                  <td className="py-3 px-4 text-xs text-muted-foreground">{c.product_name || "–"}</td>
                   <td className="py-3 px-4 text-right"><QodiaIcon synced={qodia} /></td>
                   <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
-                    {r.buchungsDatum ? format(new Date(r.buchungsDatum), "dd.MM.yy", { locale: de }) : "–"}
+                    {c.start_date ? format(new Date(c.start_date), "dd.MM.yy", { locale: de }) : "–"}
                   </td>
                   <td className="py-3 px-4">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <a href="/praxen" className="text-primary hover:text-primary/70 transition-colors">
+                          <a href="/vertrieb/vertraege" className="text-primary hover:text-primary/70 transition-colors">
                             <ArrowRight className="h-3.5 w-3.5" />
                           </a>
                         </TooltipTrigger>
-                        <TooltipContent>In Kundenübersicht öffnen</TooltipContent>
+                        <TooltipContent>Vertrag öffnen</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </td>
