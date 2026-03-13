@@ -42,6 +42,7 @@ import {
   UserPlus,
   FilePlus,
   Play,
+  Mail,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -90,6 +91,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
   const [syncingQodia, setSyncingQodia] = useState(false);
   const [sendingConfirmEmail, setSendingConfirmEmail] = useState(false);
   const [sendingCredentials, setSendingCredentials] = useState(false);
+  const [sendingBuchungsmail, setSendingBuchungsmail] = useState(false);
 
   const form = useForm<EditValues>({
     resolver: zodResolver(editSchema),
@@ -216,6 +218,54 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
       toast({ title: "Fehler", description: err.message || "Versand fehlgeschlagen", variant: "destructive" });
     } finally {
       setSendingCredentials(false);
+    }
+  };
+
+  const sendBuchungsmail = async () => {
+    setSendingBuchungsmail(true);
+    try {
+      // Find the contract with status 'eingegangen' linked to this lead's email or hfx_customer_number
+      const { data: contracts, error: contractError } = await supabase
+        .from("contracts")
+        .select("id, product_name, email, hfx_customer_number, confirmation_email_sent_at")
+        .eq("status", "eingegangen")
+        .or(`email.eq.${lead.email},hfx_customer_number.eq.${lead.hfx_customer_number}`)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (contractError) throw contractError;
+
+      if (!contracts || contracts.length === 0) {
+        toast({
+          title: "Kein Vertrag gefunden",
+          description: "Es wurde kein Vertrag mit Status 'Eingegangen' für diesen Interessenten gefunden. Bitte zuerst einen Vertrag anlegen.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const contract = contracts[0];
+
+      const { data, error } = await supabase.functions.invoke("send-contract-confirmation", {
+        body: { contract_id: contract.id },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Buchungsmail versendet",
+        description: `Die Buchungs-E-Mail wurde erfolgreich an ${contract.email} gesendet.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["contracts"] });
+    } catch (err: any) {
+      toast({
+        title: "Fehler beim E-Mail-Versand",
+        description: err.message || "E-Mail konnte nicht gesendet werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingBuchungsmail(false);
     }
   };
 
@@ -518,6 +568,15 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
 
             {/* Aktionen */}
             <div className="space-y-2">
+              <Button
+                className="w-full justify-start gap-2"
+                disabled={sendingBuchungsmail}
+                onClick={sendBuchungsmail}
+              >
+                {sendingBuchungsmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                Buchungsmail senden
+              </Button>
+
               <Button
                 variant="outline"
                 className="w-full justify-start gap-2"
