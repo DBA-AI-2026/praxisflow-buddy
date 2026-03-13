@@ -315,6 +315,7 @@ export default function Vertraege() {
   // Also store lead_id for back-linking
   const [fromLeadId, setFromLeadId] = useState<string | null>(null);
   const [sendingBuchungsmail, setSendingBuchungsmail] = useState<string | null>(null);
+  const [autoOpenContractId, setAutoOpenContractId] = useState<string | null>(null);
 
   // ── Read URL params on mount: auto-open dialog with lead prefill ──────────
   useEffect(() => {
@@ -347,26 +348,11 @@ export default function Vertraege() {
         setDialogOpen(true);
       })();
     } else if (contractId) {
-      // Will be handled when contracts are loaded (see contracts query onSuccess / existing openEdit logic)
-      // We store the contractId so we can open it once the list is loaded
+      // Will be handled when contracts are loaded — store for deferred open
       setAutoOpenContractId(contractId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
-
-  const [autoOpenContractId, setAutoOpenContractId] = useState<string | null>(null);
-
-  // Open contract edit dialog once contracts are loaded and autoOpenContractId is set
-  useEffect(() => {
-    if (autoOpenContractId && contracts.length > 0) {
-      const c = contracts.find((x: any) => x.id === autoOpenContractId);
-      if (c) {
-        openEdit(c);
-        setAutoOpenContractId(null);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoOpenContractId, contracts]);
 
   const { data: contracts = [], isLoading } = useQuery({
     queryKey: ["contracts"],
