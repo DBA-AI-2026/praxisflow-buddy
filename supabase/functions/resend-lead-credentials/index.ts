@@ -140,11 +140,13 @@ Deno.serve(async (req) => {
       console.log(`New auth user created for manually captured lead: ${newAuthUser.user.id}`);
     }
 
-    // Clear the stored plaintext password from the leads table (security hygiene)
-    await supabaseAdmin
-      .from("leads")
-      .update({ generated_password: null })
-      .eq("id", leadId);
+    // Clear the stored plaintext password from the leads table (security hygiene) — only for lead-based requests
+    if (leadId) {
+      await supabaseAdmin
+        .from("leads")
+        .update({ generated_password: null })
+        .eq("id", leadId);
+    }
 
     const resend = new Resend(Deno.env.get("RESEND_API_KEY")!);
 
