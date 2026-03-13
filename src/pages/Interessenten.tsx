@@ -444,7 +444,7 @@ export default function Interessenten() {
                         })()}
                       </TableCell>
                       {canAssign && (
-                        <TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <Select
                             value={lead.assigned_to || "none"}
                             onValueChange={(val) =>
