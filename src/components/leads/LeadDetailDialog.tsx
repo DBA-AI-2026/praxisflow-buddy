@@ -569,6 +569,15 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
             {/* Aktionen */}
             <div className="space-y-2">
               <Button
+                className="w-full justify-start gap-2"
+                disabled={sendingBuchungsmail}
+                onClick={sendBuchungsmail}
+              >
+                {sendingBuchungsmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                Buchungsmail senden
+              </Button>
+
+              <Button
                 variant="outline"
                 className="w-full justify-start gap-2"
                 disabled={resending}
