@@ -504,6 +504,22 @@ export default function Interessenten() {
                           <Button variant="ghost" size="icon" onClick={() => setSelectedLead(lead)}>
                             <Eye className="h-4 w-4" />
                           </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  disabled={resending}
+                                  onClick={() => resendCredentials(lead.id)}
+                                >
+                                  <Send className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Zugangsdaten senden</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                           {lead.status !== "kunde" && lead.status !== "abgelehnt" && (
                             <>
                               <TooltipProvider>
