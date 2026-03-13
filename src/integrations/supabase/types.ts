@@ -831,6 +831,7 @@ export type Database = {
           registration_attempts: number
           salesforce_id: string | null
           salesforce_synced: boolean
+          source: string
           status: string
           updated_at: string
           vorname: string
@@ -857,6 +858,7 @@ export type Database = {
           registration_attempts?: number
           salesforce_id?: string | null
           salesforce_synced?: boolean
+          source?: string
           status?: string
           updated_at?: string
           vorname: string
@@ -883,6 +885,7 @@ export type Database = {
           registration_attempts?: number
           salesforce_id?: string | null
           salesforce_synced?: boolean
+          source?: string
           status?: string
           updated_at?: string
           vorname?: string
