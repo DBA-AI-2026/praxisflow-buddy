@@ -440,7 +440,31 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
 function VertraegeTab({ search, highlightId, missingEmailCount }: { search: string; highlightId?: string; missingEmailCount: number }) {
   const [statusFilter, setStatusFilter] = useState<string>("alle");
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
+  const [sendingBuchungsmail, setSendingBuchungsmail] = useState<string | null>(null);
+
+  const sendBuchungsmail = async (contract: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!contract.email) {
+      toast.error("Keine E-Mail-Adresse hinterlegt – Buchungsmail kann nicht gesendet werden.");
+      return;
+    }
+    setSendingBuchungsmail(contract.id);
+    try {
+      const { error } = await supabase.functions.invoke("send-contract-confirmation", {
+        body: { contract_id: contract.id },
+      });
+      if (error) throw error;
+      toast.success(`Buchungsmail an ${contract.email} gesendet`);
+      queryClient.invalidateQueries({ queryKey: ["journey-contracts-pending"] });
+      queryClient.invalidateQueries({ queryKey: ["journey-counts"] });
+    } catch (err: any) {
+      toast.error(err.message || "Fehler beim Senden der Buchungsmail");
+    } finally {
+      setSendingBuchungsmail(null);
+    }
+  };
 
   useEffect(() => {
     if (highlightId && highlightRef.current) {
