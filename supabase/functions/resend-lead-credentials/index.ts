@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
     // Generate a fresh password on-demand — never read from DB
     const newPassword = generatePassword(12);
 
-    // Find the Supabase Auth user by email and update their password
+    // Find the Supabase Auth user by email
     const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
     if (listError) {
       console.error("Error listing users:", listError);
@@ -105,6 +105,22 @@ Deno.serve(async (req) => {
         console.error("Error updating password:", updateError);
         return new Response(JSON.stringify({ error: "Fehler beim Zurücksetzen des Passworts." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+      console.log(`Password updated for existing auth user: ${authUser.id}`);
+    } else {
+      // No auth user exists yet (manually captured lead) — create one now
+      const { data: newAuthUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: lead.email,
+        password: newPassword,
+        email_confirm: true,
+        user_metadata: {
+          full_name: `${lead.vorname} ${lead.nachname}`,
+        },
+      });
+      if (createError) {
+        console.error("Error creating auth user:", createError);
+        return new Response(JSON.stringify({ error: "Fehler beim Anlegen des Benutzerkontos." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      console.log(`New auth user created for manually captured lead: ${newAuthUser.user.id}`);
     }
 
     // Clear the stored plaintext password from the leads table (security hygiene)
