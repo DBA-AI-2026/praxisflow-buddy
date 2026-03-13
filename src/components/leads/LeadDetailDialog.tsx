@@ -203,6 +203,22 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
     }
   };
 
+  const sendCredentialsSync = async () => {
+    setSendingCredentials(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("resend-lead-credentials", {
+        body: { leadId: lead.id },
+      });
+      if (error) throw error;
+      toast({ title: "Zugangsdaten versendet", description: data?.message });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    } catch (err: any) {
+      toast({ title: "Fehler", description: err.message || "Versand fehlgeschlagen", variant: "destructive" });
+    } finally {
+      setSendingCredentials(false);
+    }
+  };
+
   const sc = statusConfig[lead.status] || statusConfig.neu;
   const sourceLabel = lead.source === "manual" ? "Manuell erfasst" : "Homepage";
   const sourceIcon = lead.source === "manual"
@@ -219,6 +235,8 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
   const syncItems: Array<{
     key: string;
     label: string;
+    value?: boolean | null;
+    timestamp?: string | null;
     onTrigger?: () => void;
     triggering?: boolean;
     triggerLabel?: string;
@@ -226,13 +244,24 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
     {
       key: "confirmation_email_sent",
       label: "Bestätigungs-E-Mail",
+      value: lead.confirmation_email_sent,
       onTrigger: sendConfirmationEmail,
       triggering: sendingConfirmEmail,
       triggerLabel: "E-Mail senden",
     },
     {
+      key: "credentials_sent_at",
+      label: "Zugangsdaten versendet",
+      value: !!lead.credentials_sent_at,
+      timestamp: lead.credentials_sent_at,
+      onTrigger: sendCredentialsSync,
+      triggering: sendingCredentials,
+      triggerLabel: "Zugangsdaten senden",
+    },
+    {
       key: "qodia_synced",
       label: "Qodia",
+      value: lead.qodia_synced,
       onTrigger: !lead.qodia_synced ? syncToQodia : undefined,
       triggering: syncingQodia,
       triggerLabel: "Registrieren",
@@ -240,10 +269,12 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
     {
       key: "salesforce_synced",
       label: "Salesforce",
+      value: lead.salesforce_synced,
     },
     {
       key: "honorarplus_synced",
       label: "HonorarPlus",
+      value: lead.honorarplus_synced,
     },
   ];
 
