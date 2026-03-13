@@ -1415,7 +1415,8 @@ export default function EmailPreview() {
                       <p className="text-xs text-muted-foreground mt-1 font-mono truncate">Betreff: {tpl.subject}</p>
                     </div>
 
-                    {/* E-Mail row */}
+                    {/* E-Mail row — only for email-type templates */}
+                    {tpl.type === "email" && (
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
@@ -1451,6 +1452,7 @@ export default function EmailPreview() {
                         </>
                       )}
                     </div>
+                    )}
 
                     {/* PDF row – invoice (editable HTML) */}
                     {tpl.id === "invoice" && (
