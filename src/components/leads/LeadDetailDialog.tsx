@@ -491,7 +491,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
               {!lead.qodia_synced && (
                 <Button
                   variant="outline"
-                  className="w-full justify-start gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
+                  className="w-full justify-start gap-2 border-border text-muted-foreground hover:bg-muted"
                   disabled={syncingQodia}
                   onClick={syncToQodia}
                 >
