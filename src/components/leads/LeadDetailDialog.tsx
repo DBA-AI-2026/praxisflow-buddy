@@ -91,6 +91,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
   const [syncingQodia, setSyncingQodia] = useState(false);
   const [sendingConfirmEmail, setSendingConfirmEmail] = useState(false);
   const [sendingCredentials, setSendingCredentials] = useState(false);
+  const [sendingBuchungsmail, setSendingBuchungsmail] = useState(false);
 
   const form = useForm<EditValues>({
     resolver: zodResolver(editSchema),
