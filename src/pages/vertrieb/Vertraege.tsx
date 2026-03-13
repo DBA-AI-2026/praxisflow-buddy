@@ -1198,10 +1198,7 @@ export default function Vertraege() {
 
   const handlePreviewPdf = async (contractData: Record<string, any>) => {
     try {
-      let sigData = contractData.signature_data;
-      if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
-        sigData = signaturePadRef.current.toDataURL();
-      }
+      const sigData = contractData.signature_data;
       // Build product price details from selected products
       const now = new Date();
       const selectedNames = contractData.modules?.length ? contractData.modules : (contractData.selected_products || []);
