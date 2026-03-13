@@ -2612,7 +2612,7 @@ export default function Vertraege() {
                     <span tabIndex={0} className="flex-1 sm:flex-none">
                       <Button type="submit" size="sm" disabled={upsertMutation.isPending || !isFormComplete} className="w-full">
                         {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-                        {editId ? "Speichern" : "Vertrag zeichnen"}
+                        {editId ? "Speichern" : "Digitaler Vertragsabschluss"}
                       </Button>
                     </span>
                   </TooltipTrigger>
