@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Building2, FlaskConical, TrendingUp, FileText,
   ArrowRight, Clock, Users,
@@ -153,6 +153,7 @@ export default function Dashboard() {
   const { profile } = useAuth();
   const { role, isAdmin, isVertragsabteilung } = useUserRole();
   const { previewRole, isPreviewActive, setPreviewRole } = useRolePreview();
+  const navigate = useNavigate();
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
 
@@ -444,7 +445,11 @@ export default function Dashboard() {
             {recentLeads.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">Noch keine Interessenten vorhanden.</p>
             ) : recentLeads.map((l) => (
-              <div key={l.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+              <button
+                key={l.id}
+                onClick={() => navigate(`/praxen-journey?tab=interessenten&id=${l.id}`)}
+                className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left group"
+              >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-foreground text-sm truncate">{l.praxis_name}</span>
@@ -452,7 +457,7 @@ export default function Dashboard() {
                       {l.status}
                     </span>
                     {l.qodia_synced ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                      <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
                     ) : (
                       <XCircle className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />
                     )}
@@ -461,11 +466,14 @@ export default function Dashboard() {
                     {l.vorname} {l.nachname} · {l.abrechnungszentrum}
                   </p>
                 </div>
-                <div className="text-right text-xs text-muted-foreground ml-2 shrink-0 flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {format(new Date(l.created_at), "dd.MM.yy")}
+                <div className="text-right text-xs text-muted-foreground ml-2 shrink-0 flex items-center gap-2">
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {format(new Date(l.created_at), "dd.MM.yy")}
+                  </span>
+                  <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -485,7 +493,11 @@ export default function Dashboard() {
             {recentContracts.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">Noch keine Verträge vorhanden.</p>
             ) : recentContracts.map((c) => (
-              <div key={c.id} className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+              <button
+                key={c.id}
+                onClick={() => navigate(`/praxen-journey?tab=vertraege&id=${c.id}`)}
+                className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left group"
+              >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-foreground text-sm truncate">{c.customer_name}</span>
@@ -493,20 +505,25 @@ export default function Dashboard() {
                       {c.status}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{c.product_name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {c.product_name}{c.hfx_customer_number ? ` · ${c.hfx_customer_number}` : ""}
+                  </p>
                 </div>
-                <div className="text-right text-xs text-muted-foreground ml-2 shrink-0">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {format(new Date(c.created_at), "dd.MM.yy")}
-                  </div>
-                  {c.monthly_price > 0 && (
-                    <div className="font-medium text-foreground mt-0.5">
-                      {c.monthly_price.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}/Mo.
+                <div className="text-right text-xs text-muted-foreground ml-2 shrink-0 flex items-center gap-2">
+                  <div>
+                    <div className="flex items-center gap-1 justify-end">
+                      <Clock className="h-3 w-3" />
+                      {format(new Date(c.created_at), "dd.MM.yy")}
                     </div>
-                  )}
+                    {c.monthly_price > 0 && (
+                      <div className="font-medium text-foreground mt-0.5">
+                        {c.monthly_price.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}/Mo.
+                      </div>
+                    )}
+                  </div>
+                  <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>

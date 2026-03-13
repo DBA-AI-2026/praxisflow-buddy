@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useUserRole } from "@/hooks/useUserRole";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
@@ -109,11 +109,12 @@ const CLOSED_LEAD_STATUSES = ["kein_abschluss", "abgelehnt"];
 type LeadSourceFilter = "alle" | "homepage" | "manuell";
 type LeadStatusFilter = "aktiv" | "kein_abschluss" | "abgelehnt" | "alle";
 
-function InteressentenTab({ search }: { search: string }) {
+function InteressentenTab({ search, highlightId }: { search: string; highlightId?: string }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAdmin, isSalesLead, isRegionalLead } = useUserRole();
   const canAssign = isAdmin || isSalesLead || isRegionalLead;
+  const highlightRef = useRef<HTMLTableRowElement | null>(null);
 
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("alle");
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("aktiv");
@@ -121,6 +122,12 @@ function InteressentenTab({ search }: { search: string }) {
   const [uploadLead, setUploadLead] = useState<any>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (highlightId && highlightRef.current) {
+      setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+    }
+  }, [highlightId]);
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["journey-leads"],
@@ -328,7 +335,11 @@ function InteressentenTab({ search }: { search: string }) {
               const nextStep = getNextStepAction(lead);
               const isClosed = CLOSED_LEAD_STATUSES.includes(lead.status);
               return (
-                <tr key={lead.id} className="hover:bg-muted/20 transition-colors group">
+                <tr
+                  key={lead.id}
+                  ref={highlightId === lead.id ? highlightRef : null}
+                  className={`hover:bg-muted/20 transition-colors group ${highlightId === lead.id ? "bg-primary/5 ring-1 ring-primary/30" : ""}`}
+                >
                   <td className="py-3 px-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
                     {lead.hfx_customer_number || <span className="text-muted-foreground/40">—</span>}
                   </td>
@@ -430,10 +441,15 @@ function InteressentenTab({ search }: { search: string }) {
 
 // ─── Tab: Verträge (ausstehend) ───────────────────────────────────────────────
 
-function VertraegeTab({ search }: { search: string }) {
+function VertraegeTab({ search, highlightId }: { search: string; highlightId?: string }) {
   const [statusFilter, setStatusFilter] = useState<string>("alle");
+  const highlightRef = useRef<HTMLTableRowElement | null>(null);
 
-  const { data: contracts = [], isLoading } = useQuery({
+  useEffect(() => {
+    if (highlightId && highlightRef.current) {
+      setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+    }
+  }, [highlightId]);
     queryKey: ["journey-contracts-pending"],
     queryFn: async () => {
       const { data } = await supabase
@@ -617,7 +633,13 @@ function VertraegeTab({ search }: { search: string }) {
 
 // ─── Tab: Kunden ──────────────────────────────────────────────────────────────
 
-function KundenTab({ search }: { search: string }) {
+function KundenTab({ search, highlightId }: { search: string; highlightId?: string }) {
+  const highlightRef = useRef<HTMLTableRowElement | null>(null);
+  useEffect(() => {
+    if (highlightId && highlightRef.current) {
+      setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+    }
+  }, [highlightId]);
   const [sendingId, setSendingId] = useState<string | null>(null);
 
   // Primary source: active contracts (single source of truth for customers)
@@ -722,7 +744,11 @@ function KundenTab({ search }: { search: string }) {
               const arztLabel = [c.vorname, c.nachname].filter(Boolean).join(" ");
               const qodia = !!(c.hfx_customer_number ? qodiaMap[c.hfx_customer_number] : false);
               return (
-                <tr key={c.id} className="hover:bg-muted/20 transition-colors group">
+                <tr
+                  key={c.id}
+                  ref={highlightId === c.id ? highlightRef : null}
+                  className={`hover:bg-muted/20 transition-colors group ${highlightId === c.id ? "bg-primary/5 ring-1 ring-primary/30" : ""}`}
+                >
                   <td className="py-3 px-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
                     {c.hfx_customer_number || <span className="text-muted-foreground/40">—</span>}
                   </td>
@@ -833,8 +859,13 @@ function JourneySteps({ activeTab, onSelect }: { activeTab: string; onSelect: (t
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function PraxenJourney() {
+  const [searchParams] = useSearchParams();
+  const urlTab = searchParams.get("tab");
+  const urlId = searchParams.get("id") ?? undefined;
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"leads" | "vertraege" | "kunden">("leads");
+  const [tab, setTab] = useState<"leads" | "vertraege" | "kunden">(
+    urlTab === "vertraege" ? "vertraege" : urlTab === "kunden" ? "kunden" : "leads"
+  );
 
   const { data: counts = { leads: 0, contracts: 0, kunden: 0 } } = useQuery({
     queryKey: ["journey-counts"],
