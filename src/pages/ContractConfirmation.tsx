@@ -39,8 +39,8 @@ export default function ContractConfirmation() {
               </div>
               <div className="p-5 text-sm space-y-2 text-muted-foreground">
                 <p>✅ Ihr Vertrag ist jetzt aktiv.</p>
-                <p>📧 Eine Buchungsbestätigung erhalten Sie in Kürze per E-Mail.</p>
-                <p>👤 Ihr zuständiger Außendienstmitarbeiter meldet sich zeitnah bei Ihnen.</p>
+                <p>📧 Eine Vertragsbestätigung mit Ihren Unterlagen wird Ihnen in Kürze per E-Mail zugeschickt.</p>
+                <p>📄 Die E-Mail enthält Ihre Vertragszusammenfassung sowie die AGB als PDF-Anhang.</p>
               </div>
             </div>
           </div>

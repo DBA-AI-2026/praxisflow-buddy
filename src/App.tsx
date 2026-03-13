@@ -42,6 +42,7 @@ import PraxenJourney from "./pages/PraxenJourney";
 import DemoSuccess from "./pages/DemoSuccess";
 import ContractConfirmation from "./pages/ContractConfirmation";
 import MandateSuccess from "./pages/MandateSuccess";
+import Buchen from "./pages/Buchen";
 
 const queryClient = new QueryClient();
 
