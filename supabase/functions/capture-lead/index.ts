@@ -460,26 +460,32 @@ Deno.serve(async (req) => {
     if (sendConfirmationEmail) {
       try {
         const resendApiKey = Deno.env.get("RESEND_API_KEY");
-        if (resendApiKey) {
+        if (!resendApiKey) {
+          console.error("RESEND_API_KEY not configured – skipping confirmation email");
+        } else {
           const resend = new Resend(resendApiKey);
           const emailHtml = buildConfirmationEmailHtml({ praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht, hfx_customer_number: lead.hfx_customer_number, generated_password: generatedPassword });
 
-          await resend.emails.send({
+          console.log(`Attempting to send confirmation email to ${email} from noreply@hfx-honorarfuchs.de`);
+          const sendResult = await resend.emails.send({
             from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
             to: [email],
             subject: `Danke für Ihr Interesse am Honorarfuchs!`,
             html: emailHtml,
           });
 
-          await supabase
-            .from("leads")
-            .update({ confirmation_email_sent: true })
-            .eq("id", lead.id);
-
-          console.log(`Confirmation email sent to ${email}`);
+          if (sendResult.error) {
+            console.error(`Resend API error for ${email}:`, JSON.stringify(sendResult.error));
+          } else {
+            await supabase
+              .from("leads")
+              .update({ confirmation_email_sent: true })
+              .eq("id", lead.id);
+            console.log(`Confirmation email sent successfully to ${email}, Resend ID: ${sendResult.data?.id}`);
+          }
         }
-      } catch (emailErr) {
-        console.error("Error sending confirmation email:", emailErr);
+      } catch (emailErr: any) {
+        console.error(`Exception sending confirmation email to ${email}:`, emailErr?.message || emailErr);
       }
     } else {
       console.log(`Confirmation email skipped (send_confirmation_email=false) for ${email}`);
