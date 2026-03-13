@@ -1006,10 +1006,6 @@ export default function Vertraege() {
       if (empty) missing.push(requiredFieldLabels[f]);
     });
     if (form.selected_products.length === 0) missing.push("Produkte");
-    if (form.signature_mode === "digital") {
-      if (!form.signature_data && !(signaturePadRef.current && !signaturePadRef.current.isEmpty())) missing.push("Unterschrift Kunde");
-      if (!form.vertrieb_signature_data && !(vertriebSignaturePadRef.current && !vertriebSignaturePadRef.current.isEmpty())) missing.push("Unterschrift Vertrieb");
-    }
     return missing;
   };
 
