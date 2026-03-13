@@ -474,25 +474,32 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
             <div className="rounded-lg border border-border p-3">
               <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wide">Sync-Status</p>
               <div className="space-y-2">
-                {syncItems.map(({ key, label, onTrigger, triggering, triggerLabel }) => {
-                  const isSynced = !!(lead as any)[key];
+                {syncItems.map(({ key, label, value, timestamp, onTrigger, triggering, triggerLabel }) => {
+                  const isSynced = !!value;
                   return (
                     <div
                       key={key}
                       className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted/40 transition-colors"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         {isSynced
                           ? <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
                           : <XCircle className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                         }
-                        <span className={isSynced ? "text-foreground" : "text-muted-foreground"}>{label}</span>
+                        <div className="min-w-0">
+                          <span className={isSynced ? "text-foreground" : "text-muted-foreground"}>{label}</span>
+                          {isSynced && timestamp && (
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(timestamp), "dd.MM.yyyy HH:mm", { locale: de })}
+                            </p>
+                          )}
+                        </div>
                       </div>
                       {onTrigger && (
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-7 px-2 text-xs gap-1 text-primary hover:text-primary hover:bg-muted"
+                          className="h-7 px-2 text-xs gap-1 text-primary hover:text-primary hover:bg-muted shrink-0"
                           onClick={onTrigger}
                           disabled={triggering}
                         >
