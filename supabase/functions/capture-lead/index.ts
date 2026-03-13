@@ -475,6 +475,7 @@ Deno.serve(async (req) => {
         ort: ort?.trim().slice(0, 100) || null,
         generated_password: generatedPassword,
         assigned_to: assignedTo,
+        source: leadSource,
       })
       .select("id, hfx_customer_number")
       .single();
@@ -487,31 +488,35 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Lead created: ${lead.hfx_customer_number} for ${email}`);
+    console.log(`Lead created: ${lead.hfx_customer_number} for ${email} (source: ${leadSource})`);
 
-    // Send confirmation email via Resend
-    try {
-      const resendApiKey = Deno.env.get("RESEND_API_KEY");
-      if (resendApiKey) {
-        const resend = new Resend(resendApiKey);
-        const emailHtml = buildConfirmationEmailHtml({ praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht, hfx_customer_number: lead.hfx_customer_number, generated_password: generatedPassword });
+    // Send confirmation email via Resend (skipped if sendConfirmationEmail=false)
+    if (sendConfirmationEmail) {
+      try {
+        const resendApiKey = Deno.env.get("RESEND_API_KEY");
+        if (resendApiKey) {
+          const resend = new Resend(resendApiKey);
+          const emailHtml = buildConfirmationEmailHtml({ praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht, hfx_customer_number: lead.hfx_customer_number, generated_password: generatedPassword });
 
-        await resend.emails.send({
-          from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
-          to: [email],
-          subject: `Danke für Ihr Interesse am Honorarfuchs!`,
-          html: emailHtml,
-        });
+          await resend.emails.send({
+            from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+            to: [email],
+            subject: `Danke für Ihr Interesse am Honorarfuchs!`,
+            html: emailHtml,
+          });
 
-        await supabase
-          .from("leads")
-          .update({ confirmation_email_sent: true })
-          .eq("id", lead.id);
+          await supabase
+            .from("leads")
+            .update({ confirmation_email_sent: true })
+            .eq("id", lead.id);
 
-        console.log(`Confirmation email sent to ${email}`);
+          console.log(`Confirmation email sent to ${email}`);
+        }
+      } catch (emailErr) {
+        console.error("Error sending confirmation email:", emailErr);
       }
-    } catch (emailErr) {
-      console.error("Error sending confirmation email:", emailErr);
+    } else {
+      console.log(`Confirmation email skipped (send_confirmation_email=false) for ${email}`);
     }
 
     // Notify assigned AD (Außendienst / Gebietsleiter) about the new lead
