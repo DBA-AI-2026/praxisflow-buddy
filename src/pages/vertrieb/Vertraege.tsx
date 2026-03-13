@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Mail } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,7 +64,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import SignaturePad from "signature_pad";
+
 
 // Searchable combobox for sales partner selection
 function SalesPartnerCombobox({
@@ -312,101 +312,8 @@ export default function Vertraege() {
     }
   };
   const location = useLocation();
-  const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
-  const signaturePadRef = useRef<SignaturePad | null>(null);
-  const vertriebSignatureCanvasRef = useRef<HTMLCanvasElement>(null);
-  const vertriebSignaturePadRef = useRef<SignaturePad | null>(null);
-
-  // Initialize signature pads when dialog opens
-  useEffect(() => {
-    if (!dialogOpen) {
-      signaturePadRef.current = null;
-      vertriebSignaturePadRef.current = null;
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      // Customer signature pad
-      const canvas = signatureCanvasRef.current;
-      if (canvas) {
-        const rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
-        signaturePadRef.current = new SignaturePad(canvas, {
-          backgroundColor: "rgb(255, 255, 255)",
-          penColor: "rgb(0, 0, 0)",
-        });
-        if (form.signature_data) {
-          signaturePadRef.current.fromDataURL(form.signature_data, {
-            width: rect.width,
-            height: rect.height,
-          });
-        }
-      }
-
-      // Vertrieb signature pad
-      const vCanvas = vertriebSignatureCanvasRef.current;
-      if (vCanvas) {
-        const vRect = vCanvas.getBoundingClientRect();
-        vCanvas.width = vRect.width;
-        vCanvas.height = vRect.height;
-        vertriebSignaturePadRef.current = new SignaturePad(vCanvas, {
-          backgroundColor: "rgb(255, 255, 255)",
-          penColor: "rgb(0, 0, 0)",
-        });
-        if (form.vertrieb_signature_data) {
-          vertriebSignaturePadRef.current.fromDataURL(form.vertrieb_signature_data, {
-            width: vRect.width,
-            height: vRect.height,
-          });
-        }
-      }
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [dialogOpen, form.signature_data, form.vertrieb_signature_data]);
-
   // Also store lead_id for back-linking
   const [fromLeadId, setFromLeadId] = useState<string | null>(null);
-
-  // Auto-open form when navigating from lead conversion
-  // Wait for user to be loaded to avoid RLS failures (created_by = null)
-  useEffect(() => {
-    const state = location.state as { fromLead?: Record<string, string> } | null;
-    if (state?.fromLead && user?.id) {
-      const lead = state.fromLead;
-      setLeadHfxNumber(lead.hfx_customer_number || null);
-      setFromLeadId(lead.lead_id || null);
-      setForm({
-        ...emptyForm,
-        praxis: lead.praxis || "",
-        vorname: lead.vorname || "",
-        nachname: lead.nachname || "",
-        email: lead.email || "",
-        plz: lead.plz || "",
-        ort: lead.ort || "",
-        adresse: lead.adresse || "",
-        telefon: lead.telefon || "",
-        mp_nr: lead.mp_nr || "",
-        notes: lead.nachricht || "",
-        customer_name: `${lead.vorname || ""} ${lead.nachname || ""}`.trim() || lead.praxis || "",
-        sales_partner_name: profile?.full_name || "",
-        status: "entwurf",
-      });
-      setDialogOpen(true);
-      window.history.replaceState({}, document.title);
-    }
-  }, [location.state, user?.id, profile?.full_name]);
-
-  const clearSignature = useCallback(() => {
-    signaturePadRef.current?.clear();
-    set("signature_data", "");
-  }, []);
-
-  const clearVertriebSignature = useCallback(() => {
-    vertriebSignaturePadRef.current?.clear();
-    set("vertrieb_signature_data", "");
-  }, []);
 
   const { data: contracts = [], isLoading } = useQuery({
     queryKey: ["contracts"],
@@ -524,15 +431,8 @@ export default function Vertraege() {
         documentName = file.name;
       }
 
-      // Get signature data from pads
-      let sigData = data.signature_data;
-      if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
-        sigData = signaturePadRef.current.toDataURL();
-      }
-      let vertriebSigData = data.vertrieb_signature_data;
-      if (vertriebSignaturePadRef.current && !vertriebSignaturePadRef.current.isEmpty()) {
-        vertriebSigData = vertriebSignaturePadRef.current.toDataURL();
-      }
+      const sigData = data.signature_data || null;
+      const vertriebSigData = data.vertrieb_signature_data || null;
 
       const record = {
         customer_name: `${data.vorname} ${data.nachname}`.trim() || data.praxis || "Entwurf",
@@ -704,13 +604,7 @@ export default function Vertraege() {
             const templateRes = await fetch("/templates/vertrag-honorarfuchs.pdf");
             const templateBytes = await templateRes.arrayBuffer();
             let sigData = form.signature_data;
-            if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
-              sigData = signaturePadRef.current.toDataURL();
-            }
-            let vertriebSigData = form.vertrieb_signature_data;
-            if (vertriebSignaturePadRef.current && !vertriebSignaturePadRef.current.isEmpty()) {
-              vertriebSigData = vertriebSignaturePadRef.current.toDataURL();
-            }
+            const vertriebSigData = form.vertrieb_signature_data;
             const pdfBytes = await fillContractTemplate(templateBytes, {
               mp_nr: form.mp_nr, praxis: form.praxis, fachrichtung: form.fachrichtung,
               rechtsform: form.rechtsform, vorname: form.vorname, nachname: form.nachname,
@@ -1112,10 +1006,6 @@ export default function Vertraege() {
       if (empty) missing.push(requiredFieldLabels[f]);
     });
     if (form.selected_products.length === 0) missing.push("Produkte");
-    if (form.signature_mode === "digital") {
-      if (!form.signature_data && !(signaturePadRef.current && !signaturePadRef.current.isEmpty())) missing.push("Unterschrift Kunde");
-      if (!form.vertrieb_signature_data && !(vertriebSignaturePadRef.current && !vertriebSignaturePadRef.current.isEmpty())) missing.push("Unterschrift Vertrieb");
-    }
     return missing;
   };
 
@@ -1308,10 +1198,7 @@ export default function Vertraege() {
 
   const handlePreviewPdf = async (contractData: Record<string, any>) => {
     try {
-      let sigData = contractData.signature_data;
-      if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
-        sigData = signaturePadRef.current.toDataURL();
-      }
+      const sigData = contractData.signature_data;
       // Build product price details from selected products
       const now = new Date();
       const selectedNames = contractData.modules?.length ? contractData.modules : (contractData.selected_products || []);
@@ -1360,15 +1247,6 @@ export default function Vertraege() {
 
   const handleTemplatePdf = async (contractData: Record<string, any>) => {
     try {
-      // Capture signatures from pads if available
-      let sigData = contractData.signature_data;
-      if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
-        sigData = signaturePadRef.current.toDataURL();
-      }
-      let vertriebSigData = contractData.vertrieb_signature_data;
-      if (vertriebSignaturePadRef.current && !vertriebSignaturePadRef.current.isEmpty()) {
-        vertriebSigData = vertriebSignaturePadRef.current.toDataURL();
-      }
       // Load the template PDF
       const templateRes = await fetch("/templates/vertrag-honorarfuchs.pdf");
       const templateBytes = await templateRes.arrayBuffer();
@@ -1402,8 +1280,8 @@ export default function Vertraege() {
         modules: contractData.modules?.length ? contractData.modules : contractData.selected_products,
         duration_months: contractData.duration_months,
         notes: contractData.notes,
-        signature_data: sigData,
-        vertrieb_signature_data: vertriebSigData,
+        signature_data: contractData.signature_data || null,
+        vertrieb_signature_data: contractData.vertrieb_signature_data || null,
         praxissystem: contractData.praxissystem,
         stundenaufwand_pro_woche: contractData.stundenaufwand_pro_woche,
         selected_addon_modules: contractData.selected_addon_modules || contractData.selected_modules || [],
@@ -2684,88 +2562,15 @@ export default function Vertraege() {
 
 
 
-            {/* Unterschriften */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Unterschriften</h4>
-
-              {/* Unterschrift-Modus Toggle */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => set("signature_mode", "digital")}
-                  className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-colors ${form.signature_mode === "digital" ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:border-muted-foreground/50"}`}
-                >
-                  ✍️ Digital unterschreiben
-                </button>
-                <button
-                  type="button"
-                  onClick={() => set("signature_mode", "papier")}
-                  className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-colors ${form.signature_mode === "papier" ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:border-muted-foreground/50"}`}
-                >
-                  📄 Papier / Manuell
-                </button>
+            {/* Digitaler Vertragsabschluss Hinweis */}
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-2">
+              <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+                <CheckCircle className="h-4 w-4" />
+                Digitaler Vertragsabschluss
               </div>
-              
-              {/* Ort & Datum (auto-filled from Vertragsparteien) */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Ort</Label>
-                  <Input value={form.ort} disabled className="bg-muted" />
-                </div>
-                <div>
-                  <Label>Datum</Label>
-                  <Input value={new Date().toLocaleDateString("de-DE")} disabled className="bg-muted" />
-                </div>
-              </div>
-
-              <Separator />
-
-              {form.signature_mode === "digital" ? (
-                <>
-                  {/* Kundenunterschrift */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Unterschrift Kunde</Label>
-                    <div className="border rounded-lg p-2 bg-background">
-                      <canvas
-                        ref={signatureCanvasRef}
-                        className="w-full h-32 cursor-crosshair rounded"
-                        style={{ touchAction: "none" }}
-                      />
-                    </div>
-                    <Button type="button" variant="outline" size="sm" onClick={clearSignature}>
-                      Kundenunterschrift löschen
-                    </Button>
-                  </div>
-
-                  <Separator />
-
-                  {/* Vertriebsunterschrift */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Unterschrift Vertriebsmitarbeiter</Label>
-                    <div className="border rounded-lg p-2 bg-background">
-                      <canvas
-                        ref={vertriebSignatureCanvasRef}
-                        className="w-full h-32 cursor-crosshair rounded"
-                        style={{ touchAction: "none" }}
-                      />
-                    </div>
-                    <Button type="button" variant="outline" size="sm" onClick={clearVertriebSignature}>
-                      Vertriebsunterschrift löschen
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div className="rounded-lg border border-success/40 bg-success/5 p-4 space-y-3">
-                  <div className="flex items-center gap-2 text-success font-medium text-sm">
-                    <CheckCircle className="h-4 w-4" />
-                    Papierunterschrift – manuell erfasst
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Der Vertrag wurde auf Papier unterschrieben. Digitale Unterschriftspads werden nicht benötigt.
-                    Optional können Sie das gescannte Dokument unten hochladen.
-                  </p>
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Nach dem Speichern erhält der Kunde per E-Mail einen Zahlungslink (Stripe). Mit Abschluss der Zahlung wird der Vertrag automatisch aktiviert. Eine manuelle Unterschrift ist nicht erforderlich.
+              </p>
             </div>
 
             {/* Notizen */}
@@ -2807,7 +2612,7 @@ export default function Vertraege() {
                     <span tabIndex={0} className="flex-1 sm:flex-none">
                       <Button type="submit" size="sm" disabled={upsertMutation.isPending || !isFormComplete} className="w-full">
                         {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-                        {editId ? "Speichern" : "Vertrag zeichnen"}
+                        {editId ? "Speichern" : "Digitaler Vertragsabschluss"}
                       </Button>
                     </span>
                   </TooltipTrigger>
