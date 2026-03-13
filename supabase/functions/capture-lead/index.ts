@@ -666,11 +666,9 @@ Deno.serve(async (req) => {
     );
   } catch (error: any) {
     console.error("Error in capture-lead:", error);
-    const origin2 = req.headers.get("origin");
-    const fallbackHeaders = getCorsHeaders(origin2) || {};
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...fallbackHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
