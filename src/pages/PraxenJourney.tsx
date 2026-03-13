@@ -123,6 +123,12 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (highlightId && highlightRef.current) {
+      setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+    }
+  }, [highlightId]);
+
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["journey-leads"],
     queryFn: async () => {
