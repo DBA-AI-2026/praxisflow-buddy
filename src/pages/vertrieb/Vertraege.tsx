@@ -2562,88 +2562,15 @@ export default function Vertraege() {
 
 
 
-            {/* Unterschriften */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Unterschriften</h4>
-
-              {/* Unterschrift-Modus Toggle */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => set("signature_mode", "digital")}
-                  className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-colors ${form.signature_mode === "digital" ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:border-muted-foreground/50"}`}
-                >
-                  ✍️ Digital unterschreiben
-                </button>
-                <button
-                  type="button"
-                  onClick={() => set("signature_mode", "papier")}
-                  className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-colors ${form.signature_mode === "papier" ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:border-muted-foreground/50"}`}
-                >
-                  📄 Papier / Manuell
-                </button>
+            {/* Digitaler Vertragsabschluss Hinweis */}
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-2">
+              <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+                <CheckCircle className="h-4 w-4" />
+                Digitaler Vertragsabschluss
               </div>
-              
-              {/* Ort & Datum (auto-filled from Vertragsparteien) */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Ort</Label>
-                  <Input value={form.ort} disabled className="bg-muted" />
-                </div>
-                <div>
-                  <Label>Datum</Label>
-                  <Input value={new Date().toLocaleDateString("de-DE")} disabled className="bg-muted" />
-                </div>
-              </div>
-
-              <Separator />
-
-              {form.signature_mode === "digital" ? (
-                <>
-                  {/* Kundenunterschrift */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Unterschrift Kunde</Label>
-                    <div className="border rounded-lg p-2 bg-background">
-                      <canvas
-                        ref={signatureCanvasRef}
-                        className="w-full h-32 cursor-crosshair rounded"
-                        style={{ touchAction: "none" }}
-                      />
-                    </div>
-                    <Button type="button" variant="outline" size="sm" onClick={clearSignature}>
-                      Kundenunterschrift löschen
-                    </Button>
-                  </div>
-
-                  <Separator />
-
-                  {/* Vertriebsunterschrift */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Unterschrift Vertriebsmitarbeiter</Label>
-                    <div className="border rounded-lg p-2 bg-background">
-                      <canvas
-                        ref={vertriebSignatureCanvasRef}
-                        className="w-full h-32 cursor-crosshair rounded"
-                        style={{ touchAction: "none" }}
-                      />
-                    </div>
-                    <Button type="button" variant="outline" size="sm" onClick={clearVertriebSignature}>
-                      Vertriebsunterschrift löschen
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div className="rounded-lg border border-success/40 bg-success/5 p-4 space-y-3">
-                  <div className="flex items-center gap-2 text-success font-medium text-sm">
-                    <CheckCircle className="h-4 w-4" />
-                    Papierunterschrift – manuell erfasst
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Der Vertrag wurde auf Papier unterschrieben. Digitale Unterschriftspads werden nicht benötigt.
-                    Optional können Sie das gescannte Dokument unten hochladen.
-                  </p>
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Nach dem Speichern erhält der Kunde per E-Mail einen Zahlungslink (Stripe). Mit Abschluss der Zahlung wird der Vertrag automatisch aktiviert. Eine manuelle Unterschrift ist nicht erforderlich.
+              </p>
             </div>
 
             {/* Notizen */}
