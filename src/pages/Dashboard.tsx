@@ -447,7 +447,7 @@ export default function Dashboard() {
             ) : recentLeads.map((l) => (
               <button
                 key={l.id}
-                onClick={() => navigate(`/praxen-journey?tab=interessenten&id=${l.id}`)}
+                onClick={() => navigate(`/praxen-journey?tab=leads&id=${l.id}`)}
                 className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left group"
               >
                 <div className="min-w-0 flex-1">
