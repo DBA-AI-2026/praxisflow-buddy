@@ -271,6 +271,13 @@ async function handleContractActivation(
       : (session.customer as any).id;
   }
 
+  // Load contract details before update for audit log
+  const { data: contractBefore } = await supabase
+    .from("contracts")
+    .select("customer_name, product_name, hfx_customer_number, email, monthly_price")
+    .eq("id", contractId)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("contracts")
     .update({
@@ -283,8 +290,39 @@ async function handleContractActivation(
 
   if (error) {
     console.error("[stripe-webhook] failed to update contract:", error);
+    // Log failed attempt
+    await supabase.from("audit_logs").insert({
+      action: "CONTRACT_ACTIVATION_FAILED",
+      resource_path: `/contracts/${contractId}`,
+      success: false,
+      details: JSON.stringify({
+        contract_id: contractId,
+        stripe_session_id: session.id,
+        flow: "contract_activation",
+        error: error.message,
+      }),
+      user_email: contractBefore?.email ?? null,
+    });
   } else {
     console.log("[stripe-webhook] contract activated via Stripe:", contractId);
+    // Log successful digital contract activation
+    await supabase.from("audit_logs").insert({
+      action: "CONTRACT_ACTIVATED_DIGITAL",
+      resource_path: `/contracts/${contractId}`,
+      success: true,
+      details: JSON.stringify({
+        contract_id: contractId,
+        stripe_session_id: session.id,
+        stripe_subscription_id: stripeSubscriptionId,
+        stripe_customer_id: stripeCustomerId,
+        flow: "contract_activation",
+        customer_name: contractBefore?.customer_name ?? null,
+        product_name: contractBefore?.product_name ?? null,
+        hfx_customer_number: contractBefore?.hfx_customer_number ?? null,
+        monthly_price: contractBefore?.monthly_price ?? null,
+      }),
+      user_email: contractBefore?.email ?? null,
+    });
   }
 }
 
