@@ -354,18 +354,6 @@ export default function Vertraege() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
 
-  // Open contract edit dialog once contracts are loaded and autoOpenContractId is set
-  useEffect(() => {
-    if (autoOpenContractId && contracts.length > 0) {
-      const c = contracts.find((x: any) => x.id === autoOpenContractId);
-      if (c) {
-        openEdit(c);
-        setAutoOpenContractId(null);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoOpenContractId, contracts]);
-
   const { data: contracts = [], isLoading } = useQuery({
     queryKey: ["contracts"],
     queryFn: async () => {
@@ -377,6 +365,18 @@ export default function Vertraege() {
       return data;
     },
   });
+
+  // Open contract edit dialog once contracts are loaded and autoOpenContractId is set
+  useEffect(() => {
+    if (autoOpenContractId && contracts.length > 0) {
+      const c = contracts.find((x: any) => x.id === autoOpenContractId);
+      if (c) {
+        openEdit(c);
+        setAutoOpenContractId(null);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenContractId, contracts]);
 
   const { data: profilesMap = {} } = useQuery({
     queryKey: ["profiles-map"],
