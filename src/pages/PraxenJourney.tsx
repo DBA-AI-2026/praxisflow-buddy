@@ -452,6 +452,7 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
 
 function VertraegeTab({ search, highlightId }: { search: string; highlightId?: string }) {
   const [statusFilter, setStatusFilter] = useState<string>("alle");
+  const navigate = useNavigate();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
 
   useEffect(() => {
