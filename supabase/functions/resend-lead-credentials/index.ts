@@ -64,24 +64,41 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { leadId } = await req.json();
-    if (!leadId) {
-      return new Response(JSON.stringify({ error: "leadId is required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
+    const body = await req.json();
+    const { leadId, email: directEmail, name: directName, hfxCustomerNumber: directHfx, vorname: directVorname, nachname: directNachname } = body;
 
-    // Fetch lead (do NOT read generated_password)
-    const { data: lead, error: leadError } = await supabaseAdmin
-      .from("leads")
-      .select("id, hfx_customer_number, praxis_name, vorname, nachname, email, status")
-      .eq("id", leadId)
-      .single();
+    // Support two modes:
+    // 1. leadId: look up the lead record (existing flow for Interessenten)
+    // 2. direct: email + name + hfxCustomerNumber (for Praxen without a lead record)
+    let lead: { id?: string; hfx_customer_number: string; praxis_name: string; vorname: string; nachname: string; email: string } | null = null;
 
-    if (leadError || !lead) {
-      return new Response(JSON.stringify({ error: "Lead not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (leadId) {
+      const { data, error: leadError } = await supabaseAdmin
+        .from("leads")
+        .select("id, hfx_customer_number, praxis_name, vorname, nachname, email, status")
+        .eq("id", leadId)
+        .single();
+
+      if (leadError || !data) {
+        return new Response(JSON.stringify({ error: "Lead not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      lead = data;
+    } else if (directEmail) {
+      // Direct mode: build a pseudo-lead from supplied data
+      lead = {
+        id: undefined,
+        hfx_customer_number: directHfx || "",
+        praxis_name: directName || directEmail,
+        vorname: directVorname || "",
+        nachname: directNachname || "",
+        email: directEmail,
+      };
+    } else {
+      return new Response(JSON.stringify({ error: "leadId or email is required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (!lead.email) {
-      return new Response(JSON.stringify({ error: "Kein E-Mail für diesen Lead vorhanden." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Kein E-Mail für diesen Kunden vorhanden." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Generate a fresh password on-demand — never read from DB
