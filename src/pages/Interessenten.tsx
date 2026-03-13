@@ -597,12 +597,25 @@ export default function Interessenten() {
         </div>
       </div>
 
-      {/* Detail Dialog */}
-      <Dialog open={!!selectedLead} onOpenChange={(open) => !open && setSelectedLead(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Interessent: {selectedLead?.hfx_customer_number}</DialogTitle>
-          </DialogHeader>
+      {/* Detail Dialog – replaced by dedicated LeadDetailDialog component */}
+      {selectedLead && (
+        <LeadDetailDialog
+          lead={selectedLead}
+          onClose={() => setSelectedLead(null)}
+          gebietsleiter={gebietsleiter}
+          canAssign={canAssign}
+        />
+      )}
+
+      <CreateLeadDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} />
+      <UploadPaperContractDialog
+        open={!!uploadContractLead}
+        onOpenChange={(open) => { if (!open) setUploadContractLead(null); }}
+        lead={uploadContractLead}
+      />
+    </MainLayout>
+  );
+}
           {selectedLead && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
