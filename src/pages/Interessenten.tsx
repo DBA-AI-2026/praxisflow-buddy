@@ -380,7 +380,7 @@ export default function Interessenten() {
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         {(() => {
                           const step = getNextStep(lead);
                           if (step.action === "none") {
