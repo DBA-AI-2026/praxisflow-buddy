@@ -391,6 +391,25 @@ async function handlePaperContractPayment(
 
   if (!contract) return;
 
+  // Log successful paper contract activation
+  await supabase.from("audit_logs").insert({
+    action: "CONTRACT_ACTIVATED_PAPER",
+    resource_path: `/contracts/${contractId}`,
+    success: true,
+    details: JSON.stringify({
+      contract_id: contractId,
+      stripe_session_id: session.id,
+      stripe_subscription_id: stripeSubscriptionId,
+      stripe_customer_id: stripeCustomerId,
+      flow: "paper_contract_confirmation",
+      customer_name: contract.customer_name,
+      product_name: contract.product_name,
+      hfx_customer_number: contract.hfx_customer_number,
+      monthly_price: contract.monthly_price,
+    }),
+    user_email: contract.email ?? null,
+  });
+
   // Create praxen entry if not already exists
   const { data: existingPraxis } = await supabase
     .from("praxen")
