@@ -451,7 +451,7 @@ function VertraegeTab({ search, highlightId }: { search: string; highlightId?: s
     }
   }, [highlightId]);
 
-  const { data: contracts = [] } = useQuery({
+  const { data: contracts = [], isLoading } = useQuery({
     queryKey: ["journey-contracts-pending"],
     queryFn: async () => {
       const { data } = await supabase
