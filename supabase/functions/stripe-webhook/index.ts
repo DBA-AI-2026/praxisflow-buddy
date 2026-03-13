@@ -367,6 +367,17 @@ async function handlePaperContractPayment(
 
   if (updateError) {
     console.error("[stripe-webhook] failed to activate paper contract:", updateError);
+    await supabase.from("audit_logs").insert({
+      action: "CONTRACT_ACTIVATION_FAILED",
+      resource_path: `/contracts/${contractId}`,
+      success: false,
+      details: JSON.stringify({
+        contract_id: contractId,
+        stripe_session_id: session.id,
+        flow: "paper_contract_confirmation",
+        error: updateError.message,
+      }),
+    });
     return;
   }
   log("Paper contract activated after payment", { contractId });
