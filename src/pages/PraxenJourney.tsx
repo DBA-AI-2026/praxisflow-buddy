@@ -430,6 +430,12 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
         </table>
       </div>
 
+      {selectedLead && (
+        <LeadDetailDialog
+          lead={selectedLead}
+          onClose={() => { setSelectedLead(null); queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); }}
+        />
+      )}
       <CreateLeadDialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); }} />
       {uploadLead && (
         <UploadPaperContractDialog
