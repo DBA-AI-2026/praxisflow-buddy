@@ -382,7 +382,7 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
                   <td className="py-3 px-4">
                     <StatusPill label={sc.label} cls={sc.cls} />
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                     {!isClosed && nextStep ? (
                       <button
                         onClick={nextStep.action}
