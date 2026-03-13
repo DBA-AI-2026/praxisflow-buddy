@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -102,6 +101,30 @@ function EmptyState({ icon: Icon, title, sub }: { icon: React.ComponentType<any>
   );
 }
 
+// ─── Filter pill button ───────────────────────────────────────────────────────
+
+function FilterPill({
+  active, onClick, label, count,
+}: { active: boolean; onClick: () => void; label: string; count: number }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+        active
+          ? "bg-primary text-primary-foreground"
+          : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+      }`}
+    >
+      {label}
+      <span className={`text-[10px] px-1.5 py-0.5 rounded-full min-w-[18px] text-center ${
+        active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-muted-foreground"
+      }`}>
+        {count}
+      </span>
+    </button>
+  );
+}
+
 // ─── Tab: Interessenten ───────────────────────────────────────────────────────
 
 const ACTIVE_LEAD_STATUSES = ["neu", "kontaktiert", "qualifiziert", "vertrag"];
@@ -114,7 +137,6 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAdmin, isSalesLead, isRegionalLead } = useUserRole();
-  const canAssign = isAdmin || isSalesLead || isRegionalLead;
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
 
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("alle");
@@ -143,32 +165,14 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
     },
   });
 
-  // Counts for filter tabs
   const activeCount = leads.filter((l: any) => ACTIVE_LEAD_STATUSES.includes(l.status)).length;
   const closedKeinCount = leads.filter((l: any) => l.status === "kein_abschluss").length;
   const closedAblCount = leads.filter((l: any) => l.status === "abgelehnt").length;
-  const homepageCount = leads.filter((l: any) => !l.nachricht || l.registration_attempts > 0 || !l.ort).length;
+  const homepageCount = leads.filter((l: any) => l.nachricht && l.nachricht.trim().length > 0).length;
+  const manuellCount = leads.length - homepageCount;
 
-  // Determine source: leads without `ort` and with mobilnummer via webhook = homepage; manually filled = manuell
-  // We use a heuristic: leads captured via CF7 webhook have mobilnummer non-empty from form fields;
-  // manually entered leads were created by staff. We distinguish by checking `created_at` origin isn't needed —
-  // instead we store the distinction: if the lead has no `nachricht` and non-empty `mobilnummer`, it's homepage.
-  // Since we can't know for sure without a db column, we use: homepage = has `mobilnummer` set from form (registration_attempts >= 1 set by capture-lead fn)
-  // Actually: capture-lead sets registration_attempts to 1 by default too. Let's use `confirmation_email_sent` = true as indicator of homepage capture
-  // OR: simply show the info based on `nachricht` presence (homepage leads often have `nachricht` from form, manual leads don't)
-  // Best approach: use registration_attempts > 1 OR confirmation_email_sent = true for homepage; else manual
   const getSource = (l: any): "homepage" | "manuell" => {
-    // Homepage leads: created via CF7 form (capture-lead function), typically have confirmation_email_sent = true initially or registration_attempts from form
-    // Manual leads: created in the admin UI, don't have confirmation_email_sent set from form
-    // We'll use: if mobilnummer is from a phone input (numeric) AND confirmation_email_sent field exists → homepage
-    // Simplest reliable heuristic: homepage leads come through capture-lead which sets confirmation_email_sent=false initially
-    // Manual leads: created via CreateLeadDialog which also sets confirmation_email_sent=false
-    // Let's use: if status was NEVER manually set (initial status 'neu') AND no assigned_to → could be homepage
-    // REAL approach: add a `source` column... but we can't add migrations here.
-    // Use heuristic: leads with `nachricht` field filled = homepage (form has a message field); manual = no nachricht
     if (l.nachricht && l.nachricht.trim().length > 0) return "homepage";
-    // Also: leads with non-null `ort` (captured from form's city field) might be homepage
-    // Fall back: if registration_attempts > 0 from auto-increment, it indicates form capture
     return "manuell";
   };
 
@@ -254,60 +258,43 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
 
   return (
     <div>
-      {/* Toolbar */}
+      {/* Unified Toolbar */}
       <div className="p-4 border-b border-border flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        {/* Status filter tabs */}
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Status filters */}
+          <FilterPill active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")} label="Im Prozess" count={activeCount} />
+          <FilterPill active={statusFilter === "kein_abschluss"} onClick={() => setStatusFilter("kein_abschluss")} label="Kein Abschluss" count={closedKeinCount} />
+          <FilterPill active={statusFilter === "abgelehnt"} onClick={() => setStatusFilter("abgelehnt")} label="Abgelehnt" count={closedAblCount} />
+          <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={leads.length} />
+
+          {/* Divider */}
+          <span className="h-5 w-px bg-border mx-1" />
+
+          {/* Source filters */}
           {[
-            { key: "aktiv" as const, label: "Im Prozess", count: activeCount },
-            { key: "kein_abschluss" as const, label: "Kein Abschluss", count: closedKeinCount },
-            { key: "abgelehnt" as const, label: "Abgelehnt", count: closedAblCount },
-            { key: "alle" as const, label: "Alle", count: leads.length },
+            { key: "alle" as const, icon: null, label: "Alle Quellen", count: leads.length },
+            { key: "homepage" as const, icon: <Globe className="h-3 w-3" />, label: "Homepage", count: homepageCount },
+            { key: "manuell" as const, icon: <PenLine className="h-3 w-3" />, label: "Manuell", count: manuellCount },
           ].map((t) => (
             <button
               key={t.key}
-              onClick={() => setStatusFilter(t.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                statusFilter === t.key
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+              onClick={() => setSourceFilter(t.key)}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors ${
+                sourceFilter === t.key
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-border bg-background text-muted-foreground hover:text-foreground"
               }`}
             >
+              {t.icon}
               {t.label}
-              <span className={`text-[10px] px-1 py-0.5 rounded-full ${statusFilter === t.key ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-muted-foreground"}`}>
-                {t.count}
-              </span>
             </button>
           ))}
         </div>
 
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          {/* Source filter */}
-          <div className="flex gap-1">
-            {[
-              { key: "alle" as const, label: "Alle Quellen" },
-              { key: "homepage" as const, icon: <Globe className="h-3 w-3" />, label: "Homepage" },
-              { key: "manuell" as const, icon: <PenLine className="h-3 w-3" />, label: "Manuell" },
-            ].map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setSourceFilter(t.key)}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors ${
-                  sourceFilter === t.key
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border bg-background text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t.icon}
-                {t.label}
-              </button>
-            ))}
-          </div>
-          <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5 h-8">
-            <UserPlus className="h-3.5 w-3.5" />
-            Neuer Interessent
-          </Button>
-        </div>
+        <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5 h-8 shrink-0">
+          <UserPlus className="h-3.5 w-3.5" />
+          Neuer Interessent
+        </Button>
       </div>
 
       {/* Table */}
@@ -450,7 +437,7 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
 
 // ─── Tab: Verträge (ausstehend) ───────────────────────────────────────────────
 
-function VertraegeTab({ search, highlightId }: { search: string; highlightId?: string }) {
+function VertraegeTab({ search, highlightId, missingEmailCount }: { search: string; highlightId?: string; missingEmailCount: number }) {
   const [statusFilter, setStatusFilter] = useState<string>("alle");
   const navigate = useNavigate();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
@@ -495,54 +482,22 @@ function VertraegeTab({ search, highlightId }: { search: string; highlightId?: s
     );
   });
 
-  // Warning: eingegangen ohne E-Mail
-  const missingEmailAlert = contracts.filter((c: any) => c.status === "eingegangen" && !c.confirmation_email_sent_at).length;
-
   return (
     <div>
-      {/* Alert */}
-      {missingEmailAlert > 0 && (
-        <div className="mx-4 mt-4 flex items-center gap-3 rounded-lg border border-warning/30 bg-warning/8 px-4 py-3 text-sm text-warning">
-          <FileText className="h-4 w-4 shrink-0" />
-          <span>
-            <strong>{missingEmailAlert} Vertrag{missingEmailAlert > 1 ? "e" : ""}</strong> mit Status "Eingegangen" — Bestätigungs-E-Mail noch nicht versendet.
-          </span>
-        </div>
-      )}
-
-      {/* Toolbar */}
+      {/* Unified Toolbar — always rendered, pills stable even at count=0 */}
       <div className="p-4 border-b border-border flex flex-wrap gap-2 items-center">
-        <button
-          onClick={() => setStatusFilter("alle")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-            statusFilter === "alle"
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-          }`}
-        >
-          Alle
-          <span className={`text-[10px] px-1 py-0.5 rounded-full ${statusFilter === "alle" ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-muted-foreground"}`}>
-            {contracts.length}
-          </span>
-        </button>
+        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={contracts.length} />
         {pendingStatuses.map((st) => {
           const cfg = contractStatusCfg[st];
-          if (!cfg || statusCounts[st] === 0) return null;
+          if (!cfg) return null;
           return (
-            <button
+            <FilterPill
               key={st}
+              active={statusFilter === st}
               onClick={() => setStatusFilter(st)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                statusFilter === st
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-              }`}
-            >
-              {cfg.label}
-              <span className={`text-[10px] px-1 py-0.5 rounded-full ${statusFilter === st ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-muted-foreground"}`}>
-                {statusCounts[st]}
-              </span>
-            </button>
+              label={cfg.label}
+              count={statusCounts[st] ?? 0}
+            />
           );
         })}
       </div>
@@ -576,8 +531,9 @@ function VertraegeTab({ search, highlightId }: { search: string; highlightId?: s
               return (
                 <tr
                   key={c.id}
+                  ref={highlightId === c.id ? (highlightRef as any) : null}
                   onClick={() => navigate(`/vertrieb/vertraege?contractId=${c.id}`)}
-                  className="hover:bg-muted/30 transition-colors cursor-pointer"
+                  className={`hover:bg-muted/30 transition-colors cursor-pointer ${highlightId === c.id ? "bg-primary/5 ring-1 ring-primary/30" : ""}`}
                 >
                   <td className="py-3 px-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
                     {c.hfx_customer_number || <span className="text-muted-foreground/40">—</span>}
@@ -653,6 +609,7 @@ function VertraegeTab({ search, highlightId }: { search: string; highlightId?: s
 // ─── Tab: Kunden ──────────────────────────────────────────────────────────────
 
 function KundenTab({ search, highlightId }: { search: string; highlightId?: string }) {
+  const navigate = useNavigate();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
   useEffect(() => {
     if (highlightId && highlightRef.current) {
@@ -661,8 +618,6 @@ function KundenTab({ search, highlightId }: { search: string; highlightId?: stri
   }, [highlightId]);
   const [sendingId, setSendingId] = useState<string | null>(null);
 
-  // Primary source: active contracts (single source of truth for customers)
-  // Each unique hfx_customer_number = one customer row (deduplicated)
   const { data: activeContracts = [], isLoading } = useQuery({
     queryKey: ["journey-kunden"],
     queryFn: async () => {
@@ -675,7 +630,6 @@ function KundenTab({ search, highlightId }: { search: string; highlightId?: stri
     },
   });
 
-  // Qodia sync status from leads (keyed by hfx_customer_number)
   const { data: qodiaMap = {} } = useQuery({
     queryKey: ["journey-kunden-qodia"],
     queryFn: async () => {
@@ -706,9 +660,6 @@ function KundenTab({ search, highlightId }: { search: string; highlightId?: stri
 
   const s = search.toLowerCase();
 
-  // Deduplicate: one row per customer — keyed by hfx_customer_number if present,
-  // otherwise by normalised customer_name (lowercase trim) to catch duplicates
-  // without an HFX number (e.g. "Praxis Freitag" twice).
   const seenKeys = new Set<string>();
   const rows = activeContracts.filter((c: any) => {
     const key = c.hfx_customer_number
@@ -735,8 +686,11 @@ function KundenTab({ search, highlightId }: { search: string; highlightId?: stri
 
   return (
     <div>
+      {/* Toolbar */}
       <div className="p-4 border-b border-border flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{filtered.length} aktive Kunden</span>
+        <span className="text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">{filtered.length}</span> aktive Kunden
+        </span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -744,7 +698,7 @@ function KundenTab({ search, highlightId }: { search: string; highlightId?: stri
             <tr>
               <TH>HFX-Nr.</TH>
               <TH>MP-Nr.</TH>
-              <TH>Praxis</TH>
+              <TH>Praxis / Arzt</TH>
               <TH>E-Mail</TH>
               <TH>PLZ / Ort</TH>
               <TH>Produkt</TH>
@@ -766,7 +720,8 @@ function KundenTab({ search, highlightId }: { search: string; highlightId?: stri
                 <tr
                   key={c.id}
                   ref={highlightId === c.id ? highlightRef : null}
-                  className={`hover:bg-muted/20 transition-colors group ${highlightId === c.id ? "bg-primary/5 ring-1 ring-primary/30" : ""}`}
+                  onClick={() => navigate(`/vertrieb/vertraege?contractId=${c.id}`)}
+                  className={`hover:bg-muted/30 transition-colors cursor-pointer group ${highlightId === c.id ? "bg-primary/5 ring-1 ring-primary/30" : ""}`}
                 >
                   <td className="py-3 px-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
                     {c.hfx_customer_number || <span className="text-muted-foreground/40">—</span>}
@@ -778,7 +733,7 @@ function KundenTab({ search, highlightId }: { search: string; highlightId?: stri
                     <p className="font-semibold text-foreground leading-tight">{praxisLabel}</p>
                     {arztLabel && <p className="text-xs text-muted-foreground mt-0.5">{arztLabel}</p>}
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground">
+                  <td className="py-3 px-4 text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-2">
                       <span>{c.email || "–"}</span>
                       {c.email && c.hfx_customer_number && (
@@ -809,13 +764,16 @@ function KundenTab({ search, highlightId }: { search: string; highlightId?: stri
                   <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
                     {c.start_date ? format(new Date(c.start_date), "dd.MM.yy", { locale: de }) : "–"}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <a href="/vertrieb/vertraege" className="text-primary hover:text-primary/70 transition-colors">
+                          <button
+                            onClick={() => navigate(`/vertrieb/vertraege?contractId=${c.id}`)}
+                            className="text-primary hover:text-primary/70 transition-colors"
+                          >
                             <ArrowRight className="h-3.5 w-3.5" />
-                          </a>
+                          </button>
                         </TooltipTrigger>
                         <TooltipContent>Vertrag öffnen</TooltipContent>
                       </Tooltip>
@@ -831,42 +789,53 @@ function KundenTab({ search, highlightId }: { search: string; highlightId?: stri
   );
 }
 
-// ─── Journey Step Indicator ───────────────────────────────────────────────────
+// ─── Tab Navigation Bar (replaces JourneySteps stepper) ─────────────────────
 
-function JourneySteps({ activeTab, onSelect }: { activeTab: string; onSelect: (t: string) => void }) {
-  const steps = [
-    { key: "leads", label: "Interessenten", sub: "Lead-Eingang & Qualifizierung", icon: Users },
-    { key: "vertraege", label: "Verträge", sub: "Ausstehend & in Bearbeitung", icon: FileText },
-    { key: "kunden", label: "Kunden", sub: "Aktive Vertragspartner", icon: Building2 },
-  ];
+interface TabDef {
+  key: string;
+  label: string;
+  icon: React.ComponentType<any>;
+  count: number;
+  warningCount?: number;
+}
+
+function JourneyTabBar({ activeTab, onSelect, tabs }: {
+  activeTab: string;
+  onSelect: (t: string) => void;
+  tabs: TabDef[];
+}) {
   return (
-    <div className="flex items-stretch border-b border-border bg-muted/20">
-      {steps.map((step, i) => {
-        const Icon = step.icon;
-        const active = activeTab === step.key;
+    <div className="flex border-b border-border bg-card">
+      {tabs.map((tab) => {
+        const Icon = tab.icon;
+        const active = activeTab === tab.key;
         return (
           <button
-            key={step.key}
-            onClick={() => onSelect(step.key)}
-            className={`flex-1 flex items-center gap-3 px-6 py-4 text-left transition-colors border-b-2 ${
+            key={tab.key}
+            onClick={() => onSelect(tab.key)}
+            className={`relative flex items-center gap-2.5 px-5 py-3.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               active
-                ? "border-primary bg-background text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30"
-            } ${i > 0 ? "border-l border-l-border/50" : ""}`}
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+            }`}
           >
-            <div className={`flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-full ${
-              active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+            <Icon className={`h-4 w-4 shrink-0 ${active ? "text-primary" : ""}`} />
+            <span>{tab.label}</span>
+            {/* Count badge */}
+            <span className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-semibold ${
+              active
+                ? "bg-primary/15 text-primary"
+                : "bg-muted text-muted-foreground"
             }`}>
-              <Icon className="h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-              <p className={`text-sm font-semibold leading-tight ${active ? "text-foreground" : "text-muted-foreground"}`}>
-                {step.label}
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{step.sub}</p>
-            </div>
-            {i < steps.length - 1 && (
-              <ArrowRight className="h-3.5 w-3.5 ml-auto text-muted-foreground/40 flex-shrink-0" />
+              {tab.count}
+            </span>
+            {/* Warning dot for tabs with alerts */}
+            {tab.warningCount != null && tab.warningCount > 0 && (
+              <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-warning" />
+            )}
+            {/* Active indicator */}
+            {active && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
             )}
           </button>
         );
@@ -886,17 +855,24 @@ export default function PraxenJourney() {
     urlTab === "vertraege" ? "vertraege" : urlTab === "kunden" ? "kunden" : "leads"
   );
 
-  const { data: counts = { leads: 0, contracts: 0, kunden: 0 } } = useQuery({
+  const { data: counts = { leads: 0, contracts: 0, kunden: 0, missingEmail: 0 } } = useQuery({
     queryKey: ["journey-counts"],
     queryFn: async () => {
-      const [l, c, k] = await Promise.all([
+      const [l, c, k, me] = await Promise.all([
         supabase.from("leads").select("id", { count: "exact", head: true }).neq("status", "kunde"),
         supabase.from("contracts").select("id", { count: "exact", head: true }).neq("status", "aktiv"),
         supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "aktiv"),
+        supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "eingegangen").is("confirmation_email_sent_at", null),
       ]);
-      return { leads: l.count ?? 0, contracts: c.count ?? 0, kunden: k.count ?? 0 };
+      return { leads: l.count ?? 0, contracts: c.count ?? 0, kunden: k.count ?? 0, missingEmail: me.count ?? 0 };
     },
   });
+
+  const tabs: TabDef[] = [
+    { key: "leads", label: "Interessenten", icon: Users, count: counts.leads },
+    { key: "vertraege", label: "Verträge", icon: FileText, count: counts.contracts, warningCount: counts.missingEmail },
+    { key: "kunden", label: "Kunden", icon: Building2, count: counts.kunden },
+  ];
 
   return (
     <MainLayout
@@ -904,19 +880,11 @@ export default function PraxenJourney() {
       subtitle="Von der Anfrage bis zum aktiven Kunden — alles in einem Blick"
     >
       <div className="card-elevated overflow-hidden">
-        {/* Journey Step Header */}
-        <JourneySteps activeTab={tab} onSelect={(t) => setTab(t as any)} />
+        {/* Tab navigation */}
+        <JourneyTabBar activeTab={tab} onSelect={(t) => setTab(t as any)} tabs={tabs} />
 
-        {/* Count pills + Search bar */}
+        {/* Search bar */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/10">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">
-              {tab === "leads" ? counts.leads : tab === "vertraege" ? counts.contracts : counts.kunden}
-            </span>
-            <span>
-              {tab === "leads" ? "Interessenten" : tab === "vertraege" ? "ausstehende Verträge" : "aktive Kunden"}
-            </span>
-          </div>
           <div className="relative w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
@@ -926,12 +894,19 @@ export default function PraxenJourney() {
               className="pl-8 h-8 text-sm"
             />
           </div>
+          {/* Warning notice inline — only for vertraege tab */}
+          {tab === "vertraege" && counts.missingEmail > 0 && (
+            <div className="flex items-center gap-2 text-xs text-warning font-medium">
+              <FileText className="h-3.5 w-3.5" />
+              <span>{counts.missingEmail} Vertrag{counts.missingEmail > 1 ? "e" : ""} ohne Bestätigungs-E-Mail</span>
+            </div>
+          )}
         </div>
 
         {/* Tab content */}
-        {tab === "leads" && <InteressentenTab search={search} />}
-        {tab === "vertraege" && <VertraegeTab search={search} />}
-        {tab === "kunden" && <KundenTab search={search} />}
+        {tab === "leads" && <InteressentenTab search={search} highlightId={urlId} />}
+        {tab === "vertraege" && <VertraegeTab search={search} highlightId={urlId} missingEmailCount={counts.missingEmail} />}
+        {tab === "kunden" && <KundenTab search={search} highlightId={urlId} />}
       </div>
     </MainLayout>
   );

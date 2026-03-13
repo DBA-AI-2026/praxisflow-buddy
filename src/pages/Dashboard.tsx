@@ -254,7 +254,7 @@ export default function Dashboard() {
           .limit(8);
         (contracts ?? []).forEach((r) => items.push({
           id: r.id, type: "contract", label: r.customer_name, sub: r.product_name,
-          status: r.status, time: r.updated_at, link: "/vertrieb/vertraege",
+          status: r.status, time: r.updated_at, link: `/praxen-journey?tab=vertraege&id=${r.id}`,
         }));
 
         // Leads always shown in else-branch (tippgeber is already handled above)
@@ -267,7 +267,7 @@ export default function Dashboard() {
             .limit(8);
           (leads ?? []).forEach((r) => items.push({
             id: r.id, type: "lead", label: r.praxis_name, sub: `${r.vorname} ${r.nachname}`.trim(),
-            status: r.status, time: r.updated_at, link: "/interessenten",
+            status: r.status, time: r.updated_at, link: `/praxen-journey?tab=leads&id=${r.id}`,
           }));
         }
       }
@@ -447,7 +447,7 @@ export default function Dashboard() {
             ) : recentLeads.map((l) => (
               <button
                 key={l.id}
-                onClick={() => navigate(`/praxen-journey?tab=interessenten&id=${l.id}`)}
+                onClick={() => navigate(`/praxen-journey?tab=leads&id=${l.id}`)}
                 className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left group"
               >
                 <div className="min-w-0 flex-1">
