@@ -1253,6 +1253,44 @@ export default function EmailPreview() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // PDF blob for the contract PDF preview
+  const [pdfModal, setPdfModal] = useState<{ template: Template } | null>(null);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const prevPdfBlobUrl = useRef<string | null>(null);
+
+  const openPdfPreview = async (tpl: Template) => {
+    setPdfModal({ template: tpl });
+    setPdfLoading(true);
+    setPdfBlobUrl(null);
+    try {
+      // Fetch logo for the PDF header
+      let logoBytes: ArrayBuffer | undefined;
+      try {
+        const logoRes = await fetch("/logo.jpeg");
+        if (logoRes.ok) logoBytes = await logoRes.arrayBuffer();
+      } catch { /* proceed without logo */ }
+
+      const pdfBytes = await generateContractPdf(MOCK_CONTRACT_PDF_DATA, logoBytes);
+      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      // Revoke previous
+      if (prevPdfBlobUrl.current) URL.revokeObjectURL(prevPdfBlobUrl.current);
+      prevPdfBlobUrl.current = url;
+      setPdfBlobUrl(url);
+    } catch (err) {
+      console.error("PDF preview error:", err);
+      toast.error("PDF konnte nicht generiert werden.");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const closePdfModal = () => {
+    setPdfModal(null);
+    setPdfBlobUrl(null);
+  };
+
   // Load saved templates on mount
   useEffect(() => {
     async function loadTemplates() {
