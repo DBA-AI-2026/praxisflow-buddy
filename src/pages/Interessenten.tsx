@@ -349,6 +349,16 @@ export default function Interessenten() {
                       <TableCell>{lead.plz}</TableCell>
                       <TableCell className="text-sm">{(lead.abrechnungszentrum === "nein" || lead.abrechnungszentrum === "keins") ? "–" : lead.abrechnungszentrum}</TableCell>
                       <TableCell>
+                        <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${
+                          lead.source === "manual"
+                            ? "bg-accent/10 text-accent border-accent/30"
+                            : "bg-primary/10 text-primary border-primary/30"
+                        }`}>
+                          {lead.source === "manual" ? <UserPlus className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
+                          {lead.source === "manual" ? "Manuell" : "Homepage"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
                         <Select
                           value={lead.status}
                           onValueChange={(val) => {
