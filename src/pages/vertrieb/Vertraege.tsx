@@ -2747,15 +2747,44 @@ export default function Vertraege() {
               {/* Zeile 2: Speichern-Aktionen */}
               <div className="flex flex-wrap gap-2 justify-end">
                 <Button type="button" variant="outline" size="sm" onClick={closeDialog} className="flex-1 sm:flex-none">Abbrechen</Button>
-                <Button type="button" variant="secondary" size="sm" onClick={handleSaveDraft} disabled={upsertMutation.isPending} className="flex-1 sm:flex-none">
+                <Button type="button" variant="secondary" size="sm" onClick={handleSaveDraft} disabled={upsertMutation.isPending || sendingBuchungsmailDialog} className="flex-1 sm:flex-none">
                   {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
                   Als Entwurf
                 </Button>
+                {/* Buchungsmail senden – saves as eingegangen + triggers booking email */}
+                {!editId && (
+                  <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0} className="flex-1 sm:flex-none">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSaveWithBuchungsmail}
+                          disabled={upsertMutation.isPending || sendingBuchungsmailDialog || !form.email}
+                          className="w-full gap-1.5 border-primary/40 text-primary hover:bg-primary/5"
+                        >
+                          {sendingBuchungsmailDialog
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <Send className="h-4 w-4" />}
+                          Buchungsmail senden
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      {!form.email
+                        ? "E-Mail-Adresse erforderlich"
+                        : "Speichert als „Eingegangen" und sendet den digitalen Buchungslink an den Kunden"}
+                    </TooltipContent>
+                  </Tooltip>
+                  </TooltipProvider>
+                )}
                 <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span tabIndex={0} className="flex-1 sm:flex-none">
-                      <Button type="submit" size="sm" disabled={upsertMutation.isPending || !isFormComplete} className="w-full">
+                      <Button type="submit" size="sm" disabled={upsertMutation.isPending || sendingBuchungsmailDialog || !isFormComplete} className="w-full">
                         {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
                         {editId ? "Speichern" : "Digitaler Vertragsabschluss"}
                       </Button>
