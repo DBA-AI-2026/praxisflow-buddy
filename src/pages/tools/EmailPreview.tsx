@@ -82,6 +82,17 @@ const TEMPLATES: Template[] = [
     type: "email",
     description: "Wird vom Vertrieb manuell ausgelöst: sendet dem Interessenten einen Buchungslink zur /buchen-Seite. Dort gibt der Kunde Fachrichtung, Rechtsform und ggf. BSNR/LANR an und zahlt via Stripe – der Vertrag aktiviert sich automatisch.",
     category: "kunden",
+    hasPdfPreview: true,
+  },
+  {
+    id: "post-payment-contract-pdf",
+    label: "Vertragszusammenfassung (PDF nach Zahlung)",
+    subject: "— PDF-Anhang (kein separater Versand) —",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "pdf",
+    description: "Nach erfolgreicher Stripe-Zahlung wird diese Vertragszusammenfassung automatisch als PDF-Anhang in der Bestätigungs-E-Mail mitgeschickt (zusammen mit den AGB). Das PDF wird via pdf-lib dynamisch generiert.",
+    category: "kunden",
+    hasPdfPreview: true,
   },
   {
     id: "contract-customer",
