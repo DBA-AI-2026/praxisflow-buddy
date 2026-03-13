@@ -109,11 +109,12 @@ const CLOSED_LEAD_STATUSES = ["kein_abschluss", "abgelehnt"];
 type LeadSourceFilter = "alle" | "homepage" | "manuell";
 type LeadStatusFilter = "aktiv" | "kein_abschluss" | "abgelehnt" | "alle";
 
-function InteressentenTab({ search }: { search: string }) {
+function InteressentenTab({ search, highlightId }: { search: string; highlightId?: string }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAdmin, isSalesLead, isRegionalLead } = useUserRole();
   const canAssign = isAdmin || isSalesLead || isRegionalLead;
+  const highlightRef = useRef<HTMLTableRowElement | null>(null);
 
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("alle");
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("aktiv");
