@@ -1405,7 +1405,7 @@ export default function EmailPreview() {
                   <div key={tpl.id} className="rounded-xl border border-border bg-card p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <Mail className="w-4 h-4 text-primary" />
+                        {tpl.type === "pdf" ? <FileText className="w-4 h-4 text-primary" /> : <Mail className="w-4 h-4 text-primary" />}
                         <span className="font-semibold text-foreground">{tpl.label}</span>
                         {(hasCustom(tpl, "email") || (tpl.id === "invoice" && hasCustom(tpl, "pdf"))) && (
                           <span className="ml-auto text-[10px] font-medium bg-warning/20 text-warning-foreground px-1.5 py-0.5 rounded border border-warning/30">Bearbeitet</span>
