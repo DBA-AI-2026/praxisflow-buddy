@@ -419,13 +419,12 @@ function InteressentenTab({ search }: { search: string }) {
         </table>
       </div>
 
-      <CreateLeadDialog open={createOpen} onOpenChange={setCreateOpen} onSuccess={() => queryClient.invalidateQueries({ queryKey: ["journey-leads"] })} />
+      <CreateLeadDialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); }} />
       {uploadLead && (
         <UploadPaperContractDialog
           open={!!uploadLead}
-          onOpenChange={(o) => { if (!o) setUploadLead(null); }}
+          onOpenChange={(o) => { if (!o) { setUploadLead(null); queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); } }}
           lead={uploadLead}
-          onSuccess={() => queryClient.invalidateQueries({ queryKey: ["journey-leads"] })}
         />
       )}
     </div>
