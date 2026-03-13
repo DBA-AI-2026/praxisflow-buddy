@@ -358,15 +358,12 @@ export default function Interessenten() {
                           {lead.source === "manual" ? "Manuell" : "Homepage"}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Select
                           value={lead.status}
                           onValueChange={(val) => {
-                            // Statusübergänge einschränken: kein Sprung zurück auf "neu"
                             const order = ["neu", "kontaktiert", "qualifiziert", "vertrag", "kein_abschluss", "abgelehnt"];
                             const currentIdx = order.indexOf(lead.status);
-                            const newIdx = order.indexOf(val);
-                            // Rücksprung auf "neu" nur wenn aktuell "kontaktiert"
                             if (val === "neu" && currentIdx > 1) return;
                             updateStatusMutation.mutate({ id: lead.id, status: val });
                           }}
@@ -376,7 +373,7 @@ export default function Interessenten() {
                           </SelectTrigger>
                           <SelectContent>
                             {Object.entries(statusConfig)
-                              .filter(([key]) => key !== "kunde") // "kunde" wird automatisch gesetzt
+                              .filter(([key]) => key !== "kunde")
                               .map(([key, cfg]) => (
                                 <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
                               ))}
