@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import foxLogoUrl from "@/assets/fox-logo.jpeg";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
