@@ -57,6 +57,7 @@ import {
   Package,
   Users,
   Lightbulb,
+  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
