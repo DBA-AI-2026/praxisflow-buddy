@@ -1256,10 +1256,10 @@ export default function Vertraege() {
         .filter((p: any) => selectedNames.includes(p.name))
         .map((p: any) => ({
           name: p.name,
-          monthly_price: Number(p.monthly_price),
-          price_per_unit: p.price_per_unit != null ? Number(p.price_per_unit) : null,
+          monthly_price: Number(p.monthly_price) || 0,
+          price_per_unit: p.price_per_unit != null ? (Number(p.price_per_unit) || 0) : null,
           price_per_unit_label: p.price_per_unit_label || null,
-          promo_price: p.promo_price != null ? Number(p.promo_price) : null,
+          promo_price: p.promo_price != null ? (Number(p.promo_price) || 0) : null,
           promo_price_label: p.promo_price_label || null,
           promo_end_date: p.promo_end_date || null,
           promo_base_fee_end_date: p.promo_base_fee_end_date || null,
@@ -1269,7 +1269,7 @@ export default function Vertraege() {
       const addonNames: string[] = c.selected_addon_modules || [];
       const addon_module_details = ebmModules
         .filter((m: any) => addonNames.includes(m.name))
-        .map((m: any) => ({ name: m.name, monthly_price: Number(m.monthly_price) }));
+        .map((m: any) => ({ name: m.name, monthly_price: Number(m.monthly_price) || 0 }));
 
       // 1) Generate Vorschau PDF
       const previewBytes = await generateContractPdf({
@@ -1353,10 +1353,10 @@ export default function Vertraege() {
           const hasPromo = p.promo_price != null && p.promo_end_date && new Date(p.promo_end_date) >= now;
           return {
             name: p.name,
-            monthly_price: Number(p.monthly_price),
-            price_per_unit: p.price_per_unit != null ? Number(p.price_per_unit) : null,
+            monthly_price: Number(p.monthly_price) || 0,
+            price_per_unit: p.price_per_unit != null ? (Number(p.price_per_unit) || 0) : null,
             price_per_unit_label: p.price_per_unit_label || null,
-            promo_price: p.promo_price != null ? Number(p.promo_price) : null,
+            promo_price: p.promo_price != null ? (Number(p.promo_price) || 0) : null,
             promo_price_label: p.promo_price_label || null,
             promo_end_date: p.promo_end_date || null,
             promo_base_fee_end_date: p.promo_base_fee_end_date || null,
@@ -1375,7 +1375,7 @@ export default function Vertraege() {
       const addonNames = contractData.selected_addon_modules || contractData.selected_modules || [];
       const addon_module_details = ebmModules
         .filter((m: any) => addonNames.includes(m.name))
-        .map((m: any) => ({ name: m.name, monthly_price: Number(m.monthly_price) }));
+        .map((m: any) => ({ name: m.name, monthly_price: Number(m.monthly_price) || 0 }));
 
       const pdfBytes = await generateContractPdf({
         ...contractData,
@@ -2170,8 +2170,10 @@ export default function Vertraege() {
                       const today = new Date();
                       const hasPromo = p.promo_price != null && p.promo_end_date && new Date(p.promo_end_date) >= today;
                       const baseFeeWaived = hasPromo && p.promo_base_fee_end_date && new Date(p.promo_base_fee_end_date) >= today;
-                      const displayMonthly = baseFeeWaived ? 0 : Number(p.monthly_price);
-                      const displayPerUnit = hasPromo ? Number(p.promo_price) : (p.price_per_unit != null ? Number(p.price_per_unit) : null);
+                      const displayMonthly = baseFeeWaived ? 0 : (Number(p.monthly_price) || 0);
+                      const displayPerUnit = hasPromo
+                        ? (Number(p.promo_price) || 0)
+                        : (p.price_per_unit != null ? (Number(p.price_per_unit) || 0) : null);
 
                       return (
                         <div key={p.id}>
@@ -2192,8 +2194,8 @@ export default function Vertraege() {
                                 <span className="text-xs font-medium text-muted-foreground whitespace-nowrap ml-2">
                                   {hasPromo && baseFeeWaived
                                     ? "0 €/Mon."
-                                    : `${Number(p.monthly_price).toLocaleString("de-DE")} €/Mon.`}
-                                  {displayPerUnit != null && ` + ${displayPerUnit.toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."}`}
+                                    : `${displayMonthly.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.`}
+                                  {displayPerUnit != null && ` + ${displayPerUnit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/${p.price_per_unit_label || "Stk."}`}
                                 </span>
                               </div>
                               {hasPromo && (
@@ -2207,8 +2209,8 @@ export default function Vertraege() {
                                     </span>
                                   )}
                                   <span className="text-xs text-muted-foreground line-through">
-                                    Regulär: {Number(p.monthly_price).toLocaleString("de-DE")} €/Mon.
-                                    {p.price_per_unit != null && ` + ${Number(p.price_per_unit).toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."}`}
+                                    Regulär: {(Number(p.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.
+                                    {p.price_per_unit != null && ` + ${(Number(p.price_per_unit) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/${p.price_per_unit_label || "Stk."}`}
                                   </span>
                                 </div>
                               )}
@@ -2294,7 +2296,7 @@ export default function Vertraege() {
                                           <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between">
                                               <span className="text-sm font-medium">{mod.name}</span>
-                                              <span className="text-sm font-medium text-primary">{Number(mod.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.</span>
+                                              <span className="text-sm font-medium text-primary">{(Number(mod.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.</span>
                                             </div>
                                             {mod.description && (
                                               <p className="text-xs text-muted-foreground mt-1">{mod.description}</p>
