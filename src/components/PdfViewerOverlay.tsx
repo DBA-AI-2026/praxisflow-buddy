@@ -96,7 +96,7 @@ export function PdfViewerOverlay() {
           onClick={() => {
             const a = document.createElement("a");
             a.href = pdfUrl;
-            a.download = "Vertrag.pdf";
+            a.download = pdfFilename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
