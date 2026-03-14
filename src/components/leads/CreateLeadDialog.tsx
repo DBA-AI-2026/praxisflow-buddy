@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -29,7 +29,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Loader2, UserPlus, Mail } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, UserPlus, Mail, Package } from "lucide-react";
 
 const schema = z.object({
   praxis_name: z.string().trim().min(2, "Pflichtfeld").max(200),
@@ -44,6 +45,7 @@ const schema = z.object({
   mp_nummer: z.string().trim().max(50).default(""),
   nachricht: z.string().trim().max(1000).default(""),
   send_confirmation_email: z.boolean().default(true),
+  interested_products: z.array(z.string()).default([]),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -57,6 +59,19 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
+
+  const { data: products = [] } = useQuery({
+    queryKey: ["active-products"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -73,6 +88,7 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
       mp_nummer: "",
       nachricht: "",
       send_confirmation_email: true,
+      interested_products: [],
     },
   });
 
@@ -96,6 +112,7 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
           nachricht: values.nachricht || null,
           source: "manual",
           send_confirmation_email: values.send_confirmation_email,
+          interested_products: values.interested_products,
         },
       });
 
@@ -304,6 +321,49 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
                 )}
               />
             </div>
+
+            {/* Produktinteresse */}
+            {products.length > 0 && (
+              <FormField
+                control={form.control}
+                name="interested_products"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-primary" />
+                      Produktinteresse
+                    </FormLabel>
+                    <div className="grid grid-cols-2 gap-2">
+                      {products.map((product) => {
+                        const checked = field.value.includes(product.name);
+                        return (
+                          <label
+                            key={product.id}
+                            className={`flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer transition-colors ${
+                              checked
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:bg-muted/50"
+                            }`}
+                          >
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(val) => {
+                                const next = val
+                                  ? [...field.value, product.name]
+                                  : field.value.filter((p: string) => p !== product.name);
+                                field.onChange(next);
+                              }}
+                            />
+                            <span className="text-sm">{product.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

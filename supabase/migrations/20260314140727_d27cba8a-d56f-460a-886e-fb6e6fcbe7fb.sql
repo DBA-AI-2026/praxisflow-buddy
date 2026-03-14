@@ -1,0 +1,1 @@
+ALTER TABLE public.leads ADD COLUMN interested_products text[] DEFAULT '{}'::text[];
