@@ -127,18 +127,16 @@ export async function generateInvoicePdf(
   };
 
   // ===== HEADER =====
-  // Thin navy top line + red accent below
-  page.drawRectangle({ x: 0, y: PAGE_H - 3, width: PAGE_W, height: 3, color: C_NAVY });
-  page.drawRectangle({ x: 0, y: PAGE_H - 6, width: PAGE_W, height: 3, color: C_RED });
+  // No top stripe
 
-  // Logo top-right: 12mm from top, 10mm from right edge
+  // Logo top-right: 12mm from top, 10mm from right edge – larger
   const LOGO_TOP_MM = 12;
   const LOGO_RIGHT_MM = 10;
   const mmToPt = 2.8346;
   if (logoBytes) {
     try {
       const logoImage = await doc.embedJpg(logoBytes);
-      const logoH = 36;
+      const logoH = 48;
       const logoW = (logoImage.width / logoImage.height) * logoH;
       const logoX = PAGE_W - LOGO_RIGHT_MM * mmToPt - logoW;
       const logoY = PAGE_H - LOGO_TOP_MM * mmToPt - logoH;
@@ -148,24 +146,19 @@ export async function generateInvoicePdf(
     }
   }
 
-  // Status badge (below logo area, top-right)
+  // Status badge – always light blue background
   const statusLabels: Record<string, string> = {
     entwurf: "ENTWURF", versendet: "VERSENDET", bezahlt: "BEZAHLT", storniert: "STORNIERT",
   };
-  const statusColors: Record<string, { bg: ReturnType<typeof rgb>; fg: ReturnType<typeof rgb> }> = {
-    entwurf:   { bg: rgb(0.90, 0.92, 0.96), fg: C_NAVY },
-    versendet: { bg: rgb(0.88, 0.93, 1.0), fg: rgb(0.12, 0.38, 0.72) },
-    bezahlt:   { bg: rgb(0.88, 0.96, 0.90), fg: C_GREEN },
-    storniert: { bg: rgb(0.98, 0.90, 0.90), fg: C_RED },
-  };
+  const C_LIGHT_BLUE_BG = rgb(0.88, 0.93, 1.0);
   const st = data.status || "entwurf";
   const stLabel = statusLabels[st] || st.toUpperCase();
-  const stColor = statusColors[st] || statusColors.entwurf;
+  const stFg = st === "storniert" ? C_RED : st === "bezahlt" ? C_GREEN : C_NAVY;
   const badgeW = font.widthOfTextAtSize(stLabel, 8) + 18;
   const badgeX = PAGE_W - M - badgeW;
-  const badgeY = PAGE_H - 58;
-  page.drawRectangle({ x: badgeX, y: badgeY - 4, width: badgeW, height: 18, color: stColor.bg });
-  text(stLabel, badgeX + 9, badgeY + 1, 8, fontBold, stColor.fg);
+  const badgeY = PAGE_H - 64;
+  page.drawRectangle({ x: badgeX, y: badgeY - 4, width: badgeW, height: 18, color: C_LIGHT_BLUE_BG });
+  text(stLabel, badgeX + 9, badgeY + 1, 8, fontBold, stFg);
 
   // ===== ADDRESS SECTION =====
   // 45mm from top edge of page to sender line
