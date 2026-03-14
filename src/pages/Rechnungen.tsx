@@ -59,6 +59,7 @@ import {
   Link,
 } from "lucide-react";
 import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
+import { generateInvoicePdfV2 } from "@/lib/generateInvoicePdfV2";
 import { openPdfBlob } from "@/lib/openPdfBlob";
 
 interface InvoicePosition {
@@ -158,6 +159,7 @@ export default function Rechnungen() {
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [detailEmail, setDetailEmail] = useState<string>("");
+  const [pdfDesign, setPdfDesign] = useState<"design1" | "design2">("design2");
 
   // Create form
   const [form, setForm] = useState({
@@ -336,7 +338,7 @@ export default function Rechnungen() {
           const logoResp = await fetch("/logo.jpeg");
           if (logoResp.ok) logoBytes = await logoResp.arrayBuffer();
         } catch { /* no logo */ }
-        const pdfBytes = await generateInvoicePdf(invoice, logoBytes);
+        const pdfBytes = await (pdfDesign === "design2" ? generateInvoicePdfV2 : generateInvoicePdf)(invoice, logoBytes);
         // Convert Uint8Array → base64
         const binary = Array.from(pdfBytes).map((b) => String.fromCharCode(b)).join("");
         pdfBase64 = btoa(binary);
@@ -365,7 +367,7 @@ export default function Rechnungen() {
         const logoResp = await fetch("/logo.jpeg");
         if (logoResp.ok) logoBytes = await logoResp.arrayBuffer();
       } catch { /* no logo */ }
-      const pdfBytes = await generateInvoicePdf(invoice, logoBytes);
+      const pdfBytes = await (pdfDesign === "design2" ? generateInvoicePdfV2 : generateInvoicePdf)(invoice, logoBytes);
       openPdfBlob(pdfBytes, `Rechnung-${invoice.invoice_number}.pdf`);
     } catch (e: any) {
       toast({ title: "PDF-Fehler", description: e.message, variant: "destructive" });
@@ -493,10 +495,21 @@ export default function Rechnungen() {
             <h1 className="text-2xl font-bold text-foreground">Rechnungen</h1>
             <p className="text-muted-foreground text-sm mt-1">Rechnungen erstellen, versenden und verwalten</p>
           </div>
-          <Button onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Neue Rechnung
-          </Button>
+          <div className="flex items-center gap-3">
+            <Select value={pdfDesign} onValueChange={(v) => setPdfDesign(v as "design1" | "design2")}>
+              <SelectTrigger className="w-[140px] h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="design1">Design 1</SelectItem>
+                <SelectItem value="design2">Design 2</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={() => setShowCreate(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Neue Rechnung
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="rechnungen">
