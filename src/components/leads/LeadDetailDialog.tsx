@@ -325,6 +325,22 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
     }
   };
 
+  const deleteLead = async () => {
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from("leads").delete().eq("id", lead.id);
+      if (error) throw error;
+      toast({ title: "Gelöscht", description: "Interessent wurde endgültig gelöscht." });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-recent-leads"] });
+      onClose();
+    } catch (err: any) {
+      toast({ title: "Fehler", description: err.message || "Löschen fehlgeschlagen.", variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const sc = statusConfig[lead.status] || statusConfig.neu;
   const sourceLabel = lead.source === "manual" ? "Manuell erfasst" : "Homepage";
   const sourceIcon = lead.source === "manual"
