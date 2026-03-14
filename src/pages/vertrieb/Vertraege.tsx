@@ -2171,10 +2171,12 @@ export default function Vertraege() {
                       const today = new Date();
                       const hasPromo = p.promo_price != null && p.promo_end_date && new Date(p.promo_end_date) >= today;
                       const baseFeeWaived = hasPromo && p.promo_base_fee_end_date && new Date(p.promo_base_fee_end_date) >= today;
-                      const displayMonthly = baseFeeWaived ? 0 : (Number(p.monthly_price) || 0);
+                      const regularMonthly = Number(p.monthly_price ?? p.base_license_price) || 0;
+                      const displayMonthly = baseFeeWaived ? 0 : regularMonthly;
+                      const regularPerUnit = p.price_per_unit != null ? (Number(p.price_per_unit) || 0) : null;
                       const displayPerUnit = hasPromo
-                        ? (Number(p.promo_price) || 0)
-                        : (p.price_per_unit != null ? (Number(p.price_per_unit) || 0) : null);
+                        ? (p.promo_price != null ? (Number(p.promo_price) || 0) : regularPerUnit)
+                        : regularPerUnit;
 
                       return (
                         <div key={p.id}>
@@ -2190,14 +2192,21 @@ export default function Vertraege() {
                               onCheckedChange={() => toggleProduct(p.name)}
                             />
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-semibold">{p.name}</span>
-                                <span className="text-xs font-medium text-muted-foreground whitespace-nowrap ml-2">
-                                  {hasPromo && baseFeeWaived
-                                    ? "0 €/Mon."
-                                    : `${displayMonthly.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.`}
-                                  {displayPerUnit != null && ` + ${displayPerUnit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/${p.price_per_unit_label || "Stk."}`}
-                                </span>
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-sm font-semibold truncate">{p.name}</span>
+                                <div className="text-right text-xs font-medium text-muted-foreground">
+                                  <div className="whitespace-nowrap">
+                                    {hasPromo && baseFeeWaived
+                                      ? "0,00 €/Mon."
+                                      : `${displayMonthly.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.`}
+                                    <span className="ml-1 text-muted-foreground/80">Grundgebühr</span>
+                                  </div>
+                                  {displayPerUnit != null && (
+                                    <div className="whitespace-nowrap text-muted-foreground/90">
+                                      {displayPerUnit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/{p.price_per_unit_label || "Stk."}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               {hasPromo && (
                                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
@@ -2210,8 +2219,8 @@ export default function Vertraege() {
                                     </span>
                                   )}
                                   <span className="text-xs text-muted-foreground line-through">
-                                    Regulär: {(Number(p.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.
-                                    {p.price_per_unit != null && ` + ${(Number(p.price_per_unit) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/${p.price_per_unit_label || "Stk."}`}
+                                    Regulär: {regularMonthly.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.
+                                    {regularPerUnit != null && ` + ${regularPerUnit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/${p.price_per_unit_label || "Stk."}`}
                                   </span>
                                 </div>
                               )}
