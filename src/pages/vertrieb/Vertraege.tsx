@@ -544,7 +544,7 @@ export default function Vertraege() {
         rechnungs_email: data.rechnungs_email || null,
         selected_addon_modules: data.selected_modules.length > 0 ? data.selected_modules : [],
         qodia_unit_price: (data as any).qodia_unit_price ?? 0,
-        ...((data as any).mandate_accepted && !editId ? { mandate_accepted_at: new Date().toISOString() } : {}),
+        ...(data.mandate_accepted && !editId ? { mandate_accepted_at: new Date().toISOString() } : {}),
         ...(documentUrl ? { document_url: documentUrl, document_name: documentName } : {}),
         ...(leadHfxNumber && !editId ? { hfx_customer_number: leadHfxNumber } : {}),
       };
