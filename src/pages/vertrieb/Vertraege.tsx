@@ -850,6 +850,7 @@ export default function Vertraege() {
       stundenaufwand_pro_woche: contract.stundenaufwand_pro_woche || "",
       rechnungs_email: contract.rechnungs_email || "",
       rechnungs_email_identisch: false,
+      mandate_accepted: !!contract.mandate_accepted_at,
     });
     setDialogOpen(true);
   };
