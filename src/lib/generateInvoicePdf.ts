@@ -126,51 +126,52 @@ export async function generateInvoicePdf(
     page.drawLine({ start: { x: M, y }, end: { x: PAGE_W - M, y }, thickness, color });
   };
 
-  // ===== HEADER BAR =====
-  const headerH = 64;
-  // Gradient-like dual rectangles
-  page.drawRectangle({ x: 0, y: PAGE_H - headerH, width: PAGE_W * 0.6, height: headerH, color: C_NAVY });
-  page.drawRectangle({ x: PAGE_W * 0.6, y: PAGE_H - headerH, width: PAGE_W * 0.4, height: headerH, color: C_NAVY_MID });
+  // ===== HEADER =====
+  // Thin navy top line + red accent below
+  page.drawRectangle({ x: 0, y: PAGE_H - 3, width: PAGE_W, height: 3, color: C_NAVY });
+  page.drawRectangle({ x: 0, y: PAGE_H - 6, width: PAGE_W, height: 3, color: C_RED });
 
-  // Accent bar bottom of header
-  page.drawRectangle({ x: 0, y: PAGE_H - headerH - 3, width: PAGE_W, height: 3, color: C_RED });
+  y = PAGE_H - 30;
 
   let logoXEnd = M;
   if (logoBytes) {
     try {
       const logoImage = await doc.embedJpg(logoBytes);
-      const logoH = 36;
+      const logoH = 32;
       const logoW = (logoImage.width / logoImage.height) * logoH;
-      page.drawImage(logoImage, { x: M, y: PAGE_H - headerH + 14, width: logoW, height: logoH });
-      logoXEnd = M + logoW + 14;
+      page.drawImage(logoImage, { x: M, y: y - 8, width: logoW, height: logoH });
+      logoXEnd = M + logoW + 12;
     } catch {
       // continue without logo
     }
   }
 
-  text("HFX Honorarfuchs", logoXEnd, PAGE_H - headerH + 32, 17, fontBold, C_WHITE);
-  text("Rechnung / Invoice", logoXEnd, PAGE_H - headerH + 16, 8.5, font, rgb(0.72, 0.80, 0.94));
+  text("HFX Honorarfuchs", logoXEnd, y + 4, 16, fontBold, C_NAVY);
+  text("Rechnung / Invoice", logoXEnd, y - 12, 8.5, font, C_MUTED);
 
-  // Status badge (top-right of header)
+  // Status badge (top-right)
   const statusLabels: Record<string, string> = {
     entwurf: "ENTWURF", versendet: "VERSENDET", bezahlt: "BEZAHLT", storniert: "STORNIERT",
   };
   const statusColors: Record<string, { bg: ReturnType<typeof rgb>; fg: ReturnType<typeof rgb> }> = {
-    entwurf:   { bg: rgb(0.80, 0.84, 0.92), fg: C_NAVY },
-    versendet: { bg: rgb(0.18, 0.48, 0.84), fg: C_WHITE },
-    bezahlt:   { bg: C_GREEN, fg: C_WHITE },
-    storniert: { bg: C_RED, fg: C_WHITE },
+    entwurf:   { bg: rgb(0.90, 0.92, 0.96), fg: C_NAVY },
+    versendet: { bg: rgb(0.88, 0.93, 1.0), fg: rgb(0.12, 0.38, 0.72) },
+    bezahlt:   { bg: rgb(0.88, 0.96, 0.90), fg: C_GREEN },
+    storniert: { bg: rgb(0.98, 0.90, 0.90), fg: C_RED },
   };
   const st = data.status || "entwurf";
   const stLabel = statusLabels[st] || st.toUpperCase();
   const stColor = statusColors[st] || statusColors.entwurf;
   const badgeW = font.widthOfTextAtSize(stLabel, 8) + 18;
   const badgeX = PAGE_W - M - badgeW;
-  const badgeY = PAGE_H - headerH + 22;
-  page.drawRectangle({ x: badgeX, y: badgeY - 2, width: badgeW, height: 18, color: stColor.bg });
-  text(stLabel, badgeX + 9, badgeY + 3, 8, fontBold, stColor.fg);
+  const badgeY = y;
+  page.drawRectangle({ x: badgeX, y: badgeY - 4, width: badgeW, height: 18, color: stColor.bg });
+  text(stLabel, badgeX + 9, badgeY + 1, 8, fontBold, stColor.fg);
 
-  y = PAGE_H - headerH - 3 - 22; // below header + accent bar
+  y -= 34;
+  // Separator line
+  page.drawLine({ start: { x: M, y }, end: { x: PAGE_W - M, y }, thickness: 0.6, color: C_LINE });
+  y -= 18;
 
   // ===== ADDRESS SECTION =====
   // Sender line
