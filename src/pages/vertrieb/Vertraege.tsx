@@ -2664,12 +2664,12 @@ export default function Vertraege() {
                   className="mt-0.5"
                 />
                 <div>
-                  <Label htmlFor="mandate_accepted" className="cursor-pointer font-medium text-foreground">
-                    Zustimmung zur automatischen Zahlung erteilt
-                  </Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Der Kunde stimmt dem automatischen Einzug der fälligen Beträge über Stripe (SEPA-Lastschrift / Kreditkarte) zu. Diese Zustimmung wird datiert gespeichert.
-                  </p>
+                   <Label htmlFor="mandate_accepted" className="cursor-pointer font-medium text-foreground">
+                     Zustimmung zur automatischen Zahlung
+                   </Label>
+                   <p className="text-xs text-muted-foreground mt-0.5">
+                     Wird beim digitalen Vertragsabschluss automatisch erteilt. Der Kunde stimmt dem Einzug der fälligen Beträge per SEPA-Lastschrift / Kreditkarte zu.
+                   </p>
                 </div>
               </div>
               {/* Qodia Unit Price */}
