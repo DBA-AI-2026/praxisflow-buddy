@@ -265,8 +265,10 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
 
   // ===== LAUFZEIT & KÜNDIGUNG =====
   sectionHeader("LAUFZEIT & KÜNDIGUNG");
-  fieldRow("Vertragsbeginn", formatDate(data.start_date), "Vertragsende", formatDate(data.end_date));
-  fieldRow("Laufzeit", `${data.duration_months ?? 12} Monate`, "Kündigungsfrist", `${data.cancellation_period_months ?? 6} Monate zum Monatsende`);
+  const endDateLabel = data.end_date === "2099-12-31" ? "Unbefristet" : formatDate(data.end_date);
+  fieldRow("Vertragsbeginn", formatDate(data.start_date), "Vertragsende", endDateLabel);
+  const laufzeitLabel = (data.duration_months ?? 0) === 0 ? "Unbefristet" : `${data.duration_months} Monate`;
+  fieldRow("Laufzeit", laufzeitLabel, "Kündigungsfrist", `${data.cancellation_period_months ?? 6} Monate zum Monatsende`);
   y -= 10;
 
   // ===== PREISÜBERSICHT (table style like invoice) =====
