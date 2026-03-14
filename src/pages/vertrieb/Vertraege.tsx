@@ -1686,7 +1686,7 @@ export default function Vertraege() {
                      <td className="py-3.5 px-4 text-sm text-muted-foreground whitespace-nowrap">{c.sales_partner_name || "–"}</td>
                     <td className="py-3.5 px-4 text-right whitespace-nowrap">
                       <span className="font-semibold text-foreground tabular-nums">
-                        {Number(c.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+                        {(Number(c.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
                       </span>
                       {Number(c.discount_percent) > 0 && (
                         <span className="block text-xs text-success">-{c.discount_percent}%</span>
@@ -2310,7 +2310,7 @@ export default function Vertraege() {
                                       <span className="font-medium">
                                         +{ebmModules
                                           .filter((m: any) => form.selected_modules.includes(m.name))
-                                          .reduce((sum: number, m: any) => sum + Number(m.monthly_price), 0)
+                                          .reduce((sum: number, m: any) => sum + (Number(m.monthly_price) || 0), 0)
                                           .toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.
                                       </span>
                                     </div>
@@ -2397,13 +2397,13 @@ export default function Vertraege() {
                         .map((pr: any) => {
                           const hasPromo = pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now;
                           const baseFeeWaived = hasPromo && pr.promo_base_fee_end_date && new Date(pr.promo_base_fee_end_date) >= now;
-                          const price = baseFeeWaived ? 0 : Number(pr.monthly_price);
+                          const price = baseFeeWaived ? 0 : (Number(pr.monthly_price) || 0);
                           return (
                             <div key={pr.id} className="flex items-center justify-between text-sm">
                               <span className="text-foreground font-medium truncate mr-2">{pr.name}</span>
                               <span className="text-muted-foreground whitespace-nowrap tabular-nums">
                                 {hasPromo && baseFeeWaived ? (
-                                  <><span className="line-through text-muted-foreground/60 mr-1">{Number(pr.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</span><span className="text-success font-medium">0,00 €</span></>
+                                  <><span className="line-through text-muted-foreground/60 mr-1">{(Number(pr.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</span><span className="text-success font-medium">0,00 €</span></>
                                 ) : (
                                   <>{price.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</>
                                 )}
@@ -2417,7 +2417,7 @@ export default function Vertraege() {
                       .map((m: any) => (
                         <div key={m.id} className="flex items-center justify-between text-sm pl-3 border-l-2 border-primary/20">
                           <span className="text-muted-foreground truncate mr-2">{m.name}</span>
-                          <span className="text-muted-foreground whitespace-nowrap tabular-nums">{Number(m.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</span>
+                          <span className="text-muted-foreground whitespace-nowrap tabular-nums">{(Number(m.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</span>
                         </div>
                       ))
                     }
@@ -2477,15 +2477,38 @@ export default function Vertraege() {
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">Monatspreis</span>
-                      <p className="font-medium">{(form.monthly_price || 0).toLocaleString("de-DE")} €</p>
+                      {isAdmin ? (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          value={form.monthly_price}
+                          onChange={(e) => set("monthly_price", parseFloat(e.target.value) || 0)}
+                          className="mt-1 h-8 text-sm font-medium"
+                        />
+                      ) : (
+                        <p className="font-medium">{(form.monthly_price || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</p>
+                      )}
                     </div>
-                    {form.one_time_fee > 0 && (
-                      <div>
-                        <span className="text-muted-foreground">Einmalgebühr</span>
-                        <p className="font-medium">{form.one_time_fee.toLocaleString("de-DE")} €</p>
-                      </div>
-                    )}
+                    <div>
+                      <span className="text-muted-foreground">Einmalgebühr</span>
+                      {isAdmin ? (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          value={form.one_time_fee}
+                          onChange={(e) => set("one_time_fee", parseFloat(e.target.value) || 0)}
+                          className="mt-1 h-8 text-sm font-medium"
+                        />
+                      ) : (
+                        <p className="font-medium">{(form.one_time_fee || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</p>
+                      )}
+                    </div>
                   </div>
+                  {!isAdmin && (
+                    <p className="text-xs text-muted-foreground mt-2">💡 Preise werden automatisch aus der Produktmatrix berechnet.</p>
+                  )}
                 </div>
                 <div>
                   <Label>Zahlungsintervall</Label>
