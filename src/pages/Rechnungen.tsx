@@ -159,6 +159,7 @@ export default function Rechnungen() {
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [detailEmail, setDetailEmail] = useState<string>("");
+  const [pdfDesign, setPdfDesign] = useState<"design1" | "design2">("design2");
 
   // Create form
   const [form, setForm] = useState({
