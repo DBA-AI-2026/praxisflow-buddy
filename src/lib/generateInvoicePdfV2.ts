@@ -145,11 +145,11 @@ export async function generateInvoicePdfV2(
 
   const headerTop = PAGE_H - 36;
 
-  // Logo top-right (18mm from right paper edge)
+  // Logo top-right, aligned with right text margin
   if (embeddedLogo) {
-    const logoH = 56;
+    const logoH = 40;
     const logoW = (embeddedLogo.width / embeddedLogo.height) * logoH;
-    const logoX = PAGE_W - 8 * mmToPt - logoW;
+    const logoX = PAGE_W - MR - logoW;
     page.drawImage(embeddedLogo, { x: logoX, y: headerTop - logoH + 10, width: logoW, height: logoH });
   } else {
     text("HFX Honorarfuchs", ML, headerTop, 18, fontBold, C_NAVY);
