@@ -155,19 +155,7 @@ export async function generateInvoicePdfV2(
     text("ein Geschäftsbereich der MCC Medical CareCapital GmbH", ML, headerTop - 16, 7, font, C_MUTED);
   }
 
-  // Status badge top-right
-  const statusLabels: Record<string, string> = {
-    entwurf: "ENTWURF", versendet: "VERSENDET", bezahlt: "BEZAHLT", storniert: "STORNIERT",
-  };
-  const st = data.status || "entwurf";
-  const stLabel = statusLabels[st] || st.toUpperCase();
-  const stBg = st === "bezahlt" ? C_GREEN : st === "storniert" ? C_MUTED : C_STATUS_RED;
-  const badgeW = fontBold.widthOfTextAtSize(stLabel, 9) + 20;
-  const badgeH = 22;
-  const badgeX = PAGE_W - MR - badgeW;
-  const badgeY = headerTop - 18;
-  page.drawRectangle({ x: badgeX, y: badgeY, width: badgeW, height: badgeH, color: stBg });
-  text(stLabel, badgeX + 10, badgeY + 6, 9, fontBold, C_WHITE);
+  // Status badge removed
 
   // ===== SENDER LINE =====
   y = PAGE_H - 45 * mmToPt;
