@@ -129,14 +129,14 @@ export async function generateInvoicePdf(
   // ===== HEADER =====
   // No top stripe
 
-  // Logo top-right: 12mm from top, 10mm from right edge – larger
+  // Logo top-right: 12mm from top, close to right edge
   const LOGO_TOP_MM = 12;
-  const LOGO_RIGHT_MM = 10;
+  const LOGO_RIGHT_MM = 5;
   const mmToPt = 2.8346;
   if (logoBytes) {
     try {
       const logoImage = await doc.embedJpg(logoBytes);
-      const logoH = 48;
+      const logoH = 52;
       const logoW = (logoImage.width / logoImage.height) * logoH;
       const logoX = PAGE_W - LOGO_RIGHT_MM * mmToPt - logoW;
       const logoY = PAGE_H - LOGO_TOP_MM * mmToPt - logoH;
