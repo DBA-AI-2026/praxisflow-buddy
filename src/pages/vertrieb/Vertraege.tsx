@@ -2209,8 +2209,8 @@ export default function Vertraege() {
                                     </span>
                                   )}
                                   <span className="text-xs text-muted-foreground line-through">
-                                    Regulär: {Number(p.monthly_price).toLocaleString("de-DE")} €/Mon.
-                                    {p.price_per_unit != null && ` + ${Number(p.price_per_unit).toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."}`}
+                                    Regulär: {(Number(p.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.
+                                    {p.price_per_unit != null && ` + ${(Number(p.price_per_unit) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/${p.price_per_unit_label || "Stk."}`}
                                   </span>
                                 </div>
                               )}
