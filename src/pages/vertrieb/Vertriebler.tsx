@@ -304,15 +304,25 @@ const Vertriebler = () => {
                         <TableCell className="text-center font-medium">{v.contract_count}</TableCell>
                         {isAdmin && (
                           <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="gap-1.5"
-                              onClick={() => setSelectedPartner(v)}
-                            >
-                              <Percent className="h-3.5 w-3.5" />
-                              Provisionen
-                            </Button>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-1.5"
+                                onClick={() => setSelectedPartner(v)}
+                              >
+                                <Percent className="h-3.5 w-3.5" />
+                                Provisionen
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => setDeleteTarget(v)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </TableCell>
                         )}
                       </TableRow>
