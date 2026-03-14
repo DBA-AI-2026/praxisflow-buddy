@@ -835,6 +835,7 @@ export type Database = {
           salesforce_synced: boolean
           source: string
           status: string
+          tippgeber_id: string | null
           updated_at: string
           vorname: string
         }
@@ -864,6 +865,7 @@ export type Database = {
           salesforce_synced?: boolean
           source?: string
           status?: string
+          tippgeber_id?: string | null
           updated_at?: string
           vorname: string
         }
@@ -893,6 +895,7 @@ export type Database = {
           salesforce_synced?: boolean
           source?: string
           status?: string
+          tippgeber_id?: string | null
           updated_at?: string
           vorname?: string
         }

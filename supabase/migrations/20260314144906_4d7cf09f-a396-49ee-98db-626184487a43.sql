@@ -1,0 +1,1 @@
+ALTER TABLE public.leads ADD COLUMN tippgeber_id uuid DEFAULT NULL;
