@@ -2170,8 +2170,10 @@ export default function Vertraege() {
                       const today = new Date();
                       const hasPromo = p.promo_price != null && p.promo_end_date && new Date(p.promo_end_date) >= today;
                       const baseFeeWaived = hasPromo && p.promo_base_fee_end_date && new Date(p.promo_base_fee_end_date) >= today;
-                      const displayMonthly = baseFeeWaived ? 0 : Number(p.monthly_price);
-                      const displayPerUnit = hasPromo ? Number(p.promo_price) : (p.price_per_unit != null ? Number(p.price_per_unit) : null);
+                      const displayMonthly = baseFeeWaived ? 0 : (Number(p.monthly_price) || 0);
+                      const displayPerUnit = hasPromo
+                        ? (Number(p.promo_price) || 0)
+                        : (p.price_per_unit != null ? (Number(p.price_per_unit) || 0) : null);
 
                       return (
                         <div key={p.id}>
