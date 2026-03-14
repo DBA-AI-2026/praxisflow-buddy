@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Euro, Check, ChevronsUpDown, Star, UserPlus, Search } from "lucide-react";
+import { Users, Euro, Check, ChevronsUpDown, Star, UserPlus, Search, Percent } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { PartnerCommissionDialog } from "@/components/vertrieb/PartnerCommissionDialog";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const roleLabels: Record<string, string> = {
   admin: "Administrator",
@@ -49,6 +51,8 @@ const Vertriebler = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("alle");
   const [roleFilterOpen, setRoleFilterOpen] = useState(false);
+  const [selectedPartner, setSelectedPartner] = useState<VertrieblerRow | null>(null);
+  const { isAdmin } = useUserRole();
 
   // Fetch profiles with their roles
   const { data: vertriebler = [], isLoading } = useQuery({
@@ -254,6 +258,7 @@ const Vertriebler = () => {
                     <TableHead>Rolle</TableHead>
                     <TableHead>E-Mail</TableHead>
                     <TableHead className="text-center">Verträge</TableHead>
+                    {isAdmin && <TableHead className="text-right">Provisionen</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -270,6 +275,19 @@ const Vertriebler = () => {
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{v.email || "–"}</TableCell>
                         <TableCell className="text-center font-medium">{v.contract_count}</TableCell>
+                        {isAdmin && (
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-1.5"
+                              onClick={() => setSelectedPartner(v)}
+                            >
+                              <Percent className="h-3.5 w-3.5" />
+                              Provisionen
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })}
@@ -278,6 +296,17 @@ const Vertriebler = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Commission Dialog */}
+        {selectedPartner && (
+          <PartnerCommissionDialog
+            open={!!selectedPartner}
+            onOpenChange={(open) => !open && setSelectedPartner(null)}
+            userId={selectedPartner.user_id}
+            userName={selectedPartner.full_name}
+            userRole={selectedPartner.role}
+          />
+        )}
       </div>
     </MainLayout>
   );

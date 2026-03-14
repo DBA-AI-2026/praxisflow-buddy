@@ -188,6 +188,36 @@ export type Database = {
           },
         ]
       }
+      commission_role_defaults: {
+        Row: {
+          commission_type: string
+          commission_value: number
+          created_at: string
+          id: string
+          product_name: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          commission_type?: string
+          commission_value?: number
+          created_at?: string
+          id?: string
+          product_name: string
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          commission_type?: string
+          commission_value?: number
+          created_at?: string
+          id?: string
+          product_name?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contracts: {
         Row: {
           adresse: string | null
@@ -898,6 +928,36 @@ export type Database = {
           tippgeber_id?: string | null
           updated_at?: string
           vorname?: string
+        }
+        Relationships: []
+      }
+      partner_commission_overrides: {
+        Row: {
+          commission_type: string
+          commission_value: number
+          created_at: string
+          id: string
+          product_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          commission_type?: string
+          commission_value?: number
+          created_at?: string
+          id?: string
+          product_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          commission_type?: string
+          commission_value?: number
+          created_at?: string
+          id?: string
+          product_name?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
