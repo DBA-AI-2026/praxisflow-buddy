@@ -2400,16 +2400,29 @@ export default function Vertraege() {
                           const hasPromo = pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now;
                           const baseFeeWaived = hasPromo && pr.promo_base_fee_end_date && new Date(pr.promo_base_fee_end_date) >= now;
                           const price = baseFeeWaived ? 0 : (Number(pr.monthly_price) || 0);
+                          const perUnit = hasPromo
+                            ? (pr.promo_price != null ? (Number(pr.promo_price) || 0) : null)
+                            : (pr.price_per_unit != null ? (Number(pr.price_per_unit) || 0) : null);
+                          const perUnitLabel = pr.price_per_unit_label || "Stk.";
                           return (
-                            <div key={pr.id} className="flex items-center justify-between text-sm">
-                              <span className="text-foreground font-medium truncate mr-2">{pr.name}</span>
-                              <span className="text-muted-foreground whitespace-nowrap tabular-nums">
-                                {hasPromo && baseFeeWaived ? (
-                                  <><span className="line-through text-muted-foreground/60 mr-1">{(Number(pr.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</span><span className="text-success font-medium">0,00 €</span></>
-                                ) : (
-                                  <>{price.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</>
-                                )}
-                              </span>
+                            <div key={pr.id} className="space-y-0.5">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-foreground font-medium truncate mr-2">{pr.name}</span>
+                                <span className="text-muted-foreground whitespace-nowrap tabular-nums">
+                                  {hasPromo && baseFeeWaived ? (
+                                    <><span className="line-through text-muted-foreground/60 mr-1">{(Number(pr.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</span><span className="text-success font-medium">0,00 €</span></>
+                                  ) : (
+                                    <>{price.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</>
+                                  )}
+                                  <span className="text-xs text-muted-foreground/70 ml-1">Grundgebühr</span>
+                                </span>
+                              </div>
+                              {perUnit != null && (
+                                <div className="flex items-center justify-between text-xs pl-3">
+                                  <span className="text-muted-foreground">zzgl. pro {perUnitLabel}</span>
+                                  <span className="text-muted-foreground tabular-nums">{perUnit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/{perUnitLabel}</span>
+                                </div>
+                              )}
                             </div>
                           );
                         });
