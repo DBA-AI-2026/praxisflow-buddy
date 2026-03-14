@@ -81,7 +81,7 @@ export function PartnerCommissionDialog({ open, onOpenChange, userId, userName, 
         .from("partner_commission_overrides" as any)
         .select("*")
         .eq("user_id", userId);
-      return (data || []) as Array<{ id: string; product_name: string; commission_type: CommissionType; commission_value: number }>;
+      return (data as unknown as Array<{ id: string; product_name: string; commission_type: CommissionType; commission_value: number }>) || [];
     },
     enabled: open,
   });
