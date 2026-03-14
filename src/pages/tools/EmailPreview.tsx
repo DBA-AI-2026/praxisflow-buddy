@@ -1260,6 +1260,12 @@ export default function EmailPreview() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const prevPdfBlobUrl = useRef<string | null>(null);
 
+  // AI assistant state
+  const [aiModal, setAiModal] = useState<{ template: Template; mode: "email" | "pdf" } | null>(null);
+  const [aiInstruction, setAiInstruction] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiPreviewHtml, setAiPreviewHtml] = useState<string | null>(null);
+
   const openPdfPreview = async (tpl: Template) => {
     setPdfModal({ template: tpl });
     setPdfLoading(true);
