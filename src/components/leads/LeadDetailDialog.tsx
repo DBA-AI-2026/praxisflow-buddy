@@ -1,4 +1,14 @@
 import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -47,6 +57,7 @@ import {
   Package,
   Users,
   Lightbulb,
+  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -98,6 +109,8 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
   const [sendingConfirmEmail, setSendingConfirmEmail] = useState(false);
   const [sendingCredentials, setSendingCredentials] = useState(false);
   const [sendingBuchungsmail, setSendingBuchungsmail] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Fetch assigned profile name
   const { data: assignedProfile } = useQuery({
@@ -312,6 +325,22 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
     }
   };
 
+  const deleteLead = async () => {
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from("leads").delete().eq("id", lead.id);
+      if (error) throw error;
+      toast({ title: "Gelöscht", description: "Interessent wurde endgültig gelöscht." });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-recent-leads"] });
+      onClose();
+    } catch (err: any) {
+      toast({ title: "Fehler", description: err.message || "Löschen fehlgeschlagen.", variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const sc = statusConfig[lead.status] || statusConfig.neu;
   const sourceLabel = lead.source === "manual" ? "Manuell erfasst" : "Homepage";
   const sourceIcon = lead.source === "manual"
@@ -375,7 +404,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
+          <DialogTitle className="flex items-center gap-3 flex-wrap">
             <span className="font-mono text-primary">{lead.hfx_customer_number}</span>
             <Badge variant={sc.variant} className="text-xs">{sc.label}</Badge>
             <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${
@@ -386,6 +415,17 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
               {sourceIcon}
               {sourceLabel}
             </span>
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="ml-auto h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => setShowDeleteConfirm(true)}
+                title="Interessent löschen"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </DialogTitle>
         </DialogHeader>
 
@@ -709,6 +749,28 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Interessent endgültig löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Der Interessent <strong>{lead.praxis_name}</strong> ({lead.hfx_customer_number}) wird unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={deleteLead}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Endgültig löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
