@@ -344,6 +344,30 @@ const Vertriebler = () => {
             userRole={selectedPartner.role}
           />
         )}
+
+        {/* Delete Confirmation */}
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Vertriebler entfernen?</AlertDialogTitle>
+              <AlertDialogDescription>
+                <strong>{deleteTarget?.full_name}</strong> ({deleteTarget?.email || "–"}) wird aus der Vertriebsliste entfernt.
+                Alle Vertriebsrollen dieses Benutzers werden gelöscht. Bestehende Verträge bleiben erhalten.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleteMutation.isPending}>Abbrechen</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleteMutation.isPending}
+                onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.user_id)}
+              >
+                {deleteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Entfernen
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </MainLayout>
   );
