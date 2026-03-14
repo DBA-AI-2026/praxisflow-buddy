@@ -244,6 +244,7 @@ const emptyForm: ContractFormData = {
   stundenaufwand_pro_woche: "",
   rechnungs_email: "",
   rechnungs_email_identisch: false,
+  mandate_accepted: true,
 };
 
 export default function Vertraege() {
