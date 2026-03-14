@@ -220,7 +220,7 @@ export async function generateInvoicePdfV2(
     text(row[1], rightColX + metaLabelW + 6, textY, 8, font, C_TEXT);
   });
 
-  y = boxTop - recipBoxH - 24;
+  y = boxTop - recipBoxH - 24 - 20 * mmToPt;
 
   // ===== "RECHNUNG" TITLE =====
   text("RECHNUNG", ML, y, 20, fontBold, C_TEXT);
