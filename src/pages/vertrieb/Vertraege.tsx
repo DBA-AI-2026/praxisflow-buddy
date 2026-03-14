@@ -400,7 +400,7 @@ export default function Vertraege() {
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("user_id")
-        .in("role", ["sales_partner", "user", "sales_lead", "regional_lead", "admin"]);
+        .in("role", ["sales_partner", "user", "sales_lead", "regional_lead", "admin", "tippgeber"]);
       if (roleError) throw roleError;
       const salesUserIds = (roleData || []).map((r) => r.user_id);
       if (salesUserIds.length === 0) return [];
