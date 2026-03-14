@@ -327,13 +327,15 @@ Deno.serve(async (req) => {
     const normalizedEmail = email.trim().toLowerCase();
     const { data: existingLead } = await supabase
       .from("leads")
-      .select("id, hfx_customer_number, generated_password, praxis_name, vorname, nachname")
+      .select("id, hfx_customer_number, generated_password, praxis_name, vorname, nachname, registration_attempts")
       .eq("email", normalizedEmail)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (existingLead) {
+    // For homepage submissions we keep strict deduplication by email.
+    // For manual internal entries we allow a new lead row, even with same email.
+    if (existingLead && leadSource === "homepage") {
       console.log(`Duplicate registration attempt for ${normalizedEmail}, resending credentials for ${existingLead.hfx_customer_number}`);
 
       // Resend existing credentials
@@ -383,6 +385,10 @@ Deno.serve(async (req) => {
         }),
         { status: 200, headers: { ...headers, "Content-Type": "application/json" } }
       );
+    }
+
+    if (existingLead && leadSource === "manual") {
+      console.log(`Manual lead with existing email ${normalizedEmail} – creating a new lead record.`);
     }
 
     // Generate password for Qodia access
