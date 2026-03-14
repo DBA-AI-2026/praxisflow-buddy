@@ -432,7 +432,7 @@ export default function Vertraege() {
   });
 
   const { data: products = [] } = useQuery({
-    queryKey: ["products"],
+    queryKey: ["products", "full"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
