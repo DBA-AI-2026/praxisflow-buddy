@@ -2194,8 +2194,8 @@ export default function Vertraege() {
                                 <span className="text-xs font-medium text-muted-foreground whitespace-nowrap ml-2">
                                   {hasPromo && baseFeeWaived
                                     ? "0 €/Mon."
-                                    : `${Number(p.monthly_price).toLocaleString("de-DE")} €/Mon.`}
-                                  {displayPerUnit != null && ` + ${displayPerUnit.toLocaleString("de-DE")} €/${p.price_per_unit_label || "Stk."}`}
+                                    : `${displayMonthly.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.`}
+                                  {displayPerUnit != null && ` + ${displayPerUnit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/${p.price_per_unit_label || "Stk."}`}
                                 </span>
                               </div>
                               {hasPromo && (
