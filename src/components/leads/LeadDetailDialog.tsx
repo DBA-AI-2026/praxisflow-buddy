@@ -3,8 +3,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +44,9 @@ import {
   FilePlus,
   Play,
   Mail,
+  Package,
+  Users,
+  Lightbulb,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -86,12 +90,51 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { isAdmin, isSalesLead, isRegionalLead } = useUserRole();
+  const canSeePartnerInfo = isAdmin || isSalesLead || isRegionalLead;
   const [saving, setSaving] = useState(false);
   const [resending, setResending] = useState(false);
   const [syncingQodia, setSyncingQodia] = useState(false);
   const [sendingConfirmEmail, setSendingConfirmEmail] = useState(false);
   const [sendingCredentials, setSendingCredentials] = useState(false);
   const [sendingBuchungsmail, setSendingBuchungsmail] = useState(false);
+
+  // Fetch assigned profile name
+  const { data: assignedProfile } = useQuery({
+    queryKey: ["profile", lead.assigned_to],
+    queryFn: async () => {
+      if (!lead.assigned_to) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("user_id", lead.assigned_to)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!lead.assigned_to && canSeePartnerInfo,
+  });
+
+  // Check if there's a linked Tippgeber lead
+  const { data: tippLeadMatch } = useQuery({
+    queryKey: ["tipp-lead-match", lead.email, lead.praxis_name],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("tipp_leads")
+        .select("id, arzt_name, praxis_name, created_by")
+        .or(`email.eq.${lead.email},praxis_name.eq.${lead.praxis_name}`)
+        .limit(1);
+      if (!data || data.length === 0) return null;
+      // Fetch tippgeber profile
+      const tipp = data[0];
+      const { data: tippProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", tipp.created_by)
+        .maybeSingle();
+      return { ...tipp, tippgeber_name: tippProfile?.full_name || "Unbekannt" };
+    },
+    enabled: canSeePartnerInfo,
+  });
 
   const form = useForm<EditValues>({
     resolver: zodResolver(editSchema),
@@ -518,7 +561,43 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
                   <p className="font-medium">{getAssigneeName(lead.assigned_to)}</p>
                 </div>
               )}
+              {canSeePartnerInfo && !canAssign && (
+                <div className="rounded-lg border border-border p-3 col-span-2">
+                  <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                    <Users className="h-3 w-3" /> Vertriebspartner / AD-Zuteilung
+                  </p>
+                  <p className="font-medium">
+                    {assignedProfile
+                      ? `${assignedProfile.full_name} (${assignedProfile.email})`
+                      : lead.assigned_to ? "–" : "Nicht zugewiesen"}
+                  </p>
+                </div>
+              )}
+              {canSeePartnerInfo && tippLeadMatch && (
+                <div className="rounded-lg border border-border p-3 col-span-2">
+                  <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                    <Lightbulb className="h-3 w-3" /> Tippgeber
+                  </p>
+                  <p className="font-medium">{tippLeadMatch.tippgeber_name}</p>
+                </div>
+              )}
             </div>
+
+            {/* Produktinteresse */}
+            {lead.interested_products && lead.interested_products.length > 0 && (
+              <div className="rounded-lg border border-border p-3">
+                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide flex items-center gap-1">
+                  <Package className="h-3 w-3" /> Produktinteresse
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {lead.interested_products.map((product: string) => (
+                    <Badge key={product} variant="secondary" className="text-xs">
+                      {product}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Sync-Status – each row is clickable if an action exists */}
             <div className="rounded-lg border border-border p-3">
