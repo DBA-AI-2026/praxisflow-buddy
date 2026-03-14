@@ -159,7 +159,7 @@ export async function generateInvoicePdfV2(
   // Status badge removed
 
   // ===== SENDER LINE =====
-  y = PAGE_H - 45 * mmToPt;
+  y = PAGE_H - 48 * mmToPt;
   text("HFX Honorarfuchs · Hohenzollernstr. 47 · 47799 Krefeld", ML, y, 7, font, C_MUTED);
   y -= 4;
   page.drawLine({ start: { x: ML, y }, end: { x: ML + 220, y }, thickness: 0.3, color: C_LINE_LIGHT });
