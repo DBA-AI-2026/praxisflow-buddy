@@ -338,7 +338,7 @@ export default function Rechnungen() {
           const logoResp = await fetch("/logo.jpeg");
           if (logoResp.ok) logoBytes = await logoResp.arrayBuffer();
         } catch { /* no logo */ }
-        const pdfBytes = await generateInvoicePdf(invoice, logoBytes);
+        const pdfBytes = await (pdfDesign === "design2" ? generateInvoicePdfV2 : generateInvoicePdf)(invoice, logoBytes);
         // Convert Uint8Array → base64
         const binary = Array.from(pdfBytes).map((b) => String.fromCharCode(b)).join("");
         pdfBase64 = btoa(binary);
