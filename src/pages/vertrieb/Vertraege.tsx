@@ -2417,7 +2417,7 @@ export default function Vertraege() {
                       .map((m: any) => (
                         <div key={m.id} className="flex items-center justify-between text-sm pl-3 border-l-2 border-primary/20">
                           <span className="text-muted-foreground truncate mr-2">{m.name}</span>
-                          <span className="text-muted-foreground whitespace-nowrap tabular-nums">{Number(m.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</span>
+                          <span className="text-muted-foreground whitespace-nowrap tabular-nums">{(Number(m.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</span>
                         </div>
                       ))
                     }
