@@ -131,25 +131,24 @@ export async function generateInvoicePdf(
   page.drawRectangle({ x: 0, y: PAGE_H - 3, width: PAGE_W, height: 3, color: C_NAVY });
   page.drawRectangle({ x: 0, y: PAGE_H - 6, width: PAGE_W, height: 3, color: C_RED });
 
-  y = PAGE_H - 30;
-
-  let logoXEnd = M;
+  // Logo top-right: 12mm from top, 10mm from right edge
+  const LOGO_TOP_MM = 12;
+  const LOGO_RIGHT_MM = 10;
+  const mmToPt = 2.8346;
   if (logoBytes) {
     try {
       const logoImage = await doc.embedJpg(logoBytes);
-      const logoH = 32;
+      const logoH = 36;
       const logoW = (logoImage.width / logoImage.height) * logoH;
-      page.drawImage(logoImage, { x: M, y: y - 8, width: logoW, height: logoH });
-      logoXEnd = M + logoW + 12;
+      const logoX = PAGE_W - LOGO_RIGHT_MM * mmToPt - logoW;
+      const logoY = PAGE_H - LOGO_TOP_MM * mmToPt - logoH;
+      page.drawImage(logoImage, { x: logoX, y: logoY, width: logoW, height: logoH });
     } catch {
       // continue without logo
     }
   }
 
-  text("HFX Honorarfuchs", logoXEnd, y + 4, 16, fontBold, C_NAVY);
-  text("Rechnung / Invoice", logoXEnd, y - 12, 8.5, font, C_MUTED);
-
-  // Status badge (top-right)
+  // Status badge (below logo area, top-right)
   const statusLabels: Record<string, string> = {
     entwurf: "ENTWURF", versendet: "VERSENDET", bezahlt: "BEZAHLT", storniert: "STORNIERT",
   };
@@ -164,22 +163,20 @@ export async function generateInvoicePdf(
   const stColor = statusColors[st] || statusColors.entwurf;
   const badgeW = font.widthOfTextAtSize(stLabel, 8) + 18;
   const badgeX = PAGE_W - M - badgeW;
-  const badgeY = y;
+  const badgeY = PAGE_H - 58;
   page.drawRectangle({ x: badgeX, y: badgeY - 4, width: badgeW, height: 18, color: stColor.bg });
   text(stLabel, badgeX + 9, badgeY + 1, 8, fontBold, stColor.fg);
 
-  y -= 34;
-  // Separator line
-  page.drawLine({ start: { x: M, y }, end: { x: PAGE_W - M, y }, thickness: 0.6, color: C_LINE });
-  y -= 18;
-
   // ===== ADDRESS SECTION =====
-  // Sender line
-  text("HFX Honorarfuchs – MCC Medical CareCapital GmbH · Hohenzollernstr. 47 · 47799 Krefeld", M, y, 7, font, C_MUTED);
-  y -= 4;
-  // Underline under sender
-  page.drawLine({ start: { x: M, y }, end: { x: M + 200, y }, thickness: 0.3, color: C_LINE });
-  y -= 16;
+  // 45mm from top edge of page to sender line
+  const ADDR_TOP_MM = 45;
+  y = PAGE_H - ADDR_TOP_MM * mmToPt;
+
+  // Sender line (small, without company name)
+  text("HFX Honorarfuchs · Hohenzollernstr. 47 · 47799 Krefeld", M, y, 6, font, C_MUTED);
+  y -= 3;
+  page.drawLine({ start: { x: M, y }, end: { x: M + 180, y }, thickness: 0.3, color: C_LINE });
+  y -= 14;
 
   // Two-column layout: Recipient left, invoice details right
   const colLeft = M;
