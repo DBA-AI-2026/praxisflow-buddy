@@ -1045,10 +1045,7 @@ export default function Vertraege() {
     praxisanschrift: "Adresse (Straße, Hausnummer)",
     plz: "PLZ",
     ort: "Ort",
-    telefon: "Telefon",
-    email: "E-Mail",
-    fachrichtung: "Fachrichtung",
-    rechtsform: "Rechtsform",
+    sales_partner_name: "Vertriebspartner",
     start_date: "Vertragsbeginn",
   };
 
