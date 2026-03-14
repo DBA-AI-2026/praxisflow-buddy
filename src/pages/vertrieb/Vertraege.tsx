@@ -2138,7 +2138,8 @@ export default function Vertraege() {
                     .reduce((sum: number, pr: any) => {
                       const promoActive = pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now;
                       const bfWaived = promoActive && pr.promo_base_fee_end_date && new Date(pr.promo_base_fee_end_date) >= now;
-                      return sum + (bfWaived ? 0 : (Number(pr.monthly_price) || 0));
+                      const baseMonthly = Number(pr.monthly_price ?? pr.base_license_price) || 0;
+                      return sum + (bfWaived ? 0 : baseMonthly);
                     }, 0);
                   const modulesTotal = ebmModules
                     .filter((m: any) => (selectedModules ?? form.selected_modules).includes(m.name))
@@ -2170,10 +2171,12 @@ export default function Vertraege() {
                       const today = new Date();
                       const hasPromo = p.promo_price != null && p.promo_end_date && new Date(p.promo_end_date) >= today;
                       const baseFeeWaived = hasPromo && p.promo_base_fee_end_date && new Date(p.promo_base_fee_end_date) >= today;
-                      const displayMonthly = baseFeeWaived ? 0 : (Number(p.monthly_price) || 0);
+                      const regularMonthly = Number(p.monthly_price ?? p.base_license_price) || 0;
+                      const displayMonthly = baseFeeWaived ? 0 : regularMonthly;
+                      const regularPerUnit = p.price_per_unit != null ? (Number(p.price_per_unit) || 0) : null;
                       const displayPerUnit = hasPromo
-                        ? (Number(p.promo_price) || 0)
-                        : (p.price_per_unit != null ? (Number(p.price_per_unit) || 0) : null);
+                        ? (p.promo_price != null ? (Number(p.promo_price) || 0) : regularPerUnit)
+                        : regularPerUnit;
 
                       return (
                         <div key={p.id}>
@@ -2189,14 +2192,21 @@ export default function Vertraege() {
                               onCheckedChange={() => toggleProduct(p.name)}
                             />
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-semibold">{p.name}</span>
-                                <span className="text-xs font-medium text-muted-foreground whitespace-nowrap ml-2">
-                                  {hasPromo && baseFeeWaived
-                                    ? "0 €/Mon."
-                                    : `${displayMonthly.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.`}
-                                  {displayPerUnit != null && ` + ${displayPerUnit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/${p.price_per_unit_label || "Stk."}`}
-                                </span>
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-sm font-semibold truncate">{p.name}</span>
+                                <div className="text-right text-xs font-medium text-muted-foreground">
+                                  <div className="whitespace-nowrap">
+                                    {hasPromo && baseFeeWaived
+                                      ? "0,00 €/Mon."
+                                      : `${displayMonthly.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.`}
+                                    <span className="ml-1 text-muted-foreground/80">Grundgebühr</span>
+                                  </div>
+                                  {displayPerUnit != null && (
+                                    <div className="whitespace-nowrap text-muted-foreground/90">
+                                      {displayPerUnit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/{p.price_per_unit_label || "Stk."}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               {hasPromo && (
                                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
@@ -2209,8 +2219,8 @@ export default function Vertraege() {
                                     </span>
                                   )}
                                   <span className="text-xs text-muted-foreground line-through">
-                                    Regulär: {(Number(p.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.
-                                    {p.price_per_unit != null && ` + ${(Number(p.price_per_unit) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/${p.price_per_unit_label || "Stk."}`}
+                                    Regulär: {regularMonthly.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.
+                                    {regularPerUnit != null && ` + ${regularPerUnit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/${p.price_per_unit_label || "Stk."}`}
                                   </span>
                                 </div>
                               )}
@@ -2399,10 +2409,12 @@ export default function Vertraege() {
                         .map((pr: any) => {
                           const hasPromo = pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now;
                           const baseFeeWaived = hasPromo && pr.promo_base_fee_end_date && new Date(pr.promo_base_fee_end_date) >= now;
-                          const price = baseFeeWaived ? 0 : (Number(pr.monthly_price) || 0);
+                          const regularMonthly = Number(pr.monthly_price ?? pr.base_license_price) || 0;
+                          const price = baseFeeWaived ? 0 : regularMonthly;
+                          const regularPerUnit = pr.price_per_unit != null ? (Number(pr.price_per_unit) || 0) : null;
                           const perUnit = hasPromo
-                            ? (pr.promo_price != null ? (Number(pr.promo_price) || 0) : null)
-                            : (pr.price_per_unit != null ? (Number(pr.price_per_unit) || 0) : null);
+                            ? (pr.promo_price != null ? (Number(pr.promo_price) || 0) : regularPerUnit)
+                            : regularPerUnit;
                           const perUnitLabel = pr.price_per_unit_label || "Stk.";
                           return (
                             <div key={pr.id} className="space-y-0.5">
@@ -2410,11 +2422,11 @@ export default function Vertraege() {
                                 <span className="text-foreground font-medium truncate mr-2">{pr.name}</span>
                                 <span className="text-muted-foreground whitespace-nowrap tabular-nums">
                                   {hasPromo && baseFeeWaived ? (
-                                    <><span className="line-through text-muted-foreground/60 mr-1">{(Number(pr.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</span><span className="text-success font-medium">0,00 €</span></>
+                                    <><span className="line-through text-muted-foreground/60 mr-1">{regularMonthly.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</span><span className="text-success font-medium">0,00 €</span></>
                                   ) : (
                                     <>{price.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</>
                                   )}
-                                  <span className="text-xs text-muted-foreground/70 ml-1">Grundgebühr</span>
+                                  <span className="text-xs text-muted-foreground/80 ml-1">Grundgebühr</span>
                                 </span>
                               </div>
                               {perUnit != null && (
