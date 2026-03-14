@@ -170,7 +170,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-4 lg:px-6 border-b border-sidebar-border">
-        <img src={logo} alt="Honorarfuchs Logo" className="h-9 w-9 lg:h-10 lg:w-10 object-contain" />
+        <div className="h-9 w-9 lg:h-10 lg:w-10 rounded-full bg-white flex items-center justify-center flex-shrink-0">
+          <img src={logo} alt="Honorarfuchs Logo" className="h-7 w-7 lg:h-8 lg:w-8 object-contain" />
+        </div>
         <div>
           <span className="text-base lg:text-lg font-semibold text-sidebar-foreground">HFX Sales</span>
           <span className="text-xs block text-sidebar-foreground/60">das Portal für den Vertrieb</span>
