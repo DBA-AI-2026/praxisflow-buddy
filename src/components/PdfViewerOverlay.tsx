@@ -7,7 +7,7 @@ import { ArrowLeft, Download, Loader2 } from "lucide-react";
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs`;
 
 export function PdfViewerOverlay() {
-  const { pdfUrl, setPdfUrl, register } = usePdfViewer();
+  const { pdfUrl, setPdfUrl, pdfFilename, setPdfFilename, register } = usePdfViewer();
   const [loading, setLoading] = useState(false);
   const [pageCount, setPageCount] = useState(0);
   const [pageDataUrls, setPageDataUrls] = useState<string[]>([]);
