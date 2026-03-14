@@ -90,15 +90,14 @@ export async function generateInvoicePdf(
   const CW = PAGE_W - 2 * M;
 
   const C_NAVY    = rgb(0.044, 0.212, 0.498);
-  const C_NAVY_MID = rgb(0.08, 0.30, 0.62);
   const C_RED     = rgb(0.714, 0.098, 0.239);
   const C_TEXT    = rgb(0.1, 0.1, 0.12);
   const C_MUTED   = rgb(0.42, 0.44, 0.50);
-  const C_LINE    = rgb(0.85, 0.87, 0.91);
+  const C_LINE    = rgb(0.80, 0.82, 0.86);
   const C_BG_ROW  = rgb(0.96, 0.97, 0.99);
   const C_WHITE   = rgb(1, 1, 1);
   const C_GREEN   = rgb(0.09, 0.56, 0.28);
-  const C_ACCENT  = rgb(0.95, 0.96, 1.0);
+  const C_ACCENT  = rgb(0.95, 0.96, 0.98);
 
   let page = doc.addPage([PAGE_W, PAGE_H]);
   let y = PAGE_H;
