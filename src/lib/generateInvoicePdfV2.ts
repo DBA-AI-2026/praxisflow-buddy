@@ -194,12 +194,7 @@ export async function generateInvoicePdfV2(
   const recipLineH = 13;
   const recipBoxH = 18 + recipientLines.length * recipLineH + 10; // header + lines + padding
 
-  // Draw recipient box border
-  page.drawRectangle({ x: ML, y: boxTop - recipBoxH, width: leftColW, height: recipBoxH, color: C_WHITE });
-  page.drawLine({ start: { x: ML, y: boxTop }, end: { x: ML + leftColW, y: boxTop }, thickness: 0.8, color: C_LINE });
-  page.drawLine({ start: { x: ML, y: boxTop - recipBoxH }, end: { x: ML + leftColW, y: boxTop - recipBoxH }, thickness: 0.8, color: C_LINE });
-  page.drawLine({ start: { x: ML, y: boxTop }, end: { x: ML, y: boxTop - recipBoxH }, thickness: 0.8, color: C_LINE });
-  page.drawLine({ start: { x: ML + leftColW, y: boxTop }, end: { x: ML + leftColW, y: boxTop - recipBoxH }, thickness: 0.8, color: C_LINE });
+  // No border around recipient box
 
   // Header row
   text("Rechnung an", ML + 8, boxTop - 12, 7.5, fontBold, C_NAVY);
