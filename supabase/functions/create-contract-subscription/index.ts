@@ -49,9 +49,9 @@ serve(async (req) => {
 
     // Build line items from stripeProducts mapping
     const STRIPE_PRODUCT_MAP: Record<string, { price_id: string; recurring: boolean }> = {
-      "HFX EBM": { price_id: "price_1T4HDh6v0qHdbOipecPqXas5", recurring: true },
-      "HFX GOÄ - die KI für ihre Privatabrechnung": { price_id: "price_1T4HEl6v0qHdbOipmPO3EKHl", recurring: true },
-      "HFX GOÄ/GOZ Live-Check": { price_id: "price_1T4HF76v0qHdbOipbBG04A5Q", recurring: false },
+      "HFX EBM": { price_id: "price_1T7z1h6v0qHdbOip4A7qocQC", recurring: true },
+      "HFX GOÄ - die KI für ihre Privatabrechnung": { price_id: "price_1T7z2Z6v0qHdbOipvyPDB9mB", recurring: true },
+      "HFX GOÄ/GOZ Live-Check": { price_id: "price_1T7z3X6v0qHdbOiplCCLqD2n", recurring: false },
     };
 
     const selectedProducts: string[] = contract.modules || (contract.product_name ? [contract.product_name] : []);
