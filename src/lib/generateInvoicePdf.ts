@@ -129,15 +129,11 @@ export async function generateInvoicePdf(
   // ===== HEADER =====
   const mmToPt = 2.8346;
 
-  // Logo will be drawn after we know the metadata box position (right-aligned above it)
-  let logoDrawn = false;
-  const drawLogo = (rightEdgeX: number, belowY: number) => {
-    if (!logoBytes || logoDrawn) return;
-    logoDrawn = true;
-    try {
-      // embedJpg is async but we already embedded above — need to store reference
-    } catch { /* skip */ }
-  };
+  // Embed logo early (async), draw later when we know position
+  let embeddedLogo: Awaited<ReturnType<typeof doc.embedJpg>> | null = null;
+  if (logoBytes) {
+    try { embeddedLogo = await doc.embedJpg(logoBytes); } catch { /* skip */ }
+  }
 
   // Status label/colors (drawn inside metadata box later)
   const statusLabels: Record<string, string> = {
@@ -178,17 +174,28 @@ export async function generateInvoicePdf(
   const metaY = recipientStartY;
   const metaLabelX = colRight;
   const metaValueX = colRight + 90;
+  const metaBoxW = CW - (colRight - M) + 8;
+  const metaBoxLeft = colRight - 8;
+  const metaBoxRight = metaBoxLeft + metaBoxW;
+
+  // Logo right-aligned directly above metadata box
+  if (embeddedLogo) {
+    const logoH = 40;
+    const logoW = (embeddedLogo.width / embeddedLogo.height) * logoH;
+    const logoX = metaBoxRight - logoW;
+    const logoY = metaY + 8; // just above the metadata box top
+    page.drawImage(embeddedLogo, { x: logoX, y: logoY, width: logoW, height: logoH });
+  }
 
   // Box behind metadata
   const metaBoxH = 80;
-  page.drawRectangle({ x: colRight - 8, y: metaY - metaBoxH + 14, width: CW - (colRight - M) + 8, height: metaBoxH, color: C_ACCENT });
+  page.drawRectangle({ x: metaBoxLeft, y: metaY - metaBoxH + 14, width: metaBoxW, height: metaBoxH, color: C_ACCENT });
 
   text("Rechnungsnummer:", metaLabelX, metaY, 7.5, font, C_MUTED);
   text(data.invoice_number, metaValueX, metaY, 9.5, fontBold, C_NAVY);
 
   // Status badge inside metadata box, right-aligned on the invoice number line
   const badgeW = font.widthOfTextAtSize(stLabel, 7.5) + 14;
-  const metaBoxRight = colRight - 8 + CW - (colRight - M) + 8;
   const badgeX = metaBoxRight - badgeW - 6;
   page.drawRectangle({ x: badgeX, y: metaY - 5, width: badgeW, height: 16, color: C_LIGHT_BLUE_BG });
   text(stLabel, badgeX + 7, metaY, 7.5, fontBold, stFg);
