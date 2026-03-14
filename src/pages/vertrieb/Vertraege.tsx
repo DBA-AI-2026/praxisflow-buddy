@@ -2112,12 +2112,13 @@ export default function Vertraege() {
                   )}
                 </div>
                 <div>
-                  <Label>Vertriebspartner</Label>
+                  <Label>Vertriebspartner *</Label>
                   <SalesPartnerCombobox
                     value={form.sales_partner_name}
                     onChange={(v) => set("sales_partner_name", v)}
                     profiles={allProfiles}
                   />
+                  {fieldErr("sales_partner_name") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
                 </div>
               </div>
             </div>
