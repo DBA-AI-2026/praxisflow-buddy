@@ -1045,10 +1045,7 @@ export default function Vertraege() {
     praxisanschrift: "Adresse (Straße, Hausnummer)",
     plz: "PLZ",
     ort: "Ort",
-    telefon: "Telefon",
-    email: "E-Mail",
-    fachrichtung: "Fachrichtung",
-    rechtsform: "Rechtsform",
+    sales_partner_name: "Vertriebspartner",
     start_date: "Vertragsbeginn",
   };
 
@@ -2054,13 +2051,11 @@ export default function Vertraege() {
                  </div>
                  <div>
                    <Label>Fachrichtung</Label>
-                   <Input value={form.fachrichtung} onChange={(e) => set("fachrichtung", e.target.value)} placeholder="z.B. Allgemeinmedizin, Orthopädie..." className={fieldErr("fachrichtung") ? "border-destructive focus-visible:ring-destructive" : ""} />
-                   {fieldErr("fachrichtung") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                   <Input value={form.fachrichtung} onChange={(e) => set("fachrichtung", e.target.value)} placeholder="z.B. Allgemeinmedizin, Orthopädie..." />
                  </div>
                  <div>
                    <Label>Rechtsform</Label>
-                   <Input value={form.rechtsform} onChange={(e) => set("rechtsform", e.target.value)} placeholder="z.B. Einzelpraxis, GbR, MVZ..." className={fieldErr("rechtsform") ? "border-destructive focus-visible:ring-destructive" : ""} />
-                   {fieldErr("rechtsform") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                   <Input value={form.rechtsform} onChange={(e) => set("rechtsform", e.target.value)} placeholder="z.B. Einzelpraxis, GbR, MVZ..." />
                  </div>
                  <div>
                    <Label>Vorname *</Label>
@@ -2117,12 +2112,13 @@ export default function Vertraege() {
                   )}
                 </div>
                 <div>
-                  <Label>Vertriebspartner</Label>
+                  <Label>Vertriebspartner *</Label>
                   <SalesPartnerCombobox
                     value={form.sales_partner_name}
                     onChange={(v) => set("sales_partner_name", v)}
                     profiles={allProfiles}
                   />
+                  {fieldErr("sales_partner_name") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
                 </div>
               </div>
             </div>
@@ -2846,6 +2842,27 @@ export default function Vertraege() {
                   {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
                   Als Entwurf
                 </Button>
+                {/* Digitaler Vertragsabschluss – primary action, listed first */}
+                <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span tabIndex={0} className="flex-1 sm:flex-none">
+                      <Button type="submit" size="sm" disabled={upsertMutation.isPending || sendingBuchungsmailDialog || !isFormComplete} className="w-full">
+                        {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+                        {editId ? "Speichern" : "Digitaler Vertragsabschluss"}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {!isFormComplete && (
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p className="font-semibold mb-1">Fehlende Pflichtfelder:</p>
+                      <ul className="list-disc pl-4 text-xs space-y-0.5">
+                        {getMissingFields().map((f) => <li key={f}>{f}</li>)}
+                      </ul>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+                </TooltipProvider>
                 {/* Buchungsmail senden – saves as eingegangen + triggers booking email */}
                 {!editId && (
                   <TooltipProvider>
@@ -2875,26 +2892,6 @@ export default function Vertraege() {
                   </Tooltip>
                   </TooltipProvider>
                 )}
-                <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span tabIndex={0} className="flex-1 sm:flex-none">
-                      <Button type="submit" size="sm" disabled={upsertMutation.isPending || sendingBuchungsmailDialog || !isFormComplete} className="w-full">
-                        {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-                        {editId ? "Speichern" : "Digitaler Vertragsabschluss"}
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {!isFormComplete && (
-                    <TooltipContent side="top" className="max-w-xs">
-                      <p className="font-semibold mb-1">Fehlende Pflichtfelder:</p>
-                      <ul className="list-disc pl-4 text-xs space-y-0.5">
-                        {getMissingFields().map((f) => <li key={f}>{f}</li>)}
-                      </ul>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-                </TooltipProvider>
               </div>
             </DialogFooter>
           </form>
