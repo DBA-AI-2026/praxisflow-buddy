@@ -367,7 +367,7 @@ export default function Rechnungen() {
         const logoResp = await fetch("/logo.jpeg");
         if (logoResp.ok) logoBytes = await logoResp.arrayBuffer();
       } catch { /* no logo */ }
-      const pdfBytes = await generateInvoicePdf(invoice, logoBytes);
+      const pdfBytes = await (pdfDesign === "design2" ? generateInvoicePdfV2 : generateInvoicePdf)(invoice, logoBytes);
       openPdfBlob(pdfBytes, `Rechnung-${invoice.invoice_number}.pdf`);
     } catch (e: any) {
       toast({ title: "PDF-Fehler", description: e.message, variant: "destructive" });
