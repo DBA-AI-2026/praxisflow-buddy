@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Mail, FileText, Pencil, Eye, RotateCcw, Save, Loader2, Lock } from "lucide-react";
+import { Mail, FileText, Pencil, Eye, RotateCcw, Save, Loader2, Lock, Sparkles, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import CodeMirror from "@uiw/react-codemirror";
@@ -10,6 +10,7 @@ import { html } from "@codemirror/lang-html";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { useUserRole } from "@/hooks/useUserRole";
 import { generateContractPdf } from "@/lib/generateContractPdf";
+import { Textarea } from "@/components/ui/textarea";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK = {
@@ -1259,6 +1260,12 @@ export default function EmailPreview() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const prevPdfBlobUrl = useRef<string | null>(null);
 
+  // AI assistant state
+  const [aiModal, setAiModal] = useState<{ template: Template; mode: "email" | "pdf" } | null>(null);
+  const [aiInstruction, setAiInstruction] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiPreviewHtml, setAiPreviewHtml] = useState<string | null>(null);
+
   const openPdfPreview = async (tpl: Template) => {
     setPdfModal({ template: tpl });
     setPdfLoading(true);
@@ -1364,6 +1371,55 @@ export default function EmailPreview() {
     return !!customHtml[key];
   };
 
+  const openAiEditor = (tpl: Template, mode: "email" | "pdf") => {
+    setAiInstruction("");
+    setAiPreviewHtml(null);
+    setAiModal({ template: tpl, mode });
+  };
+
+  const runAiEdit = async () => {
+    if (!aiModal || !aiInstruction.trim()) return;
+    const key = getStorageKey(aiModal.template, aiModal.mode);
+    const currentHtml = aiPreviewHtml ?? customHtml[key] ?? getHtmlForTemplate(key as TemplateId);
+
+    setAiLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("edit-email-template", {
+        body: { html: currentHtml, instruction: aiInstruction.trim() },
+      });
+      if (error) throw error;
+      if (data?.html) {
+        setAiPreviewHtml(data.html);
+        setAiInstruction("");
+        toast.success("Änderung angewendet – prüfe die Vorschau");
+      } else {
+        throw new Error("Keine Antwort erhalten");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "KI-Fehler");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const saveAiResult = async () => {
+    if (!aiModal || !aiPreviewHtml) return;
+    const key = getStorageKey(aiModal.template, aiModal.mode);
+    setIsSaving(true);
+    const { error } = await supabase
+      .from("email_template_overrides" as any)
+      .upsert({ template_key: key, html_content: aiPreviewHtml }, { onConflict: "template_key" });
+    setIsSaving(false);
+    if (error) {
+      toast.error("Fehler beim Speichern: " + error.message);
+      return;
+    }
+    setCustomHtml((prev) => ({ ...prev, [key]: aiPreviewHtml }));
+    setAiModal(null);
+    setAiPreviewHtml(null);
+    toast.success("Vorlage gespeichert");
+  };
+
   return (
     <MainLayout title="E-Mail & PDF Vorschau" subtitle={isAdmin ? "Vorschau aller E-Mail- und PDF-Vorlagen" : "Nur-Lese-Ansicht – Bearbeitung nur für Admins"}>
       <div className="max-w-4xl mx-auto space-y-8">
@@ -1433,10 +1489,19 @@ export default function EmailPreview() {
                             variant="outline"
                             size="sm"
                             className="gap-1.5"
+                            onClick={() => openAiEditor(tpl, "email")}
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            KI
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
                             onClick={() => openEdit(tpl, "email")}
                           >
                             <Pencil className="w-3.5 h-3.5" />
-                            Bearbeiten
+                            HTML
                           </Button>
                           {hasCustom(tpl, "email") && (
                             <Button
@@ -1631,6 +1696,71 @@ export default function EmailPreview() {
                 title="Live Preview"
                 className="flex-1 w-full border-0"
               />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── AI Assistant Modal ── */}
+      <Dialog open={!!aiModal} onOpenChange={() => { setAiModal(null); setAiPreviewHtml(null); }}>
+        <DialogContent className="max-w-4xl w-full p-0 gap-0 overflow-hidden" style={{ maxHeight: "92vh" }}>
+          <DialogHeader className="px-5 py-3 border-b border-border bg-muted/40 flex-row items-center gap-3 space-y-0">
+            <Sparkles className="w-4 h-4 text-primary shrink-0" />
+            <DialogTitle className="text-sm font-semibold flex-1">
+              KI-Assistent — {aiModal?.template.label}
+            </DialogTitle>
+            <div className="flex gap-2 ml-auto">
+              <Button variant="outline" size="sm" onClick={() => { setAiModal(null); setAiPreviewHtml(null); }}>Abbrechen</Button>
+              {aiPreviewHtml && (
+                <Button size="sm" onClick={saveAiResult} disabled={isSaving} className="gap-1.5">
+                  {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  Übernehmen
+                </Button>
+              )}
+            </div>
+          </DialogHeader>
+
+          <div className="flex flex-col overflow-hidden" style={{ height: "calc(92vh - 60px)" }}>
+            {/* Preview */}
+            <div className="flex-1 overflow-auto">
+              {aiModal && (
+                <iframe
+                  srcDoc={aiPreviewHtml ?? getRenderedHtml(aiModal.template, aiModal.mode)}
+                  title="AI Preview"
+                  className="w-full border-0"
+                  style={{ height: "100%", minHeight: 500 }}
+                />
+              )}
+            </div>
+
+            {/* AI instruction input */}
+            <div className="border-t border-border bg-muted/30 p-4">
+              <div className="flex gap-3 items-end max-w-3xl mx-auto">
+                <Textarea
+                  value={aiInstruction}
+                  onChange={(e) => setAiInstruction(e.target.value)}
+                  placeholder="Beschreibe deine Änderung, z.B. 'Ändere den Button-Text zu Jetzt buchen' oder 'Füge unter der Begrüßung einen Hinweis auf 30 Tage Testphase ein'"
+                  className="flex-1 min-h-[44px] max-h-[120px] resize-none text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      runAiEdit();
+                    }
+                  }}
+                />
+                <Button
+                  onClick={runAiEdit}
+                  disabled={aiLoading || !aiInstruction.trim()}
+                  size="sm"
+                  className="gap-1.5 h-[44px] px-5"
+                >
+                  {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  Anwenden
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2 text-center">
+                Mehrere Änderungen nacheinander möglich · Enter zum Absenden · Nach Prüfung auf „Übernehmen" klicken
+              </p>
             </div>
           </div>
         </DialogContent>
