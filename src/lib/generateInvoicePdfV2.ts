@@ -147,7 +147,7 @@ export async function generateInvoicePdfV2(
 
   // Logo top-left
   if (embeddedLogo) {
-    const logoH = 42;
+    const logoH = 56;
     const logoW = (embeddedLogo.width / embeddedLogo.height) * logoH;
     page.drawImage(embeddedLogo, { x: ML, y: headerTop - logoH + 10, width: logoW, height: logoH });
   } else {
