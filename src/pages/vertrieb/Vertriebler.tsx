@@ -34,7 +34,8 @@ const roleBadgeStyles: Record<string, { bg: string; icon: React.ReactNode }> = {
 };
 
 // Relevant sales-related roles to display
-const SALES_ROLES = ["sales_partner", "user", "tippgeber", "regional_lead", "sales_lead"];
+const SALES_ROLES = ["sales_partner", "user", "tippgeber", "regional_lead", "sales_lead"] as const;
+type SalesRole = (typeof SALES_ROLES)[number];
 
 interface VertrieblerRow {
   user_id: string;
