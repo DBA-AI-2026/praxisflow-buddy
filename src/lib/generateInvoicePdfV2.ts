@@ -149,7 +149,7 @@ export async function generateInvoicePdfV2(
   if (embeddedLogo) {
     const logoH = 56;
     const logoW = (embeddedLogo.width / embeddedLogo.height) * logoH;
-    const logoX = PAGE_W - 18 * mmToPt - logoW;
+    const logoX = PAGE_W - 8 * mmToPt - logoW;
     page.drawImage(embeddedLogo, { x: logoX, y: headerTop - logoH + 10, width: logoW, height: logoH });
   } else {
     text("HFX Honorarfuchs", ML, headerTop, 18, fontBold, C_NAVY);
