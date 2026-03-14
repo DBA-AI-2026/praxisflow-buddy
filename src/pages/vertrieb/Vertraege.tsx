@@ -2397,7 +2397,7 @@ export default function Vertraege() {
                         .map((pr: any) => {
                           const hasPromo = pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now;
                           const baseFeeWaived = hasPromo && pr.promo_base_fee_end_date && new Date(pr.promo_base_fee_end_date) >= now;
-                          const price = baseFeeWaived ? 0 : Number(pr.monthly_price);
+                          const price = baseFeeWaived ? 0 : (Number(pr.monthly_price) || 0);
                           return (
                             <div key={pr.id} className="flex items-center justify-between text-sm">
                               <span className="text-foreground font-medium truncate mr-2">{pr.name}</span>
