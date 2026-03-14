@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   Dialog,
   DialogContent,
@@ -26,11 +27,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, UserPlus, Mail, Package } from "lucide-react";
+import { Loader2, UserPlus, Mail, Package, Users, Heart, ChevronsUpDown, Check, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const schema = z.object({
   praxis_name: z.string().trim().min(2, "Pflichtfeld").max(200),
@@ -46,6 +53,8 @@ const schema = z.object({
   nachricht: z.string().trim().max(1000).default(""),
   send_confirmation_email: z.boolean().default(true),
   interested_products: z.array(z.string()).default([]),
+  assigned_to: z.string().nullable().default(null),
+  tippgeber_id: z.string().nullable().default(null),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -55,10 +64,108 @@ interface CreateLeadDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+function UserSearchSelect({
+  value,
+  onChange,
+  users,
+  placeholder,
+}: {
+  value: string | null;
+  onChange: (val: string | null) => void;
+  users: { user_id: string; full_name: string; email: string | null }[];
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filtered = users.filter((u) => {
+    const q = search.toLowerCase();
+    return (
+      u.full_name.toLowerCase().includes(q) ||
+      (u.email?.toLowerCase().includes(q) ?? false)
+    );
+  });
+
+  const selected = users.find((u) => u.user_id === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          {selected ? (
+            <span className="truncate">{selected.full_name}</span>
+          ) : (
+            <span className="text-muted-foreground">{placeholder}</span>
+          )}
+          <div className="flex items-center gap-1 ml-2 shrink-0">
+            {value && (
+              <X
+                className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange(null);
+                }}
+              />
+            )}
+            <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+          </div>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+        <div className="p-2 border-b">
+          <Input
+            placeholder="Suchen…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8"
+            autoFocus
+          />
+        </div>
+        <div className="max-h-48 overflow-y-auto p-1">
+          {filtered.length === 0 ? (
+            <p className="text-sm text-muted-foreground p-2 text-center">Keine Ergebnisse</p>
+          ) : (
+            filtered.map((u) => (
+              <button
+                key={u.user_id}
+                type="button"
+                className={cn(
+                  "w-full flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground",
+                  value === u.user_id && "bg-accent"
+                )}
+                onClick={() => {
+                  onChange(u.user_id === value ? null : u.user_id);
+                  setOpen(false);
+                  setSearch("");
+                }}
+              >
+                <Check className={cn("h-4 w-4 shrink-0", value === u.user_id ? "opacity-100" : "opacity-0")} />
+                <div className="text-left truncate">
+                  <span>{u.full_name}</span>
+                  {u.email && (
+                    <span className="text-muted-foreground ml-1 text-xs">({u.email})</span>
+                  )}
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
+  const { isAdmin, isSalesLead } = useUserRole();
+  const canAssign = isAdmin || isSalesLead;
 
   const { data: products = [] } = useQuery({
     queryKey: ["active-products"],
@@ -71,6 +178,46 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
       if (error) throw error;
       return data || [];
     },
+  });
+
+  // Fetch sales partners (users with sales_partner or user role)
+  const { data: salesPartners = [] } = useQuery({
+    queryKey: ["sales-partners-for-lead"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .in("role", ["sales_partner", "user"]);
+      if (error) throw error;
+      if (!data?.length) return [];
+      const userIds = data.map((r) => r.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .in("user_id", userIds);
+      return profiles || [];
+    },
+    enabled: canAssign,
+  });
+
+  // Fetch tippgeber
+  const { data: tippgeberList = [] } = useQuery({
+    queryKey: ["tippgeber-for-lead"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "tippgeber");
+      if (error) throw error;
+      if (!data?.length) return [];
+      const userIds = data.map((r) => r.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .in("user_id", userIds);
+      return profiles || [];
+    },
+    enabled: canAssign,
   });
 
   const form = useForm<FormValues>({
@@ -89,14 +236,14 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
       nachricht: "",
       send_confirmation_email: true,
       interested_products: [],
+      assigned_to: null,
+      tippgeber_id: null,
     },
   });
 
   const onSubmit = async (values: FormValues) => {
     setSubmitting(true);
     try {
-      // Use the capture-lead Edge Function so the same email/Qodia/PLZ-assignment
-      // flow runs for manual leads just as for homepage leads.
       const { data, error } = await supabase.functions.invoke("capture-lead", {
         body: {
           praxis_name: values.praxis_name,
@@ -113,6 +260,8 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
           source: "manual",
           send_confirmation_email: values.send_confirmation_email,
           interested_products: values.interested_products,
+          assigned_to: values.assigned_to || undefined,
+          tippgeber_id: values.tippgeber_id || undefined,
         },
       });
 
@@ -321,6 +470,54 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
                 )}
               />
             </div>
+
+            {/* Vertriebspartner & Tippgeber */}
+            {canAssign && (
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="assigned_to"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-primary" />
+                        Vertriebspartner
+                      </FormLabel>
+                      <FormControl>
+                        <UserSearchSelect
+                          value={field.value}
+                          onChange={field.onChange}
+                          users={salesPartners}
+                          placeholder="Automatisch (PLZ)"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="tippgeber_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Heart className="h-4 w-4 text-primary" />
+                        Tippgeber
+                      </FormLabel>
+                      <FormControl>
+                        <UserSearchSelect
+                          value={field.value}
+                          onChange={field.onChange}
+                          users={tippgeberList}
+                          placeholder="Kein Tippgeber"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             {/* Produktinteresse */}
             {products.length > 0 && (
