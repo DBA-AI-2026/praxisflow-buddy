@@ -362,7 +362,7 @@ export default function Rechnungen() {
     try {
       let logoBytes: ArrayBuffer | undefined;
       try {
-        const logoResp = await fetch(foxLogoUrl);
+        const logoResp = await fetch("/logo.jpeg");
         if (logoResp.ok) logoBytes = await logoResp.arrayBuffer();
       } catch { /* no logo */ }
       const pdfBytes = await generateInvoicePdf(invoice, logoBytes);
