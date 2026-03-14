@@ -459,7 +459,7 @@ function VertraegeTab({ search, highlightId, missingEmailCount }: { search: stri
       });
       if (error) throw error;
       toast.success(`Buchungsmail an ${contract.email} gesendet`);
-      queryClient.invalidateQueries({ queryKey: ["journey-contracts-pending"] });
+      queryClient.invalidateQueries({ queryKey: ["journey-contracts-all"] });
       queryClient.invalidateQueries({ queryKey: ["journey-counts"] });
     } catch (err: any) {
       toast.error(err.message || "Fehler beim Senden der Buchungsmail");
