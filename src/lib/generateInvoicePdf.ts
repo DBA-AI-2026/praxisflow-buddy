@@ -178,12 +178,14 @@ export async function generateInvoicePdf(
   const metaBoxLeft = colRight - 8;
   const metaBoxRight = metaBoxLeft + metaBoxW;
 
-  // Logo right-aligned directly above metadata box
+  // Logo: 45mm from top edge, 20mm from right edge
   if (embeddedLogo) {
     const logoH = 40;
     const logoW = (embeddedLogo.width / embeddedLogo.height) * logoH;
-    const logoX = metaBoxRight - logoW;
-    const logoY = metaY + 8; // just above the metadata box top
+    const LOGO_TOP_MM = 45;
+    const LOGO_RIGHT_MM = 20;
+    const logoX = PAGE_W - LOGO_RIGHT_MM * mmToPt - logoW;
+    const logoY = PAGE_H - LOGO_TOP_MM * mmToPt;
     page.drawImage(embeddedLogo, { x: logoX, y: logoY, width: logoW, height: logoH });
   }
 
