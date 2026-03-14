@@ -7,14 +7,17 @@ import { ArrowLeft, Download, Loader2 } from "lucide-react";
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs`;
 
 export function PdfViewerOverlay() {
-  const { pdfUrl, setPdfUrl, register } = usePdfViewer();
+  const { pdfUrl, setPdfUrl, pdfFilename, setPdfFilename, register } = usePdfViewer();
   const [loading, setLoading] = useState(false);
   const [pageCount, setPageCount] = useState(0);
   const [pageDataUrls, setPageDataUrls] = useState<string[]>([]);
 
   useEffect(() => {
-    return register(setPdfUrl);
-  }, [register, setPdfUrl]);
+    return register((url: string, filename?: string) => {
+      setPdfUrl(url);
+      if (filename) setPdfFilename(filename);
+    });
+  }, [register, setPdfUrl, setPdfFilename]);
 
   // Render all pages to data URLs when pdfUrl changes
   useEffect(() => {
@@ -84,7 +87,7 @@ export function PdfViewerOverlay() {
           Zurück
         </Button>
         <span className="text-sm font-medium text-muted-foreground flex-1 truncate">
-          Vertragsdokument {pageCount > 0 ? `(${pageCount} Seiten)` : ""}
+          Dokument {pageCount > 0 ? `(${pageCount} Seiten)` : ""}
         </span>
         <Button
           variant="outline"
@@ -93,7 +96,7 @@ export function PdfViewerOverlay() {
           onClick={() => {
             const a = document.createElement("a");
             a.href = pdfUrl;
-            a.download = "Vertrag.pdf";
+            a.download = pdfFilename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
