@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import foxLogoUrl from "@/assets/fox-logo.jpeg";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -334,7 +333,7 @@ export default function Rechnungen() {
       try {
         let logoBytes: ArrayBuffer | undefined;
         try {
-          const logoResp = await fetch(foxLogoUrl);
+          const logoResp = await fetch("/logo.jpeg");
           if (logoResp.ok) logoBytes = await logoResp.arrayBuffer();
         } catch { /* no logo */ }
         const pdfBytes = await generateInvoicePdf(invoice, logoBytes);
@@ -363,7 +362,7 @@ export default function Rechnungen() {
     try {
       let logoBytes: ArrayBuffer | undefined;
       try {
-        const logoResp = await fetch(foxLogoUrl);
+        const logoResp = await fetch("/logo.jpeg");
         if (logoResp.ok) logoBytes = await logoResp.arrayBuffer();
       } catch { /* no logo */ }
       const pdfBytes = await generateInvoicePdf(invoice, logoBytes);

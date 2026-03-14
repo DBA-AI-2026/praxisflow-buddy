@@ -127,23 +127,12 @@ export async function generateInvoicePdf(
   };
 
   // ===== HEADER =====
-  // No top stripe
-
-  // Logo top-right: 12mm from top, close to right edge
-  const LOGO_TOP_MM = 12;
-  const LOGO_RIGHT_MM = 5;
   const mmToPt = 2.8346;
+
+  // Embed logo early (async), draw later when we know position
+  let embeddedLogo: Awaited<ReturnType<typeof doc.embedJpg>> | null = null;
   if (logoBytes) {
-    try {
-      const logoImage = await doc.embedJpg(logoBytes);
-      const logoH = 52;
-      const logoW = (logoImage.width / logoImage.height) * logoH;
-      const logoX = PAGE_W - LOGO_RIGHT_MM * mmToPt - logoW;
-      const logoY = PAGE_H - LOGO_TOP_MM * mmToPt - logoH;
-      page.drawImage(logoImage, { x: logoX, y: logoY, width: logoW, height: logoH });
-    } catch {
-      // continue without logo
-    }
+    try { embeddedLogo = await doc.embedJpg(logoBytes); } catch { /* skip */ }
   }
 
   // Status label/colors (drawn inside metadata box later)
@@ -185,17 +174,28 @@ export async function generateInvoicePdf(
   const metaY = recipientStartY;
   const metaLabelX = colRight;
   const metaValueX = colRight + 90;
+  const metaBoxW = CW - (colRight - M) + 8;
+  const metaBoxLeft = colRight - 8;
+  const metaBoxRight = metaBoxLeft + metaBoxW;
+
+  // Logo right-aligned directly above metadata box
+  if (embeddedLogo) {
+    const logoH = 40;
+    const logoW = (embeddedLogo.width / embeddedLogo.height) * logoH;
+    const logoX = metaBoxRight - logoW;
+    const logoY = metaY + 8; // just above the metadata box top
+    page.drawImage(embeddedLogo, { x: logoX, y: logoY, width: logoW, height: logoH });
+  }
 
   // Box behind metadata
   const metaBoxH = 80;
-  page.drawRectangle({ x: colRight - 8, y: metaY - metaBoxH + 14, width: CW - (colRight - M) + 8, height: metaBoxH, color: C_ACCENT });
+  page.drawRectangle({ x: metaBoxLeft, y: metaY - metaBoxH + 14, width: metaBoxW, height: metaBoxH, color: C_ACCENT });
 
   text("Rechnungsnummer:", metaLabelX, metaY, 7.5, font, C_MUTED);
   text(data.invoice_number, metaValueX, metaY, 9.5, fontBold, C_NAVY);
 
   // Status badge inside metadata box, right-aligned on the invoice number line
   const badgeW = font.widthOfTextAtSize(stLabel, 7.5) + 14;
-  const metaBoxRight = colRight - 8 + CW - (colRight - M) + 8;
   const badgeX = metaBoxRight - badgeW - 6;
   page.drawRectangle({ x: badgeX, y: metaY - 5, width: badgeW, height: 16, color: C_LIGHT_BLUE_BG });
   text(stLabel, badgeX + 7, metaY, 7.5, fontBold, stFg);

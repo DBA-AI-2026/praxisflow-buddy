@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import foxLogoUrl from "@/assets/fox-logo.jpeg";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -1268,7 +1267,7 @@ export default function EmailPreview() {
       // Fetch logo for the PDF header
       let logoBytes: ArrayBuffer | undefined;
       try {
-        const logoRes = await fetch(foxLogoUrl);
+        const logoRes = await fetch("/logo.jpeg");
         if (logoRes.ok) logoBytes = await logoRes.arrayBuffer();
       } catch { /* proceed without logo */ }
 
