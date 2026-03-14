@@ -2138,7 +2138,8 @@ export default function Vertraege() {
                     .reduce((sum: number, pr: any) => {
                       const promoActive = pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now;
                       const bfWaived = promoActive && pr.promo_base_fee_end_date && new Date(pr.promo_base_fee_end_date) >= now;
-                      return sum + (bfWaived ? 0 : (Number(pr.monthly_price) || 0));
+                      const baseMonthly = Number(pr.monthly_price ?? pr.base_license_price) || 0;
+                      return sum + (bfWaived ? 0 : baseMonthly);
                     }, 0);
                   const modulesTotal = ebmModules
                     .filter((m: any) => (selectedModules ?? form.selected_modules).includes(m.name))
