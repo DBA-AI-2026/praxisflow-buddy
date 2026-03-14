@@ -514,10 +514,15 @@ function VertraegeTab({ search, highlightId, missingEmailCount }: { search: stri
 
   return (
     <div>
-      {/* Unified Toolbar — always rendered, pills stable even at count=0 */}
+      {/* Group toggle: Im Prozess / Abgeschlossen */}
       <div className="p-4 border-b border-border flex flex-wrap gap-2 items-center">
-        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={contracts.length} />
-        {pendingStatuses.map((st) => {
+        <FilterPill active={groupFilter === "prozess"} onClick={() => { setGroupFilter("prozess"); setStatusFilter("alle"); }} label="Im Prozess" count={processCount} />
+        <FilterPill active={groupFilter === "abgeschlossen"} onClick={() => { setGroupFilter("abgeschlossen"); setStatusFilter("alle"); }} label="Abgeschlossen" count={completedCount} />
+
+        <span className="h-5 w-px bg-border mx-1" />
+
+        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={groupContracts.length} />
+        {currentGroupStatuses.map((st) => {
           const cfg = contractStatusCfg[st];
           if (!cfg) return null;
           return (
