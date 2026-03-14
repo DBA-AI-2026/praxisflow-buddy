@@ -26,7 +26,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/fuchs-bildmarke.png";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -170,7 +170,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-4 lg:px-6 border-b border-sidebar-border">
-        <img src={logo} alt="Honorarfuchs Logo" className="h-11 w-11 lg:h-12 lg:w-12 rounded-full object-cover" />
+        <img src={logo} alt="Honorarfuchs Logo" className="h-9 w-9 lg:h-10 lg:w-10 object-contain" />
         <div>
           <span className="text-base lg:text-lg font-semibold text-sidebar-foreground">HFX Sales</span>
           <span className="text-xs block text-sidebar-foreground/60">das Portal für den Vertrieb</span>
