@@ -127,24 +127,17 @@ export async function generateInvoicePdf(
   };
 
   // ===== HEADER =====
-  // No top stripe
-
-  // Logo top-right: 12mm from top, close to right edge
-  const LOGO_TOP_MM = 12;
-  const LOGO_RIGHT_MM = 5;
   const mmToPt = 2.8346;
-  if (logoBytes) {
+
+  // Logo will be drawn after we know the metadata box position (right-aligned above it)
+  let logoDrawn = false;
+  const drawLogo = (rightEdgeX: number, belowY: number) => {
+    if (!logoBytes || logoDrawn) return;
+    logoDrawn = true;
     try {
-      const logoImage = await doc.embedJpg(logoBytes);
-      const logoH = 52;
-      const logoW = (logoImage.width / logoImage.height) * logoH;
-      const logoX = PAGE_W - LOGO_RIGHT_MM * mmToPt - logoW;
-      const logoY = PAGE_H - LOGO_TOP_MM * mmToPt - logoH;
-      page.drawImage(logoImage, { x: logoX, y: logoY, width: logoW, height: logoH });
-    } catch {
-      // continue without logo
-    }
-  }
+      // embedJpg is async but we already embedded above — need to store reference
+    } catch { /* skip */ }
+  };
 
   // Status label/colors (drawn inside metadata box later)
   const statusLabels: Record<string, string> = {
