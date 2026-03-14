@@ -64,12 +64,10 @@ const Vertriebler = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (userId: string) => {
-      // Delete all sales-related roles for this user
       const { error } = await supabase
         .from("user_roles")
         .delete()
-        .eq("user_id", userId)
-        .in("role", SALES_ROLES as unknown as string[]);
+        .eq("user_id", userId);
       if (error) throw error;
     },
     onSuccess: (_, userId) => {
