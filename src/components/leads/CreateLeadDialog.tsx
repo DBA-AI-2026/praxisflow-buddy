@@ -322,6 +322,49 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
               />
             </div>
 
+            {/* Produktinteresse */}
+            {products.length > 0 && (
+              <FormField
+                control={form.control}
+                name="interested_products"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-primary" />
+                      Produktinteresse
+                    </FormLabel>
+                    <div className="grid grid-cols-2 gap-2">
+                      {products.map((product) => {
+                        const checked = field.value.includes(product.name);
+                        return (
+                          <label
+                            key={product.id}
+                            className={`flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer transition-colors ${
+                              checked
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:bg-muted/50"
+                            }`}
+                          >
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(val) => {
+                                const next = val
+                                  ? [...field.value, product.name]
+                                  : field.value.filter((p: string) => p !== product.name);
+                                field.onChange(next);
+                              }}
+                            />
+                            <span className="text-sm">{product.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <FormField
               control={form.control}
               name="nachricht"
