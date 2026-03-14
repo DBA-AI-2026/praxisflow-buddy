@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import foxLogoUrl from "@/assets/fox-logo.jpeg";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
