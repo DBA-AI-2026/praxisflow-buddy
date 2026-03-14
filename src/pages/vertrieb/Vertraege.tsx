@@ -2145,7 +2145,7 @@ export default function Vertraege() {
                     .reduce((sum: number, m: any) => sum + (Number(m.monthly_price) || 0), 0);
                   const totalOneTime = products
                     .filter((pr: any) => nextProducts.includes(pr.name))
-                    .reduce((sum: number, pr: any) => sum + Number(pr.one_time_fee), 0);
+                    .reduce((sum: number, pr: any) => sum + (Number(pr.one_time_fee) || 0), 0);
                   return { totalMonthly: totalMonthly + modulesTotal, totalOneTime };
                 };
 
