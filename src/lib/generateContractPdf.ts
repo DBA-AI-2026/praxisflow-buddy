@@ -184,7 +184,7 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
     ["Kundennummer", data.hfx_customer_number || "–"],
     ["Vertragsbeginn", formatDate(data.start_date)],
     ["Vertragsende", formatDate(data.end_date)],
-    ["Laufzeit", `${data.duration_months ?? 12} Monate`],
+    ["Laufzeit", (data.duration_months ?? 0) === 0 ? "Unbefristet" : `${data.duration_months} Monate`],
     ["Zahlungsintervall", intervalLabels[data.payment_interval || "monatlich"] || data.payment_interval || "Monatlich"],
     ["Status", statusLabels[st] || st.toUpperCase()],
   ];
