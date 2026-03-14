@@ -399,36 +399,39 @@ Deno.serve(async (req) => {
     let assignedTo: string | null = rawBody.assigned_to || null;
     const manualAssignment = !!assignedTo;
     let assignedName: string | null = null;
-    try {
-      const plzClean = plz.trim().replace(/\s/g, "");
-      if (plzClean.length >= 1) {
-        const prefix2 = plzClean.substring(0, 2);
-        const prefix1 = plzClean.substring(0, 1);
-        const prefixes = plzClean.length >= 2 ? [prefix2, prefix1] : [prefix1];
+    if (!manualAssignment) {
+      try {
+        const plzClean = plz.trim().replace(/\s/g, "");
+        if (plzClean.length >= 1) {
+          const prefix2 = plzClean.substring(0, 2);
+          const prefix1 = plzClean.substring(0, 1);
+          const prefixes = plzClean.length >= 2 ? [prefix2, prefix1] : [prefix1];
 
-        const { data: mappings } = await supabase
-          .from("plz_gebietsleiter_mapping")
-          .select("gebietsleiter_id, gebietsleiter_name, plz_prefix, priority")
-          .eq("is_active", true)
-          .in("plz_prefix", prefixes)
-          .order("priority", { ascending: false });
+          const { data: mappings } = await supabase
+            .from("plz_gebietsleiter_mapping")
+            .select("gebietsleiter_id, gebietsleiter_name, plz_prefix, priority")
+            .eq("is_active", true)
+            .in("plz_prefix", prefixes)
+            .order("priority", { ascending: false });
 
-        // Prefer 2-digit match over 1-digit (more specific wins regardless of priority)
-        const bestMatch =
-          mappings?.find((m) => m.plz_prefix === prefix2) ??
-          mappings?.find((m) => m.plz_prefix === prefix1) ??
-          null;
+          const bestMatch =
+            mappings?.find((m) => m.plz_prefix === prefix2) ??
+            mappings?.find((m) => m.plz_prefix === prefix1) ??
+            null;
 
-        if (bestMatch?.gebietsleiter_id) {
-          assignedTo = bestMatch.gebietsleiter_id;
-          assignedName = bestMatch.gebietsleiter_name;
-          console.log(`Lead PLZ ${plzClean} → assigned to ${assignedName} (prefix: ${bestMatch.plz_prefix})`);
-        } else {
-          console.log(`No GL mapping found for PLZ ${plzClean} (tried prefixes: ${prefixes.join(", ")})`);
+          if (bestMatch?.gebietsleiter_id) {
+            assignedTo = bestMatch.gebietsleiter_id;
+            assignedName = bestMatch.gebietsleiter_name;
+            console.log(`Lead PLZ ${plzClean} → assigned to ${assignedName} (prefix: ${bestMatch.plz_prefix})`);
+          } else {
+            console.log(`No GL mapping found for PLZ ${plzClean} (tried prefixes: ${prefixes.join(", ")})`);
+          }
         }
+      } catch (plzErr) {
+        console.error("PLZ mapping lookup error:", plzErr);
       }
-    } catch (plzErr) {
-      console.error("PLZ mapping lookup error:", plzErr);
+    } else {
+      console.log(`Manual assignment: assigned_to=${assignedTo}`);
     }
 
     const { data: lead, error: insertError } = await supabase
