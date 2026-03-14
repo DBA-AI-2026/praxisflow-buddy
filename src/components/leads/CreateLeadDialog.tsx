@@ -60,6 +60,19 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
   const queryClient = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
 
+  const { data: products = [] } = useQuery({
+    queryKey: ["active-products"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
