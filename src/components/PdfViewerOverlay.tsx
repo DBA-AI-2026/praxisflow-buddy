@@ -13,8 +13,11 @@ export function PdfViewerOverlay() {
   const [pageDataUrls, setPageDataUrls] = useState<string[]>([]);
 
   useEffect(() => {
-    return register(setPdfUrl);
-  }, [register, setPdfUrl]);
+    return register((url: string, filename?: string) => {
+      setPdfUrl(url);
+      if (filename) setPdfFilename(filename);
+    });
+  }, [register, setPdfUrl, setPdfFilename]);
 
   // Render all pages to data URLs when pdfUrl changes
   useEffect(() => {
