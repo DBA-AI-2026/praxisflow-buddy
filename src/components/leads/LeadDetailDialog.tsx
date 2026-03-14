@@ -44,6 +44,9 @@ import {
   FilePlus,
   Play,
   Mail,
+  Package,
+  Users,
+  Lightbulb,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
