@@ -439,6 +439,7 @@ Deno.serve(async (req) => {
         nachricht: nachricht?.trim().slice(0, 2000) || null,
         adresse: adresse?.trim().slice(0, 300) || null,
         ort: ort?.trim().slice(0, 100) || null,
+        interested_products: rawBody.interested_products || [],
         generated_password: generatedPassword,
         assigned_to: assignedTo,
         source: leadSource,
