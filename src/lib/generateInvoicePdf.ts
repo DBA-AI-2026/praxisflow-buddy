@@ -243,13 +243,14 @@ export async function generateInvoicePdf(
   const COL_TOTAL = M + CW * 0.84;
   const TABLE_W   = CW;
 
-  // Table header
+  // Table header – light background instead of solid navy
   const theadH = 20;
-  page.drawRectangle({ x: M, y: y - theadH + 14, width: TABLE_W, height: theadH, color: C_NAVY });
-  text("Beschreibung",  COL_DESC  + 6, y, 8, fontBold, C_WHITE);
-  text("Menge",         COL_QTY,       y, 8, fontBold, C_WHITE);
-  text("Einzelpreis",   COL_UNIT,      y, 8, fontBold, C_WHITE);
-  text("Gesamtpreis",   COL_TOTAL,     y, 8, fontBold, C_WHITE);
+  page.drawRectangle({ x: M, y: y - theadH + 14, width: TABLE_W, height: theadH, color: C_ACCENT });
+  page.drawLine({ start: { x: M, y: y - theadH + 14 }, end: { x: M + TABLE_W, y: y - theadH + 14 }, thickness: 1, color: C_NAVY });
+  text("Beschreibung",  COL_DESC  + 6, y, 8, fontBold, C_NAVY);
+  text("Menge",         COL_QTY,       y, 8, fontBold, C_NAVY);
+  text("Einzelpreis",   COL_UNIT,      y, 8, fontBold, C_NAVY);
+  text("Gesamtpreis",   COL_TOTAL,     y, 8, fontBold, C_NAVY);
   y -= theadH + 2;
 
   // Helper: wrap text into lines respecting maxWidth
