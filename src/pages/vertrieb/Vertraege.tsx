@@ -2692,6 +2692,23 @@ export default function Vertraege() {
             </div>
 
 
+            {/* Digitaler Vertragsabschluss Hinweis */}
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-2">
+              <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+                <CheckCircle className="h-4 w-4" />
+                Digitaler Vertragsabschluss
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Nach dem Speichern erhält der Kunde per E-Mail einen Zahlungslink (Stripe). Mit Abschluss der Zahlung wird der Vertrag automatisch aktiviert. Eine manuelle Unterschrift ist nicht erforderlich.
+              </p>
+            </div>
+
+            {/* Notizen */}
+            <div>
+              <Label>Notizen</Label>
+              <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={2} placeholder="Zusätzliche Informationen..." />
+            </div>
+
             {/* Dokumente */}
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Dokumente</h4>
@@ -2797,25 +2814,6 @@ export default function Vertraege() {
                 </div>
 
               </div>
-            </div>
-
-
-
-            {/* Digitaler Vertragsabschluss Hinweis */}
-            <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-2">
-              <div className="flex items-center gap-2 text-primary font-semibold text-sm">
-                <CheckCircle className="h-4 w-4" />
-                Digitaler Vertragsabschluss
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Nach dem Speichern erhält der Kunde per E-Mail einen Zahlungslink (Stripe). Mit Abschluss der Zahlung wird der Vertrag automatisch aktiviert. Eine manuelle Unterschrift ist nicht erforderlich.
-              </p>
-            </div>
-
-            {/* Notizen */}
-            <div>
-              <Label>Notizen</Label>
-              <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={2} placeholder="Zusätzliche Informationen..." />
             </div>
 
             <DialogFooter className="flex-col gap-2">
