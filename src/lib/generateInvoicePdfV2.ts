@@ -138,9 +138,9 @@ export async function generateInvoicePdfV2(
   };
 
   // ===== LOGO & STATUS HEADER =====
-  let embeddedLogo: Awaited<ReturnType<typeof doc.embedJpg>> | null = null;
+  let embeddedLogo: Awaited<ReturnType<typeof doc.embedPng>> | null = null;
   if (logoBytes) {
-    try { embeddedLogo = await doc.embedJpg(logoBytes); } catch { /* skip */ }
+    try { embeddedLogo = await doc.embedPng(logoBytes); } catch { try { embeddedLogo = await doc.embedJpg(logoBytes); } catch { /* skip */ } }
   }
 
   const headerTop = PAGE_H - 36;

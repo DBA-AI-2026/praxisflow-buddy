@@ -37,7 +37,7 @@ import { validateBic } from "@/lib/validateBic";
 import { lookupBicFromIban } from "@/lib/lookupBic";
 import { buildStripeLineItems, hasStripeProducts } from "@/lib/stripeProducts";
 import { CreditCard } from "lucide-react"; // CreditCard used for payment section
-import foxLogoUrl from "@/assets/fox-logo.jpeg";
+import foxLogoUrl from "@/assets/logo.png";
 import { useAuth } from "@/hooks/useAuth";
 import { PaperContractDialog } from "@/components/contracts/PaperContractDialog";
 

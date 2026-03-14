@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, Building2, Mail, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import logoUrl from "@/assets/fox-logo.jpeg";
+import logoUrl from "@/assets/logo.png";
 
 export default function MandateSuccess() {
   const [countdown, setCountdown] = useState(10);

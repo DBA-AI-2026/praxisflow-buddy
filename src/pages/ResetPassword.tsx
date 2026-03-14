@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
-import logo from "@/assets/fox-logo.jpeg";
+import logo from "@/assets/logo.png";
 import { z } from "zod";
 
 const passwordSchema = z.object({

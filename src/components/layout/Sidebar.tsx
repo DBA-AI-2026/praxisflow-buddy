@@ -26,7 +26,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import logo from "@/assets/fox-logo.jpeg";
+import logo from "@/assets/logo.png";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
