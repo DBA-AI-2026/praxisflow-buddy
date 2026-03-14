@@ -192,6 +192,7 @@ interface ContractFormData {
   stundenaufwand_pro_woche: string;
   rechnungs_email: string;
   rechnungs_email_identisch: boolean;
+  mandate_accepted: boolean;
 }
 
 const emptyForm: ContractFormData = {
