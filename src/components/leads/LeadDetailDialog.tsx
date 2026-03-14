@@ -109,6 +109,8 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
   const [sendingConfirmEmail, setSendingConfirmEmail] = useState(false);
   const [sendingCredentials, setSendingCredentials] = useState(false);
   const [sendingBuchungsmail, setSendingBuchungsmail] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Fetch assigned profile name
   const { data: assignedProfile } = useQuery({
