@@ -335,7 +335,8 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
                     </FormLabel>
                     <div className="grid grid-cols-2 gap-2">
                       {products.map((product) => {
-                        const checked = field.value.includes(product.name);
+                        const values = field.value || [];
+                        const checked = values.includes(product.name);
                         return (
                           <label
                             key={product.id}
@@ -348,9 +349,10 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
                             <Checkbox
                               checked={checked}
                               onCheckedChange={(val) => {
+                                const current = field.value || [];
                                 const next = val
-                                  ? [...field.value, product.name]
-                                  : field.value.filter((p: string) => p !== product.name);
+                                  ? [...current, product.name]
+                                  : current.filter((p: string) => p !== product.name);
                                 field.onChange(next);
                               }}
                             />
