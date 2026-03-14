@@ -220,8 +220,6 @@ export async function generateInvoicePdf(
   y = Math.min(y, metaY - metaBoxH + 10);
   y -= 20;
 
-  // Divider
-  hRule(0.6, C_LINE);
   y -= 14;
 
   // ===== SUBJECT LINE =====
