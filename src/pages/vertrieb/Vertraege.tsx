@@ -1353,10 +1353,10 @@ export default function Vertraege() {
           const hasPromo = p.promo_price != null && p.promo_end_date && new Date(p.promo_end_date) >= now;
           return {
             name: p.name,
-            monthly_price: Number(p.monthly_price),
-            price_per_unit: p.price_per_unit != null ? Number(p.price_per_unit) : null,
+            monthly_price: Number(p.monthly_price) || 0,
+            price_per_unit: p.price_per_unit != null ? (Number(p.price_per_unit) || 0) : null,
             price_per_unit_label: p.price_per_unit_label || null,
-            promo_price: p.promo_price != null ? Number(p.promo_price) : null,
+            promo_price: p.promo_price != null ? (Number(p.promo_price) || 0) : null,
             promo_price_label: p.promo_price_label || null,
             promo_end_date: p.promo_end_date || null,
             promo_base_fee_end_date: p.promo_base_fee_end_date || null,
