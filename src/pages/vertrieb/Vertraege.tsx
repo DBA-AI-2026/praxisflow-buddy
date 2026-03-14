@@ -2138,14 +2138,14 @@ export default function Vertraege() {
                     .reduce((sum: number, pr: any) => {
                       const promoActive = pr.promo_price != null && pr.promo_end_date && new Date(pr.promo_end_date) >= now;
                       const bfWaived = promoActive && pr.promo_base_fee_end_date && new Date(pr.promo_base_fee_end_date) >= now;
-                      return sum + (bfWaived ? 0 : Number(pr.monthly_price));
+                      return sum + (bfWaived ? 0 : (Number(pr.monthly_price) || 0));
                     }, 0);
                   const modulesTotal = ebmModules
                     .filter((m: any) => (selectedModules ?? form.selected_modules).includes(m.name))
-                    .reduce((sum: number, m: any) => sum + Number(m.monthly_price), 0);
+                    .reduce((sum: number, m: any) => sum + (Number(m.monthly_price) || 0), 0);
                   const totalOneTime = products
                     .filter((pr: any) => nextProducts.includes(pr.name))
-                    .reduce((sum: number, pr: any) => sum + Number(pr.one_time_fee), 0);
+                    .reduce((sum: number, pr: any) => sum + (Number(pr.one_time_fee) || 0), 0);
                   return { totalMonthly: totalMonthly + modulesTotal, totalOneTime };
                 };
 
@@ -2435,7 +2435,7 @@ export default function Vertraege() {
                       })()}
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-foreground tabular-nums">{form.monthly_price.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €<span className="text-xs font-normal text-muted-foreground">/Mon.</span></p>
+                      <p className="text-lg font-bold text-foreground tabular-nums">{(form.monthly_price || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €<span className="text-xs font-normal text-muted-foreground">/Mon.</span></p>
                       {form.one_time_fee > 0 && <p className="text-xs text-muted-foreground">+ {form.one_time_fee.toLocaleString("de-DE", { minimumFractionDigits: 2 })} € einmalig</p>}
                     </div>
                   </div>
@@ -2477,7 +2477,7 @@ export default function Vertraege() {
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">Monatspreis</span>
-                      <p className="font-medium">{form.monthly_price.toLocaleString("de-DE")} €</p>
+                      <p className="font-medium">{(form.monthly_price || 0).toLocaleString("de-DE")} €</p>
                     </div>
                     {form.one_time_fee > 0 && (
                       <div>
