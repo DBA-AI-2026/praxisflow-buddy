@@ -147,7 +147,7 @@ export async function generateInvoicePdfV2(
 
   // Logo top-left
   if (embeddedLogo) {
-    const logoH = 42;
+    const logoH = 56;
     const logoW = (embeddedLogo.width / embeddedLogo.height) * logoH;
     page.drawImage(embeddedLogo, { x: ML, y: headerTop - logoH + 10, width: logoW, height: logoH });
   } else {
@@ -155,19 +155,7 @@ export async function generateInvoicePdfV2(
     text("ein Geschäftsbereich der MCC Medical CareCapital GmbH", ML, headerTop - 16, 7, font, C_MUTED);
   }
 
-  // Status badge top-right
-  const statusLabels: Record<string, string> = {
-    entwurf: "ENTWURF", versendet: "VERSENDET", bezahlt: "BEZAHLT", storniert: "STORNIERT",
-  };
-  const st = data.status || "entwurf";
-  const stLabel = statusLabels[st] || st.toUpperCase();
-  const stBg = st === "bezahlt" ? C_GREEN : st === "storniert" ? C_MUTED : C_STATUS_RED;
-  const badgeW = fontBold.widthOfTextAtSize(stLabel, 9) + 20;
-  const badgeH = 22;
-  const badgeX = PAGE_W - MR - badgeW;
-  const badgeY = headerTop - 18;
-  page.drawRectangle({ x: badgeX, y: badgeY, width: badgeW, height: badgeH, color: stBg });
-  text(stLabel, badgeX + 10, badgeY + 6, 9, fontBold, C_WHITE);
+  // Status badge removed
 
   // ===== SENDER LINE =====
   y = PAGE_H - 45 * mmToPt;
@@ -396,18 +384,7 @@ export async function generateInvoicePdfV2(
   rightText(formatCurrency(data.gross_amount), totalsRight - 8, grossTextY, 11, fontBold, C_NAVY);
   ty -= grossRowH;
 
-  // Zahlstatus row
-  const statusRowH = 22;
-  page.drawLine({ start: { x: totalsX, y: ty + 10 }, end: { x: totalsRight, y: ty + 10 }, thickness: 0.4, color: C_LINE_LIGHT });
-  page.drawLine({ start: { x: totalsX, y: ty - statusRowH + 10 }, end: { x: totalsRight, y: ty - statusRowH + 10 }, thickness: 0.8, color: C_LINE });
-  page.drawLine({ start: { x: totalsX, y: ty + 10 }, end: { x: totalsX, y: ty - statusRowH + 10 }, thickness: 0.4, color: C_LINE_LIGHT });
-  page.drawLine({ start: { x: totalsRight, y: ty + 10 }, end: { x: totalsRight, y: ty - statusRowH + 10 }, thickness: 0.4, color: C_LINE_LIGHT });
-  const statusTextY = ty - statusRowH / 2 + 4;
-  text("Zahlstatus", totalsX + 8, statusTextY, 8.5, fontBold, C_TEXT);
-  const stColor = st === "bezahlt" ? C_GREEN : st === "storniert" ? C_RED : C_NAVY;
-  rightText(stLabel.toLowerCase(), totalsRight - 8, statusTextY, 8.5, fontBold, stColor);
-
-  y = Math.min(y, ty - statusRowH) - 24;
+  y = Math.min(y, ty) - 24;
 
   // ===== NOTES =====
   if (data.notes) {
