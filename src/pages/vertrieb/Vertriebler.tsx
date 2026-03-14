@@ -258,6 +258,7 @@ const Vertriebler = () => {
                     <TableHead>Rolle</TableHead>
                     <TableHead>E-Mail</TableHead>
                     <TableHead className="text-center">Verträge</TableHead>
+                    {isAdmin && <TableHead className="text-right">Provisionen</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -274,6 +275,19 @@ const Vertriebler = () => {
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{v.email || "–"}</TableCell>
                         <TableCell className="text-center font-medium">{v.contract_count}</TableCell>
+                        {isAdmin && (
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-1.5"
+                              onClick={() => setSelectedPartner(v)}
+                            >
+                              <Percent className="h-3.5 w-3.5" />
+                              Provisionen
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })}
@@ -282,6 +296,17 @@ const Vertriebler = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Commission Dialog */}
+        {selectedPartner && (
+          <PartnerCommissionDialog
+            open={!!selectedPartner}
+            onOpenChange={(open) => !open && setSelectedPartner(null)}
+            userId={selectedPartner.user_id}
+            userName={selectedPartner.full_name}
+            userRole={selectedPartner.role}
+          />
+        )}
       </div>
     </MainLayout>
   );
