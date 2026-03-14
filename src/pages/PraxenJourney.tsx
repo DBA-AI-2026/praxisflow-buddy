@@ -438,6 +438,7 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
 // ─── Tab: Verträge (Im Prozess + Abgeschlossen) ──────────────────────────────
 
 function VertraegeTab({ search, highlightId, missingEmailCount }: { search: string; highlightId?: string; missingEmailCount: number }) {
+  const [groupFilter, setGroupFilter] = useState<"prozess" | "abgeschlossen">("prozess");
   const [statusFilter, setStatusFilter] = useState<string>("alle");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
