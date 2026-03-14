@@ -2051,13 +2051,11 @@ export default function Vertraege() {
                  </div>
                  <div>
                    <Label>Fachrichtung</Label>
-                   <Input value={form.fachrichtung} onChange={(e) => set("fachrichtung", e.target.value)} placeholder="z.B. Allgemeinmedizin, Orthopädie..." className={fieldErr("fachrichtung") ? "border-destructive focus-visible:ring-destructive" : ""} />
-                   {fieldErr("fachrichtung") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                   <Input value={form.fachrichtung} onChange={(e) => set("fachrichtung", e.target.value)} placeholder="z.B. Allgemeinmedizin, Orthopädie..." />
                  </div>
                  <div>
                    <Label>Rechtsform</Label>
-                   <Input value={form.rechtsform} onChange={(e) => set("rechtsform", e.target.value)} placeholder="z.B. Einzelpraxis, GbR, MVZ..." className={fieldErr("rechtsform") ? "border-destructive focus-visible:ring-destructive" : ""} />
-                   {fieldErr("rechtsform") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
+                   <Input value={form.rechtsform} onChange={(e) => set("rechtsform", e.target.value)} placeholder="z.B. Einzelpraxis, GbR, MVZ..." />
                  </div>
                  <div>
                    <Label>Vorname *</Label>
