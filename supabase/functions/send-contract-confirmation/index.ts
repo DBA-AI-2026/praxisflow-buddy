@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import Stripe from "npm:stripe@14.21.0";
+import { PDFDocument, rgb, StandardFonts } from "npm:pdf-lib@1.17.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,13 +7,260 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const STRIPE_PRODUCT_MAP: Record<string, { price_id: string; recurring: boolean }> = {
-  "HFX EBM": { price_id: "price_1T7z1h6v0qHdbOip4A7qocQC", recurring: true },
-  "HFX GOÄ - die KI für ihre Privatabrechnung": { price_id: "price_1T7z2Z6v0qHdbOipvyPDB9mB", recurring: true },
-  "HFX GOÄ/GOZ Live-Check": { price_id: "price_1T7z3X6v0qHdbOiplCCLqD2n", recurring: false },
-};
-
 const APP_URL = "https://praxisflow-buddy.lovable.app";
+
+// ---------- PDF generation (mirrors client generateContractPdf, invoice-style) ----------
+
+function formatDate(dateStr?: string | null): string {
+  if (!dateStr) return "–";
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  } catch {
+    return dateStr;
+  }
+}
+
+function formatCurrency(value?: number | null): string {
+  if (value == null) return "0,00 €";
+  return value.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+}
+
+async function buildContractPdf(contract: Record<string, unknown>, logoBytes?: ArrayBuffer): Promise<Uint8Array> {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+
+  const PAGE_W = 595.28;
+  const PAGE_H = 841.89;
+  const ML = 56;
+  const MR = 56;
+  const CW = PAGE_W - ML - MR;
+  const mmToPt = 2.8346;
+
+  const C_NAVY = rgb(0.044, 0.212, 0.498);
+  const C_TEXT = rgb(0.12, 0.12, 0.14);
+  const C_MUTED = rgb(0.35, 0.37, 0.42);
+  const C_LINE = rgb(0.044, 0.212, 0.498);
+  const C_LINE_LIGHT = rgb(0.75, 0.80, 0.88);
+  const C_BG_LIGHT = rgb(0.95, 0.96, 0.98);
+
+  let page = doc.addPage([PAGE_W, PAGE_H]);
+  let y = PAGE_H;
+
+  const text = (t: string, x: number, yy: number, size: number, f = font, color = C_TEXT, maxW?: number) => {
+    if (!t) return;
+    page.drawText(t, { x, y: yy, size, font: f, color, maxWidth: maxW });
+  };
+
+  const rightText = (t: string, rightEdge: number, yy: number, size: number, f = font, color = C_TEXT) => {
+    const w = f.widthOfTextAtSize(t, size);
+    text(t, rightEdge - w, yy, size, f, color);
+  };
+
+  const ensureSpace = (needed = 80) => {
+    if (y < 60 + needed) {
+      drawFooter();
+      page = doc.addPage([PAGE_W, PAGE_H]);
+      y = PAGE_H - 50;
+    }
+  };
+
+  const drawFooter = () => {
+    const fY = 36;
+    page.drawLine({ start: { x: ML, y: fY + 20 }, end: { x: PAGE_W - MR, y: fY + 20 }, thickness: 0.5, color: C_LINE_LIGHT });
+    const footerLines = [
+      "MCC Medical CareCapital GmbH · Hohenzollernstr. 47 · 47799 Krefeld",
+      "Geschäftsführung: Olaf Hagelkruys, Thilo Wiers-Keiser, Robbin Zielke · Amtsgericht Krefeld, HRB 14709",
+      "USt-IdNr. DE 227 420 712 · www.hfx-honorarfuchs.de",
+    ];
+    footerLines.forEach((line, i) => {
+      const w = font.widthOfTextAtSize(line, 6);
+      text(line, (PAGE_W - w) / 2, fY + 10 - i * 9, 6, font, C_MUTED);
+    });
+  };
+
+  // Logo
+  const headerTop = PAGE_H - 36;
+  if (logoBytes) {
+    try {
+      let img;
+      try { img = await doc.embedPng(logoBytes); } catch { img = await doc.embedJpg(logoBytes); }
+      const logoH = 40;
+      const logoW = (img.width / img.height) * logoH;
+      page.drawImage(img, { x: PAGE_W - MR - logoW, y: headerTop - logoH + 10, width: logoW, height: logoH });
+    } catch { /* skip */ }
+  }
+
+  // Sender line
+  y = PAGE_H - 48 * mmToPt;
+  text("HFX Honorarfuchs · Hohenzollernstr. 47 · 47799 Krefeld", ML, y, 7, font, C_MUTED);
+  y -= 4;
+  page.drawLine({ start: { x: ML, y }, end: { x: ML + 220, y }, thickness: 0.3, color: C_LINE_LIGHT });
+  y -= 14;
+
+  // Two-column header
+  const rightColX = ML + CW * 0.50;
+  const rightColW = CW * 0.50;
+  const boxTop = y;
+
+  // Recipient
+  const recipientLines: string[] = [];
+  if (contract.praxis) recipientLines.push(String(contract.praxis));
+  const fullName = [contract.vorname, contract.nachname].filter(Boolean).join(" ");
+  if (fullName) recipientLines.push(fullName);
+  if (contract.adresse) recipientLines.push(String(contract.adresse));
+  if (contract.email) recipientLines.push(String(contract.email));
+
+  let ry = boxTop - 4;
+  recipientLines.forEach((line, i) => {
+    text(line, ML, ry, i === 0 ? 10 : 8.5, i === 0 ? fontBold : font, C_TEXT);
+    ry -= 13;
+  });
+
+  // Metadata
+  const durationMonths = Number(contract.duration_months ?? 0);
+  const endDate = String(contract.end_date || "");
+  const statusLabels: Record<string, string> = { entwurf: "ENTWURF", aktiv: "AKTIV", eingegangen: "EINGEGANGEN", gekuendigt: "GEKÜNDIGT", beendet: "BEENDET" };
+  const intervalLabels: Record<string, string> = { monatlich: "Monatlich", quartalsweise: "Quartalsweise", jaehrlich: "Jährlich" };
+  const st = String(contract.status || "entwurf");
+
+  const metaRows: [string, string][] = [
+    ["Kundennummer", String(contract.hfx_customer_number || "–")],
+    ["Vertragsbeginn", formatDate(contract.start_date as string)],
+    ["Vertragsende", endDate === "2099-12-31" ? "Unbefristet" : formatDate(endDate)],
+    ["Laufzeit", durationMonths === 0 ? "Unbefristet" : `${durationMonths} Monate`],
+    ["Zahlungsintervall", intervalLabels[String(contract.payment_interval || "monatlich")] || "Monatlich"],
+    ["Status", statusLabels[st] || st.toUpperCase()],
+  ];
+
+  const recipBoxH = Math.max(recipientLines.length * 13 + 10, metaRows.length * 16 + 10);
+  const metaRowH = recipBoxH / metaRows.length;
+
+  metaRows.forEach((row, i) => {
+    const rowY = boxTop - i * metaRowH;
+    if (i > 0) page.drawLine({ start: { x: rightColX, y: rowY }, end: { x: rightColX + rightColW, y: rowY }, thickness: 0.4, color: C_LINE_LIGHT });
+    const textY = rowY - metaRowH / 2 - 3;
+    text(row[0], rightColX + 6, textY, 7.5, fontBold, C_TEXT);
+    text(row[1], rightColX + rightColW * 0.48 + 6, textY, 8, font, C_TEXT);
+  });
+
+  y = boxTop - recipBoxH - 24 - 20 * mmToPt;
+
+  // Title
+  text("VERTRAGSÜBERSICHT", ML, y, 20, fontBold, C_TEXT);
+  y -= 28;
+
+  // Section header helper
+  const sectionHeader = (title: string) => {
+    ensureSpace(40);
+    page.drawLine({ start: { x: ML, y: y + 10 }, end: { x: PAGE_W - MR, y: y + 10 }, thickness: 1, color: C_LINE });
+    const rowH = 22;
+    page.drawRectangle({ x: ML, y: y - rowH + 10, width: CW, height: rowH, color: C_BG_LIGHT });
+    page.drawLine({ start: { x: ML, y: y - rowH + 10 }, end: { x: PAGE_W - MR, y: y - rowH + 10 }, thickness: 0.8, color: C_LINE });
+    text(title, ML + 8, y, 8.5, fontBold, C_NAVY);
+    y -= rowH + 6;
+  };
+
+  const fieldRow = (label: string, value: string, label2?: string, value2?: string) => {
+    ensureSpace(20);
+    const halfW = CW / 2;
+    text(label, ML + 8, y, 7, font, C_MUTED);
+    if (label2) text(label2, ML + halfW + 8, y, 7, font, C_MUTED);
+    y -= 11;
+    text(value || "–", ML + 8, y, 9, font, C_TEXT, halfW - 16);
+    if (label2) text(value2 || "–", ML + halfW + 8, y, 9, font, C_TEXT, halfW - 16);
+    y -= 15;
+    page.drawLine({ start: { x: ML, y: y + 4 }, end: { x: PAGE_W - MR, y: y + 4 }, thickness: 0.3, color: C_LINE_LIGHT });
+  };
+
+  // Vertragsparteien
+  sectionHeader("VERTRAGSPARTEIEN");
+  fieldRow("Praxis", String(contract.praxis || "–"), "Fachrichtung", String(contract.fachrichtung || "–"));
+  fieldRow("Vorname", String(contract.vorname || "–"), "Nachname", String(contract.nachname || "–"));
+  fieldRow("Adresse", String(contract.adresse || "–"));
+  fieldRow("Telefon", String(contract.telefon || "–"), "E-Mail", String(contract.email || "–"));
+  fieldRow("MP-Nummer", String(contract.mp_nr || "–"), "Vertriebspartner", String(contract.sales_partner_name || "–"));
+  y -= 10;
+
+  // Produkte
+  sectionHeader("PRODUKTE & LIZENZEN");
+  fieldRow("Produkt", String(contract.product_name || "–"));
+  fieldRow("Anzahl Lizenzen", String(contract.license_count ?? 1));
+  y -= 6;
+
+  // Laufzeit
+  sectionHeader("LAUFZEIT & KÜNDIGUNG");
+  const endDateLabel = endDate === "2099-12-31" ? "Unbefristet" : formatDate(endDate);
+  const laufzeitLabel = durationMonths === 0 ? "Unbefristet" : `${durationMonths} Monate`;
+  fieldRow("Vertragsbeginn", formatDate(contract.start_date as string), "Vertragsende", endDateLabel);
+  fieldRow("Laufzeit", laufzeitLabel, "Kündigungsfrist", `${contract.cancellation_period_months ?? 6} Monate zum Monatsende`);
+  y -= 10;
+
+  // Preisübersicht
+  sectionHeader("PREISÜBERSICHT");
+
+  const TABLE_RIGHT = PAGE_W - MR;
+  const priceRowH = 24;
+
+  const drawPriceRow = (label: string, value: string, isBold = false, topBorder = false) => {
+    ensureSpace(priceRowH + 4);
+    const rowTop = y + 10;
+    const rowBottom = rowTop - priceRowH;
+    if (topBorder) page.drawLine({ start: { x: ML, y: rowTop }, end: { x: TABLE_RIGHT, y: rowTop }, thickness: 0.8, color: C_LINE });
+    page.drawLine({ start: { x: ML, y: rowBottom }, end: { x: TABLE_RIGHT, y: rowBottom }, thickness: 0.4, color: C_LINE_LIGHT });
+    page.drawLine({ start: { x: ML, y: rowTop }, end: { x: ML, y: rowBottom }, thickness: 0.4, color: C_LINE_LIGHT });
+    page.drawLine({ start: { x: TABLE_RIGHT, y: rowTop }, end: { x: TABLE_RIGHT, y: rowBottom }, thickness: 0.4, color: C_LINE_LIGHT });
+    const textY = rowTop - priceRowH / 2 - 3;
+    text(label, ML + 8, textY, 8.5, isBold ? fontBold : font, isBold ? C_NAVY : C_TEXT);
+    rightText(value, TABLE_RIGHT - 8, textY, isBold ? 10 : 8.5, isBold ? fontBold : font, isBold ? C_NAVY : C_TEXT);
+    y -= priceRowH;
+  };
+
+  drawPriceRow("Monatspreis (netto)", formatCurrency(Number(contract.monthly_price) || 0), false, true);
+  drawPriceRow("Einmalgebühr", formatCurrency(Number(contract.one_time_fee) || 0));
+  if (Number(contract.discount_percent) > 0) {
+    drawPriceRow("Rabatt", `${contract.discount_percent}%`);
+  }
+
+  // Gesamtbetrag
+  ensureSpace(30);
+  const grossRowTop = y + 10;
+  const grossRowH = 28;
+  const grossRowBottom = grossRowTop - grossRowH;
+  page.drawLine({ start: { x: ML, y: grossRowTop }, end: { x: TABLE_RIGHT, y: grossRowTop }, thickness: 1.5, color: C_LINE });
+  page.drawRectangle({ x: ML, y: grossRowBottom, width: CW, height: grossRowH, color: C_BG_LIGHT });
+  page.drawLine({ start: { x: ML, y: grossRowBottom }, end: { x: TABLE_RIGHT, y: grossRowBottom }, thickness: 1.5, color: C_LINE });
+  page.drawLine({ start: { x: ML, y: grossRowTop }, end: { x: ML, y: grossRowBottom }, thickness: 0.8, color: C_LINE });
+  page.drawLine({ start: { x: TABLE_RIGHT, y: grossRowTop }, end: { x: TABLE_RIGHT, y: grossRowBottom }, thickness: 0.8, color: C_LINE });
+  const grossTextY = grossRowTop - grossRowH / 2 - 2;
+  text("Monatlicher Gesamtbetrag", ML + 8, grossTextY, 10, fontBold, C_NAVY);
+  rightText(formatCurrency(Number(contract.monthly_price) || 0), TABLE_RIGHT - 8, grossTextY, 11, fontBold, C_NAVY);
+  y -= grossRowH + 4;
+
+  // Closing
+  ensureSpace(50);
+  y -= 8;
+  text("Mit freundlichen Grüßen", ML, y, 9, font, C_TEXT);
+  y -= 16;
+  text("HFX Honorarfuchs", ML, y, 10, fontBold, C_NAVY);
+
+  drawFooter();
+
+  return doc.save();
+}
+
+// ---------- Helpers ----------
+
+function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+// ---------- Main handler ----------
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -64,7 +311,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Load contract data
     const { data: contract, error: contractError } = await adminClient
       .from("contracts")
       .select("*")
@@ -85,7 +331,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Build the /buchen page URL for the customer
+    // --- Generate contract summary PDF ---
+    let logoBytes: ArrayBuffer | undefined;
+    try {
+      const logoRes = await fetch(`${APP_URL}/logo.png`);
+      if (logoRes.ok) logoBytes = await logoRes.arrayBuffer();
+    } catch { /* skip logo */ }
+
+    const pdfBytes = await buildContractPdf(contract as Record<string, unknown>, logoBytes);
+    const pdfBase64 = toBase64(pdfBytes);
+
+    // --- Fetch AGB PDF ---
+    let agbBase64: string | undefined;
+    try {
+      const agbRes = await fetch(`${APP_URL}/templates/vertrag-honorarfuchs.pdf`);
+      if (agbRes.ok) {
+        const agbBytes = new Uint8Array(await agbRes.arrayBuffer());
+        agbBase64 = toBase64(agbBytes);
+      }
+    } catch { /* skip AGB */ }
+
+    // --- Build email ---
     const buchenUrl = `${APP_URL}/buchen?contract_id=${contract.id}&product=${encodeURIComponent(contract.product_name)}`;
 
     const startDateFormatted = contract.start_date
@@ -98,9 +364,7 @@ Deno.serve(async (req) => {
       ? `${Number(contract.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/Monat`
       : "–";
 
-    // CTA block — links to /buchen page where customer fills in Fachrichtung + Rechtsform
     const ctaBlock = `
-        <!-- Buchungs-CTA -->
         <tr>
           <td style="padding:0 40px 28px;">
             <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#0b367f,#1a4a9e);border-radius:10px;overflow:hidden;">
@@ -152,6 +416,9 @@ Deno.serve(async (req) => {
             <p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 12px;">
               wir haben Ihren Vertrag erhalten und für Sie vorbereitet. Mit einem Klick auf den Button unten schließen Sie die Buchung kostenpflichtig ab – Ihr Vertrag wird danach automatisch aktiviert.
             </p>
+            <p style="color:#374151;font-size:14px;line-height:1.7;margin:0;">
+              Im Anhang finden Sie Ihre Vertragsübersicht sowie unsere AGB als PDF.
+            </p>
           </td>
         </tr>
 
@@ -198,11 +465,11 @@ Deno.serve(async (req) => {
 
         ${ctaBlock}
 
-        <!-- AGB-Download -->
+        <!-- AGB hint -->
         <tr>
           <td style="padding:0 40px 16px;">
             <p style="color:#6b7280;font-size:12px;line-height:1.6;margin:0;">
-              📄 <a href="https://praxisflow-buddy.lovable.app/templates/vertrag-honorarfuchs.pdf" style="color:#0b367f;">Allgemeine Geschäftsbedingungen (AGB) herunterladen</a>
+              📄 Die AGB und Ihre Vertragsübersicht finden Sie als PDF im Anhang dieser E-Mail.
             </p>
           </td>
         </tr>
@@ -234,6 +501,14 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
+    // Build attachments
+    const attachments: Array<{ filename: string; content: string }> = [
+      { filename: "Vertragsuebersicht.pdf", content: pdfBase64 },
+    ];
+    if (agbBase64) {
+      attachments.push({ filename: "AGB-Honorarfuchs.pdf", content: agbBase64 });
+    }
+
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -250,6 +525,7 @@ Deno.serve(async (req) => {
           `Guten Tag${contract.vorname ? ` ${contract.vorname} ${contract.nachname || ""}` : ""},`,
           "",
           "wir haben Ihren Vertrag erhalten und für Sie vorbereitet.",
+          "Im Anhang finden Sie Ihre Vertragsübersicht sowie unsere AGB.",
           "",
           "Ihre Vertragsdetails:",
           contract.hfx_customer_number ? `HFX-Kundennummer: ${contract.hfx_customer_number}` : null,
@@ -265,6 +541,7 @@ Deno.serve(async (req) => {
           "Mit freundlichen Grüßen,",
           "Ihr HFX Honorarfuchs Team",
         ].filter(Boolean).join("\n"),
+        attachments,
       }),
     });
 
@@ -274,9 +551,8 @@ Deno.serve(async (req) => {
       throw new Error(`Email send failed: ${err}`);
     }
 
-    console.log(`[send-contract-confirmation] Email sent to ${contract.email} for contract ${contract_id}`);
+    console.log(`[send-contract-confirmation] Email with PDF attachments sent to ${contract.email} for contract ${contract_id}`);
 
-    // Record the timestamp when the confirmation email was successfully sent
     await adminClient
       .from("contracts")
       .update({ confirmation_email_sent_at: new Date().toISOString() })
