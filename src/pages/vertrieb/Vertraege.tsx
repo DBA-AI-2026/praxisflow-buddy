@@ -394,11 +394,20 @@ export default function Vertraege() {
   });
 
   const { data: allProfiles = [] } = useQuery({
-    queryKey: ["all-profiles"],
+    queryKey: ["sales-profiles"],
     queryFn: async () => {
+      // First get user_ids with sales-relevant roles
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .in("role", ["sales_partner", "user", "sales_lead", "regional_lead", "admin"]);
+      if (roleError) throw roleError;
+      const salesUserIds = (roleData || []).map((r) => r.user_id);
+      if (salesUserIds.length === 0) return [];
       const { data, error } = await supabase
         .from("profiles")
         .select("user_id, full_name, email")
+        .in("user_id", salesUserIds)
         .order("full_name");
       if (error) throw error;
       return data || [];
