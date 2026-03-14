@@ -474,26 +474,31 @@ function VertraegeTab({ search, highlightId, missingEmailCount }: { search: stri
   }, [highlightId]);
 
   const { data: contracts = [], isLoading } = useQuery({
-    queryKey: ["journey-contracts-pending"],
+    queryKey: ["journey-contracts-all"],
     queryFn: async () => {
       const { data } = await supabase
         .from("contracts")
         .select("id, customer_name, product_name, status, monthly_price, hfx_customer_number, email, vorname, nachname, praxis, created_at, start_date, confirmation_email_sent_at, customer_confirmed_at, sales_partner_name")
-        .neq("status", "aktiv")
         .order("created_at", { ascending: false });
       return data ?? [];
     },
   });
 
-  const pendingStatuses = ["entwurf", "eingegangen", "gezeichnet", "gekuendigt", "beendet"];
+  const processStatuses = ["entwurf", "eingegangen", "gezeichnet"];
+  const completedStatuses = ["aktiv", "gekuendigt", "beendet"];
+  const currentGroupStatuses = groupFilter === "prozess" ? processStatuses : completedStatuses;
 
-  const statusCounts = pendingStatuses.reduce((acc, s) => {
+  const groupContracts = contracts.filter((c: any) => currentGroupStatuses.includes(c.status));
+  const processCount = contracts.filter((c: any) => processStatuses.includes(c.status)).length;
+  const completedCount = contracts.filter((c: any) => completedStatuses.includes(c.status)).length;
+
+  const statusCounts = currentGroupStatuses.reduce((acc, s) => {
     acc[s] = contracts.filter((c: any) => c.status === s).length;
     return acc;
   }, {} as Record<string, number>);
 
   const s = search.toLowerCase();
-  const filtered = contracts.filter((c: any) => {
+  const filtered = groupContracts.filter((c: any) => {
     if (statusFilter !== "alle" && c.status !== statusFilter) return false;
     if (!s) return true;
     return (
