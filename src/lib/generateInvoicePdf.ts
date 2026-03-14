@@ -146,7 +146,7 @@ export async function generateInvoicePdf(
     }
   }
 
-  // Status badge – always light blue background
+  // Status label/colors (drawn inside metadata box later)
   const statusLabels: Record<string, string> = {
     entwurf: "ENTWURF", versendet: "VERSENDET", bezahlt: "BEZAHLT", storniert: "STORNIERT",
   };
@@ -154,11 +154,6 @@ export async function generateInvoicePdf(
   const st = data.status || "entwurf";
   const stLabel = statusLabels[st] || st.toUpperCase();
   const stFg = st === "storniert" ? C_RED : st === "bezahlt" ? C_GREEN : C_NAVY;
-  const badgeW = font.widthOfTextAtSize(stLabel, 8) + 18;
-  const badgeX = PAGE_W - M - badgeW;
-  const badgeY = PAGE_H - 64;
-  page.drawRectangle({ x: badgeX, y: badgeY - 4, width: badgeW, height: 18, color: C_LIGHT_BLUE_BG });
-  text(stLabel, badgeX + 9, badgeY + 1, 8, fontBold, stFg);
 
   // ===== ADDRESS SECTION =====
   // 45mm from top edge of page to sender line
