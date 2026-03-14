@@ -2156,12 +2156,18 @@ export default function Vertraege() {
                     ? form.selected_products.filter((n) => n !== name)
                     : [...form.selected_products, name];
                   const { totalMonthly, totalOneTime } = recalcPrices(next);
+                  // Auto-set per-unit price from first product with price_per_unit
+                  const now = new Date();
+                  const unitProduct = products.find((pr: any) => next.includes(pr.name) && (pr.price_per_unit != null || pr.promo_price != null));
+                  const hasPromo = unitProduct?.promo_price != null && unitProduct?.promo_end_date && new Date(unitProduct.promo_end_date) >= now;
+                  const unitPrice = hasPromo ? (Number(unitProduct?.promo_price) || 0) : (Number(unitProduct?.price_per_unit) || 0);
                   setForm((prev) => ({
                     ...prev,
                     selected_products: next,
                     monthly_price: totalMonthly,
                     one_time_fee: totalOneTime,
-                  }));
+                    qodia_unit_price: unitProduct ? unitPrice : 0,
+                  } as any));
                 };
 
                 return (
@@ -2501,9 +2507,9 @@ export default function Vertraege() {
               <div className="space-y-3">
                 <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Preisübersicht</h4>
                 <div className="p-3 rounded-lg bg-muted/50 border">
-                  <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <span className="text-muted-foreground">Monatspreis</span>
+                      <span className="text-muted-foreground">Grundgebühr /Mon.</span>
                       {isAdmin ? (
                         <Input
                           type="number"
@@ -2532,7 +2538,37 @@ export default function Vertraege() {
                         <p className="font-medium">{(form.one_time_fee || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</p>
                       )}
                     </div>
+                    {/* Stückpreis pro Rechnung – aus Produktmatrix, Admin kann überschreiben */}
+                    {(() => {
+                      const now = new Date();
+                      const selectedProduct = products.find((pr: any) => form.selected_products.includes(pr.name) && (pr.price_per_unit != null || pr.promo_price != null));
+                      if (!selectedProduct && !isAdmin) return null;
+                      const hasPromo = selectedProduct?.promo_price != null && selectedProduct?.promo_end_date && new Date(selectedProduct.promo_end_date) >= now;
+                      const defaultPerUnit = hasPromo ? (Number(selectedProduct?.promo_price) || 0) : (Number(selectedProduct?.price_per_unit) || 0);
+                      const perUnitLabel = selectedProduct?.price_per_unit_label || "Rechnung";
+                      const currentValue = (form as any).qodia_unit_price ?? defaultPerUnit;
+                      return (
+                        <div>
+                          <span className="text-muted-foreground">Stückpreis/{perUnitLabel}</span>
+                          {isAdmin ? (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min={0}
+                              value={currentValue}
+                              onChange={(e) => set("qodia_unit_price" as any, parseFloat(e.target.value) || 0)}
+                              className="mt-1 h-8 text-sm font-medium"
+                            />
+                          ) : (
+                            <p className="font-medium">{(currentValue || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</p>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
+                  {isAdmin && (
+                    <p className="text-xs text-muted-foreground mt-2">🔑 Admin: Preise können hier individuell angepasst werden.</p>
+                  )}
                   {!isAdmin && (
                     <p className="text-xs text-muted-foreground mt-2">💡 Preise werden automatisch aus der Produktmatrix berechnet.</p>
                   )}
