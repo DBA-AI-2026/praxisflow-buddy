@@ -193,6 +193,13 @@ export async function generateInvoicePdf(
   text("Rechnungsnummer:", metaLabelX, metaY, 7.5, font, C_MUTED);
   text(data.invoice_number, metaValueX, metaY, 9.5, fontBold, C_NAVY);
 
+  // Status badge inside metadata box, right-aligned on the invoice number line
+  const badgeW = font.widthOfTextAtSize(stLabel, 7.5) + 14;
+  const metaBoxRight = colRight - 8 + CW - (colRight - M) + 8;
+  const badgeX = metaBoxRight - badgeW - 6;
+  page.drawRectangle({ x: badgeX, y: metaY - 5, width: badgeW, height: 16, color: C_LIGHT_BLUE_BG });
+  text(stLabel, badgeX + 7, metaY, 7.5, fontBold, stFg);
+
   text("Rechnungsdatum:", metaLabelX, metaY - 16, 7.5, font, C_MUTED);
   text(formatDate(data.invoice_date), metaValueX, metaY - 16, 9, font, C_TEXT);
 
