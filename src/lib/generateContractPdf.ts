@@ -71,194 +71,253 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
 
-  const PAGE_W = 595.28; // A4
+  const PAGE_W = 595.28;
   const PAGE_H = 841.89;
-  const M = 48; // margin
-  const CW = PAGE_W - 2 * M;
-  const COL2_X = M + CW / 2 + 10;
-  const COL_W = CW / 2 - 10;
+  const ML = 56;
+  const MR = 56;
+  const CW = PAGE_W - ML - MR;
+  const mmToPt = 2.8346;
 
-  // Brand colors matching the page theme
-  const C_NAVY = rgb(0.044, 0.212, 0.498);    // #0b367f - sidebar/accent
-  const C_RED = rgb(0.714, 0.098, 0.239);      // #b6193d - primary
-  const C_TEXT = rgb(0.12, 0.12, 0.12);
-  const C_MUTED = rgb(0.4, 0.42, 0.48);
-  const C_LINE = rgb(0.82, 0.84, 0.88);
-  const C_BG_LIGHT = rgb(0.95, 0.96, 0.98);    // matches --background
+  // Colors – matching invoice design
+  const C_NAVY = rgb(0.044, 0.212, 0.498);
+  const C_TEXT = rgb(0.12, 0.12, 0.14);
+  const C_MUTED = rgb(0.35, 0.37, 0.42);
+  const C_LINE = rgb(0.044, 0.212, 0.498);
+  const C_LINE_LIGHT = rgb(0.75, 0.80, 0.88);
   const C_WHITE = rgb(1, 1, 1);
+  const C_BG_LIGHT = rgb(0.95, 0.96, 0.98);
+  const C_GREEN = rgb(0.09, 0.56, 0.28);
 
   let page = doc.addPage([PAGE_W, PAGE_H]);
   let y = PAGE_H;
 
-  // ---------- helpers ----------
   const text = (t: string, x: number, yy: number, size: number, f = font, color = C_TEXT, maxW?: number) => {
-    page.drawText(t || "", { x, y: yy, size, font: f, color, maxWidth: maxW });
+    if (!t) return;
+    page.drawText(t, { x, y: yy, size, font: f, color, maxWidth: maxW });
+  };
+
+  const rightText = (t: string, rightEdge: number, yy: number, size: number, f = font, color = C_TEXT) => {
+    const w = f.widthOfTextAtSize(t, size);
+    text(t, rightEdge - w, yy, size, f, color);
   };
 
   const ensureSpace = (needed = 80) => {
-    if (y < M + needed) {
-      // Footer on current page
+    if (y < 60 + needed) {
       drawFooter();
       page = doc.addPage([PAGE_W, PAGE_H]);
-      y = PAGE_H - M;
+      y = PAGE_H - 50;
     }
   };
 
   const drawFooter = () => {
-    const fY = 30;
-    page.drawLine({ start: { x: M, y: fY + 12 }, end: { x: PAGE_W - M, y: fY + 12 }, thickness: 0.4, color: C_LINE });
-    text("HFX Honorarfuchs GmbH · Dieses Dokument dient der Vorschau und hat keine rechtliche Bindung.", M, fY, 6, font, C_MUTED);
+    const fY = 36;
+    page.drawLine({ start: { x: ML, y: fY + 20 }, end: { x: PAGE_W - MR, y: fY + 20 }, thickness: 0.5, color: C_LINE_LIGHT });
+    const footerLines = [
+      "MCC Medical CareCapital GmbH · Hohenzollernstr. 47 · 47799 Krefeld",
+      "Geschäftsführung: Olaf Hagelkruys, Thilo Wiers-Keiser, Robbin Zielke · Amtsgericht Krefeld, HRB 14709",
+      "USt-IdNr. DE 227 420 712 · www.hfx-honorarfuchs.de",
+    ];
+    footerLines.forEach((line, i) => {
+      const w = font.widthOfTextAtSize(line, 6);
+      text(line, (PAGE_W - w) / 2, fY + 10 - i * 9, 6, font, C_MUTED);
+    });
   };
 
-  const sectionHeader = (title: string) => {
-    y -= 8;
-    // Navy bar on left, light bg
-    page.drawRectangle({ x: M, y: y - 4, width: CW, height: 20, color: C_BG_LIGHT });
-    page.drawRectangle({ x: M, y: y - 4, width: 3, height: 20, color: C_NAVY });
-    text(title.toUpperCase(), M + 12, y + 1, 8, fontBold, C_NAVY);
-    y -= 26;
-  };
-
-  const fieldPair = (l1: string, v1: string, l2: string, v2: string) => {
-    text(l1, M + 4, y, 7, font, C_MUTED);
-    if (l2) text(l2, COL2_X, y, 7, font, C_MUTED);
-    y -= 12;
-    text(v1 || "–", M + 4, y, 9.5, font, C_TEXT, COL_W - 8);
-    if (l2) text(v2 || "–", COL2_X, y, 9.5, font, C_TEXT, COL_W - 8);
-    y -= 16;
-  };
-
-  const fieldFull = (label: string, value: string) => {
-    text(label, M + 4, y, 7, font, C_MUTED);
-    y -= 12;
-    text(value || "–", M + 4, y, 9.5, font, C_TEXT, CW - 8);
-    y -= 16;
-  };
-
-  const divider = () => {
-    page.drawLine({ start: { x: M, y }, end: { x: PAGE_W - M, y }, thickness: 0.4, color: C_LINE });
-    y -= 12;
-  };
-
-  // ===== TOP BAR (Navy header strip) =====
-  const headerH = 56;
-  page.drawRectangle({ x: 0, y: PAGE_H - headerH, width: PAGE_W, height: headerH, color: C_NAVY });
-
-  // Logo in header
-  let logoXEnd = M + 4;
+  // ===== LOGO (top-right, matching invoice) =====
+  let embeddedLogo: Awaited<ReturnType<typeof doc.embedPng>> | null = null;
   if (logoBytes) {
-    try {
-      let logoImage; try { logoImage = await doc.embedPng(logoBytes); } catch { logoImage = await doc.embedJpg(logoBytes); }
-      const logoH = 30;
-      const logoW = (logoImage.width / logoImage.height) * logoH;
-      page.drawImage(logoImage, { x: M, y: PAGE_H - headerH + 13, width: logoW, height: logoH });
-      logoXEnd = M + logoW + 10;
-    } catch {
-      // continue without logo
-    }
+    try { embeddedLogo = await doc.embedPng(logoBytes); } catch { try { embeddedLogo = await doc.embedJpg(logoBytes); } catch { /* skip */ } }
   }
 
-  // Title in header bar
-  text("HFX Honorarfuchs", logoXEnd, PAGE_H - headerH + 24, 16, fontBold, C_WHITE);
-  text("Vertragsübersicht", logoXEnd, PAGE_H - headerH + 10, 9, font, rgb(0.75, 0.8, 0.9));
+  const headerTop = PAGE_H - 36;
 
-  // Status badge top-right
+  if (embeddedLogo) {
+    const logoH = 40;
+    const logoW = (embeddedLogo.width / embeddedLogo.height) * logoH;
+    const logoX = PAGE_W - MR - logoW;
+    page.drawImage(embeddedLogo, { x: logoX, y: headerTop - logoH + 10, width: logoW, height: logoH });
+  } else {
+    text("HFX Honorarfuchs", ML, headerTop, 18, fontBold, C_NAVY);
+    text("ein Geschäftsbereich der MCC Medical CareCapital GmbH", ML, headerTop - 16, 7, font, C_MUTED);
+  }
+
+  // ===== SENDER LINE =====
+  y = PAGE_H - 48 * mmToPt;
+  text("HFX Honorarfuchs · Hohenzollernstr. 47 · 47799 Krefeld", ML, y, 7, font, C_MUTED);
+  y -= 4;
+  page.drawLine({ start: { x: ML, y }, end: { x: ML + 220, y }, thickness: 0.3, color: C_LINE_LIGHT });
+  y -= 14;
+
+  // ===== TWO-COLUMN: RECIPIENT + METADATA =====
+  const leftColW = CW * 0.46;
+  const rightColX = ML + CW * 0.50;
+  const rightColW = CW * 0.50;
+  const boxTop = y;
+
+  // --- Recipient ---
+  const recipientLines: string[] = [];
+  const fullName = [data.vorname, data.nachname].filter(Boolean).join(" ");
+  if (data.praxis) recipientLines.push(data.praxis);
+  if (fullName) recipientLines.push(fullName);
+  if (data.adresse) recipientLines.push(data.adresse);
+  if (data.email) recipientLines.push(data.email);
+
+  const recipLineH = 13;
+
+  let ry = boxTop - 4;
+  recipientLines.forEach((line, i) => {
+    const isFirst = i === 0;
+    text(line, ML, ry, isFirst ? 10 : 8.5, isFirst ? fontBold : font, C_TEXT);
+    ry -= recipLineH;
+  });
+
+  // --- Metadata table (right column) ---
   const statusLabels: Record<string, string> = {
-    entwurf: "ENTWURF", aktiv: "AKTIV", gekuendigt: "GEKÜNDIGT", beendet: "BEENDET",
-  };
-  const statusColors: Record<string, { bg: ReturnType<typeof rgb>; fg: ReturnType<typeof rgb> }> = {
-    entwurf: { bg: rgb(0.85, 0.86, 0.9), fg: C_NAVY },
-    aktiv: { bg: rgb(0.2, 0.7, 0.35), fg: C_WHITE },
-    gekuendigt: { bg: rgb(0.9, 0.7, 0.15), fg: rgb(0.35, 0.3, 0.05) },
-    beendet: { bg: C_RED, fg: C_WHITE },
+    entwurf: "ENTWURF", aktiv: "AKTIV", eingegangen: "EINGEGANGEN", gekuendigt: "GEKÜNDIGT", beendet: "BEENDET",
   };
   const st = data.status || "entwurf";
-  const stLabel = statusLabels[st] || st.toUpperCase();
-  const stColor = statusColors[st] || statusColors.entwurf;
-  const badgeW = font.widthOfTextAtSize(stLabel, 8) + 16;
-  const badgeX = PAGE_W - M - badgeW;
-  page.drawRectangle({ x: badgeX, y: PAGE_H - headerH + 20, width: badgeW, height: 18, color: stColor.bg, borderColor: stColor.bg, borderWidth: 0 });
-  text(stLabel, badgeX + 8, PAGE_H - headerH + 24, 8, fontBold, stColor.fg);
+  const intervalLabels: Record<string, string> = {
+    monatlich: "Monatlich", quartalsweise: "Quartalsweise", jaehrlich: "Jährlich",
+  };
 
-  y = PAGE_H - headerH - 14;
+  const metaRows: [string, string][] = [
+    ["Kundennummer", data.hfx_customer_number || "–"],
+    ["Vertragsbeginn", formatDate(data.start_date)],
+    ["Vertragsende", formatDate(data.end_date)],
+    ["Laufzeit", `${data.duration_months ?? 12} Monate`],
+    ["Zahlungsintervall", intervalLabels[data.payment_interval || "monatlich"] || data.payment_interval || "Monatlich"],
+    ["Status", statusLabels[st] || st.toUpperCase()],
+  ];
 
-  // HFX number + date line
-  const hfxLine = `${data.hfx_customer_number || "Entwurf"}  ·  Erstellt am ${formatDate(new Date().toISOString())}`;
-  text(hfxLine, M, y, 8, font, C_MUTED);
-  y -= 18;
-  divider();
+  const recipBoxH = Math.max(recipientLines.length * recipLineH + 10, metaRows.length * 16 + 10);
+  const metaRowH = recipBoxH / metaRows.length;
+
+  metaRows.forEach((row, i) => {
+    const rowY = boxTop - i * metaRowH;
+    if (i > 0) {
+      page.drawLine({ start: { x: rightColX, y: rowY }, end: { x: rightColX + rightColW, y: rowY }, thickness: 0.4, color: C_LINE_LIGHT });
+    }
+    const textY = rowY - metaRowH / 2 - 3;
+    text(row[0], rightColX + 6, textY, 7.5, fontBold, C_TEXT);
+    text(row[1], rightColX + rightColW * 0.48 + 6, textY, 8, font, C_TEXT);
+  });
+
+  y = boxTop - recipBoxH - 24 - 20 * mmToPt;
+
+  // ===== "VERTRAGSÜBERSICHT" TITLE =====
+  text("VERTRAGSÜBERSICHT", ML, y, 20, fontBold, C_TEXT);
+  y -= 28;
 
   // ===== VERTRAGSPARTEIEN =====
-  sectionHeader("Vertragsparteien");
-  fieldPair("Praxis", data.praxis || "–", "Fachrichtung", data.fachrichtung || "–");
-  fieldPair("Vorname", data.vorname || "–", "Nachname", data.nachname || "–");
-  fieldFull("Adresse", data.adresse || "–");
-  fieldPair("Telefon", data.telefon || "–", "E-Mail", data.email || "–");
-  fieldPair("MP-Nummer", data.mp_nr || "–", "Vertriebspartner", data.sales_partner_name || "–");
-  divider();
-  ensureSpace();
+  const sectionHeader = (title: string) => {
+    ensureSpace(40);
+    page.drawLine({ start: { x: ML, y: y + 10 }, end: { x: PAGE_W - MR, y: y + 10 }, thickness: 1, color: C_LINE });
+    const rowH = 22;
+    page.drawRectangle({ x: ML, y: y - rowH + 10, width: CW, height: rowH, color: C_BG_LIGHT });
+    page.drawLine({ start: { x: ML, y: y - rowH + 10 }, end: { x: PAGE_W - MR, y: y - rowH + 10 }, thickness: 0.8, color: C_LINE });
+    text(title, ML + 8, y, 8.5, fontBold, C_NAVY);
+    y -= rowH + 6;
+  };
 
-  // ===== PRODUKTE =====
-  sectionHeader("Produkte & Lizenzen");
+  const fieldRow = (label: string, value: string, label2?: string, value2?: string) => {
+    ensureSpace(20);
+    const halfW = CW / 2;
+    text(label, ML + 8, y, 7, font, C_MUTED);
+    if (label2) text(label2, ML + halfW + 8, y, 7, font, C_MUTED);
+    y -= 11;
+    text(value || "–", ML + 8, y, 9, font, C_TEXT, halfW - 16);
+    if (label2) text(value2 || "–", ML + halfW + 8, y, 9, font, C_TEXT, halfW - 16);
+    y -= 15;
+    page.drawLine({ start: { x: ML, y: y + 4 }, end: { x: PAGE_W - MR, y: y + 4 }, thickness: 0.3, color: C_LINE_LIGHT });
+  };
+
+  sectionHeader("VERTRAGSPARTEIEN");
+  fieldRow("Praxis", data.praxis || "–", "Fachrichtung", data.fachrichtung || "–");
+  fieldRow("Vorname", data.vorname || "–", "Nachname", data.nachname || "–");
+  fieldRow("Adresse", data.adresse || "–");
+  fieldRow("Telefon", data.telefon || "–", "E-Mail", data.email || "–");
+  fieldRow("MP-Nummer", data.mp_nr || "–", "Vertriebspartner", data.sales_partner_name || "–");
+  y -= 10;
+
+  // ===== PRODUKTE & LIZENZEN =====
+  sectionHeader("PRODUKTE & LIZENZEN");
   const productList = data.modules?.length ? data.modules.join(", ") : data.product_name || "–";
-  fieldFull("Ausgewählte Produkte", productList);
-  fieldPair("Anzahl Lizenzen", String(data.license_count ?? 1), "", "");
+  fieldRow("Ausgewählte Produkte", productList);
+  fieldRow("Anzahl Lizenzen", String(data.license_count ?? 1));
 
   // Addon modules
   if (data.addon_module_details && data.addon_module_details.length > 0) {
-    y -= 4;
-    text("Zusatzmodule:", M + 4, y, 7, font, C_MUTED);
+    text("Zusatzmodule:", ML + 8, y, 7, font, C_MUTED);
     y -= 12;
     for (const mod of data.addon_module_details) {
       ensureSpace(20);
-      text(`• ${mod.name}`, M + 8, y, 8.5, font, C_TEXT);
-      text(`${formatCurrency(mod.monthly_price)}/Mon.`, COL2_X, y, 8.5, font, C_NAVY);
+      text(`• ${mod.name}`, ML + 12, y, 8.5, font, C_TEXT);
+      rightText(`${formatCurrency(mod.monthly_price)}/Mon.`, PAGE_W - MR - 8, y, 8.5, font, C_NAVY);
       y -= 14;
     }
     const addonTotal = data.addon_module_details.reduce((s, m) => s + m.monthly_price, 0);
-    text(`Zusatzmodule gesamt: ${formatCurrency(addonTotal)}/Mon.`, M + 8, y, 8, fontBold, C_NAVY);
-    y -= 14;
+    rightText(`Zusatzmodule gesamt: ${formatCurrency(addonTotal)}/Mon.`, PAGE_W - MR - 8, y, 8, fontBold, C_NAVY);
+    y -= 18;
   } else if (data.selected_addon_modules && data.selected_addon_modules.length > 0) {
-    fieldFull("Zusatzmodule", data.selected_addon_modules.join(", "));
+    fieldRow("Zusatzmodule", data.selected_addon_modules.join(", "));
+  }
+  y -= 6;
+
+  // ===== LAUFZEIT & KÜNDIGUNG =====
+  sectionHeader("LAUFZEIT & KÜNDIGUNG");
+  fieldRow("Vertragsbeginn", formatDate(data.start_date), "Vertragsende", formatDate(data.end_date));
+  fieldRow("Laufzeit", `${data.duration_months ?? 12} Monate`, "Kündigungsfrist", `${data.cancellation_period_months ?? 6} Monate zum Monatsende`);
+  y -= 10;
+
+  // ===== PREISÜBERSICHT (table style like invoice) =====
+  sectionHeader("PREISÜBERSICHT");
+
+  const TABLE_RIGHT = PAGE_W - MR;
+  const COL_LABEL = ML;
+  const COL_VALUE_RIGHT = TABLE_RIGHT;
+
+  // Price rows in bordered table style
+  const priceRowH = 24;
+
+  const drawPriceRow = (label: string, value: string, isBold = false, topBorder = false) => {
+    ensureSpace(priceRowH + 4);
+    const rowTop = y + 10;
+    const rowBottom = rowTop - priceRowH;
+
+    if (topBorder) {
+      page.drawLine({ start: { x: ML, y: rowTop }, end: { x: TABLE_RIGHT, y: rowTop }, thickness: 0.8, color: C_LINE });
+    }
+    page.drawLine({ start: { x: ML, y: rowBottom }, end: { x: TABLE_RIGHT, y: rowBottom }, thickness: 0.4, color: C_LINE_LIGHT });
+    page.drawLine({ start: { x: ML, y: rowTop }, end: { x: ML, y: rowBottom }, thickness: 0.4, color: C_LINE_LIGHT });
+    page.drawLine({ start: { x: TABLE_RIGHT, y: rowTop }, end: { x: TABLE_RIGHT, y: rowBottom }, thickness: 0.4, color: C_LINE_LIGHT });
+
+    const textY = rowTop - priceRowH / 2 - 3;
+    text(label, ML + 8, textY, 8.5, isBold ? fontBold : font, isBold ? C_NAVY : C_TEXT);
+    rightText(value, TABLE_RIGHT - 8, textY, isBold ? 10 : 8.5, isBold ? fontBold : font, isBold ? C_NAVY : C_TEXT);
+    y -= priceRowH;
+  };
+
+  drawPriceRow("Monatspreis (netto)", formatCurrency(data.monthly_price), false, true);
+  drawPriceRow("Einmalgebühr", formatCurrency(data.one_time_fee));
+  if ((data.discount_percent ?? 0) > 0) {
+    drawPriceRow("Rabatt", `${data.discount_percent}%`, false);
   }
 
-  divider();
-  ensureSpace();
+  // Gesamtbetrag row (bold, highlighted)
+  ensureSpace(30);
+  const grossRowTop = y + 10;
+  const grossRowH = 28;
+  const grossRowBottom = grossRowTop - grossRowH;
+  page.drawLine({ start: { x: ML, y: grossRowTop }, end: { x: TABLE_RIGHT, y: grossRowTop }, thickness: 1.5, color: C_LINE });
+  page.drawRectangle({ x: ML, y: grossRowBottom, width: CW, height: grossRowH, color: C_BG_LIGHT });
+  page.drawLine({ start: { x: ML, y: grossRowBottom }, end: { x: TABLE_RIGHT, y: grossRowBottom }, thickness: 1.5, color: C_LINE });
+  page.drawLine({ start: { x: ML, y: grossRowTop }, end: { x: ML, y: grossRowBottom }, thickness: 0.8, color: C_LINE });
+  page.drawLine({ start: { x: TABLE_RIGHT, y: grossRowTop }, end: { x: TABLE_RIGHT, y: grossRowBottom }, thickness: 0.8, color: C_LINE });
 
-  // ===== LAUFZEIT =====
-  sectionHeader("Laufzeit & Kündigung");
-  fieldPair("Vertragsbeginn", formatDate(data.start_date), "Vertragsende", formatDate(data.end_date));
-  fieldPair("Laufzeit", `${data.duration_months ?? 12} Monate`, "Kündigungsfrist", `${data.cancellation_period_months ?? 6} Monate zum Monatsende`);
-  divider();
-  ensureSpace();
-
-  // ===== PREISÜBERSICHT =====
-  sectionHeader("Preisübersicht");
-
-  // Price cards row
-  const cardW = (CW - 20) / 3;
-  const cardH = 50;
-  const cardY = y - cardH;
-
-  // Card 1: Monatspreis
-  page.drawRectangle({ x: M, y: cardY, width: cardW, height: cardH, color: C_BG_LIGHT, borderColor: C_LINE, borderWidth: 0.5 });
-  text("Monatspreis", M + 10, cardY + cardH - 14, 7, font, C_MUTED);
-  text(formatCurrency(data.monthly_price), M + 10, cardY + 10, 14, fontBold, C_NAVY);
-
-  // Card 2: Einmalgebühr
-  const c2x = M + cardW + 10;
-  page.drawRectangle({ x: c2x, y: cardY, width: cardW, height: cardH, color: C_BG_LIGHT, borderColor: C_LINE, borderWidth: 0.5 });
-  text("Einmalgebühr", c2x + 10, cardY + cardH - 14, 7, font, C_MUTED);
-  text(formatCurrency(data.one_time_fee), c2x + 10, cardY + 10, 14, fontBold, C_NAVY);
-
-  // Card 3: Rabatt
-  const c3x = M + 2 * (cardW + 10);
-  page.drawRectangle({ x: c3x, y: cardY, width: cardW, height: cardH, color: C_BG_LIGHT, borderColor: C_LINE, borderWidth: 0.5 });
-  text("Rabatt", c3x + 10, cardY + cardH - 14, 7, font, C_MUTED);
-  const discountVal = (data.discount_percent ?? 0) > 0 ? `${data.discount_percent}%` : "–";
-  text(discountVal, c3x + 10, cardY + 10, 14, fontBold, (data.discount_percent ?? 0) > 0 ? rgb(0.1, 0.6, 0.3) : C_MUTED);
-
-  y = cardY - 12;
+  const grossTextY = grossRowTop - grossRowH / 2 - 2;
+  text("Monatlicher Gesamtbetrag", ML + 8, grossTextY, 10, fontBold, C_NAVY);
+  rightText(formatCurrency(data.monthly_price), TABLE_RIGHT - 8, grossTextY, 11, fontBold, C_NAVY);
+  y -= grossRowH + 4;
 
   // Product price details (unit prices & promos)
   if (data.product_price_details && data.product_price_details.length > 0) {
@@ -266,32 +325,28 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
       (pp) => pp.price_per_unit != null || pp.has_active_promo
     );
     if (detailProducts.length > 0) {
-      y -= 4;
+      y -= 6;
       for (const pp of detailProducts) {
         ensureSpace(50);
-        // Product name
-        text(pp.name, M + 4, y, 8, fontBold, C_TEXT);
+        text(pp.name, ML + 8, y, 8, fontBold, C_TEXT);
         y -= 14;
         if (pp.has_active_promo && pp.promo_price != null) {
-          // Show promo pricing
           const promoLabel = pp.promo_price_label || `${pp.promo_price.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/${pp.price_per_unit_label || "Stk."}`;
-          text("Aktionspreis: " + promoLabel, M + 4, y, 8, font, rgb(0.1, 0.6, 0.3));
+          text("Aktionspreis: " + promoLabel, ML + 8, y, 8, font, C_GREEN);
           y -= 12;
-          // Show regular price struck through (as reference)
           const regParts: string[] = [];
           if (pp.monthly_price > 0) regParts.push(`${pp.monthly_price.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/Mon.`);
           if (pp.price_per_unit != null) regParts.push(`${pp.price_per_unit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/${pp.price_per_unit_label || "Stk."}`);
           if (regParts.length > 0) {
-            text("Regulaer: " + regParts.join(" + "), M + 4, y, 7, font, C_MUTED);
+            text("Regulär: " + regParts.join(" + "), ML + 8, y, 7, font, C_MUTED);
             y -= 12;
           }
           if (pp.promo_end_date) {
-            text("Gueltig bis " + formatDate(pp.promo_end_date), M + 4, y, 7, font, C_MUTED);
+            text("Gültig bis " + formatDate(pp.promo_end_date), ML + 8, y, 7, font, C_MUTED);
             y -= 12;
           }
         } else if (pp.price_per_unit != null) {
-          // Show unit price without promo
-          text(`${pp.price_per_unit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/${pp.price_per_unit_label || "Stk."}`, M + 4, y, 8, font, C_TEXT);
+          text(`${pp.price_per_unit.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/${pp.price_per_unit_label || "Stk."}`, ML + 8, y, 8, font, C_TEXT);
           y -= 12;
         }
         y -= 4;
@@ -299,7 +354,7 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
     }
   }
 
-  // Info-Box: Gesamtpreis nach Ablauf der Aktion
+  // Promo info box
   if (data.product_price_details && data.product_price_details.length > 0) {
     const promoProducts = data.product_price_details.filter((pp) => pp.has_active_promo);
     if (promoProducts.length > 0) {
@@ -307,17 +362,15 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
       y -= 4;
       const boxH = 58;
       const boxY = y - boxH;
-      page.drawRectangle({ x: M, y: boxY, width: CW, height: boxH, color: rgb(1, 0.97, 0.92), borderColor: rgb(0.9, 0.75, 0.4), borderWidth: 0.8 });
-      page.drawRectangle({ x: M, y: boxY, width: 3, height: boxH, color: rgb(0.9, 0.65, 0.1) });
+      page.drawRectangle({ x: ML, y: boxY, width: CW, height: boxH, color: rgb(1, 0.97, 0.92), borderColor: rgb(0.9, 0.75, 0.4), borderWidth: 0.8 });
+      page.drawRectangle({ x: ML, y: boxY, width: 3, height: boxH, color: rgb(0.9, 0.65, 0.1) });
 
-      text("Info: Preis nach Ablauf der Aktion", M + 12, boxY + boxH - 14, 8, fontBold, rgb(0.5, 0.35, 0.05));
+      text("Info: Preis nach Ablauf der Aktion", ML + 12, boxY + boxH - 14, 8, fontBold, rgb(0.5, 0.35, 0.05));
 
-      // Total monthly after base fee waiver ends
       let totalAfterPromo = 0;
       for (const pp of data.product_price_details) {
         totalAfterPromo += pp.monthly_price;
       }
-      // Unit prices: promo unit price is permanent, regular unit price only for non-promo products
       const unitHints: string[] = [];
       for (const pp of data.product_price_details) {
         if (pp.has_active_promo && pp.promo_price != null) {
@@ -327,11 +380,10 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
         }
       }
 
-      let afterLine = `Grundgebuehr: ${totalAfterPromo.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/Mon.`;
+      let afterLine = `Grundgebühr: ${totalAfterPromo.toLocaleString("de-DE", { minimumFractionDigits: 2 })} EUR/Mon.`;
       if (unitHints.length > 0) afterLine += "  +  " + unitHints.join(", ");
-      text(afterLine, M + 12, boxY + boxH - 28, 7.5, font, rgb(0.25, 0.2, 0.05), CW - 24);
+      text(afterLine, ML + 12, boxY + boxH - 28, 7.5, font, rgb(0.25, 0.2, 0.05), CW - 24);
 
-      // Show when base fee waiver ends (use promo_base_fee_end_date if available)
       const baseFeeEndDates = promoProducts
         .filter((pp) => pp.promo_base_fee_end_date)
         .map((pp) => pp.promo_base_fee_end_date!);
@@ -341,11 +393,11 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
 
       const baseFeeEnd = baseFeeEndDates.sort()[0];
       if (baseFeeEnd) {
-        text("Grundgebuehr regulaer ab " + formatDate(baseFeeEnd) + "  |  Stueckpreis dauerhaft reduziert", M + 12, boxY + boxH - 40, 7, font, C_MUTED, CW - 24);
+        text("Grundgebühr regulär ab " + formatDate(baseFeeEnd) + "  |  Stückpreis dauerhaft reduziert", ML + 12, boxY + boxH - 40, 7, font, C_MUTED, CW - 24);
       } else {
         const promoEnd = promoEndDates.sort()[0];
         if (promoEnd) {
-          text("Regulaere Preise gelten ab " + formatDate(promoEnd), M + 12, boxY + boxH - 40, 7, font, C_MUTED);
+          text("Reguläre Preise gelten ab " + formatDate(promoEnd), ML + 12, boxY + boxH - 40, 7, font, C_MUTED);
         }
       }
 
@@ -353,22 +405,16 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
     }
   }
 
-  const intervalLabels: Record<string, string> = {
-    monatlich: "Monatlich", quartalsweise: "Quartalsweise", jaehrlich: "Jährlich",
-  };
-  fieldPair("Zahlungsintervall", intervalLabels[data.payment_interval || "monatlich"] || data.payment_interval || "Monatlich", "", "");
-  divider();
-  ensureSpace();
+  y -= 10;
 
   // ===== SEPA =====
-  sectionHeader("SEPA-Lastschrifteinzug");
-  fieldFull("Kontoinhaber", data.kontoinhaber || "–");
-  fieldPair("IBAN", data.iban || "–", "BIC", data.bic || "–");
-  divider();
-  ensureSpace(140);
+  sectionHeader("SEPA-LASTSCHRIFTEINZUG");
+  fieldRow("Kontoinhaber", data.kontoinhaber || "–");
+  fieldRow("IBAN", data.iban || "–", "BIC", data.bic || "–");
+  y -= 10;
 
   // ===== UNTERSCHRIFT =====
-  sectionHeader("Unterschrift");
+  sectionHeader("UNTERSCHRIFT");
   if (data.signature_data && data.signature_data.startsWith("data:image")) {
     try {
       const base64 = data.signature_data.split(",")[1];
@@ -376,27 +422,36 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
       const pngImage = await doc.embedPng(imgBytes);
       const sigW = 200;
       const sigH = (pngImage.height / pngImage.width) * sigW;
-      page.drawImage(pngImage, { x: M + 4, y: y - sigH, width: sigW, height: sigH });
+      ensureSpace(sigH + 20);
+      page.drawImage(pngImage, { x: ML + 8, y: y - sigH, width: sigW, height: sigH });
       y -= sigH + 10;
     } catch {
-      text("(Unterschrift konnte nicht geladen werden)", M + 4, y, 8, font, C_MUTED);
+      text("(Unterschrift konnte nicht geladen werden)", ML + 8, y, 8, font, C_MUTED);
       y -= 15;
     }
   } else {
-    page.drawLine({ start: { x: M + 4, y }, end: { x: M + 250, y }, thickness: 0.5, color: C_TEXT });
+    page.drawLine({ start: { x: ML + 8, y }, end: { x: ML + 250, y }, thickness: 0.5, color: C_TEXT });
     y -= 8;
-    text("Datum, Unterschrift", M + 4, y, 7, font, C_MUTED);
+    text("Datum, Unterschrift", ML + 8, y, 7, font, C_MUTED);
     y -= 15;
   }
 
   // ===== NOTIZEN =====
   if (data.notes) {
     ensureSpace(60);
-    divider();
-    sectionHeader("Notizen");
-    text(data.notes, M + 4, y, 9, font, C_TEXT, CW - 8);
+    y -= 10;
+    text("Notizen:", ML + 8, y, 7, font, C_MUTED);
+    y -= 12;
+    text(data.notes, ML + 8, y, 9, font, C_TEXT, CW - 16);
     y -= 15;
   }
+
+  // ===== CLOSING =====
+  ensureSpace(50);
+  y -= 8;
+  text("Mit freundlichen Grüßen", ML, y, 9, font, C_TEXT);
+  y -= 16;
+  text("HFX Honorarfuchs", ML, y, 10, fontBold, C_NAVY);
 
   // ===== FOOTER =====
   drawFooter();
