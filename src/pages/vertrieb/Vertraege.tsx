@@ -2661,8 +2661,8 @@ export default function Vertraege() {
               <div className="flex items-start gap-3 p-3 rounded-lg border border-input bg-background">
                 <Checkbox
                   id="mandate_accepted"
-                  checked={!!(form as any).mandate_accepted}
-                  onCheckedChange={(checked) => set("mandate_accepted" as any, checked === true)}
+                   checked={!!form.mandate_accepted}
+                   onCheckedChange={(checked) => set("mandate_accepted", checked === true)}
                   className="mt-0.5"
                 />
                 <div>
