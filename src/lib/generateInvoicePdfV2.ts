@@ -145,7 +145,7 @@ export async function generateInvoicePdfV2(
 
   const headerTop = PAGE_H - 36;
 
-  // Logo top-left
+  // Logo top-right (18mm from right paper edge)
   if (embeddedLogo) {
     const logoH = 56;
     const logoW = (embeddedLogo.width / embeddedLogo.height) * logoH;
