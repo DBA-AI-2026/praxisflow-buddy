@@ -451,6 +451,7 @@ Deno.serve(async (req) => {
         interested_products: rawBody.interested_products || [],
         generated_password: generatedPassword,
         assigned_to: assignedTo,
+        tippgeber_id: rawBody.tippgeber_id || null,
         source: leadSource,
       })
       .select("id, hfx_customer_number")
