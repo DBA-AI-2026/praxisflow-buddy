@@ -90,12 +90,51 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { isAdmin, isSalesLead, isRegionalLead } = useUserRole();
+  const canSeePartnerInfo = isAdmin || isSalesLead || isRegionalLead;
   const [saving, setSaving] = useState(false);
   const [resending, setResending] = useState(false);
   const [syncingQodia, setSyncingQodia] = useState(false);
   const [sendingConfirmEmail, setSendingConfirmEmail] = useState(false);
   const [sendingCredentials, setSendingCredentials] = useState(false);
   const [sendingBuchungsmail, setSendingBuchungsmail] = useState(false);
+
+  // Fetch assigned profile name
+  const { data: assignedProfile } = useQuery({
+    queryKey: ["profile", lead.assigned_to],
+    queryFn: async () => {
+      if (!lead.assigned_to) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("user_id", lead.assigned_to)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!lead.assigned_to && canSeePartnerInfo,
+  });
+
+  // Check if there's a linked Tippgeber lead
+  const { data: tippLeadMatch } = useQuery({
+    queryKey: ["tipp-lead-match", lead.email, lead.praxis_name],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("tipp_leads")
+        .select("id, arzt_name, praxis_name, created_by")
+        .or(`email.eq.${lead.email},praxis_name.eq.${lead.praxis_name}`)
+        .limit(1);
+      if (!data || data.length === 0) return null;
+      // Fetch tippgeber profile
+      const tipp = data[0];
+      const { data: tippProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", tipp.created_by)
+        .maybeSingle();
+      return { ...tipp, tippgeber_name: tippProfile?.full_name || "Unbekannt" };
+    },
+    enabled: canSeePartnerInfo,
+  });
 
   const form = useForm<EditValues>({
     resolver: zodResolver(editSchema),
