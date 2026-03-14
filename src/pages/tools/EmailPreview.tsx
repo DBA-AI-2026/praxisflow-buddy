@@ -1489,10 +1489,19 @@ export default function EmailPreview() {
                             variant="outline"
                             size="sm"
                             className="gap-1.5"
+                            onClick={() => openAiEditor(tpl, "email")}
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            KI
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
                             onClick={() => openEdit(tpl, "email")}
                           >
                             <Pencil className="w-3.5 h-3.5" />
-                            Bearbeiten
+                            HTML
                           </Button>
                           {hasCustom(tpl, "email") && (
                             <Button
