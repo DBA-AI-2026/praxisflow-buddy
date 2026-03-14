@@ -413,9 +413,9 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
   fieldRow("IBAN", data.iban || "–", "BIC", data.bic || "–");
   y -= 10;
 
-  // ===== UNTERSCHRIFT =====
-  sectionHeader("UNTERSCHRIFT");
+  // ===== UNTERSCHRIFT (nur wenn vorhanden) =====
   if (data.signature_data && data.signature_data.startsWith("data:image")) {
+    sectionHeader("UNTERSCHRIFT");
     try {
       const base64 = data.signature_data.split(",")[1];
       const imgBytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
@@ -426,14 +426,8 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
       page.drawImage(pngImage, { x: ML + 8, y: y - sigH, width: sigW, height: sigH });
       y -= sigH + 10;
     } catch {
-      text("(Unterschrift konnte nicht geladen werden)", ML + 8, y, 8, font, C_MUTED);
-      y -= 15;
+      // skip
     }
-  } else {
-    page.drawLine({ start: { x: ML + 8, y }, end: { x: ML + 250, y }, thickness: 0.5, color: C_TEXT });
-    y -= 8;
-    text("Datum, Unterschrift", ML + 8, y, 7, font, C_MUTED);
-    y -= 15;
   }
 
   // ===== NOTIZEN =====
