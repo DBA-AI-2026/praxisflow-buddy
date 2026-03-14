@@ -364,7 +364,7 @@ export default function Rechnungen() {
     try {
       let logoBytes: ArrayBuffer | undefined;
       try {
-        const logoResp = await fetch("/logo.jpeg");
+        const logoResp = await fetch("/logo.png");
         if (logoResp.ok) logoBytes = await logoResp.arrayBuffer();
       } catch { /* no logo */ }
       const pdfBytes = await (pdfDesign === "design2" ? generateInvoicePdfV2 : generateInvoicePdf)(invoice, logoBytes);

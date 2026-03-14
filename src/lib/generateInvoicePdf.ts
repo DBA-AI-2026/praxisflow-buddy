@@ -130,9 +130,9 @@ export async function generateInvoicePdf(
   const mmToPt = 2.8346;
 
   // Embed logo early (async), draw later when we know position
-  let embeddedLogo: Awaited<ReturnType<typeof doc.embedJpg>> | null = null;
+  let embeddedLogo: Awaited<ReturnType<typeof doc.embedPng>> | null = null;
   if (logoBytes) {
-    try { embeddedLogo = await doc.embedJpg(logoBytes); } catch { /* skip */ }
+    try { embeddedLogo = await doc.embedPng(logoBytes); } catch { try { embeddedLogo = await doc.embedJpg(logoBytes); } catch { /* skip */ } }
   }
 
   // Status label/colors (drawn inside metadata box later)

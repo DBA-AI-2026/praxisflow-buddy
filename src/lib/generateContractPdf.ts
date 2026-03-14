@@ -148,7 +148,7 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
   let logoXEnd = M + 4;
   if (logoBytes) {
     try {
-      const logoImage = await doc.embedJpg(logoBytes);
+      let logoImage; try { logoImage = await doc.embedPng(logoBytes); } catch { logoImage = await doc.embedJpg(logoBytes); }
       const logoH = 30;
       const logoW = (logoImage.width / logoImage.height) * logoH;
       page.drawImage(logoImage, { x: M, y: PAGE_H - headerH + 13, width: logoW, height: logoH });

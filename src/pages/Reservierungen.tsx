@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, addMonths } from "date-fns";
 import { de } from "date-fns/locale";
-import logo from "@/assets/fox-logo.jpeg";
+import logo from "@/assets/logo.png";
 
 interface ReservationFormData {
   praxis_name: string;
