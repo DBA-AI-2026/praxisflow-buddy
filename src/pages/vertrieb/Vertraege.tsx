@@ -192,6 +192,7 @@ interface ContractFormData {
   stundenaufwand_pro_woche: string;
   rechnungs_email: string;
   rechnungs_email_identisch: boolean;
+  mandate_accepted: boolean;
 }
 
 const emptyForm: ContractFormData = {
@@ -244,6 +245,7 @@ const emptyForm: ContractFormData = {
   stundenaufwand_pro_woche: "",
   rechnungs_email: "",
   rechnungs_email_identisch: false,
+  mandate_accepted: true,
 };
 
 export default function Vertraege() {
@@ -542,7 +544,7 @@ export default function Vertraege() {
         rechnungs_email: data.rechnungs_email || null,
         selected_addon_modules: data.selected_modules.length > 0 ? data.selected_modules : [],
         qodia_unit_price: (data as any).qodia_unit_price ?? 0,
-        ...((data as any).mandate_accepted && !editId ? { mandate_accepted_at: new Date().toISOString() } : {}),
+        ...(data.mandate_accepted && !editId ? { mandate_accepted_at: new Date().toISOString() } : {}),
         ...(documentUrl ? { document_url: documentUrl, document_name: documentName } : {}),
         ...(leadHfxNumber && !editId ? { hfx_customer_number: leadHfxNumber } : {}),
       };
@@ -848,6 +850,7 @@ export default function Vertraege() {
       stundenaufwand_pro_woche: contract.stundenaufwand_pro_woche || "",
       rechnungs_email: contract.rechnungs_email || "",
       rechnungs_email_identisch: false,
+      mandate_accepted: !!contract.mandate_accepted_at,
     });
     setDialogOpen(true);
   };
@@ -2658,17 +2661,17 @@ export default function Vertraege() {
               <div className="flex items-start gap-3 p-3 rounded-lg border border-input bg-background">
                 <Checkbox
                   id="mandate_accepted"
-                  checked={!!(form as any).mandate_accepted}
-                  onCheckedChange={(checked) => set("mandate_accepted" as any, checked === true)}
+                   checked={!!form.mandate_accepted}
+                   onCheckedChange={(checked) => set("mandate_accepted", checked === true)}
                   className="mt-0.5"
                 />
                 <div>
-                  <Label htmlFor="mandate_accepted" className="cursor-pointer font-medium text-foreground">
-                    Zustimmung zur automatischen Zahlung erteilt
-                  </Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Der Kunde stimmt dem automatischen Einzug der fälligen Beträge über Stripe (SEPA-Lastschrift / Kreditkarte) zu. Diese Zustimmung wird datiert gespeichert.
-                  </p>
+                   <Label htmlFor="mandate_accepted" className="cursor-pointer font-medium text-foreground">
+                     Zustimmung zur automatischen Zahlung
+                   </Label>
+                   <p className="text-xs text-muted-foreground mt-0.5">
+                     Wird beim digitalen Vertragsabschluss automatisch erteilt. Der Kunde stimmt dem Einzug der fälligen Beträge per SEPA-Lastschrift / Kreditkarte zu.
+                   </p>
                 </div>
               </div>
               {/* Qodia Unit Price */}
