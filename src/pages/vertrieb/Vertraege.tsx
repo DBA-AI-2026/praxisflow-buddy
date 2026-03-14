@@ -1686,7 +1686,7 @@ export default function Vertraege() {
                      <td className="py-3.5 px-4 text-sm text-muted-foreground whitespace-nowrap">{c.sales_partner_name || "–"}</td>
                     <td className="py-3.5 px-4 text-right whitespace-nowrap">
                       <span className="font-semibold text-foreground tabular-nums">
-                        {Number(c.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+                        {(Number(c.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
                       </span>
                       {Number(c.discount_percent) > 0 && (
                         <span className="block text-xs text-success">-{c.discount_percent}%</span>
