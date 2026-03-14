@@ -2842,6 +2842,27 @@ export default function Vertraege() {
                   {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
                   Als Entwurf
                 </Button>
+                {/* Digitaler Vertragsabschluss – primary action, listed first */}
+                <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span tabIndex={0} className="flex-1 sm:flex-none">
+                      <Button type="submit" size="sm" disabled={upsertMutation.isPending || sendingBuchungsmailDialog || !isFormComplete} className="w-full">
+                        {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+                        {editId ? "Speichern" : "Digitaler Vertragsabschluss"}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {!isFormComplete && (
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p className="font-semibold mb-1">Fehlende Pflichtfelder:</p>
+                      <ul className="list-disc pl-4 text-xs space-y-0.5">
+                        {getMissingFields().map((f) => <li key={f}>{f}</li>)}
+                      </ul>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+                </TooltipProvider>
                 {/* Buchungsmail senden – saves as eingegangen + triggers booking email */}
                 {!editId && (
                   <TooltipProvider>
@@ -2871,26 +2892,6 @@ export default function Vertraege() {
                   </Tooltip>
                   </TooltipProvider>
                 )}
-                <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span tabIndex={0} className="flex-1 sm:flex-none">
-                      <Button type="submit" size="sm" disabled={upsertMutation.isPending || sendingBuchungsmailDialog || !isFormComplete} className="w-full">
-                        {upsertMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-                        {editId ? "Speichern" : "Digitaler Vertragsabschluss"}
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {!isFormComplete && (
-                    <TooltipContent side="top" className="max-w-xs">
-                      <p className="font-semibold mb-1">Fehlende Pflichtfelder:</p>
-                      <ul className="list-disc pl-4 text-xs space-y-0.5">
-                        {getMissingFields().map((f) => <li key={f}>{f}</li>)}
-                      </ul>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-                </TooltipProvider>
               </div>
             </DialogFooter>
           </form>
