@@ -394,10 +394,10 @@ Deno.serve(async (req) => {
     // Generate password for Qodia access
     const generatedPassword = generatePassword(12);
 
-    // Auto-assign Gebietsleiter based on PLZ prefix
-    // Tries 2-digit match first (more specific), then falls back to 1-digit.
-    // Among matches of the same prefix length, highest priority wins.
-    let assignedTo: string | null = null;
+    // If a manual assigned_to was provided (manual lead creation), use it directly.
+    // Otherwise, auto-assign Gebietsleiter based on PLZ prefix.
+    let assignedTo: string | null = rawBody.assigned_to || null;
+    const manualAssignment = !!assignedTo;
     let assignedName: string | null = null;
     try {
       const plzClean = plz.trim().replace(/\s/g, "");
