@@ -182,7 +182,7 @@ export async function generateInvoicePdf(
   if (embeddedLogo) {
     const logoH = 40;
     const logoW = (embeddedLogo.width / embeddedLogo.height) * logoH;
-    const LOGO_TOP_MM = 45;
+    const LOGO_TOP_MM = 35;
     const logoX = metaBoxRight - logoW;
     const logoY = PAGE_H - LOGO_TOP_MM * mmToPt;
     page.drawImage(embeddedLogo, { x: logoX, y: logoY, width: logoW, height: logoH });
