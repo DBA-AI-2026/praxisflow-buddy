@@ -2310,7 +2310,7 @@ export default function Vertraege() {
                                       <span className="font-medium">
                                         +{ebmModules
                                           .filter((m: any) => form.selected_modules.includes(m.name))
-                                          .reduce((sum: number, m: any) => sum + Number(m.monthly_price), 0)
+                                          .reduce((sum: number, m: any) => sum + (Number(m.monthly_price) || 0), 0)
                                           .toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.
                                       </span>
                                     </div>
