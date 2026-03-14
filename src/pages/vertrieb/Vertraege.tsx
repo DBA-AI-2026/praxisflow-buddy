@@ -2435,7 +2435,7 @@ export default function Vertraege() {
                       })()}
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-foreground tabular-nums">{form.monthly_price.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €<span className="text-xs font-normal text-muted-foreground">/Mon.</span></p>
+                      <p className="text-lg font-bold text-foreground tabular-nums">{(form.monthly_price || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €<span className="text-xs font-normal text-muted-foreground">/Mon.</span></p>
                       {form.one_time_fee > 0 && <p className="text-xs text-muted-foreground">+ {form.one_time_fee.toLocaleString("de-DE", { minimumFractionDigits: 2 })} € einmalig</p>}
                     </div>
                   </div>
