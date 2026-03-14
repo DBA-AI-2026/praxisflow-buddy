@@ -149,7 +149,8 @@ export async function generateInvoicePdfV2(
   if (embeddedLogo) {
     const logoH = 56;
     const logoW = (embeddedLogo.width / embeddedLogo.height) * logoH;
-    page.drawImage(embeddedLogo, { x: ML, y: headerTop - logoH + 10, width: logoW, height: logoH });
+    const logoX = PAGE_W - 18 * mmToPt - logoW;
+    page.drawImage(embeddedLogo, { x: logoX, y: headerTop - logoH + 10, width: logoW, height: logoH });
   } else {
     text("HFX Honorarfuchs", ML, headerTop, 18, fontBold, C_NAVY);
     text("ein Geschäftsbereich der MCC Medical CareCapital GmbH", ML, headerTop - 16, 7, font, C_MUTED);
