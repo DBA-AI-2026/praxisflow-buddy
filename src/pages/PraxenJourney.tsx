@@ -36,6 +36,7 @@ const contractStatusCfg: Record<string, { label: string; cls: string }> = {
   entwurf:     { label: "Entwurf",     cls: "bg-muted text-muted-foreground" },
   eingegangen: { label: "Eingegangen", cls: "bg-warning/15 text-warning" },
   gezeichnet:  { label: "Gezeichnet",  cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400" },
+  aktiv:       { label: "Aktiv",       cls: "bg-success/10 text-success" },
   gekuendigt:  { label: "Gekündigt",   cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400" },
   beendet:     { label: "Beendet",     cls: "bg-destructive/10 text-destructive" },
 };
@@ -435,9 +436,10 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
   );
 }
 
-// ─── Tab: Verträge (ausstehend) ───────────────────────────────────────────────
+// ─── Tab: Verträge (Im Prozess + Abgeschlossen) ──────────────────────────────
 
 function VertraegeTab({ search, highlightId, missingEmailCount }: { search: string; highlightId?: string; missingEmailCount: number }) {
+  const [groupFilter, setGroupFilter] = useState<"prozess" | "abgeschlossen">("prozess");
   const [statusFilter, setStatusFilter] = useState<string>("alle");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -457,7 +459,7 @@ function VertraegeTab({ search, highlightId, missingEmailCount }: { search: stri
       });
       if (error) throw error;
       toast.success(`Buchungsmail an ${contract.email} gesendet`);
-      queryClient.invalidateQueries({ queryKey: ["journey-contracts-pending"] });
+      queryClient.invalidateQueries({ queryKey: ["journey-contracts-all"] });
       queryClient.invalidateQueries({ queryKey: ["journey-counts"] });
     } catch (err: any) {
       toast.error(err.message || "Fehler beim Senden der Buchungsmail");
@@ -473,26 +475,31 @@ function VertraegeTab({ search, highlightId, missingEmailCount }: { search: stri
   }, [highlightId]);
 
   const { data: contracts = [], isLoading } = useQuery({
-    queryKey: ["journey-contracts-pending"],
+    queryKey: ["journey-contracts-all"],
     queryFn: async () => {
       const { data } = await supabase
         .from("contracts")
         .select("id, customer_name, product_name, status, monthly_price, hfx_customer_number, email, vorname, nachname, praxis, created_at, start_date, confirmation_email_sent_at, customer_confirmed_at, sales_partner_name")
-        .neq("status", "aktiv")
         .order("created_at", { ascending: false });
       return data ?? [];
     },
   });
 
-  const pendingStatuses = ["entwurf", "eingegangen", "gezeichnet", "gekuendigt", "beendet"];
+  const processStatuses = ["entwurf", "eingegangen", "gezeichnet"];
+  const completedStatuses = ["aktiv", "gekuendigt", "beendet"];
+  const currentGroupStatuses = groupFilter === "prozess" ? processStatuses : completedStatuses;
 
-  const statusCounts = pendingStatuses.reduce((acc, s) => {
+  const groupContracts = contracts.filter((c: any) => currentGroupStatuses.includes(c.status));
+  const processCount = contracts.filter((c: any) => processStatuses.includes(c.status)).length;
+  const completedCount = contracts.filter((c: any) => completedStatuses.includes(c.status)).length;
+
+  const statusCounts = currentGroupStatuses.reduce((acc, s) => {
     acc[s] = contracts.filter((c: any) => c.status === s).length;
     return acc;
   }, {} as Record<string, number>);
 
   const s = search.toLowerCase();
-  const filtered = contracts.filter((c: any) => {
+  const filtered = groupContracts.filter((c: any) => {
     if (statusFilter !== "alle" && c.status !== statusFilter) return false;
     if (!s) return true;
     return (
@@ -508,10 +515,15 @@ function VertraegeTab({ search, highlightId, missingEmailCount }: { search: stri
 
   return (
     <div>
-      {/* Unified Toolbar — always rendered, pills stable even at count=0 */}
+      {/* Group toggle: Im Prozess / Abgeschlossen */}
       <div className="p-4 border-b border-border flex flex-wrap gap-2 items-center">
-        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={contracts.length} />
-        {pendingStatuses.map((st) => {
+        <FilterPill active={groupFilter === "prozess"} onClick={() => { setGroupFilter("prozess"); setStatusFilter("alle"); }} label="Im Prozess" count={processCount} />
+        <FilterPill active={groupFilter === "abgeschlossen"} onClick={() => { setGroupFilter("abgeschlossen"); setStatusFilter("alle"); }} label="Abgeschlossen" count={completedCount} />
+
+        <span className="h-5 w-px bg-border mx-1" />
+
+        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={groupContracts.length} />
+        {currentGroupStatuses.map((st) => {
           const cfg = contractStatusCfg[st];
           if (!cfg) return null;
           return (
