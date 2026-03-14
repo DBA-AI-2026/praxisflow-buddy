@@ -285,7 +285,7 @@ const Vertriebler = () => {
                     <TableHead>Rolle</TableHead>
                     <TableHead>E-Mail</TableHead>
                     <TableHead className="text-center">Verträge</TableHead>
-                    {isAdmin && <TableHead className="text-right">Provisionen</TableHead>}
+                    {isAdmin && <TableHead className="text-right">Aktionen</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
