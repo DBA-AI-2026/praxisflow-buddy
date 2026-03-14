@@ -87,7 +87,7 @@ export function PdfViewerOverlay() {
           Zurück
         </Button>
         <span className="text-sm font-medium text-muted-foreground flex-1 truncate">
-          Vertragsdokument {pageCount > 0 ? `(${pageCount} Seiten)` : ""}
+          Dokument {pageCount > 0 ? `(${pageCount} Seiten)` : ""}
         </span>
         <Button
           variant="outline"
