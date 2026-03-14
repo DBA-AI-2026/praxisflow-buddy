@@ -495,10 +495,21 @@ export default function Rechnungen() {
             <h1 className="text-2xl font-bold text-foreground">Rechnungen</h1>
             <p className="text-muted-foreground text-sm mt-1">Rechnungen erstellen, versenden und verwalten</p>
           </div>
-          <Button onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Neue Rechnung
-          </Button>
+          <div className="flex items-center gap-3">
+            <Select value={pdfDesign} onValueChange={(v) => setPdfDesign(v as "design1" | "design2")}>
+              <SelectTrigger className="w-[140px] h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="design1">Design 1</SelectItem>
+                <SelectItem value="design2">Design 2</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={() => setShowCreate(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Neue Rechnung
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="rechnungen">
