@@ -1269,7 +1269,7 @@ export default function Vertraege() {
       const addonNames: string[] = c.selected_addon_modules || [];
       const addon_module_details = ebmModules
         .filter((m: any) => addonNames.includes(m.name))
-        .map((m: any) => ({ name: m.name, monthly_price: Number(m.monthly_price) }));
+        .map((m: any) => ({ name: m.name, monthly_price: Number(m.monthly_price) || 0 }));
 
       // 1) Generate Vorschau PDF
       const previewBytes = await generateContractPdf({
