@@ -146,7 +146,7 @@ export async function generateInvoicePdf(
     }
   }
 
-  // Status badge – always light blue background
+  // Status label/colors (drawn inside metadata box later)
   const statusLabels: Record<string, string> = {
     entwurf: "ENTWURF", versendet: "VERSENDET", bezahlt: "BEZAHLT", storniert: "STORNIERT",
   };
@@ -154,11 +154,6 @@ export async function generateInvoicePdf(
   const st = data.status || "entwurf";
   const stLabel = statusLabels[st] || st.toUpperCase();
   const stFg = st === "storniert" ? C_RED : st === "bezahlt" ? C_GREEN : C_NAVY;
-  const badgeW = font.widthOfTextAtSize(stLabel, 8) + 18;
-  const badgeX = PAGE_W - M - badgeW;
-  const badgeY = PAGE_H - 64;
-  page.drawRectangle({ x: badgeX, y: badgeY - 4, width: badgeW, height: 18, color: C_LIGHT_BLUE_BG });
-  text(stLabel, badgeX + 9, badgeY + 1, 8, fontBold, stFg);
 
   // ===== ADDRESS SECTION =====
   // 45mm from top edge of page to sender line
@@ -197,6 +192,13 @@ export async function generateInvoicePdf(
 
   text("Rechnungsnummer:", metaLabelX, metaY, 7.5, font, C_MUTED);
   text(data.invoice_number, metaValueX, metaY, 9.5, fontBold, C_NAVY);
+
+  // Status badge inside metadata box, right-aligned on the invoice number line
+  const badgeW = font.widthOfTextAtSize(stLabel, 7.5) + 14;
+  const metaBoxRight = colRight - 8 + CW - (colRight - M) + 8;
+  const badgeX = metaBoxRight - badgeW - 6;
+  page.drawRectangle({ x: badgeX, y: metaY - 5, width: badgeW, height: 16, color: C_LIGHT_BLUE_BG });
+  text(stLabel, badgeX + 7, metaY, 7.5, fontBold, stFg);
 
   text("Rechnungsdatum:", metaLabelX, metaY - 16, 7.5, font, C_MUTED);
   text(formatDate(data.invoice_date), metaValueX, metaY - 16, 9, font, C_TEXT);
