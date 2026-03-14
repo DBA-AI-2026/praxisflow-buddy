@@ -1,4 +1,4 @@
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { Resend } from "npm:resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /** Returns a Set of German public holiday date strings (YYYY-MM-DD) for a given year */
