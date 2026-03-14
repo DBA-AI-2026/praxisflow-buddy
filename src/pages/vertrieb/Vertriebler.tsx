@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,12 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Euro, Check, ChevronsUpDown, Star, UserPlus, Search, Percent } from "lucide-react";
+import { Users, Euro, Check, ChevronsUpDown, Star, UserPlus, Search, Percent, Trash2, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { PartnerCommissionDialog } from "@/components/vertrieb/PartnerCommissionDialog";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const roleLabels: Record<string, string> = {
   admin: "Administrator",
@@ -52,7 +57,29 @@ const Vertriebler = () => {
   const [roleFilter, setRoleFilter] = useState<string>("alle");
   const [roleFilterOpen, setRoleFilterOpen] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState<VertrieblerRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<VertrieblerRow | null>(null);
   const { isAdmin } = useUserRole();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const deleteMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    onSuccess: (_, userId) => {
+      const name = deleteTarget?.full_name || "Vertriebler";
+      queryClient.invalidateQueries({ queryKey: ["vertriebler-list"] });
+      toast({ title: "Vertriebler entfernt", description: `${name} wurde aus der Vertriebsliste entfernt.` });
+      setDeleteTarget(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "Fehler", description: err.message, variant: "destructive" });
+    },
+  });
 
   // Fetch profiles with their roles
   const { data: vertriebler = [], isLoading } = useQuery({
@@ -258,7 +285,7 @@ const Vertriebler = () => {
                     <TableHead>Rolle</TableHead>
                     <TableHead>E-Mail</TableHead>
                     <TableHead className="text-center">Verträge</TableHead>
-                    {isAdmin && <TableHead className="text-right">Provisionen</TableHead>}
+                    {isAdmin && <TableHead className="text-right">Aktionen</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -277,15 +304,25 @@ const Vertriebler = () => {
                         <TableCell className="text-center font-medium">{v.contract_count}</TableCell>
                         {isAdmin && (
                           <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="gap-1.5"
-                              onClick={() => setSelectedPartner(v)}
-                            >
-                              <Percent className="h-3.5 w-3.5" />
-                              Provisionen
-                            </Button>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-1.5"
+                                onClick={() => setSelectedPartner(v)}
+                              >
+                                <Percent className="h-3.5 w-3.5" />
+                                Provisionen
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => setDeleteTarget(v)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </TableCell>
                         )}
                       </TableRow>
@@ -307,6 +344,30 @@ const Vertriebler = () => {
             userRole={selectedPartner.role}
           />
         )}
+
+        {/* Delete Confirmation */}
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Vertriebler entfernen?</AlertDialogTitle>
+              <AlertDialogDescription>
+                <strong>{deleteTarget?.full_name}</strong> ({deleteTarget?.email || "–"}) wird aus der Vertriebsliste entfernt.
+                Alle Vertriebsrollen dieses Benutzers werden gelöscht. Bestehende Verträge bleiben erhalten.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleteMutation.isPending}>Abbrechen</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleteMutation.isPending}
+                onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.user_id)}
+              >
+                {deleteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Entfernen
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </MainLayout>
   );
