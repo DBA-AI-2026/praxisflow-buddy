@@ -2477,15 +2477,38 @@ export default function Vertraege() {
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">Monatspreis</span>
-                      <p className="font-medium">{(form.monthly_price || 0).toLocaleString("de-DE")} €</p>
+                      {isAdmin ? (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          value={form.monthly_price}
+                          onChange={(e) => set("monthly_price", parseFloat(e.target.value) || 0)}
+                          className="mt-1 h-8 text-sm font-medium"
+                        />
+                      ) : (
+                        <p className="font-medium">{(form.monthly_price || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</p>
+                      )}
                     </div>
-                    {form.one_time_fee > 0 && (
-                      <div>
-                        <span className="text-muted-foreground">Einmalgebühr</span>
-                        <p className="font-medium">{form.one_time_fee.toLocaleString("de-DE")} €</p>
-                      </div>
-                    )}
+                    <div>
+                      <span className="text-muted-foreground">Einmalgebühr</span>
+                      {isAdmin ? (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          value={form.one_time_fee}
+                          onChange={(e) => set("one_time_fee", parseFloat(e.target.value) || 0)}
+                          className="mt-1 h-8 text-sm font-medium"
+                        />
+                      ) : (
+                        <p className="font-medium">{(form.one_time_fee || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</p>
+                      )}
+                    </div>
                   </div>
+                  {!isAdmin && (
+                    <p className="text-xs text-muted-foreground mt-2">💡 Preise werden automatisch aus der Produktmatrix berechnet.</p>
+                  )}
                 </div>
                 <div>
                   <Label>Zahlungsintervall</Label>
