@@ -435,7 +435,7 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
   );
 }
 
-// ─── Tab: Verträge (ausstehend) ───────────────────────────────────────────────
+// ─── Tab: Verträge (Im Prozess + Abgeschlossen) ──────────────────────────────
 
 function VertraegeTab({ search, highlightId, missingEmailCount }: { search: string; highlightId?: string; missingEmailCount: number }) {
   const [statusFilter, setStatusFilter] = useState<string>("alle");
