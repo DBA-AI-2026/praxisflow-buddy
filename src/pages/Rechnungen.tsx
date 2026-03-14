@@ -59,6 +59,7 @@ import {
   Link,
 } from "lucide-react";
 import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
+import { generateInvoicePdfV2 } from "@/lib/generateInvoicePdfV2";
 import { openPdfBlob } from "@/lib/openPdfBlob";
 
 interface InvoicePosition {
