@@ -51,6 +51,8 @@ const Vertriebler = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("alle");
   const [roleFilterOpen, setRoleFilterOpen] = useState(false);
+  const [selectedPartner, setSelectedPartner] = useState<VertrieblerRow | null>(null);
+  const { isAdmin } = useUserRole();
 
   // Fetch profiles with their roles
   const { data: vertriebler = [], isLoading } = useQuery({
