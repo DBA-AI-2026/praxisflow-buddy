@@ -56,6 +56,7 @@ const Vertriebler = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("alle");
   const [roleFilterOpen, setRoleFilterOpen] = useState(false);
+  const [selectedPartner, setSelectedPartner] = useState<VertrieblerRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<VertrieblerRow | null>(null);
   const { isAdmin } = useUserRole();
   const { toast } = useToast();
