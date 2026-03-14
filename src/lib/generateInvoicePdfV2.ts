@@ -221,15 +221,7 @@ export async function generateInvoicePdfV2(
   const metaRowH = recipBoxH / metaRows.length;
   const metaLabelW = rightColW * 0.48;
 
-  // Outer border
-  page.drawRectangle({ x: rightColX, y: boxTop - recipBoxH, width: rightColW, height: recipBoxH, color: C_WHITE });
-  // Border lines
-  page.drawLine({ start: { x: rightColX, y: boxTop }, end: { x: rightColX + rightColW, y: boxTop }, thickness: 0.8, color: C_LINE });
-  page.drawLine({ start: { x: rightColX, y: boxTop - recipBoxH }, end: { x: rightColX + rightColW, y: boxTop - recipBoxH }, thickness: 0.8, color: C_LINE });
-  page.drawLine({ start: { x: rightColX, y: boxTop }, end: { x: rightColX, y: boxTop - recipBoxH }, thickness: 0.8, color: C_LINE });
-  page.drawLine({ start: { x: rightColX + rightColW, y: boxTop }, end: { x: rightColX + rightColW, y: boxTop - recipBoxH }, thickness: 0.8, color: C_LINE });
-  // Vertical divider
-  page.drawLine({ start: { x: rightColX + metaLabelW, y: boxTop }, end: { x: rightColX + metaLabelW, y: boxTop - recipBoxH }, thickness: 0.4, color: C_LINE_LIGHT });
+  // No outer border around metadata box
 
   metaRows.forEach((row, i) => {
     const rowY = boxTop - i * metaRowH;
