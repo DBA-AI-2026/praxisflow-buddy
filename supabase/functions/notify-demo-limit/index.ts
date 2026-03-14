@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
       let stripeCheckoutUrl: string | null = null;
       if (STRIPE_SECRET_KEY && demo.product_name && STRIPE_PRODUCT_MAP[demo.product_name]) {
         try {
-          const { default: Stripe } = await import("https://esm.sh/stripe@18.5.0");
+          const { default: Stripe } = await import("https://esm.sh/stripe@14.21.0");
           const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2025-08-27.basil" });
           const priceInfo = STRIPE_PRODUCT_MAP[demo.product_name];
           const session = await stripe.checkout.sessions.create({
