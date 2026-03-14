@@ -2156,12 +2156,18 @@ export default function Vertraege() {
                     ? form.selected_products.filter((n) => n !== name)
                     : [...form.selected_products, name];
                   const { totalMonthly, totalOneTime } = recalcPrices(next);
+                  // Auto-set per-unit price from first product with price_per_unit
+                  const now = new Date();
+                  const unitProduct = products.find((pr: any) => next.includes(pr.name) && (pr.price_per_unit != null || pr.promo_price != null));
+                  const hasPromo = unitProduct?.promo_price != null && unitProduct?.promo_end_date && new Date(unitProduct.promo_end_date) >= now;
+                  const unitPrice = hasPromo ? (Number(unitProduct?.promo_price) || 0) : (Number(unitProduct?.price_per_unit) || 0);
                   setForm((prev) => ({
                     ...prev,
                     selected_products: next,
                     monthly_price: totalMonthly,
                     one_time_fee: totalOneTime,
-                  }));
+                    qodia_unit_price: unitProduct ? unitPrice : 0,
+                  } as any));
                 };
 
                 return (
