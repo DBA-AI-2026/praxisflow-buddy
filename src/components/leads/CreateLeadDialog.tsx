@@ -45,6 +45,7 @@ const schema = z.object({
   mp_nummer: z.string().trim().max(50).default(""),
   nachricht: z.string().trim().max(1000).default(""),
   send_confirmation_email: z.boolean().default(true),
+  interested_products: z.array(z.string()).default([]),
 });
 
 type FormValues = z.infer<typeof schema>;
