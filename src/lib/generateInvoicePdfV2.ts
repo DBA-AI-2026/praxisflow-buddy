@@ -384,18 +384,7 @@ export async function generateInvoicePdfV2(
   rightText(formatCurrency(data.gross_amount), totalsRight - 8, grossTextY, 11, fontBold, C_NAVY);
   ty -= grossRowH;
 
-  // Zahlstatus row
-  const statusRowH = 22;
-  page.drawLine({ start: { x: totalsX, y: ty + 10 }, end: { x: totalsRight, y: ty + 10 }, thickness: 0.4, color: C_LINE_LIGHT });
-  page.drawLine({ start: { x: totalsX, y: ty - statusRowH + 10 }, end: { x: totalsRight, y: ty - statusRowH + 10 }, thickness: 0.8, color: C_LINE });
-  page.drawLine({ start: { x: totalsX, y: ty + 10 }, end: { x: totalsX, y: ty - statusRowH + 10 }, thickness: 0.4, color: C_LINE_LIGHT });
-  page.drawLine({ start: { x: totalsRight, y: ty + 10 }, end: { x: totalsRight, y: ty - statusRowH + 10 }, thickness: 0.4, color: C_LINE_LIGHT });
-  const statusTextY = ty - statusRowH / 2 + 4;
-  text("Zahlstatus", totalsX + 8, statusTextY, 8.5, fontBold, C_TEXT);
-  const stColor = st === "bezahlt" ? C_GREEN : st === "storniert" ? C_RED : C_NAVY;
-  rightText(stLabel.toLowerCase(), totalsRight - 8, statusTextY, 8.5, fontBold, stColor);
-
-  y = Math.min(y, ty - statusRowH) - 24;
+  y = Math.min(y, ty) - 24;
 
   // ===== NOTES =====
   if (data.notes) {
