@@ -2403,7 +2403,7 @@ export default function Vertraege() {
                               <span className="text-foreground font-medium truncate mr-2">{pr.name}</span>
                               <span className="text-muted-foreground whitespace-nowrap tabular-nums">
                                 {hasPromo && baseFeeWaived ? (
-                                  <><span className="line-through text-muted-foreground/60 mr-1">{Number(pr.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</span><span className="text-success font-medium">0,00 €</span></>
+                                  <><span className="line-through text-muted-foreground/60 mr-1">{(Number(pr.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</span><span className="text-success font-medium">0,00 €</span></>
                                 ) : (
                                   <>{price.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €</>
                                 )}
