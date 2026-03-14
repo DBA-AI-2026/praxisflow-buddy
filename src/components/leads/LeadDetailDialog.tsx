@@ -404,9 +404,29 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
+          <DialogTitle className="flex items-center gap-3 flex-wrap">
             <span className="font-mono text-primary">{lead.hfx_customer_number}</span>
             <Badge variant={sc.variant} className="text-xs">{sc.label}</Badge>
+            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${
+              lead.source === "manual"
+                ? "bg-accent/10 text-accent border-accent/30"
+                : "bg-primary/10 text-primary border-primary/30"
+            }`}>
+              {sourceIcon}
+              {sourceLabel}
+            </span>
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="ml-auto h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => setShowDeleteConfirm(true)}
+                title="Interessent löschen"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </DialogTitle>
             <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${
               lead.source === "manual"
                 ? "bg-accent/10 text-accent border-accent/30"
