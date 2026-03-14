@@ -2142,7 +2142,7 @@ export default function Vertraege() {
                     }, 0);
                   const modulesTotal = ebmModules
                     .filter((m: any) => (selectedModules ?? form.selected_modules).includes(m.name))
-                    .reduce((sum: number, m: any) => sum + Number(m.monthly_price), 0);
+                    .reduce((sum: number, m: any) => sum + (Number(m.monthly_price) || 0), 0);
                   const totalOneTime = products
                     .filter((pr: any) => nextProducts.includes(pr.name))
                     .reduce((sum: number, pr: any) => sum + Number(pr.one_time_fee), 0);
