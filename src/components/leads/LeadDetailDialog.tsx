@@ -693,7 +693,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
                 onClick={sendBuchungsmail}
               >
                 {sendingBuchungsmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                Buchungsmail senden
+                Buchungsmail erneut senden
               </Button>
 
               <Button

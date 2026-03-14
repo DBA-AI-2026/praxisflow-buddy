@@ -632,7 +632,7 @@ function VertraegeTab({ search, highlightId, missingEmailCount }: { search: stri
                                 {sendingBuchungsmail === c.id
                                   ? <Loader2 className="h-3 w-3 animate-spin" />
                                   : <Send className="h-3 w-3" />}
-                                Buchungsmail
+                                Buchungsmail erneut
                               </button>
                             </TooltipTrigger>
                             <TooltipContent>Digitalen Buchungslink an Kunden senden</TooltipContent>
