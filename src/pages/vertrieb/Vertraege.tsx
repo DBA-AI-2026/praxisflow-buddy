@@ -2477,7 +2477,7 @@ export default function Vertraege() {
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">Monatspreis</span>
-                      <p className="font-medium">{form.monthly_price.toLocaleString("de-DE")} €</p>
+                      <p className="font-medium">{(form.monthly_price || 0).toLocaleString("de-DE")} €</p>
                     </div>
                     {form.one_time_fee > 0 && (
                       <div>
