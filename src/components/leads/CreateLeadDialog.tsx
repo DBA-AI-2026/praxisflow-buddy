@@ -88,6 +88,7 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
       mp_nummer: "",
       nachricht: "",
       send_confirmation_email: true,
+      interested_products: [],
     },
   });
 
