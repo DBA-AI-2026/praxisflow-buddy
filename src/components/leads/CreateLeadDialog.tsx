@@ -112,6 +112,7 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
           nachricht: values.nachricht || null,
           source: "manual",
           send_confirmation_email: values.send_confirmation_email,
+          interested_products: values.interested_products,
         },
       });
 
