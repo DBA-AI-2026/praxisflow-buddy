@@ -56,8 +56,31 @@ const Vertriebler = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("alle");
   const [roleFilterOpen, setRoleFilterOpen] = useState(false);
-  const [selectedPartner, setSelectedPartner] = useState<VertrieblerRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<VertrieblerRow | null>(null);
   const { isAdmin } = useUserRole();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const deleteMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      // Delete all sales-related roles for this user
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId)
+        .in("role", SALES_ROLES as unknown as string[]);
+      if (error) throw error;
+    },
+    onSuccess: (_, userId) => {
+      const name = deleteTarget?.full_name || "Vertriebler";
+      queryClient.invalidateQueries({ queryKey: ["vertriebler-list"] });
+      toast({ title: "Vertriebler entfernt", description: `${name} wurde aus der Vertriebsliste entfernt.` });
+      setDeleteTarget(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "Fehler", description: err.message, variant: "destructive" });
+    },
+  });
 
   // Fetch profiles with their roles
   const { data: vertriebler = [], isLoading } = useQuery({
