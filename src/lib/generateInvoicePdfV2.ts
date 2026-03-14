@@ -192,16 +192,15 @@ export async function generateInvoicePdfV2(
   if (data.rechnungs_email) recipientLines.push(data.rechnungs_email);
 
   const recipLineH = 13;
-  const recipBoxH = 18 + recipientLines.length * recipLineH + 10; // header + lines + padding
+  const recipBoxH = recipientLines.length * recipLineH + 10;
 
   // No border around recipient box
 
-  // Header row
-  text("Rechnung an", ML + 8, boxTop - 12, 7.5, fontBold, C_NAVY);
-  let ry = boxTop - 26;
+  // Recipient lines (no "Rechnung an" header)
+  let ry = boxTop - 4;
   recipientLines.forEach((line, i) => {
     const isFirst = i === 0;
-    text(line, ML + 8, ry, isFirst ? 10 : 8.5, isFirst ? fontBold : font, C_TEXT);
+    text(line, ML, ry, isFirst ? 10 : 8.5, isFirst ? fontBold : font, C_TEXT);
     ry -= recipLineH;
   });
 
