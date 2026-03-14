@@ -2881,7 +2881,7 @@ export default function Vertraege() {
                           {sendingBuchungsmailDialog
                             ? <Loader2 className="h-4 w-4 animate-spin" />
                             : <Send className="h-4 w-4" />}
-                          Buchungsmail senden
+                          Buchungsmail erneut senden
                         </Button>
                       </span>
                     </TooltipTrigger>
