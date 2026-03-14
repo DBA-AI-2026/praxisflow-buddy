@@ -427,15 +427,6 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
               </Button>
             )}
           </DialogTitle>
-            <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${
-              lead.source === "manual"
-                ? "bg-accent/10 text-accent border-accent/30"
-                : "bg-primary/10 text-primary border-primary/30"
-            }`}>
-              {sourceIcon}
-              {sourceLabel}
-            </span>
-          </DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="details">
