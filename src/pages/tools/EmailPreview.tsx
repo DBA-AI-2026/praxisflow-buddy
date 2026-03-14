@@ -1371,6 +1371,55 @@ export default function EmailPreview() {
     return !!customHtml[key];
   };
 
+  const openAiEditor = (tpl: Template, mode: "email" | "pdf") => {
+    setAiInstruction("");
+    setAiPreviewHtml(null);
+    setAiModal({ template: tpl, mode });
+  };
+
+  const runAiEdit = async () => {
+    if (!aiModal || !aiInstruction.trim()) return;
+    const key = getStorageKey(aiModal.template, aiModal.mode);
+    const currentHtml = aiPreviewHtml ?? customHtml[key] ?? getHtmlForTemplate(key as TemplateId);
+
+    setAiLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("edit-email-template", {
+        body: { html: currentHtml, instruction: aiInstruction.trim() },
+      });
+      if (error) throw error;
+      if (data?.html) {
+        setAiPreviewHtml(data.html);
+        setAiInstruction("");
+        toast.success("Änderung angewendet – prüfe die Vorschau");
+      } else {
+        throw new Error("Keine Antwort erhalten");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "KI-Fehler");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const saveAiResult = async () => {
+    if (!aiModal || !aiPreviewHtml) return;
+    const key = getStorageKey(aiModal.template, aiModal.mode);
+    setIsSaving(true);
+    const { error } = await supabase
+      .from("email_template_overrides" as any)
+      .upsert({ template_key: key, html_content: aiPreviewHtml }, { onConflict: "template_key" });
+    setIsSaving(false);
+    if (error) {
+      toast.error("Fehler beim Speichern: " + error.message);
+      return;
+    }
+    setCustomHtml((prev) => ({ ...prev, [key]: aiPreviewHtml }));
+    setAiModal(null);
+    setAiPreviewHtml(null);
+    toast.success("Vorlage gespeichert");
+  };
+
   return (
     <MainLayout title="E-Mail & PDF Vorschau" subtitle={isAdmin ? "Vorschau aller E-Mail- und PDF-Vorlagen" : "Nur-Lese-Ansicht – Bearbeitung nur für Admins"}>
       <div className="max-w-4xl mx-auto space-y-8">
