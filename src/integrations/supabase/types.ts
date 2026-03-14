@@ -821,6 +821,7 @@ export type Database = {
           hfx_customer_number: string | null
           honorarplus_synced: boolean
           id: string
+          interested_products: string[] | null
           mobilnummer: string
           mp_nummer: string | null
           nachname: string
@@ -849,6 +850,7 @@ export type Database = {
           hfx_customer_number?: string | null
           honorarplus_synced?: boolean
           id?: string
+          interested_products?: string[] | null
           mobilnummer: string
           mp_nummer?: string | null
           nachname: string
@@ -877,6 +879,7 @@ export type Database = {
           hfx_customer_number?: string | null
           honorarplus_synced?: boolean
           id?: string
+          interested_products?: string[] | null
           mobilnummer?: string
           mp_nummer?: string | null
           nachname?: string
