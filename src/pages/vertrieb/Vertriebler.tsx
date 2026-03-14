@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Euro, Check, ChevronsUpDown, Star, UserPlus, Search } from "lucide-react";
+import { Users, Euro, Check, ChevronsUpDown, Star, UserPlus, Search, Percent } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { PartnerCommissionDialog } from "@/components/vertrieb/PartnerCommissionDialog";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const roleLabels: Record<string, string> = {
   admin: "Administrator",
