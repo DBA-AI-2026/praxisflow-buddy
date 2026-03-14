@@ -430,15 +430,6 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
     }
   }
 
-  // ===== NOTIZEN =====
-  if (data.notes) {
-    ensureSpace(60);
-    y -= 10;
-    text("Notizen:", ML + 8, y, 7, font, C_MUTED);
-    y -= 12;
-    text(data.notes, ML + 8, y, 9, font, C_TEXT, CW - 16);
-    y -= 15;
-  }
 
   // ===== CLOSING =====
   ensureSpace(50);
