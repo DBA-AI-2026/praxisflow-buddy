@@ -488,7 +488,7 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
                           value={field.value}
                           onChange={field.onChange}
                           users={salesPartners}
-                          placeholder="Automatisch (PLZ)"
+                          placeholder="Kein Vertriebspartner"
                         />
                       </FormControl>
                       <FormMessage />
