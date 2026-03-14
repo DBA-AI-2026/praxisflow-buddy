@@ -2296,7 +2296,7 @@ export default function Vertraege() {
                                           <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between">
                                               <span className="text-sm font-medium">{mod.name}</span>
-                                              <span className="text-sm font-medium text-primary">{Number(mod.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.</span>
+                                              <span className="text-sm font-medium text-primary">{(Number(mod.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Mon.</span>
                                             </div>
                                             {mod.description && (
                                               <p className="text-xs text-muted-foreground mt-1">{mod.description}</p>
