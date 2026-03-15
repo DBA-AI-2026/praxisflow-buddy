@@ -2185,12 +2185,32 @@ export default function Vertraege() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
-              {editId ? "Vertrag bearbeiten" : "Neuen Vertrag erfassen"}
+              {editId
+                ? (editingContract && isContractLocked(editingContract.status) && !isAdmin)
+                  ? "Vertragsdetails"
+                  : "Vertrag bearbeiten"
+                : "Neuen Vertrag erfassen"}
             </DialogTitle>
             <DialogDescription>
-              Erfassen Sie alle relevanten Vertragsdetails.
+              {editingContract && isContractLocked(editingContract.status) && !isAdmin
+                ? "Dieser Vertrag ist abgeschlossen und kann nicht mehr bearbeitet werden."
+                : "Erfassen Sie alle relevanten Vertragsdetails."}
             </DialogDescription>
           </DialogHeader>
+
+          {/* Admin-Warnung bei abgeschlossenem Vertrag */}
+          {editId && editingContract && isContractLocked(editingContract.status) && isAdmin && (
+            <div className="rounded-lg border border-warning/50 bg-warning/10 p-3 flex items-start gap-2">
+              <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-warning">Originalvertrag wird bearbeitet</p>
+                <p className="text-muted-foreground text-xs mt-1">
+                  Dieser Vertrag hat den Status „{statusConfig[editingContract.status as keyof typeof statusConfig]?.label || editingContract.status}". 
+                  Änderungen werden am Originalvertrag vorgenommen und im Audit-Log dokumentiert.
+                </p>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Vertragsparteien */}
