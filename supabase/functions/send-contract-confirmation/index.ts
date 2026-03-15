@@ -383,25 +383,29 @@ Deno.serve(async (req) => {
     let agbBase64: string | undefined;
     let agbFilename = "AGB-Honorarfuchs.pdf";
     try {
-      // Look up product-specific AGB
-      const { data: product } = await adminClient
+      // Look up product-specific AGB (supports legacy labels like "HFX.GOÄ")
+      const { data: productsWithAgb } = await adminClient
         .from("products")
-        .select("agb_pdf_path, name")
-        .eq("name", contract.product_name)
-        .maybeSingle();
+        .select("name, agb_pdf_path")
+        .not("agb_pdf_path", "is", null);
 
-      if (product?.agb_pdf_path) {
+      const matchedProduct = findBestProductMatch((productsWithAgb ?? []) as ProductWithAgb[], [
+        contract.product_name,
+        ...(Array.isArray(contract.modules) ? contract.modules : []),
+      ]);
+
+      if (matchedProduct?.agb_pdf_path) {
         // Product has a specific AGB PDF in storage
         const { data: signed } = await adminClient.storage
           .from("contracts")
-          .createSignedUrl(product.agb_pdf_path, 300);
+          .createSignedUrl(matchedProduct.agb_pdf_path, 300);
         if (signed?.signedUrl) {
           const agbRes = await fetch(signed.signedUrl);
           if (agbRes.ok) {
             const agbBytes = new Uint8Array(await agbRes.arrayBuffer());
             agbBase64 = toBase64(agbBytes);
             // Use product name in filename
-            const safeName = (product.name || "Honorarfuchs").replace(/[^a-zA-Z0-9äöüÄÖÜß\-_.]/g, "_");
+            const safeName = (matchedProduct.name || "Honorarfuchs").replace(/[^a-zA-Z0-9äöüÄÖÜß\-_.]/g, "_");
             agbFilename = `AGB-${safeName}.pdf`;
           }
         }
