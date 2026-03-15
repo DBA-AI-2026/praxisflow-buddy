@@ -265,6 +265,7 @@ export default function Vertraege() {
   const [resendingConfirmationId, setResendingConfirmationId] = useState<string | null>(null);
   const [emailConfirmContract, setEmailConfirmContract] = useState<any | null>(null);
   const [syncingQodiaId, setSyncingQodiaId] = useState<string | null>(null);
+  const [leadTippgeberName, setLeadTippgeberName] = useState<string | null>(null);
   const { user, profile } = useAuth();
   const { isAdmin, isVertragsabteilung } = useUserRole();
   const { toast } = useToast();
