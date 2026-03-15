@@ -1783,6 +1783,26 @@ export default function EmailPreview() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* ── Delete Confirmation Dialog ── */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Vorlage endgültig löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Die Vorlage wird aus der Übersicht entfernt und alle gespeicherten Anpassungen (Entwürfe) werden unwiderruflich gelöscht.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteConfirmId && hideTemplate(deleteConfirmId)}
+            >
+              Endgültig löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
