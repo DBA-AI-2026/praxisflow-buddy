@@ -257,7 +257,7 @@ const emptyForm: ContractFormData = {
   weitere_lanr: "",
   ort: "",
   notes: "",
-  status: "aktiv",
+  status: "eingegangen",
   signature_data: "",
   vertrieb_signature_data: "",
   signature_mode: "digital" as "digital" | "papier",
@@ -723,11 +723,27 @@ export default function Vertraege() {
           converted_from_lead_id: fromLeadId || null,
         });
       }
+
+      // For new contracts with status "eingegangen": send booking email to customer
+      // The customer will open Stripe Checkout themselves via the link in the email
+      if (!editId && variables.status === "eingegangen" && contractId && variables.email) {
+        try {
+          const { error: mailError } = await supabase.functions.invoke("send-contract-confirmation", {
+            body: { contract_id: contractId },
+          });
+          if (mailError) throw mailError;
+          toast({ title: "✅ Buchungsmail gesendet", description: `Digitaler Buchungslink an ${variables.email} gesendet. Vertrag steht auf „Eingegangen".` });
+        } catch (emailErr: any) {
+          console.error("Booking email send error:", emailErr);
+          toast({ title: "E-Mail konnte nicht gesendet werden", description: emailErr.message, variant: "destructive" });
+        }
+      }
+
       // Auto-open template PDF after creating a new contract (only if not a draft)
       if (!editId && variables.status !== "entwurf") {
         handleTemplatePdf(form);
-        // Send confirmation email if email is provided
-        if (form.email || profile?.email) {
+        // Send contract PDF email to sales partner
+        if (profile?.email) {
           try {
             const templateRes = await fetch("/templates/vertrag-honorarfuchs.pdf");
             const templateBytes = await templateRes.arrayBuffer();
@@ -755,7 +771,7 @@ export default function Vertraege() {
             const customerName = [form.vorname, form.nachname].filter(Boolean).join(" ");
             await supabase.functions.invoke("send-contract-email", {
               body: {
-                email: form.email || null,
+                email: null,
                 salesPartnerEmail: profile?.email || null,
                 customerName,
                 pdfBase64,
@@ -763,17 +779,9 @@ export default function Vertraege() {
                 startDate: form.start_date,
               },
             });
-            const sentTo = [form.email, profile?.email].filter(Boolean).join(", ");
-            toast({ title: "Bestätigungs-E-Mail gesendet", description: `An ${sentTo}` });
           } catch (emailErr: any) {
             console.error("Email send error:", emailErr);
-            toast({ title: "E-Mail konnte nicht gesendet werden", description: emailErr.message, variant: "destructive" });
           }
-        }
-
-        // Trigger Stripe Checkout if payment method is Stripe and products have Stripe pricing
-        if (variables.payment_method === "stripe" && contractId && hasStripeProducts(variables.selected_products)) {
-          await handleStripeCheckout(contractId);
         }
       }
       closeDialog();
@@ -2942,35 +2950,6 @@ export default function Vertraege() {
                   )}
                 </Tooltip>
                 </TooltipProvider>
-                {/* Buchungsmail senden – saves as eingegangen + triggers booking email */}
-                {!editId && (
-                  <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span tabIndex={0} className="flex-1 sm:flex-none">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleSaveWithBuchungsmail}
-                          disabled={upsertMutation.isPending || sendingBuchungsmailDialog || !form.email}
-                          className="w-full gap-1.5 border-primary/40 text-primary hover:bg-primary/5"
-                        >
-                          {sendingBuchungsmailDialog
-                            ? <Loader2 className="h-4 w-4 animate-spin" />
-                            : <Send className="h-4 w-4" />}
-                          Buchungsmail erneut senden
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-xs">
-                      {!form.email
-                        ? "E-Mail-Adresse erforderlich"
-                        : "Speichert als Eingegangen und sendet den digitalen Buchungslink an den Kunden"}
-                    </TooltipContent>
-                  </Tooltip>
-                  </TooltipProvider>
-                )}
               </div>
             </DialogFooter>
           </form>
