@@ -255,9 +255,25 @@ export default function AdminProducts() {
                       ) : "–"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={p.is_active ? "default" : "secondary"}>
-                        {p.is_active ? "Aktiv" : "Inaktiv"}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={p.is_active ? "default" : "secondary"}>
+                          {p.is_active ? "Aktiv" : "Inaktiv"}
+                        </Badge>
+                        {p.agb_pdf_path ? (
+                          <Badge variant="outline" className="text-xs gap-1 cursor-pointer" onClick={async (e) => {
+                            e.stopPropagation();
+                            const { data } = await supabase.storage.from("contracts").createSignedUrl(p.agb_pdf_path, 300);
+                            if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                          }}>
+                            <FileText className="h-3 w-3" />
+                            AGB
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs text-muted-foreground">
+                            Keine AGB
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
