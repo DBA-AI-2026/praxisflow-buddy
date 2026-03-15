@@ -1968,31 +1968,6 @@ export default function Vertraege() {
                             <Eye className="h-3 w-3" />
                             Vorschau
                           </Button>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-7 gap-1 text-xs text-primary border-primary/30 hover:bg-primary/5"
-                                  disabled={sendingEmailId === c.id || !c.email}
-                                  onClick={() => setEmailConfirmContract(c)}
-                                >
-                                  {sendingEmailId === c.id ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    <Mail className="h-3 w-3" />
-                                  )}
-                                  Vertrag per Mail senden
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {c.email
-                                  ? `Sendet das Vertragsdokument als PDF-Anhang an ${c.email} – ohne Stripe-Zahlungslink`
-                                  : "Keine E-Mail-Adresse hinterlegt"}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
                           {/* Generiertes / digital signiertes Dokument */}
                           {c.document_url && (
                             <button
