@@ -453,7 +453,7 @@ async function handlePaperContractPayment(
   const resendKey = Deno.env.get("RESEND_API_KEY");
   if (resendKey && contract.email) {
     try {
-      await sendVertragsbestaetigung(contract, resendKey);
+      await sendVertragsbestaetigung(contract, resendKey, supabase);
       log("Vertragsbestätigung email sent", { contractId });
     } catch (mailErr) {
       console.error("[stripe-webhook] Failed to send Vertragsbestätigung:", mailErr);
@@ -466,7 +466,8 @@ async function handlePaperContractPayment(
 // ────────────────────────────────────────────────────────────────────────────
 async function sendVertragsbestaetigung(
   contract: Record<string, any>,
-  resendKey: string
+  resendKey: string,
+  supabase: ReturnType<typeof createClient>
 ) {
   const { PDFDocument, rgb, StandardFonts } = await import("npm:pdf-lib");
 
@@ -558,12 +559,43 @@ async function sendVertragsbestaetigung(
   ];
 
   try {
-    const agbUrl = "https://praxisflow-buddy.lovable.app/templates/vertrag-honorarfuchs.pdf";
-    const agbRes = await fetch(agbUrl);
-    if (agbRes.ok) {
-      const agbBytes = new Uint8Array(await agbRes.arrayBuffer());
-      const agbBase64 = btoa(String.fromCharCode(...agbBytes));
-      attachments.push({ filename: "AGB-HFX-Honorarfuchs.pdf", content: agbBase64 });
+    let agbBase64: string | undefined;
+    let agbFilename = "AGB-HFX-Honorarfuchs.pdf";
+
+    // Look up product-specific AGB
+    const { data: product } = await supabase
+      .from("products")
+      .select("agb_pdf_path, name")
+      .eq("name", contract.product_name)
+      .maybeSingle();
+
+    if (product?.agb_pdf_path) {
+      const { data: signed } = await supabase.storage
+        .from("contracts")
+        .createSignedUrl(product.agb_pdf_path, 300);
+      if (signed?.signedUrl) {
+        const agbRes = await fetch(signed.signedUrl);
+        if (agbRes.ok) {
+          const agbBytes = new Uint8Array(await agbRes.arrayBuffer());
+          agbBase64 = btoa(String.fromCharCode(...agbBytes));
+          const safeName = (product.name || "Honorarfuchs").replace(/[^a-zA-Z0-9äöüÄÖÜß\-_.]/g, "_");
+          agbFilename = `AGB-${safeName}.pdf`;
+        }
+      }
+    }
+
+    // Fallback to generic AGB
+    if (!agbBase64) {
+      const agbUrl = "https://praxisflow-buddy.lovable.app/templates/vertrag-honorarfuchs.pdf";
+      const agbRes = await fetch(agbUrl);
+      if (agbRes.ok) {
+        const agbBytes = new Uint8Array(await agbRes.arrayBuffer());
+        agbBase64 = btoa(String.fromCharCode(...agbBytes));
+      }
+    }
+
+    if (agbBase64) {
+      attachments.push({ filename: agbFilename, content: agbBase64 });
     }
   } catch (agbErr) {
     console.error("[stripe-webhook] Could not fetch AGB PDF:", agbErr);
