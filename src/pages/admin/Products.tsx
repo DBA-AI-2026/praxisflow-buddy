@@ -286,6 +286,8 @@ export default function AdminProducts() {
                               )}
                             </div>
                           )}
+                          {/* AGB PDF */}
+                          <AgbUploadSection productId={p.id} currentPath={p.agb_pdf_path} onUploaded={() => queryClient.invalidateQueries({ queryKey: ["products"] })} />
                           {/* Modules */}
                           <ProductModulesSection productId={p.id} productName={p.name} />
                         </div>
