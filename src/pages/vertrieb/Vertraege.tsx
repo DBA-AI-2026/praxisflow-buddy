@@ -257,7 +257,7 @@ const emptyForm: ContractFormData = {
   weitere_lanr: "",
   ort: "",
   notes: "",
-  status: "aktiv",
+  status: "eingegangen",
   signature_data: "",
   vertrieb_signature_data: "",
   signature_mode: "digital" as "digital" | "papier",
