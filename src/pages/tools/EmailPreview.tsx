@@ -1277,11 +1277,7 @@ export default function EmailPreview() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // PDF blob for the contract PDF preview
-  const [pdfModal, setPdfModal] = useState<{ template: Template } | null>(null);
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
-  const [pdfLoading, setPdfLoading] = useState(false);
-  const prevPdfBlobUrl = useRef<string | null>(null);
+  // PDF preview (uses PdfViewerOverlay via showPdfInViewer)
 
   // AI assistant state
   const [aiModal, setAiModal] = useState<{ template: Template; mode: "email" | "pdf" } | null>(null);
