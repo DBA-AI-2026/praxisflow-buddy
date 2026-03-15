@@ -1310,10 +1310,6 @@ export default function EmailPreview() {
     }
   };
 
-  const closePdfModal = () => {
-    setPdfModal(null);
-    setPdfBlobUrl(null);
-  };
 
   // Load saved templates on mount
   useEffect(() => {
