@@ -212,6 +212,10 @@ const statusConfig: Record<string, { label: string; class: string; icon: typeof 
   gesperrt: { label: "Gesperrt", class: "bg-destructive/20 text-destructive", icon: ShieldBan },
 };
 
+const LOCKED_STATUSES = ["aktiv", "gekuendigt", "beendet", "gesperrt", "gezeichnet"];
+const isContractLocked = (status: string) => LOCKED_STATUSES.includes(status);
+
+
 // Product options are now loaded from the database
 
 type PaymentMethod = "stripe";
@@ -2089,10 +2093,27 @@ export default function Vertraege() {
                               />
                             </label>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEdit(c)}>
-                            <Pencil className="h-4 w-4 mr-2" />
-                            Bearbeiten
-                          </DropdownMenuItem>
+                          {/* Bearbeiten: nur für nicht-abgeschlossene Verträge oder Admins */}
+                          {(!isContractLocked(c.status)) ? (
+                            <DropdownMenuItem onClick={() => openEdit(c)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Bearbeiten
+                            </DropdownMenuItem>
+                          ) : isAdmin ? (
+                            <DropdownMenuItem onClick={() => {
+                              if (window.confirm("⚠️ Achtung: Sie bearbeiten einen abgeschlossenen Originalvertrag. Änderungen werden dokumentiert. Fortfahren?")) {
+                                openEdit(c);
+                              }
+                            }}>
+                              <AlertTriangle className="h-4 w-4 mr-2 text-warning" />
+                              <span className="text-warning">Bearbeiten (Admin)</span>
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={() => { openEdit(c); }} disabled={false}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              Details ansehen
+                            </DropdownMenuItem>
+                          )}
                           {(c.status === "aktiv" || c.status === "gezeichnet") && (
                             <>
                               <DropdownMenuSeparator />
@@ -2164,14 +2185,35 @@ export default function Vertraege() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
-              {editId ? "Vertrag bearbeiten" : "Neuen Vertrag erfassen"}
+              {editId
+                ? (editingContract && isContractLocked(editingContract.status) && !isAdmin)
+                  ? "Vertragsdetails"
+                  : "Vertrag bearbeiten"
+                : "Neuen Vertrag erfassen"}
             </DialogTitle>
             <DialogDescription>
-              Erfassen Sie alle relevanten Vertragsdetails.
+              {editingContract && isContractLocked(editingContract.status) && !isAdmin
+                ? "Dieser Vertrag ist abgeschlossen und kann nicht mehr bearbeitet werden."
+                : "Erfassen Sie alle relevanten Vertragsdetails."}
             </DialogDescription>
           </DialogHeader>
 
+          {/* Admin-Warnung bei abgeschlossenem Vertrag */}
+          {editId && editingContract && isContractLocked(editingContract.status) && isAdmin && (
+            <div className="rounded-lg border border-warning/50 bg-warning/10 p-3 flex items-start gap-2">
+              <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-warning">Originalvertrag wird bearbeitet</p>
+                <p className="text-muted-foreground text-xs mt-1">
+                  Dieser Vertrag hat den Status „{statusConfig[editingContract.status as keyof typeof statusConfig]?.label || editingContract.status}". 
+                  Änderungen werden am Originalvertrag vorgenommen und im Audit-Log dokumentiert.
+                </p>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
+           <fieldset disabled={!!(editId && editingContract && isContractLocked(editingContract.status) && !isAdmin)} className="space-y-5">
             {/* Vertragsparteien */}
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Vertragsparteien</h4>
@@ -2959,6 +3001,14 @@ export default function Vertraege() {
               </div>
             </div>
 
+           </fieldset>
+
+            {/* Footer: read-only for non-admins on locked contracts */}
+            {editId && editingContract && isContractLocked(editingContract.status) && !isAdmin ? (
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={closeDialog}>Schließen</Button>
+              </DialogFooter>
+            ) : (
             <DialogFooter className="flex-col gap-2">
               {/* Zeile 1: PDF-Aktionen */}
               <div className="flex flex-wrap gap-2">
@@ -3009,6 +3059,7 @@ export default function Vertraege() {
                 </TooltipProvider>
               </div>
             </DialogFooter>
+            )}
           </form>
         </DialogContent>
       </Dialog>
