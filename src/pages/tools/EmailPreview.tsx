@@ -11,6 +11,7 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import { useUserRole } from "@/hooks/useUserRole";
 import { generateContractPdf } from "@/lib/generateContractPdf";
 import { generateInvoicePdfV2 } from "@/lib/generateInvoicePdfV2";
+import { showPdfInViewer } from "@/lib/pdfViewerState";
 import { Textarea } from "@/components/ui/textarea";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
@@ -1276,11 +1277,7 @@ export default function EmailPreview() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // PDF blob for the contract PDF preview
-  const [pdfModal, setPdfModal] = useState<{ template: Template } | null>(null);
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
-  const [pdfLoading, setPdfLoading] = useState(false);
-  const prevPdfBlobUrl = useRef<string | null>(null);
+  // PDF preview (uses PdfViewerOverlay via showPdfInViewer)
 
   // AI assistant state
   const [aiModal, setAiModal] = useState<{ template: Template; mode: "email" | "pdf" } | null>(null);
@@ -1289,9 +1286,6 @@ export default function EmailPreview() {
   const [aiPreviewHtml, setAiPreviewHtml] = useState<string | null>(null);
 
   const openPdfPreview = async (tpl: Template) => {
-    setPdfModal({ template: tpl });
-    setPdfLoading(true);
-    setPdfBlobUrl(null);
     try {
       // Fetch logo for the PDF header
       let logoBytes: ArrayBuffer | undefined;
@@ -1302,29 +1296,20 @@ export default function EmailPreview() {
 
       let pdfBytes: Uint8Array;
       if (tpl.id === "invoice") {
-        // Use Design 2 (generateInvoicePdfV2) for invoice PDF preview
         pdfBytes = await generateInvoicePdfV2(MOCK_INVOICE_PDF_DATA, logoBytes);
       } else {
         pdfBytes = await generateContractPdf(MOCK_CONTRACT_PDF_DATA, logoBytes);
       }
       const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
-      // Revoke previous
-      if (prevPdfBlobUrl.current) URL.revokeObjectURL(prevPdfBlobUrl.current);
-      prevPdfBlobUrl.current = url;
-      setPdfBlobUrl(url);
+      const filename = tpl.id === "invoice" ? "Rechnung-Vorschau.pdf" : "Vertrag-Vorschau.pdf";
+      showPdfInViewer(url, filename);
     } catch (err) {
       console.error("PDF preview error:", err);
       toast.error("PDF konnte nicht generiert werden.");
-    } finally {
-      setPdfLoading(false);
     }
   };
 
-  const closePdfModal = () => {
-    setPdfModal(null);
-    setPdfBlobUrl(null);
-  };
 
   // Load saved templates on mount
   useEffect(() => {
@@ -1599,39 +1584,6 @@ export default function EmailPreview() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Contract PDF Preview Modal (pdf-lib live render) ── */}
-      <Dialog open={!!pdfModal} onOpenChange={closePdfModal}>
-        <DialogContent className="max-w-4xl w-full p-0 gap-0 overflow-hidden" style={{ maxHeight: "92vh" }}>
-          <DialogHeader className="px-5 py-3 border-b border-border bg-muted/40 flex-row items-center justify-between space-y-0">
-            <div className="flex flex-col gap-0.5">
-              <DialogTitle className="text-sm font-semibold">
-                📄 Vertragszusammenfassung (PDF) — Live-Vorschau mit Musterdaten
-              </DialogTitle>
-              <p className="text-xs text-muted-foreground">
-                Wird nach erfolgreicher Stripe-Zahlung automatisch generiert und als Anhang verschickt.
-              </p>
-            </div>
-          </DialogHeader>
-          <div className="flex items-center justify-center bg-muted/30" style={{ height: "calc(92vh - 72px)" }}>
-            {pdfLoading && (
-              <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                <Loader2 className="w-8 h-8 animate-spin" />
-                <span className="text-sm">PDF wird generiert…</span>
-              </div>
-            )}
-            {!pdfLoading && pdfBlobUrl && (
-              <iframe
-                src={pdfBlobUrl}
-                title="Vertragszusammenfassung PDF"
-                className="w-full h-full border-0"
-              />
-            )}
-            {!pdfLoading && !pdfBlobUrl && (
-              <p className="text-sm text-muted-foreground">PDF konnte nicht geladen werden.</p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* ── Edit Modal ── */}
       <Dialog open={!!editModal} onOpenChange={() => setEditModal(null)}>
