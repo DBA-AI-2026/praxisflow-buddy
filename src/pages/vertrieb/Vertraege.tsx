@@ -322,7 +322,7 @@ const emptyForm: ContractFormData = {
   praxissystem: "",
   stundenaufwand_pro_woche: "",
   rechnungs_email: "",
-  rechnungs_email_identisch: false,
+  rechnungs_email_identisch: true,
   mandate_accepted: true,
 };
 
