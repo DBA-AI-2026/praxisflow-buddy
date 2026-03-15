@@ -1519,6 +1519,17 @@ export default function EmailPreview() {
                       </div>
                       <p className="text-xs text-muted-foreground">{tpl.description}</p>
                       <p className="text-xs text-muted-foreground mt-1 font-mono truncate">Betreff: {tpl.subject}</p>
+                      <div className="flex justify-end mt-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-muted-foreground hover:text-destructive"
+                          title="Vorlage ausblenden"
+                          onClick={() => hideTemplate(tpl.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
 
                     {/* E-Mail row — only for email-type templates */}
