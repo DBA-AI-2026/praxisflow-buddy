@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { contract_id, fachrichtung, rechtsform, bsnr, lanr } = body;
+    const { contract_id, fachrichtung, rechtsform, bsnr, lanr, agb_accepted, agb_version, user_agent } = body;
 
     if (!contract_id || !fachrichtung || !rechtsform) {
       return new Response(JSON.stringify({ error: "contract_id, fachrichtung and rechtsform are required" }), {
@@ -87,6 +87,24 @@ Deno.serve(async (req) => {
         lanr: lanr || null,
       } as any)
       .eq("id", contract_id);
+
+    // Record AGB acceptance
+    if (agb_accepted) {
+      const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+        || req.headers.get("cf-connecting-ip")
+        || req.headers.get("x-real-ip")
+        || "unknown";
+
+      await adminClient.from("agb_acceptances").insert({
+        contract_id,
+        agb_version: agb_version || "1.0",
+        ip_address: clientIp,
+        user_agent: user_agent || null,
+        customer_email: contract.email,
+        customer_name: contract.customer_name,
+      });
+      console.log(`[initiate-booking] AGB acceptance recorded for contract ${contract_id}`);
+    }
 
     console.log(`[initiate-booking] Updated contract ${contract_id} with fachrichtung=${fachrichtung}, rechtsform=${rechtsform}`);
 
