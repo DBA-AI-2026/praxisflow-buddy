@@ -66,6 +66,16 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
 
+// Role display labels
+const roleLabels: Record<string, string> = {
+  admin: "Admin",
+  sales_lead: "Sales Lead",
+  regional_lead: "Gebietsleiter",
+  sales_partner: "Vertriebspartner",
+  user: "Gebietsleiter",
+  tippgeber: "Tippgeber",
+};
+
 // Searchable combobox for sales partner selection
 function SalesPartnerCombobox({
   value,
@@ -74,7 +84,7 @@ function SalesPartnerCombobox({
 }: {
   value: string;
   onChange: (v: string) => void;
-  profiles: { user_id: string; full_name: string; email: string | null }[];
+  profiles: { user_id: string; full_name: string; email: string | null; role?: string | null }[];
 }) {
   const [open, setOpen] = useState(false);
   const selected = profiles.find((p) => p.full_name === value);
@@ -89,7 +99,14 @@ function SalesPartnerCombobox({
           className="w-full justify-between font-normal"
         >
           {selected ? (
-            <span>{selected.full_name}</span>
+            <span className="flex items-center gap-2 truncate">
+              <span>{selected.full_name}</span>
+              {selected.role && (
+                <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+                  {roleLabels[selected.role] || selected.role}
+                </span>
+              )}
+            </span>
           ) : (
             <span className="text-muted-foreground">Vertriebspartner auswählen...</span>
           )}
@@ -112,12 +129,15 @@ function SalesPartnerCombobox({
                   }}
                 >
                   <Check
-                    className={`mr-2 h-4 w-4 ${value === p.full_name ? "opacity-100" : "opacity-0"}`}
+                    className={`mr-2 h-4 w-4 shrink-0 ${value === p.full_name ? "opacity-100" : "opacity-0"}`}
                   />
-                  <span>{p.full_name}</span>
-                  {p.email && (
-                    <span className="ml-2 text-xs text-muted-foreground">({p.email})</span>
-                  )}
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-medium truncate">{p.full_name}</span>
+                    <span className="text-xs text-muted-foreground truncate">
+                      {p.email || "–"}
+                      {p.role && ` · ${roleLabels[p.role] || p.role}`}
+                    </span>
+                  </div>
                 </CommandItem>
               ))}
             </CommandGroup>
