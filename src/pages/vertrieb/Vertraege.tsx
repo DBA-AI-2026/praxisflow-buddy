@@ -65,6 +65,60 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
+function AgbAcceptanceSection({ contractId }: { contractId: string }) {
+  const [acceptance, setAcceptance] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("agb_acceptances" as any)
+      .select("*")
+      .eq("contract_id", contractId)
+      .order("accepted_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        setAcceptance(data);
+        setLoading(false);
+      });
+  }, [contractId]);
+
+  if (loading) return null;
+
+  return (
+    <div className="space-y-3">
+      <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">AGB-Zustimmung</h4>
+      {acceptance ? (
+        <div className="rounded-lg border bg-success/5 border-success/30 p-3 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-success shrink-0" />
+            <span className="text-sm font-medium text-foreground">AGB akzeptiert</span>
+            <Badge variant="outline" className="text-xs ml-auto">v{acceptance.agb_version}</Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground pl-6">
+            <span>Zeitpunkt:</span>
+            <span className="text-foreground">
+              {new Date(acceptance.accepted_at).toLocaleString("de-DE")}
+            </span>
+            <span>E-Mail:</span>
+            <span className="text-foreground">{acceptance.customer_email || "–"}</span>
+            <span>IP-Adresse:</span>
+            <span className="text-foreground font-mono text-[11px]">{acceptance.ip_address || "–"}</span>
+            <span>Browser:</span>
+            <span className="text-foreground truncate" title={acceptance.user_agent}>
+              {acceptance.user_agent?.substring(0, 60) || "–"}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-border bg-muted/30 p-3 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="text-xs text-muted-foreground">Keine AGB-Zustimmung dokumentiert</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Role display labels
 const roleLabels: Record<string, string> = {
