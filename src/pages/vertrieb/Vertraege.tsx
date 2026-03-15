@@ -2188,9 +2188,20 @@ export default function Vertraege() {
                     profiles={allProfiles}
                   />
                   {fieldErr("sales_partner_name") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
-                </div>
-              </div>
-            </div>
+                 </div>
+                 {leadTippgeberName && (
+                   <div className="col-span-2">
+                     <Label className="flex items-center gap-1">
+                       <Lightbulb className="h-3.5 w-3.5 text-warning" />
+                       Tippgeber
+                     </Label>
+                     <div className="mt-1.5 flex items-center gap-2 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm">
+                       <span className="font-medium text-foreground">{leadTippgeberName}</span>
+                     </div>
+                   </div>
+                 )}
+               </div>
+             </div>
 
             {/* Produkte – Mehrfachauswahl */}
             <div className="space-y-3">
