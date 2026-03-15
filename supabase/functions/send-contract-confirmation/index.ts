@@ -382,6 +382,7 @@ Deno.serve(async (req) => {
     // --- Fetch product-specific AGB PDF (fallback to generic) ---
     let agbBase64: string | undefined;
     let agbFilename = "AGB-Honorarfuchs.pdf";
+    let agbDownloadUrl = `${APP_URL}/templates/vertrag-honorarfuchs.pdf`;
     try {
       // Look up product-specific AGB (supports legacy labels like "HFX.GOÄ")
       const { data: productsWithAgb } = await adminClient
@@ -398,15 +399,17 @@ Deno.serve(async (req) => {
         // Product has a specific AGB PDF in storage
         const { data: signed } = await adminClient.storage
           .from("contracts")
-          .createSignedUrl(matchedProduct.agb_pdf_path, 300);
+          .createSignedUrl(matchedProduct.agb_pdf_path, 60 * 60 * 24 * 14);
+
         if (signed?.signedUrl) {
+          agbDownloadUrl = signed.signedUrl;
           const agbRes = await fetch(signed.signedUrl);
           if (agbRes.ok) {
             const agbBytes = new Uint8Array(await agbRes.arrayBuffer());
             agbBase64 = toBase64(agbBytes);
-            // Use product name in filename
             const safeName = (matchedProduct.name || "Honorarfuchs").replace(/[^a-zA-Z0-9äöüÄÖÜß\-_.]/g, "_");
             agbFilename = `AGB-${safeName}.pdf`;
+            console.log(`[send-contract-confirmation] Using product AGB for "${matchedProduct.name}"`);
           }
         }
       }
@@ -418,8 +421,11 @@ Deno.serve(async (req) => {
           const agbBytes = new Uint8Array(await agbRes.arrayBuffer());
           agbBase64 = toBase64(agbBytes);
         }
+        console.log("[send-contract-confirmation] Falling back to generic AGB");
       }
-    } catch { /* skip AGB */ }
+    } catch {
+      /* skip AGB */
+    }
 
     // --- Build email ---
     const buchenUrl = `${APP_URL}/buchen?contract_id=${contract.id}&product=${encodeURIComponent(contract.product_name)}`;
@@ -446,21 +452,23 @@ Deno.serve(async (req) => {
       // Replace placeholders in custom template
       console.log("[send-contract-confirmation] Using custom booking-link template override");
       html = templateOverride.html_content
-        .replace(/\$\{MOCK\.vorname\}|\$\{vorname\}/g, contract.vorname || "")
-        .replace(/\$\{MOCK\.nachname\}|\$\{nachname\}/g, contract.nachname || "")
-        .replace(/\$\{MOCK\.hfx_customer_number\}|\$\{hfx_customer_number\}/g, contract.hfx_customer_number || "–")
-        .replace(/\$\{MOCK\.praxis_name\}|\$\{praxis_name\}|\$\{praxis\}/g, contract.praxis || "–")
-        .replace(/\$\{MOCK\.email\}|\$\{email\}/g, contract.email || "")
-        .replace(/\$\{product_name\}/g, contract.product_name || "–")
-        .replace(/\$\{monthly_price\}/g, priceFormatted)
-        .replace(/\$\{start_date\}/g, startDateFormatted)
-        .replace(/\$\{buchen_url\}|\$\{buchenUrl\}/g, buchenUrl)
+        // Generic placeholders
+        .replace(/\$\{MOCK\.vorname\}|\$\{vorname\}|\$\{contract\.vorname\}/g, contract.vorname || "")
+        .replace(/\$\{MOCK\.nachname\}|\$\{nachname\}|\$\{contract\.nachname\}/g, contract.nachname || "")
+        .replace(/\$\{MOCK\.hfx_customer_number\}|\$\{hfx_customer_number\}|\$\{contract\.hfx_customer_number\}/g, contract.hfx_customer_number || "–")
+        .replace(/\$\{MOCK\.praxis_name\}|\$\{praxis_name\}|\$\{praxis\}|\$\{contract\.praxis\}/g, contract.praxis || "–")
+        .replace(/\$\{MOCK\.email\}|\$\{email\}|\$\{contract\.email\}/g, contract.email || "")
+        .replace(/\$\{product_name\}|\$\{contract\.product_name\}/g, contract.product_name || "–")
+        .replace(/\$\{monthly_price\}|\$\{contract\.monthly_price\}/g, priceFormatted)
+        .replace(/\$\{start_date\}|\$\{contract\.start_date\}/g, startDateFormatted)
+        .replace(/\$\{buchen_url\}|\$\{buchenUrl\}|\$\{contract\.buchen_url\}/g, buchenUrl)
+        .replace(/\$\{agb_url\}|\$\{agbUrl\}/g, agbDownloadUrl)
+        // Force-replace old static AGB fallback URL in customized templates
+        .replace(/https?:\/\/[^\s"']*\/templates\/vertrag-honorarfuchs\.pdf/g, agbDownloadUrl)
         // Replace mock URLs and demo contract IDs with real values
         .replace(/contract_id=demo/g, `contract_id=${contract.id}`)
         .replace(/product=HFX%20EBM/g, `product=${encodeURIComponent(contract.product_name)}`)
-        // Also replace any hardcoded mock values from the preview
-        .replace(/Max/g, contract.vorname || "Max")
-        .replace(/Mustermann/g, contract.nachname || "Mustermann")
+        // Legacy preview hardcoded values
         .replace(/HFX-I01019/g, contract.hfx_customer_number || "–")
         .replace(/Testpraxis Dr\. Müller/g, contract.praxis || "–")
         .replace(/99,00 €\/Monat/g, priceFormatted);
