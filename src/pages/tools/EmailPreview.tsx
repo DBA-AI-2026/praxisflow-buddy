@@ -11,6 +11,7 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import { useUserRole } from "@/hooks/useUserRole";
 import { generateContractPdf } from "@/lib/generateContractPdf";
 import { generateInvoicePdfV2 } from "@/lib/generateInvoicePdfV2";
+import { showPdfInViewer } from "@/lib/pdfViewerState";
 import { Textarea } from "@/components/ui/textarea";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
