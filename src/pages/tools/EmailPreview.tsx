@@ -1290,9 +1290,6 @@ export default function EmailPreview() {
   const [aiPreviewHtml, setAiPreviewHtml] = useState<string | null>(null);
 
   const openPdfPreview = async (tpl: Template) => {
-    setPdfModal({ template: tpl });
-    setPdfLoading(true);
-    setPdfBlobUrl(null);
     try {
       // Fetch logo for the PDF header
       let logoBytes: ArrayBuffer | undefined;
@@ -1303,22 +1300,17 @@ export default function EmailPreview() {
 
       let pdfBytes: Uint8Array;
       if (tpl.id === "invoice") {
-        // Use Design 2 (generateInvoicePdfV2) for invoice PDF preview
         pdfBytes = await generateInvoicePdfV2(MOCK_INVOICE_PDF_DATA, logoBytes);
       } else {
         pdfBytes = await generateContractPdf(MOCK_CONTRACT_PDF_DATA, logoBytes);
       }
       const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
-      // Revoke previous
-      if (prevPdfBlobUrl.current) URL.revokeObjectURL(prevPdfBlobUrl.current);
-      prevPdfBlobUrl.current = url;
-      setPdfBlobUrl(url);
+      const filename = tpl.id === "invoice" ? "Rechnung-Vorschau.pdf" : "Vertrag-Vorschau.pdf";
+      showPdfInViewer(url, filename);
     } catch (err) {
       console.error("PDF preview error:", err);
       toast.error("PDF konnte nicht generiert werden.");
-    } finally {
-      setPdfLoading(false);
     }
   };
 
