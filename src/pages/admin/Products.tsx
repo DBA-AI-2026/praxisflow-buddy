@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { ProductModulesSection } from "@/components/admin/ProductModulesSection";
+import { AgbUploadSection } from "@/components/admin/AgbUploadSection";
 
 interface ProductForm {
   name: string;
