@@ -1558,7 +1558,7 @@ export default function EmailPreview() {
                           onClick={() => openPdfPreview(tpl)}
                         >
                           <FileText className="w-3.5 h-3.5" />
-                          Vertragszusammenfassung PDF
+                          {tpl.id === "invoice" ? "Rechnungs-PDF (Design 2)" : "Vertragszusammenfassung PDF"}
                         </Button>
                       </div>
                     )}
