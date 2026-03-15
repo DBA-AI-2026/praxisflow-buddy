@@ -1300,7 +1300,13 @@ export default function EmailPreview() {
         if (logoRes.ok) logoBytes = await logoRes.arrayBuffer();
       } catch { /* proceed without logo */ }
 
-      const pdfBytes = await generateContractPdf(MOCK_CONTRACT_PDF_DATA, logoBytes);
+      let pdfBytes: Uint8Array;
+      if (tpl.id === "invoice") {
+        // Use Design 2 (generateInvoicePdfV2) for invoice PDF preview
+        pdfBytes = await generateInvoicePdfV2(MOCK_INVOICE_PDF_DATA, logoBytes);
+      } else {
+        pdfBytes = await generateContractPdf(MOCK_CONTRACT_PDF_DATA, logoBytes);
+      }
       const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       // Revoke previous
