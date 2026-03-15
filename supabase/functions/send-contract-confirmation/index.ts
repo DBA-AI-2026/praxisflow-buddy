@@ -534,7 +534,7 @@ Deno.serve(async (req) => {
       { filename: "Vertragsuebersicht.pdf", content: pdfBase64 },
     ];
     if (agbBase64) {
-      attachments.push({ filename: "AGB-Honorarfuchs.pdf", content: agbBase64 });
+      attachments.push({ filename: agbFilename, content: agbBase64 });
     }
 
     const emailRes = await fetch("https://api.resend.com/emails", {
