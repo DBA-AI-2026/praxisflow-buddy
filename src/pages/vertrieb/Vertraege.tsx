@@ -2166,7 +2166,7 @@ export default function Vertraege() {
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 className="text-destructive"
-                                onClick={() => deleteMutation.mutate(c.id)}
+                                onClick={() => setDeleteContractTarget(c)}
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Löschen
