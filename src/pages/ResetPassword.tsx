@@ -128,7 +128,7 @@ export default function ResetPassword() {
               </AlertDescription>
             </Alert>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form autoComplete="off" onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="new-password">Neues Passwort</Label>
                 <Input

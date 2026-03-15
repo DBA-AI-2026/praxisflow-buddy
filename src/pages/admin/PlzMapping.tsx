@@ -470,7 +470,7 @@ export default function PlzMapping() {
               {editEntry ? "Zuordnung bearbeiten" : "Neue Zuordnung anlegen"}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form autoComplete="off" onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="plz_prefix">PLZ-Präfix *</Label>

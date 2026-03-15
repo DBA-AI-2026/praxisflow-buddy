@@ -326,7 +326,7 @@ export default function Buchen() {
         </div>
 
         {/* Booking form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form autoComplete="off" onSubmit={handleSubmit} className="space-y-5">
           <div className="bg-card border rounded-lg p-5 space-y-4">
             <p className="text-sm font-semibold text-foreground">Bitte vervollständigen Sie Ihre Angaben</p>
 

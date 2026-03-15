@@ -176,7 +176,7 @@ export function ProductModulesSection({ productId, productName }: Props) {
           <DialogHeader>
             <DialogTitle>{editId ? "Modul bearbeiten" : "Neues Modul"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={(e) => { e.preventDefault(); upsertMutation.mutate(form); }} className="space-y-4">
+          <form autoComplete="off" onSubmit={(e) => { e.preventDefault(); upsertMutation.mutate(form); }} className="space-y-4">
             <div>
               <Label>Modulname *</Label>
               <Input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} required />

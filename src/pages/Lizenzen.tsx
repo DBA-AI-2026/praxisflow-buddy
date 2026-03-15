@@ -183,7 +183,7 @@ export default function Lizenzen() {
             <DialogHeader>
               <DialogTitle>Neue Lizenz erstellen</DialogTitle>
             </DialogHeader>
-            <form
+            <form autoComplete="off"
               onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);

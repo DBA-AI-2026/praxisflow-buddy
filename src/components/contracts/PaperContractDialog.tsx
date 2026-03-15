@@ -162,7 +162,7 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 pt-2">
+        <form autoComplete="off" onSubmit={handleSubmit(onSubmit)} className="space-y-5 pt-2">
           {/* Kundendaten */}
           <div>
             <h3 className="text-sm font-semibold text-foreground mb-3 pb-1 border-b border-border">Kundendaten</h3>

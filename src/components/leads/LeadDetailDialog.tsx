@@ -438,7 +438,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
           {/* ── Tab: Bearbeiten ── */}
           <TabsContent value="details" className="mt-4">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSave)} className="space-y-4">
+              <form autoComplete="off" onSubmit={form.handleSubmit(onSave)} className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <FormField control={form.control} name="status" render={({ field }) => (
                     <FormItem>
