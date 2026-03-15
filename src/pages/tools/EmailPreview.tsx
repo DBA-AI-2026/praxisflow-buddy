@@ -1547,46 +1547,8 @@ export default function EmailPreview() {
                     </div>
                     )}
 
-                    {/* PDF row – invoice (editable HTML) */}
-                    {tpl.id === "invoice" && (
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 gap-1.5"
-                          onClick={() => setActiveModal({ template: tpl, mode: "pdf" })}
-                        >
-                          <FileText className="w-3.5 h-3.5" />
-                          PDF
-                        </Button>
-                        {isAdmin && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1.5"
-                              onClick={() => openEdit(tpl, "pdf")}
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                              Bearbeiten
-                            </Button>
-                            {hasCustom(tpl, "pdf") && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="px-2 text-muted-foreground"
-                                title="Zurücksetzen"
-                                onClick={() => resetTemplate(tpl, "pdf")}
-                              >
-                                <RotateCcw className="w-3.5 h-3.5" />
-                              </Button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    )}
 
-                    {/* PDF row – live pdf-lib preview (booking-link + post-payment-contract-pdf) */}
+                    {/* PDF row – live pdf-lib preview (booking-link, post-payment-contract-pdf, invoice) */}
                     {PDF_PREVIEW_TEMPLATE_IDS.includes(tpl.id) && (
                       <div className="flex gap-2">
                         <Button
