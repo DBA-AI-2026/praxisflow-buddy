@@ -141,13 +141,29 @@ export default function Buchen() {
       .eq("id", contractId)
       .eq("status", "eingegangen")
       .maybeSingle()
-      .then(({ data, error: err }) => {
+      .then(async ({ data, error: err }) => {
         if (err || !data) {
           setNotFound(true);
         } else {
           setContract(data as ContractSummary);
           if (data.fachrichtung) setFachrichtung(data.fachrichtung);
           if (data.rechtsform) setRechtsform(data.rechtsform);
+
+          // Fetch product-specific AGB PDF
+          const { data: product } = await supabase
+            .from("products")
+            .select("agb_pdf_path")
+            .eq("name", data.product_name)
+            .maybeSingle();
+
+          if ((product as any)?.agb_pdf_path) {
+            const { data: signed } = await supabase.storage
+              .from("contracts")
+              .createSignedUrl((product as any).agb_pdf_path, 3600);
+            if (signed?.signedUrl) {
+              setAgbUrl(signed.signedUrl);
+            }
+          }
         }
         setLoading(false);
       });
