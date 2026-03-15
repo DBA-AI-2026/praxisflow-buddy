@@ -322,7 +322,7 @@ const emptyForm: ContractFormData = {
   praxissystem: "",
   stundenaufwand_pro_woche: "",
   rechnungs_email: "",
-  rechnungs_email_identisch: false,
+  rechnungs_email_identisch: true,
   mandate_accepted: true,
 };
 
@@ -3013,17 +3013,6 @@ export default function Vertraege() {
             <DialogFooter className="flex-col gap-2">
               {/* Zeile 1: PDF-Aktionen */}
               <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleTemplatePdf({ ...form, signature_data: null, vertrieb_signature_data: null })}
-                  className="gap-1.5 flex-1 sm:flex-none"
-                  disabled={!form.praxis && !form.vorname && !form.nachname}
-                >
-                  <Download className="h-4 w-4" />
-                  Zum Ausdrucken
-                </Button>
                 <Button type="button" variant="outline" size="sm" onClick={() => handlePreviewPdf(form)} className="gap-1.5 flex-1 sm:flex-none" disabled={!isFormComplete}>
                   <Eye className="h-4 w-4" />
                   Vorschau PDF
