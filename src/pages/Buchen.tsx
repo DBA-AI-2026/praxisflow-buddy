@@ -40,6 +40,10 @@ interface ContractSummary {
   rechtsform: string | null;
 }
 
+interface ProductAgb {
+  agb_pdf_path: string | null;
+}
+
 const STEPS = [
   { id: 1, label: "Angaben", icon: FileText },
   { id: 2, label: "Zahlung", icon: CreditCard },
