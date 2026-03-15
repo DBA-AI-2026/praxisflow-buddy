@@ -1552,8 +1552,8 @@ export default function EmailPreview() {
                           variant="ghost"
                           size="sm"
                           className="h-6 px-2 text-muted-foreground hover:text-destructive"
-                          title="Vorlage ausblenden"
-                          onClick={() => hideTemplate(tpl.id)}
+                          title="Vorlage löschen"
+                          onClick={() => setDeleteConfirmId(tpl.id)}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
