@@ -382,6 +382,7 @@ Deno.serve(async (req) => {
     // --- Fetch product-specific AGB PDF (fallback to generic) ---
     let agbBase64: string | undefined;
     let agbFilename = "AGB-Honorarfuchs.pdf";
+    let agbDownloadUrl = `${APP_URL}/templates/vertrag-honorarfuchs.pdf`;
     try {
       // Look up product-specific AGB (supports legacy labels like "HFX.GOÄ")
       const { data: productsWithAgb } = await adminClient
@@ -398,15 +399,17 @@ Deno.serve(async (req) => {
         // Product has a specific AGB PDF in storage
         const { data: signed } = await adminClient.storage
           .from("contracts")
-          .createSignedUrl(matchedProduct.agb_pdf_path, 300);
+          .createSignedUrl(matchedProduct.agb_pdf_path, 60 * 60 * 24 * 14);
+
         if (signed?.signedUrl) {
+          agbDownloadUrl = signed.signedUrl;
           const agbRes = await fetch(signed.signedUrl);
           if (agbRes.ok) {
             const agbBytes = new Uint8Array(await agbRes.arrayBuffer());
             agbBase64 = toBase64(agbBytes);
-            // Use product name in filename
             const safeName = (matchedProduct.name || "Honorarfuchs").replace(/[^a-zA-Z0-9äöüÄÖÜß\-_.]/g, "_");
             agbFilename = `AGB-${safeName}.pdf`;
+            console.log(`[send-contract-confirmation] Using product AGB for "${matchedProduct.name}"`);
           }
         }
       }
@@ -418,8 +421,11 @@ Deno.serve(async (req) => {
           const agbBytes = new Uint8Array(await agbRes.arrayBuffer());
           agbBase64 = toBase64(agbBytes);
         }
+        console.log("[send-contract-confirmation] Falling back to generic AGB");
       }
-    } catch { /* skip AGB */ }
+    } catch {
+      /* skip AGB */
+    }
 
     // --- Build email ---
     const buchenUrl = `${APP_URL}/buchen?contract_id=${contract.id}&product=${encodeURIComponent(contract.product_name)}`;
