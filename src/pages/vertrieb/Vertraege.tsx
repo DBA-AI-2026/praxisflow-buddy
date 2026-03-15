@@ -215,9 +215,6 @@ const statusConfig: Record<string, { label: string; class: string; icon: typeof 
 const LOCKED_STATUSES = ["aktiv", "gekuendigt", "beendet", "gesperrt", "gezeichnet"];
 const isContractLocked = (status: string) => LOCKED_STATUSES.includes(status);
 
-// Placeholder to keep line numbering — real statusConfig closing brace is above
-const _statusConfigEnd = {
-};
 
 // Product options are now loaded from the database
 
