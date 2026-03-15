@@ -34,6 +34,7 @@ interface ContractSummary {
   praxis: string | null;
   customer_name: string;
   product_name: string;
+  modules: string[] | null;
   monthly_price: number;
   hfx_customer_number: string | null;
   fachrichtung: string | null;
@@ -41,7 +42,41 @@ interface ContractSummary {
 }
 
 interface ProductAgb {
+  name: string;
   agb_pdf_path: string | null;
+}
+
+const normalizeProductKey = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+
+function findBestProductMatch(products: ProductAgb[], candidates: Array<string | null | undefined>) {
+  const preparedCandidates = candidates
+    .flatMap((candidate) => String(candidate || "").split(","))
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (preparedCandidates.length === 0) return null;
+
+  const exactMatch = products.find((product) =>
+    preparedCandidates.some((candidate) => candidate.toLowerCase() === product.name.toLowerCase())
+  );
+  if (exactMatch) return exactMatch;
+
+  return products.find((product) => {
+    const normalizedProduct = normalizeProductKey(product.name);
+    return preparedCandidates.some((candidate) => {
+      const normalizedCandidate = normalizeProductKey(candidate);
+      return (
+        normalizedCandidate === normalizedProduct ||
+        normalizedCandidate.includes(normalizedProduct) ||
+        normalizedProduct.includes(normalizedCandidate)
+      );
+    });
+  }) ?? null;
 }
 
 const STEPS = [
@@ -137,7 +172,7 @@ export default function Buchen() {
 
     supabase
       .from("contracts")
-      .select("praxis, customer_name, product_name, monthly_price, hfx_customer_number, fachrichtung, rechtsform")
+      .select("praxis, customer_name, product_name, modules, monthly_price, hfx_customer_number, fachrichtung, rechtsform")
       .eq("id", contractId)
       .eq("status", "eingegangen")
       .maybeSingle()
@@ -149,17 +184,23 @@ export default function Buchen() {
           if (data.fachrichtung) setFachrichtung(data.fachrichtung);
           if (data.rechtsform) setRechtsform(data.rechtsform);
 
-          // Fetch product-specific AGB PDF
-          const { data: product } = await supabase
+          // Fetch product-specific AGB PDF (supports legacy product labels like "HFX.GOÄ")
+          const { data: products } = await supabase
             .from("products")
-            .select("agb_pdf_path")
-            .eq("name", data.product_name)
-            .maybeSingle();
+            .select("name, agb_pdf_path")
+            .eq("is_active", true)
+            .not("agb_pdf_path", "is", null);
 
-          if ((product as any)?.agb_pdf_path) {
+          const matchedProduct = findBestProductMatch((products ?? []) as ProductAgb[], [
+            data.product_name,
+            productParam,
+            ...((data.modules as string[] | null) ?? []),
+          ]);
+
+          if (matchedProduct?.agb_pdf_path) {
             const { data: signed } = await supabase.storage
               .from("contracts")
-              .createSignedUrl((product as any).agb_pdf_path, 3600);
+              .createSignedUrl(matchedProduct.agb_pdf_path, 3600);
             if (signed?.signedUrl) {
               setAgbUrl(signed.signedUrl);
             }
@@ -167,7 +208,7 @@ export default function Buchen() {
         }
         setLoading(false);
       });
-  }, [contractId]);
+  }, [contractId, productParam]);
 
   const productName = contract?.product_name || productParam || "";
   const monthlyNet = contract?.monthly_price ?? 0;

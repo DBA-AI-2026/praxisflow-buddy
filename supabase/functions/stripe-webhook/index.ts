@@ -13,6 +13,44 @@ const corsHeaders = {
 const log = (step: string, details?: unknown) =>
   console.log(`[stripe-webhook] ${step}${details ? " – " + JSON.stringify(details) : ""}`);
 
+type ProductWithAgb = {
+  name: string;
+  agb_pdf_path: string | null;
+};
+
+const normalizeProductKey = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+
+function findBestProductMatch(products: ProductWithAgb[], candidates: Array<string | null | undefined>) {
+  const preparedCandidates = candidates
+    .flatMap((candidate) => String(candidate || "").split(","))
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (preparedCandidates.length === 0) return null;
+
+  const exactMatch = products.find((product) =>
+    preparedCandidates.some((candidate) => candidate.toLowerCase() === product.name.toLowerCase())
+  );
+  if (exactMatch) return exactMatch;
+
+  return products.find((product) => {
+    const normalizedProduct = normalizeProductKey(product.name);
+    return preparedCandidates.some((candidate) => {
+      const normalizedCandidate = normalizeProductKey(candidate);
+      return (
+        normalizedCandidate === normalizedProduct ||
+        normalizedCandidate.includes(normalizedProduct) ||
+        normalizedProduct.includes(normalizedCandidate)
+      );
+    });
+  }) ?? null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -562,23 +600,27 @@ async function sendVertragsbestaetigung(
     let agbBase64: string | undefined;
     let agbFilename = "AGB-HFX-Honorarfuchs.pdf";
 
-    // Look up product-specific AGB
-    const { data: product } = await supabase
+    // Look up product-specific AGB (supports legacy labels like "HFX.GOÄ")
+    const { data: productsWithAgb } = await supabase
       .from("products")
-      .select("agb_pdf_path, name")
-      .eq("name", contract.product_name)
-      .maybeSingle();
+      .select("name, agb_pdf_path")
+      .not("agb_pdf_path", "is", null);
 
-    if (product?.agb_pdf_path) {
+    const matchedProduct = findBestProductMatch((productsWithAgb ?? []) as ProductWithAgb[], [
+      contract.product_name,
+      ...(Array.isArray(contract.modules) ? contract.modules : []),
+    ]);
+
+    if (matchedProduct?.agb_pdf_path) {
       const { data: signed } = await supabase.storage
         .from("contracts")
-        .createSignedUrl(product.agb_pdf_path, 300);
+        .createSignedUrl(matchedProduct.agb_pdf_path, 300);
       if (signed?.signedUrl) {
         const agbRes = await fetch(signed.signedUrl);
         if (agbRes.ok) {
           const agbBytes = new Uint8Array(await agbRes.arrayBuffer());
           agbBase64 = btoa(String.fromCharCode(...agbBytes));
-          const safeName = (product.name || "Honorarfuchs").replace(/[^a-zA-Z0-9äöüÄÖÜß\-_.]/g, "_");
+          const safeName = (matchedProduct.name || "Honorarfuchs").replace(/[^a-zA-Z0-9äöüÄÖÜß\-_.]/g, "_");
           agbFilename = `AGB-${safeName}.pdf`;
         }
       }
