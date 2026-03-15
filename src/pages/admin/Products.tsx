@@ -400,6 +400,15 @@ export default function AdminProducts() {
               </div>
             </div>
 
+            {/* AGB Upload im Bearbeitungsmodus */}
+            {editId && (
+              <AgbUploadSection
+                productId={editId}
+                currentPath={products?.find((p: any) => p.id === editId)?.agb_pdf_path ?? null}
+                onUploaded={() => queryClient.invalidateQueries({ queryKey: ["products"] })}
+              />
+            )}
+
             <div className="flex items-center gap-3">
               <Switch checked={form.is_active} onCheckedChange={(v) => set("is_active", v)} />
               <Label>Aktiv</Label>
