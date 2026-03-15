@@ -25,7 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye, CheckCircle,
   FilePen, FileSignature, CircleCheck, CircleOff, ArchiveX, ShieldBan, ArrowUpDown, ArrowUp, ArrowDown,
-  GitMerge, AlertTriangle, Send,
+  GitMerge, AlertTriangle, Send, Lightbulb,
 } from "lucide-react";
 // Check and ChevronsUpDown already imported above via combobox imports
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
@@ -66,6 +66,16 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
 
+// Role display labels
+const roleLabels: Record<string, string> = {
+  admin: "Admin",
+  sales_lead: "Sales Lead",
+  regional_lead: "Gebietsleiter",
+  sales_partner: "Vertriebspartner",
+  user: "Gebietsleiter",
+  tippgeber: "Tippgeber",
+};
+
 // Searchable combobox for sales partner selection
 function SalesPartnerCombobox({
   value,
@@ -74,7 +84,7 @@ function SalesPartnerCombobox({
 }: {
   value: string;
   onChange: (v: string) => void;
-  profiles: { user_id: string; full_name: string; email: string | null }[];
+  profiles: { user_id: string; full_name: string; email: string | null; role?: string | null }[];
 }) {
   const [open, setOpen] = useState(false);
   const selected = profiles.find((p) => p.full_name === value);
@@ -89,7 +99,14 @@ function SalesPartnerCombobox({
           className="w-full justify-between font-normal"
         >
           {selected ? (
-            <span>{selected.full_name}</span>
+            <span className="flex items-center gap-2 truncate">
+              <span>{selected.full_name}</span>
+              {selected.role && (
+                <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+                  {roleLabels[selected.role] || selected.role}
+                </span>
+              )}
+            </span>
           ) : (
             <span className="text-muted-foreground">Vertriebspartner auswählen...</span>
           )}
@@ -112,12 +129,15 @@ function SalesPartnerCombobox({
                   }}
                 >
                   <Check
-                    className={`mr-2 h-4 w-4 ${value === p.full_name ? "opacity-100" : "opacity-0"}`}
+                    className={`mr-2 h-4 w-4 shrink-0 ${value === p.full_name ? "opacity-100" : "opacity-0"}`}
                   />
-                  <span>{p.full_name}</span>
-                  {p.email && (
-                    <span className="ml-2 text-xs text-muted-foreground">({p.email})</span>
-                  )}
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-medium truncate">{p.full_name}</span>
+                    <span className="text-xs text-muted-foreground truncate">
+                      {p.email || "–"}
+                      {p.role && ` · ${roleLabels[p.role] || p.role}`}
+                    </span>
+                  </div>
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -265,6 +285,7 @@ export default function Vertraege() {
   const [resendingConfirmationId, setResendingConfirmationId] = useState<string | null>(null);
   const [emailConfirmContract, setEmailConfirmContract] = useState<any | null>(null);
   const [syncingQodiaId, setSyncingQodiaId] = useState<string | null>(null);
+  const [leadTippgeberName, setLeadTippgeberName] = useState<string | null>(null);
   const { user, profile } = useAuth();
   const { isAdmin, isVertragsabteilung } = useUserRole();
   const { toast } = useToast();
@@ -336,6 +357,46 @@ export default function Vertraege() {
         if (!lead) return;
         setFromLeadId(leadId);
         setLeadHfxNumber(lead.hfx_customer_number || null);
+
+        // Resolve assigned sales partner name
+        let partnerName = "";
+        if (lead.assigned_to) {
+          const { data: partnerProfile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("user_id", lead.assigned_to)
+            .maybeSingle();
+          if (partnerProfile) partnerName = partnerProfile.full_name;
+        }
+
+        // Resolve tippgeber name
+        const tippgeberId = lead.tippgeber_id;
+        if (tippgeberId) {
+          const { data: tippProfile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("user_id", tippgeberId)
+            .maybeSingle();
+          setLeadTippgeberName(tippProfile?.full_name || null);
+        } else {
+          // Check tipp_leads table for match
+          const { data: tippMatch } = await supabase
+            .from("tipp_leads")
+            .select("created_by")
+            .or(`email.eq.${lead.email},praxis_name.eq.${lead.praxis_name}`)
+            .limit(1);
+          if (tippMatch && tippMatch.length > 0) {
+            const { data: tippProfile } = await supabase
+              .from("profiles")
+              .select("full_name")
+              .eq("user_id", tippMatch[0].created_by)
+              .maybeSingle();
+            setLeadTippgeberName(tippProfile?.full_name || null);
+          } else {
+            setLeadTippgeberName(null);
+          }
+        }
+
         setForm({
           ...emptyForm,
           praxis: lead.praxis_name || "",
@@ -346,6 +407,7 @@ export default function Vertraege() {
           ort: lead.ort || "",
           adresse: lead.adresse || "",
           telefon: lead.mobilnummer || "",
+          sales_partner_name: partnerName,
         });
         setDialogOpen(true);
       })();
@@ -396,15 +458,19 @@ export default function Vertraege() {
   });
 
   const { data: allProfiles = [] } = useQuery({
-    queryKey: ["sales-profiles"],
+    queryKey: ["sales-profiles-with-roles"],
     queryFn: async () => {
       // First get user_ids with sales-relevant roles
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
-        .select("user_id")
+        .select("user_id, role")
         .in("role", ["sales_partner", "user", "sales_lead", "regional_lead", "admin", "tippgeber"]);
       if (roleError) throw roleError;
-      const salesUserIds = (roleData || []).map((r) => r.user_id);
+      const roleMap: Record<string, string> = {};
+      for (const r of roleData || []) {
+        roleMap[r.user_id] = r.role;
+      }
+      const salesUserIds = Object.keys(roleMap);
       if (salesUserIds.length === 0) return [];
       const { data, error } = await supabase
         .from("profiles")
@@ -412,7 +478,7 @@ export default function Vertraege() {
         .in("user_id", salesUserIds)
         .order("full_name");
       if (error) throw error;
-      return data || [];
+      return (data || []).map((p) => ({ ...p, role: roleMap[p.user_id] || null }));
     },
   });
 
@@ -791,6 +857,7 @@ export default function Vertraege() {
     setEditId(null);
     setEditingContract(null);
     setLeadHfxNumber(null);
+    setLeadTippgeberName(null);
     setFromLeadId(null);
     setForm(emptyForm);
     setFile(null);
@@ -2122,9 +2189,20 @@ export default function Vertraege() {
                     profiles={allProfiles}
                   />
                   {fieldErr("sales_partner_name") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
-                </div>
-              </div>
-            </div>
+                 </div>
+                 {leadTippgeberName && (
+                   <div className="col-span-2">
+                     <Label className="flex items-center gap-1">
+                       <Lightbulb className="h-3.5 w-3.5 text-warning" />
+                       Tippgeber
+                     </Label>
+                     <div className="mt-1.5 flex items-center gap-2 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm">
+                       <span className="font-medium text-foreground">{leadTippgeberName}</span>
+                     </div>
+                   </div>
+                 )}
+               </div>
+             </div>
 
             {/* Produkte – Mehrfachauswahl */}
             <div className="space-y-3">
