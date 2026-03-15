@@ -2795,6 +2795,9 @@ export default function Vertraege() {
               <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={2} placeholder="Zusätzliche Informationen..." />
             </div>
 
+            {/* AGB-Zustimmung */}
+            {editId && <AgbAcceptanceSection contractId={editId} />}
+
             {/* Dokumente */}
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Dokumente</h4>
