@@ -438,15 +438,19 @@ export default function Vertraege() {
   });
 
   const { data: allProfiles = [] } = useQuery({
-    queryKey: ["sales-profiles"],
+    queryKey: ["sales-profiles-with-roles"],
     queryFn: async () => {
       // First get user_ids with sales-relevant roles
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
-        .select("user_id")
+        .select("user_id, role")
         .in("role", ["sales_partner", "user", "sales_lead", "regional_lead", "admin", "tippgeber"]);
       if (roleError) throw roleError;
-      const salesUserIds = (roleData || []).map((r) => r.user_id);
+      const roleMap: Record<string, string> = {};
+      for (const r of roleData || []) {
+        roleMap[r.user_id] = r.role;
+      }
+      const salesUserIds = Object.keys(roleMap);
       if (salesUserIds.length === 0) return [];
       const { data, error } = await supabase
         .from("profiles")
@@ -454,7 +458,7 @@ export default function Vertraege() {
         .in("user_id", salesUserIds)
         .order("full_name");
       if (error) throw error;
-      return data || [];
+      return (data || []).map((p) => ({ ...p, role: roleMap[p.user_id] || null }));
     },
   });
 
