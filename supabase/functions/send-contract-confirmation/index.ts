@@ -26,6 +26,44 @@ function formatCurrency(value?: number | null): string {
   return value.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 }
 
+type ProductWithAgb = {
+  name: string;
+  agb_pdf_path: string | null;
+};
+
+const normalizeProductKey = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+
+function findBestProductMatch(products: ProductWithAgb[], candidates: Array<string | null | undefined>) {
+  const preparedCandidates = candidates
+    .flatMap((candidate) => String(candidate || "").split(","))
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (preparedCandidates.length === 0) return null;
+
+  const exactMatch = products.find((product) =>
+    preparedCandidates.some((candidate) => candidate.toLowerCase() === product.name.toLowerCase())
+  );
+  if (exactMatch) return exactMatch;
+
+  return products.find((product) => {
+    const normalizedProduct = normalizeProductKey(product.name);
+    return preparedCandidates.some((candidate) => {
+      const normalizedCandidate = normalizeProductKey(candidate);
+      return (
+        normalizedCandidate === normalizedProduct ||
+        normalizedCandidate.includes(normalizedProduct) ||
+        normalizedProduct.includes(normalizedCandidate)
+      );
+    });
+  }) ?? null;
+}
+
 async function buildContractPdf(contract: Record<string, unknown>, logoBytes?: ArrayBuffer): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);

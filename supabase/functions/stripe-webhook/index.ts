@@ -13,6 +13,44 @@ const corsHeaders = {
 const log = (step: string, details?: unknown) =>
   console.log(`[stripe-webhook] ${step}${details ? " – " + JSON.stringify(details) : ""}`);
 
+type ProductWithAgb = {
+  name: string;
+  agb_pdf_path: string | null;
+};
+
+const normalizeProductKey = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+
+function findBestProductMatch(products: ProductWithAgb[], candidates: Array<string | null | undefined>) {
+  const preparedCandidates = candidates
+    .flatMap((candidate) => String(candidate || "").split(","))
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (preparedCandidates.length === 0) return null;
+
+  const exactMatch = products.find((product) =>
+    preparedCandidates.some((candidate) => candidate.toLowerCase() === product.name.toLowerCase())
+  );
+  if (exactMatch) return exactMatch;
+
+  return products.find((product) => {
+    const normalizedProduct = normalizeProductKey(product.name);
+    return preparedCandidates.some((candidate) => {
+      const normalizedCandidate = normalizeProductKey(candidate);
+      return (
+        normalizedCandidate === normalizedProduct ||
+        normalizedCandidate.includes(normalizedProduct) ||
+        normalizedProduct.includes(normalizedCandidate)
+      );
+    });
+  }) ?? null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
