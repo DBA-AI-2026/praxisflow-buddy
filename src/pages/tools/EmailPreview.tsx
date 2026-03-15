@@ -3,6 +3,16 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Mail, FileText, Pencil, Eye, RotateCcw, Save, Loader2, Lock, Sparkles, Send, Trash2, RotateCw } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import CodeMirror from "@uiw/react-codemirror";
@@ -1441,11 +1451,29 @@ export default function EmailPreview() {
     } catch { return []; }
   });
 
-  const hideTemplate = (id: string) => {
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  const hideTemplate = async (id: string) => {
+    // Also delete any saved custom HTML overrides for this template
+    const tpl = TEMPLATES.find((t) => t.id === id);
+    if (tpl) {
+      const emailKey = getStorageKey(tpl, "email");
+      const pdfKey = getStorageKey(tpl, "pdf");
+      // Delete from DB
+      await supabase.from("email_template_overrides" as any).delete().in("template_key", [emailKey, pdfKey]);
+      // Remove from local state
+      setCustomHtml((prev) => {
+        const next = { ...prev };
+        delete next[emailKey];
+        delete next[pdfKey];
+        return next;
+      });
+    }
     const next = [...hiddenIds, id];
     setHiddenIds(next);
     localStorage.setItem(HIDDEN_KEY, JSON.stringify(next));
-    toast("Vorlage ausgeblendet", { action: { label: "Rückgängig", onClick: () => restoreTemplate(id) } });
+    toast.success("Vorlage endgültig gelöscht");
+    setDeleteConfirmId(null);
   };
 
   const restoreTemplate = (id: string) => {
@@ -1524,8 +1552,8 @@ export default function EmailPreview() {
                           variant="ghost"
                           size="sm"
                           className="h-6 px-2 text-muted-foreground hover:text-destructive"
-                          title="Vorlage ausblenden"
-                          onClick={() => hideTemplate(tpl.id)}
+                          title="Vorlage löschen"
+                          onClick={() => setDeleteConfirmId(tpl.id)}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
@@ -1755,6 +1783,26 @@ export default function EmailPreview() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* ── Delete Confirmation Dialog ── */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Vorlage endgültig löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Die Vorlage wird aus der Übersicht entfernt und alle gespeicherten Anpassungen (Entwürfe) werden unwiderruflich gelöscht.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteConfirmId && hideTemplate(deleteConfirmId)}
+            >
+              Endgültig löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
