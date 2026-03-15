@@ -464,6 +464,7 @@ export default function Vertraege() {
           plz: lead.plz || "",
           ort: lead.ort || "",
           adresse: lead.adresse || "",
+          praxisanschrift: lead.adresse || "",
           telefon: lead.mobilnummer || "",
           sales_partner_name: partnerName,
         });
