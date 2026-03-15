@@ -337,6 +337,46 @@ export default function Vertraege() {
         if (!lead) return;
         setFromLeadId(leadId);
         setLeadHfxNumber(lead.hfx_customer_number || null);
+
+        // Resolve assigned sales partner name
+        let partnerName = "";
+        if (lead.assigned_to) {
+          const { data: partnerProfile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("user_id", lead.assigned_to)
+            .maybeSingle();
+          if (partnerProfile) partnerName = partnerProfile.full_name;
+        }
+
+        // Resolve tippgeber name
+        const tippgeberId = lead.tippgeber_id;
+        if (tippgeberId) {
+          const { data: tippProfile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("user_id", tippgeberId)
+            .maybeSingle();
+          setLeadTippgeberName(tippProfile?.full_name || null);
+        } else {
+          // Check tipp_leads table for match
+          const { data: tippMatch } = await supabase
+            .from("tipp_leads")
+            .select("created_by")
+            .or(`email.eq.${lead.email},praxis_name.eq.${lead.praxis_name}`)
+            .limit(1);
+          if (tippMatch && tippMatch.length > 0) {
+            const { data: tippProfile } = await supabase
+              .from("profiles")
+              .select("full_name")
+              .eq("user_id", tippMatch[0].created_by)
+              .maybeSingle();
+            setLeadTippgeberName(tippProfile?.full_name || null);
+          } else {
+            setLeadTippgeberName(null);
+          }
+        }
+
         setForm({
           ...emptyForm,
           praxis: lead.praxis_name || "",
@@ -347,6 +387,7 @@ export default function Vertraege() {
           ort: lead.ort || "",
           adresse: lead.adresse || "",
           telefon: lead.mobilnummer || "",
+          sales_partner_name: partnerName,
         });
         setDialogOpen(true);
       })();
