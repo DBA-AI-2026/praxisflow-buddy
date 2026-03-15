@@ -2213,6 +2213,7 @@ export default function Vertraege() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
+           <fieldset disabled={!!(editId && editingContract && isContractLocked(editingContract.status) && !isAdmin)} className="space-y-5">
             {/* Vertragsparteien */}
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Vertragsparteien</h4>
