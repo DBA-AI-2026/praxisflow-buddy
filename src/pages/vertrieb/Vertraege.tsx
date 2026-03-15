@@ -1968,15 +1968,6 @@ export default function Vertraege() {
                             <Eye className="h-3 w-3" />
                             Vorschau
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 gap-1 text-xs"
-                            onClick={() => handleTemplatePdf(c)}
-                          >
-                            <FileText className="h-3 w-3" />
-                            Vertragsdokument
-                          </Button>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
