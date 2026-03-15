@@ -453,7 +453,7 @@ async function handlePaperContractPayment(
   const resendKey = Deno.env.get("RESEND_API_KEY");
   if (resendKey && contract.email) {
     try {
-      await sendVertragsbestaetigung(contract, resendKey);
+      await sendVertragsbestaetigung(contract, resendKey, supabase);
       log("Vertragsbestätigung email sent", { contractId });
     } catch (mailErr) {
       console.error("[stripe-webhook] Failed to send Vertragsbestätigung:", mailErr);
