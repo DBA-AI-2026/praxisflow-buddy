@@ -3213,6 +3213,35 @@ export default function Vertraege() {
       </Dialog>
 
       <PaperContractDialog open={paperContractOpen} onOpenChange={setPaperContractOpen} />
+
+      {/* Delete Contract Confirmation */}
+      <AlertDialog open={!!deleteContractTarget} onOpenChange={(open) => !open && setDeleteContractTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Vertrag endgültig löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Der Vertrag <strong>{deleteContractTarget?.customer_name}</strong> ({deleteContractTarget?.product_name}) wird unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                if (deleteContractTarget) {
+                  deleteMutation.mutate(deleteContractTarget.id, {
+                    onSuccess: () => setDeleteContractTarget(null),
+                  });
+                }
+              }}
+            >
+              {deleteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Endgültig löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
