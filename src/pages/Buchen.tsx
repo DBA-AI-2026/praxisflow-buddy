@@ -179,6 +179,9 @@ export default function Buchen() {
             rechtsform,
             bsnr: bsnr.trim() || null,
             lanr: lanr.trim() || null,
+            agb_accepted: true,
+            agb_version: "1.0",
+            user_agent: navigator.userAgent,
           }),
         }
       );
