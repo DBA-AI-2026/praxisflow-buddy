@@ -466,7 +466,8 @@ async function handlePaperContractPayment(
 // ────────────────────────────────────────────────────────────────────────────
 async function sendVertragsbestaetigung(
   contract: Record<string, any>,
-  resendKey: string
+  resendKey: string,
+  supabase: ReturnType<typeof createClient>
 ) {
   const { PDFDocument, rgb, StandardFonts } = await import("npm:pdf-lib");
 
