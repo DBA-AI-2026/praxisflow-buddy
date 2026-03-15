@@ -2950,35 +2950,6 @@ export default function Vertraege() {
                   )}
                 </Tooltip>
                 </TooltipProvider>
-                {/* Buchungsmail senden – saves as eingegangen + triggers booking email */}
-                {!editId && (
-                  <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span tabIndex={0} className="flex-1 sm:flex-none">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleSaveWithBuchungsmail}
-                          disabled={upsertMutation.isPending || sendingBuchungsmailDialog || !form.email}
-                          className="w-full gap-1.5 border-primary/40 text-primary hover:bg-primary/5"
-                        >
-                          {sendingBuchungsmailDialog
-                            ? <Loader2 className="h-4 w-4 animate-spin" />
-                            : <Send className="h-4 w-4" />}
-                          Buchungsmail erneut senden
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-xs">
-                      {!form.email
-                        ? "E-Mail-Adresse erforderlich"
-                        : "Speichert als Eingegangen und sendet den digitalen Buchungslink an den Kunden"}
-                    </TooltipContent>
-                  </Tooltip>
-                  </TooltipProvider>
-                )}
               </div>
             </DialogFooter>
           </form>
