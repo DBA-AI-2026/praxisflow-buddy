@@ -434,7 +434,41 @@ Deno.serve(async (req) => {
       ? `${Number(contract.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/Monat`
       : "–";
 
-    const ctaBlock = `
+    // --- Check for custom template override ---
+    let html: string;
+    const { data: templateOverride } = await adminClient
+      .from("email_template_overrides")
+      .select("html_content")
+      .eq("template_key", "booking-link")
+      .maybeSingle();
+
+    if (templateOverride?.html_content) {
+      // Replace placeholders in custom template
+      console.log("[send-contract-confirmation] Using custom booking-link template override");
+      html = templateOverride.html_content
+        .replace(/\$\{MOCK\.vorname\}|\$\{vorname\}/g, contract.vorname || "")
+        .replace(/\$\{MOCK\.nachname\}|\$\{nachname\}/g, contract.nachname || "")
+        .replace(/\$\{MOCK\.hfx_customer_number\}|\$\{hfx_customer_number\}/g, contract.hfx_customer_number || "–")
+        .replace(/\$\{MOCK\.praxis_name\}|\$\{praxis_name\}|\$\{praxis\}/g, contract.praxis || "–")
+        .replace(/\$\{MOCK\.email\}|\$\{email\}/g, contract.email || "")
+        .replace(/\$\{product_name\}/g, contract.product_name || "–")
+        .replace(/\$\{monthly_price\}/g, priceFormatted)
+        .replace(/\$\{start_date\}/g, startDateFormatted)
+        .replace(/\$\{buchen_url\}|\$\{buchenUrl\}/g, buchenUrl)
+        // Replace mock URLs and demo contract IDs with real values
+        .replace(/contract_id=demo/g, `contract_id=${contract.id}`)
+        .replace(/product=HFX%20EBM/g, `product=${encodeURIComponent(contract.product_name)}`)
+        // Also replace any hardcoded mock values from the preview
+        .replace(/Max/g, contract.vorname || "Max")
+        .replace(/Mustermann/g, contract.nachname || "Mustermann")
+        .replace(/HFX-I01019/g, contract.hfx_customer_number || "–")
+        .replace(/Testpraxis Dr\. Müller/g, contract.praxis || "–")
+        .replace(/99,00 €\/Monat/g, priceFormatted);
+    } else {
+      // Default hardcoded template
+      console.log("[send-contract-confirmation] Using default booking-link template");
+
+      const ctaBlock = `
         <tr>
           <td style="padding:0 40px 28px;">
             <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#0b367f,#1a4a9e);border-radius:10px;overflow:hidden;">
@@ -459,7 +493,7 @@ Deno.serve(async (req) => {
           </td>
         </tr>`;
 
-    const html = `<!DOCTYPE html>
+      html = `<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8">
@@ -570,6 +604,7 @@ Deno.serve(async (req) => {
   </table>
 </body>
 </html>`;
+    }
 
     // Build attachments
     const attachments: Array<{ filename: string; content: string }> = [
