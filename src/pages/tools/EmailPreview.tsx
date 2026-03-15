@@ -10,6 +10,7 @@ import { html } from "@codemirror/lang-html";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { useUserRole } from "@/hooks/useUserRole";
 import { generateContractPdf } from "@/lib/generateContractPdf";
+import { generateInvoicePdfV2 } from "@/lib/generateInvoicePdfV2";
 import { Textarea } from "@/components/ui/textarea";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
@@ -1217,6 +1218,27 @@ const MOCK_CONTRACT_PDF_DATA = {
   ],
 };
 
+const MOCK_INVOICE_PDF_DATA = {
+  invoice_number: "RE-2026-0002",
+  customer_name: "Test GmbH",
+  customer_number: "HFX-I01019",
+  adresse: "Musterstraße 12",
+  plz: "80331",
+  ort: "München",
+  rechnungs_email: "rechnung@test-gmbh.de",
+  invoice_date: new Date().toISOString().split("T")[0],
+  due_date: null,
+  positions: [
+    { description: "HFX EBM Lizenz – März 2026", quantity: 1, unit_price: 150.00 },
+  ],
+  net_amount: 150.00,
+  tax_rate: 19,
+  tax_amount: 28.50,
+  gross_amount: 178.50,
+  status: "entwurf",
+  notes: null,
+};
+
 const DEFAULT_HTML: Record<string, () => string> = {
   "lead-confirmation": buildLeadConfirmationHtml,
   "contract-customer": buildContractCustomerHtml,
@@ -1239,7 +1261,7 @@ function getHtmlForTemplate(id: TemplateId) {
 }
 
 /** IDs where we show the live pdf-lib PDF preview button */
-const PDF_PREVIEW_TEMPLATE_IDS: TemplateId[] = ["booking-link", "post-payment-contract-pdf"];
+const PDF_PREVIEW_TEMPLATE_IDS: TemplateId[] = ["booking-link", "post-payment-contract-pdf", "invoice"];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function EmailPreview() {
@@ -1278,7 +1300,13 @@ export default function EmailPreview() {
         if (logoRes.ok) logoBytes = await logoRes.arrayBuffer();
       } catch { /* proceed without logo */ }
 
-      const pdfBytes = await generateContractPdf(MOCK_CONTRACT_PDF_DATA, logoBytes);
+      let pdfBytes: Uint8Array;
+      if (tpl.id === "invoice") {
+        // Use Design 2 (generateInvoicePdfV2) for invoice PDF preview
+        pdfBytes = await generateInvoicePdfV2(MOCK_INVOICE_PDF_DATA, logoBytes);
+      } else {
+        pdfBytes = await generateContractPdf(MOCK_CONTRACT_PDF_DATA, logoBytes);
+      }
       const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       // Revoke previous
@@ -1519,46 +1547,8 @@ export default function EmailPreview() {
                     </div>
                     )}
 
-                    {/* PDF row – invoice (editable HTML) */}
-                    {tpl.id === "invoice" && (
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 gap-1.5"
-                          onClick={() => setActiveModal({ template: tpl, mode: "pdf" })}
-                        >
-                          <FileText className="w-3.5 h-3.5" />
-                          PDF
-                        </Button>
-                        {isAdmin && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1.5"
-                              onClick={() => openEdit(tpl, "pdf")}
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                              Bearbeiten
-                            </Button>
-                            {hasCustom(tpl, "pdf") && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="px-2 text-muted-foreground"
-                                title="Zurücksetzen"
-                                onClick={() => resetTemplate(tpl, "pdf")}
-                              >
-                                <RotateCcw className="w-3.5 h-3.5" />
-                              </Button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    )}
 
-                    {/* PDF row – live pdf-lib preview (booking-link + post-payment-contract-pdf) */}
+                    {/* PDF row – live pdf-lib preview (booking-link, post-payment-contract-pdf, invoice) */}
                     {PDF_PREVIEW_TEMPLATE_IDS.includes(tpl.id) && (
                       <div className="flex gap-2">
                         <Button
@@ -1568,7 +1558,7 @@ export default function EmailPreview() {
                           onClick={() => openPdfPreview(tpl)}
                         >
                           <FileText className="w-3.5 h-3.5" />
-                          Vertragszusammenfassung PDF
+                          {tpl.id === "invoice" ? "Rechnungs-PDF (Design 2)" : "Vertragszusammenfassung PDF"}
                         </Button>
                       </div>
                     )}
