@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Mail, FileText, Pencil, Eye, RotateCcw, Save, Loader2, Lock, Sparkles, Send } from "lucide-react";
+import { Mail, FileText, Pencil, Eye, RotateCcw, Save, Loader2, Lock, Sparkles, Send, Trash2, RotateCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import CodeMirror from "@uiw/react-codemirror";
@@ -1433,6 +1433,34 @@ export default function EmailPreview() {
     toast.success("Vorlage gespeichert");
   };
 
+  // ─── Hidden templates (localStorage) ─────────────────────────────────────
+  const HIDDEN_KEY = "hfx-email-preview-hidden";
+  const [hiddenIds, setHiddenIds] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(HIDDEN_KEY) || "[]");
+    } catch { return []; }
+  });
+
+  const hideTemplate = (id: string) => {
+    const next = [...hiddenIds, id];
+    setHiddenIds(next);
+    localStorage.setItem(HIDDEN_KEY, JSON.stringify(next));
+    toast("Vorlage ausgeblendet", { action: { label: "Rückgängig", onClick: () => restoreTemplate(id) } });
+  };
+
+  const restoreTemplate = (id: string) => {
+    const next = hiddenIds.filter((h) => h !== id);
+    setHiddenIds(next);
+    localStorage.setItem(HIDDEN_KEY, JSON.stringify(next));
+    toast.success("Vorlage wiederhergestellt");
+  };
+
+  const restoreAll = () => {
+    setHiddenIds([]);
+    localStorage.removeItem(HIDDEN_KEY);
+    toast.success("Alle Vorlagen wiederhergestellt");
+  };
+
   return (
     <MainLayout title="E-Mail & PDF Vorschau" subtitle={isAdmin ? "Vorschau aller E-Mail- und PDF-Vorlagen" : "Nur-Lese-Ansicht – Bearbeitung nur für Admins"}>
       <div className="max-w-4xl mx-auto space-y-8">
@@ -1447,17 +1475,26 @@ export default function EmailPreview() {
                 : "Klicke auf eine Vorlage, um die Vorschau zu öffnen. Das Bearbeiten ist nur Administratoren vorbehalten."}
             </p>
           </div>
-          {isLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-          {!isAdmin && <Lock className="w-4 h-4 text-muted-foreground" />}
+          <div className="flex items-center gap-2">
+            {hiddenIds.length > 0 && (
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={restoreAll}>
+                <RotateCw className="w-3.5 h-3.5" />
+                {hiddenIds.length} ausgeblendet – alle zurücksetzen
+              </Button>
+            )}
+            {isLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+            {!isAdmin && <Lock className="w-4 h-4 text-muted-foreground" />}
+          </div>
         </div>
 
         {/* Template groups */}
         {(["kunden", "intern"] as const).map((cat) => {
-          const groupTemplates = TEMPLATES.filter((t) => t.category === cat);
+          const groupTemplates = TEMPLATES.filter((t) => t.category === cat && !hiddenIds.includes(t.id));
           const groupLabel = cat === "kunden" ? "Kunden-Mails" : "Interne Mails";
           const groupDesc = cat === "kunden"
             ? "E-Mails, die direkt an Interessenten und Kunden gesendet werden"
             : "Benachrichtigungen an Vertriebsmitarbeiter und interne Nutzer";
+          if (groupTemplates.length === 0) return null;
           return (
             <div key={cat}>
               <div className="flex items-center gap-3 mb-4">
@@ -1482,6 +1519,17 @@ export default function EmailPreview() {
                       </div>
                       <p className="text-xs text-muted-foreground">{tpl.description}</p>
                       <p className="text-xs text-muted-foreground mt-1 font-mono truncate">Betreff: {tpl.subject}</p>
+                      <div className="flex justify-end mt-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-muted-foreground hover:text-destructive"
+                          title="Vorlage ausblenden"
+                          onClick={() => hideTemplate(tpl.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
 
                     {/* E-Mail row — only for email-type templates */}
