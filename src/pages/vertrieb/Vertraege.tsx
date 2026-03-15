@@ -216,7 +216,7 @@ const statusConfig: Record<string, { label: string; class: string; icon: typeof 
   gesperrt: { label: "Gesperrt", class: "bg-destructive/20 text-destructive", icon: ShieldBan },
 };
 
-const LOCKED_STATUSES = ["aktiv", "gekuendigt", "beendet", "gesperrt", "gezeichnet"];
+const LOCKED_STATUSES = ["aktiv", "eingegangen", "gekuendigt", "beendet", "gesperrt", "gezeichnet"];
 const isContractLocked = (status: string) => LOCKED_STATUSES.includes(status);
 
 
