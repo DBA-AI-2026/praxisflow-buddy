@@ -1218,6 +1218,27 @@ const MOCK_CONTRACT_PDF_DATA = {
   ],
 };
 
+const MOCK_INVOICE_PDF_DATA = {
+  invoice_number: "RE-2026-0002",
+  customer_name: "Test GmbH",
+  customer_number: "HFX-I01019",
+  adresse: "Musterstraße 12",
+  plz: "80331",
+  ort: "München",
+  rechnungs_email: "rechnung@test-gmbh.de",
+  invoice_date: new Date().toISOString().split("T")[0],
+  due_date: null,
+  positions: [
+    { description: "HFX EBM Lizenz – März 2026", quantity: 1, unit_price: 150.00 },
+  ],
+  net_amount: 150.00,
+  tax_rate: 19,
+  tax_amount: 28.50,
+  gross_amount: 178.50,
+  status: "entwurf",
+  notes: null,
+};
+
 const DEFAULT_HTML: Record<string, () => string> = {
   "lead-confirmation": buildLeadConfirmationHtml,
   "contract-customer": buildContractCustomerHtml,
