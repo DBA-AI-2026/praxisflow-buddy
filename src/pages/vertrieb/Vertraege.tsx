@@ -3000,6 +3000,12 @@ export default function Vertraege() {
               </div>
             </div>
 
+            {/* Footer: read-only for non-admins on locked contracts */}
+            {editId && editingContract && isContractLocked(editingContract.status) && !isAdmin ? (
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={closeDialog}>Schließen</Button>
+              </DialogFooter>
+            ) : (
             <DialogFooter className="flex-col gap-2">
               {/* Zeile 1: PDF-Aktionen */}
               <div className="flex flex-wrap gap-2">
@@ -3050,6 +3056,7 @@ export default function Vertraege() {
                 </TooltipProvider>
               </div>
             </DialogFooter>
+            )}
           </form>
         </DialogContent>
       </Dialog>
