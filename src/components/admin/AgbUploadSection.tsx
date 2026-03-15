@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Upload, FileText, X, Loader2, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { showPdfInViewer } from "@/lib/pdfViewerState";
 
 interface Props {
   productId: string;
@@ -72,11 +73,20 @@ export function AgbUploadSection({ productId, currentPath, onUploaded }: Props) 
 
   const handleView = async () => {
     if (!currentPath) return;
-    const { data } = await supabase.storage
-      .from("contracts")
-      .createSignedUrl(currentPath, 300);
-    if (data?.signedUrl) {
-      window.open(data.signedUrl, "_blank");
+
+    try {
+      const fileName = currentPath.split("/").pop() || "AGB.pdf";
+      const { data: blob, error } = await supabase.storage.from("contracts").download(currentPath);
+      if (error || !blob) throw error ?? new Error("Datei konnte nicht geladen werden");
+
+      const blobUrl = URL.createObjectURL(blob);
+      showPdfInViewer(blobUrl, fileName);
+    } catch (err: any) {
+      toast({
+        title: "AGB konnte nicht geöffnet werden",
+        description: err?.message || "Bitte Browser-Blocker für diese Seite prüfen.",
+        variant: "destructive",
+      });
     }
   };
 
