@@ -19,6 +19,10 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
@@ -344,6 +348,7 @@ export default function Vertraege() {
   const [emailConfirmContract, setEmailConfirmContract] = useState<any | null>(null);
   const [syncingQodiaId, setSyncingQodiaId] = useState<string | null>(null);
   const [leadTippgeberName, setLeadTippgeberName] = useState<string | null>(null);
+  const [deleteContractTarget, setDeleteContractTarget] = useState<any | null>(null);
   const { user, profile } = useAuth();
   const { isAdmin, isVertragsabteilung } = useUserRole();
   const { toast } = useToast();
@@ -2162,7 +2167,7 @@ export default function Vertraege() {
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 className="text-destructive"
-                                onClick={() => deleteMutation.mutate(c.id)}
+                                onClick={() => setDeleteContractTarget(c)}
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Löschen
@@ -3208,6 +3213,35 @@ export default function Vertraege() {
       </Dialog>
 
       <PaperContractDialog open={paperContractOpen} onOpenChange={setPaperContractOpen} />
+
+      {/* Delete Contract Confirmation */}
+      <AlertDialog open={!!deleteContractTarget} onOpenChange={(open) => !open && setDeleteContractTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Vertrag endgültig löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Der Vertrag <strong>{deleteContractTarget?.customer_name}</strong> ({deleteContractTarget?.product_name}) wird unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                if (deleteContractTarget) {
+                  deleteMutation.mutate(deleteContractTarget.id, {
+                    onSuccess: () => setDeleteContractTarget(null),
+                  });
+                }
+              }}
+            >
+              {deleteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Endgültig löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
