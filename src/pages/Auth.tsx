@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/fuchs-bildmarke.png";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 
