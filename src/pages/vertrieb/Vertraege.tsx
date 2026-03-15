@@ -3001,6 +3001,8 @@ export default function Vertraege() {
               </div>
             </div>
 
+           </fieldset>
+
             {/* Footer: read-only for non-admins on locked contracts */}
             {editId && editingContract && isContractLocked(editingContract.status) && !isAdmin ? (
               <DialogFooter>
