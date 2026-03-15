@@ -34,6 +34,7 @@ interface ContractSummary {
   praxis: string | null;
   customer_name: string;
   product_name: string;
+  modules: string[] | null;
   monthly_price: number;
   hfx_customer_number: string | null;
   fachrichtung: string | null;
@@ -41,7 +42,41 @@ interface ContractSummary {
 }
 
 interface ProductAgb {
+  name: string;
   agb_pdf_path: string | null;
+}
+
+const normalizeProductKey = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+
+function findBestProductMatch(products: ProductAgb[], candidates: Array<string | null | undefined>) {
+  const preparedCandidates = candidates
+    .flatMap((candidate) => String(candidate || "").split(","))
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (preparedCandidates.length === 0) return null;
+
+  const exactMatch = products.find((product) =>
+    preparedCandidates.some((candidate) => candidate.toLowerCase() === product.name.toLowerCase())
+  );
+  if (exactMatch) return exactMatch;
+
+  return products.find((product) => {
+    const normalizedProduct = normalizeProductKey(product.name);
+    return preparedCandidates.some((candidate) => {
+      const normalizedCandidate = normalizeProductKey(candidate);
+      return (
+        normalizedCandidate === normalizedProduct ||
+        normalizedCandidate.includes(normalizedProduct) ||
+        normalizedProduct.includes(normalizedCandidate)
+      );
+    });
+  }) ?? null;
 }
 
 const STEPS = [
