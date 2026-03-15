@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN agb_pdf_path text DEFAULT NULL;

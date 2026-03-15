@@ -13,11 +13,12 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Loader2, Package, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Package, ChevronDown, ChevronRight, Upload, FileText, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { ProductModulesSection } from "@/components/admin/ProductModulesSection";
+import { AgbUploadSection } from "@/components/admin/AgbUploadSection";
 
 interface ProductForm {
   name: string;
@@ -286,6 +287,8 @@ export default function AdminProducts() {
                               )}
                             </div>
                           )}
+                          {/* AGB PDF */}
+                          <AgbUploadSection productId={p.id} currentPath={p.agb_pdf_path} onUploaded={() => queryClient.invalidateQueries({ queryKey: ["products"] })} />
                           {/* Modules */}
                           <ProductModulesSection productId={p.id} productName={p.name} />
                         </div>

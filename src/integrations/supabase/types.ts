@@ -1239,6 +1239,7 @@ export type Database = {
       }
       products: {
         Row: {
+          agb_pdf_path: string | null
           base_license_includes: string | null
           base_license_price: number | null
           created_at: string
@@ -1263,6 +1264,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          agb_pdf_path?: string | null
           base_license_includes?: string | null
           base_license_price?: number | null
           created_at?: string
@@ -1287,6 +1289,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          agb_pdf_path?: string | null
           base_license_includes?: string | null
           base_license_price?: number | null
           created_at?: string

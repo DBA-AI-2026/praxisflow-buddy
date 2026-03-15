@@ -40,6 +40,10 @@ interface ContractSummary {
   rechtsform: string | null;
 }
 
+interface ProductAgb {
+  agb_pdf_path: string | null;
+}
+
 const STEPS = [
   { id: 1, label: "Angaben", icon: FileText },
   { id: 2, label: "Zahlung", icon: CreditCard },
@@ -106,6 +110,7 @@ export default function Buchen() {
   const productParam = searchParams.get("product");
 
   const [contract, setContract] = useState<ContractSummary | null>(null);
+  const [agbUrl, setAgbUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -136,13 +141,29 @@ export default function Buchen() {
       .eq("id", contractId)
       .eq("status", "eingegangen")
       .maybeSingle()
-      .then(({ data, error: err }) => {
+      .then(async ({ data, error: err }) => {
         if (err || !data) {
           setNotFound(true);
         } else {
           setContract(data as ContractSummary);
           if (data.fachrichtung) setFachrichtung(data.fachrichtung);
           if (data.rechtsform) setRechtsform(data.rechtsform);
+
+          // Fetch product-specific AGB PDF
+          const { data: product } = await supabase
+            .from("products")
+            .select("agb_pdf_path")
+            .eq("name", data.product_name)
+            .maybeSingle();
+
+          if ((product as any)?.agb_pdf_path) {
+            const { data: signed } = await supabase.storage
+              .from("contracts")
+              .createSignedUrl((product as any).agb_pdf_path, 3600);
+            if (signed?.signedUrl) {
+              setAgbUrl(signed.signedUrl);
+            }
+          }
         }
         setLoading(false);
       });
@@ -395,7 +416,7 @@ export default function Buchen() {
             <label htmlFor="agb" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
               Ich akzeptiere die{" "}
               <a
-                href="https://praxisflow-buddy.lovable.app/templates/vertrag-honorarfuchs.pdf"
+                href={agbUrl || "https://praxisflow-buddy.lovable.app/templates/vertrag-honorarfuchs.pdf"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline inline-flex items-center gap-0.5"
