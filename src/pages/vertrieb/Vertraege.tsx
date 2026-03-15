@@ -2093,10 +2093,27 @@ export default function Vertraege() {
                               />
                             </label>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEdit(c)}>
-                            <Pencil className="h-4 w-4 mr-2" />
-                            Bearbeiten
-                          </DropdownMenuItem>
+                          {/* Bearbeiten: nur für nicht-abgeschlossene Verträge oder Admins */}
+                          {(!isContractLocked(c.status)) ? (
+                            <DropdownMenuItem onClick={() => openEdit(c)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Bearbeiten
+                            </DropdownMenuItem>
+                          ) : isAdmin ? (
+                            <DropdownMenuItem onClick={() => {
+                              if (window.confirm("⚠️ Achtung: Sie bearbeiten einen abgeschlossenen Originalvertrag. Änderungen werden dokumentiert. Fortfahren?")) {
+                                openEdit(c);
+                              }
+                            }}>
+                              <AlertTriangle className="h-4 w-4 mr-2 text-warning" />
+                              <span className="text-warning">Bearbeiten (Admin)</span>
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={() => { openEdit(c); }} disabled={false}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              Details ansehen
+                            </DropdownMenuItem>
+                          )}
                           {(c.status === "aktiv" || c.status === "gezeichnet") && (
                             <>
                               <DropdownMenuSeparator />
