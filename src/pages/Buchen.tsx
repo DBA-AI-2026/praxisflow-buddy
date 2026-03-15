@@ -416,7 +416,7 @@ export default function Buchen() {
             <label htmlFor="agb" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
               Ich akzeptiere die{" "}
               <a
-                href="https://praxisflow-buddy.lovable.app/templates/vertrag-honorarfuchs.pdf"
+                href={agbUrl || "https://praxisflow-buddy.lovable.app/templates/vertrag-honorarfuchs.pdf"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline inline-flex items-center gap-0.5"
