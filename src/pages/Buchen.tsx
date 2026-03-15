@@ -110,6 +110,7 @@ export default function Buchen() {
   const productParam = searchParams.get("product");
 
   const [contract, setContract] = useState<ContractSummary | null>(null);
+  const [agbUrl, setAgbUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
