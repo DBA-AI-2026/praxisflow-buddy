@@ -341,13 +341,41 @@ Deno.serve(async (req) => {
     const pdfBytes = await buildContractPdf(contract as Record<string, unknown>, logoBytes);
     const pdfBase64 = toBase64(pdfBytes);
 
-    // --- Fetch AGB PDF ---
+    // --- Fetch product-specific AGB PDF (fallback to generic) ---
     let agbBase64: string | undefined;
+    let agbFilename = "AGB-Honorarfuchs.pdf";
     try {
-      const agbRes = await fetch(`${APP_URL}/templates/vertrag-honorarfuchs.pdf`);
-      if (agbRes.ok) {
-        const agbBytes = new Uint8Array(await agbRes.arrayBuffer());
-        agbBase64 = toBase64(agbBytes);
+      // Look up product-specific AGB
+      const { data: product } = await adminClient
+        .from("products")
+        .select("agb_pdf_path, name")
+        .eq("name", contract.product_name)
+        .maybeSingle();
+
+      if (product?.agb_pdf_path) {
+        // Product has a specific AGB PDF in storage
+        const { data: signed } = await adminClient.storage
+          .from("contracts")
+          .createSignedUrl(product.agb_pdf_path, 300);
+        if (signed?.signedUrl) {
+          const agbRes = await fetch(signed.signedUrl);
+          if (agbRes.ok) {
+            const agbBytes = new Uint8Array(await agbRes.arrayBuffer());
+            agbBase64 = toBase64(agbBytes);
+            // Use product name in filename
+            const safeName = (product.name || "Honorarfuchs").replace(/[^a-zA-Z0-9äöüÄÖÜß\-_.]/g, "_");
+            agbFilename = `AGB-${safeName}.pdf`;
+          }
+        }
+      }
+
+      // Fallback to generic AGB
+      if (!agbBase64) {
+        const agbRes = await fetch(`${APP_URL}/templates/vertrag-honorarfuchs.pdf`);
+        if (agbRes.ok) {
+          const agbBytes = new Uint8Array(await agbRes.arrayBuffer());
+          agbBase64 = toBase64(agbBytes);
+        }
       }
     } catch { /* skip AGB */ }
 
