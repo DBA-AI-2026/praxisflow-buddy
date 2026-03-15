@@ -2212,7 +2212,7 @@ export default function Vertraege() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form autoComplete="off" onSubmit={handleSubmit} className="space-y-5">
            <fieldset disabled={!!(editId && editingContract && isContractLocked(editingContract.status) && !isAdmin)} className="space-y-5">
             {/* Vertragsparteien */}
             <div className="space-y-3">

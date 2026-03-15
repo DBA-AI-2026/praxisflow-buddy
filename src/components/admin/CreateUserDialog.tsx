@@ -193,7 +193,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
                 Erstellen Sie einen neuen Benutzer mit E-Mail und Rolle.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form autoComplete="off" onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="fullName">Name</Label>
                 <Input

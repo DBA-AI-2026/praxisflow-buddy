@@ -304,7 +304,7 @@ export default function AdminProducts() {
           <DialogHeader>
             <DialogTitle>{editId ? "Produkt bearbeiten" : "Neues Produkt"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form autoComplete="off" onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label>Produktname *</Label>
               <Input value={form.name} onChange={(e) => set("name", e.target.value)} required placeholder="z.B. HFX GOÄ" />

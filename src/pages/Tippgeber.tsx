@@ -163,7 +163,7 @@ export default function TippgeberPage() {
               <CardDescription>Felder mit * sind Pflichtfelder. Nach dem Speichern erhalten Sie eine Bestätigungsmail.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <form autoComplete="off" onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="arzt_name">Name des Arztes *</Label>
                   <Input

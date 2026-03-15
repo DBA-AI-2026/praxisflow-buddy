@@ -297,7 +297,7 @@ export default function Reservierungen() {
               </div>
             )}
             
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form autoComplete="off" onSubmit={handleSubmit} className="space-y-4">
               {/* Praxis Info */}
               <div className="space-y-4">
                 <div>

@@ -307,7 +307,7 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
+          <form autoComplete="off" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
             {/* Praxis */}
             <FormField
               control={form.control}
