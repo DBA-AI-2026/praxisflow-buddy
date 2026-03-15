@@ -10,7 +10,7 @@ import { html } from "@codemirror/lang-html";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { useUserRole } from "@/hooks/useUserRole";
 import { generateContractPdf } from "@/lib/generateContractPdf";
-import { generateInvoicePdfV2 } from "@/lib/generateInvoicePdfV2";
+import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
 import { showPdfInViewer } from "@/lib/pdfViewerState";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -1296,7 +1296,7 @@ export default function EmailPreview() {
 
       let pdfBytes: Uint8Array;
       if (tpl.id === "invoice") {
-        pdfBytes = await generateInvoicePdfV2(MOCK_INVOICE_PDF_DATA, logoBytes);
+        pdfBytes = await generateInvoicePdf(MOCK_INVOICE_PDF_DATA, logoBytes);
       } else {
         pdfBytes = await generateContractPdf(MOCK_CONTRACT_PDF_DATA, logoBytes);
       }
