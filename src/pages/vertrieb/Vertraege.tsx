@@ -1187,7 +1187,7 @@ export default function Vertraege() {
     praxisanschrift: "Adresse (Straße, Hausnummer)",
     plz: "PLZ",
     ort: "Ort",
-    sales_partner_name: "Vertriebspartner",
+    
     start_date: "Vertragsbeginn",
   };
 
