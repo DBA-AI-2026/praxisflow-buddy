@@ -162,6 +162,8 @@ export default function Dashboard() {
   // Live KPIs from DB
   const { data: kpis } = useQuery({
     queryKey: ["dashboard-kpis"],
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const [praxen, demos, tickets, contracts, revenues] = await Promise.all([
         supabase.from("praxen").select("id", { count: "exact", head: true }).eq("status", "aktiv"),
