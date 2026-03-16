@@ -162,6 +162,8 @@ export default function Dashboard() {
   // Live KPIs from DB
   const { data: kpis } = useQuery({
     queryKey: ["dashboard-kpis"],
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const [praxen, demos, tickets, contracts, revenues] = await Promise.all([
         supabase.from("praxen").select("id", { count: "exact", head: true }).eq("status", "aktiv"),
@@ -184,6 +186,8 @@ export default function Dashboard() {
   // Recent contracts
   const { data: recentContracts = [] } = useQuery({
     queryKey: ["dashboard-recent-contracts"],
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data } = await supabase
         .from("contracts")
@@ -197,6 +201,8 @@ export default function Dashboard() {
   // Recent leads
   const { data: recentLeads = [] } = useQuery({
     queryKey: ["dashboard-recent-leads"],
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data } = await supabase
         .from("leads")
@@ -229,6 +235,8 @@ export default function Dashboard() {
   const { data: activityFeed = [] } = useQuery({
     queryKey: ["dashboard-activity", role],
     enabled: !!role,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const since = subHours(new Date(), 48).toISOString();
       const items: ActivityItem[] = [];
