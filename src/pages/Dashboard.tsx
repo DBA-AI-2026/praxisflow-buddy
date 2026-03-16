@@ -235,6 +235,8 @@ export default function Dashboard() {
   const { data: activityFeed = [] } = useQuery({
     queryKey: ["dashboard-activity", role],
     enabled: !!role,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const since = subHours(new Date(), 48).toISOString();
       const items: ActivityItem[] = [];
