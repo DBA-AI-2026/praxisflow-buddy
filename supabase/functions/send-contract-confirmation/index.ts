@@ -507,76 +507,106 @@ Deno.serve(async (req) => {
           </td>
         </tr>`;
 
-      html = `<!DOCTYPE html>
-<html lang="de">
+      html = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="x-apple-disable-message-reformatting" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <title>Ihr HFX-Vertrag – jetzt verbindlich buchen</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:AllowPNG/>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <style>
+    table { border-collapse: collapse; }
+    td, th { font-family: Arial, sans-serif; }
+    a { text-decoration: none; }
+  </style>
+  <![endif]-->
+  <style type="text/css">
+    body, table, td { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    body { margin: 0; padding: 0; width: 100% !important; }
+    @media only screen and (max-width: 620px) {
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .mobile-padding { padding-left: 20px !important; padding-right: 20px !important; }
+      .mobile-full { width: 100% !important; }
+    }
+  </style>
 </head>
-<body style="margin:0;padding:0;background:#f4f6fa;font-family:Verdana,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fa;padding:40px 0;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.10);max-width:600px;">
+<body style="margin:0;padding:0;background-color:#f4f6fa;font-family:Arial,Verdana,sans-serif;width:100%;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f6fa;">
+    <tr><td align="center" style="padding:40px 10px;">
+
+      <!--[if mso]><table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" align="center"><tr><td><![endif]-->
+      <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="background-color:#ffffff;max-width:600px;width:100%;">
 
         <!-- Header -->
         <tr>
-          <td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:36px 40px;text-align:center;">
+          <td align="center" style="background-color:#0b367f;padding:36px 40px;" class="mobile-padding">
             <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg"
               alt="HFX Honorarfuchs" width="60" height="60"
-              style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin:0 auto 12px;display:block;" />
-            <p style="color:#ffffff;font-size:24px;font-weight:700;margin:0;letter-spacing:-0.5px;">HFX Honorarfuchs</p>
-            <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:6px 0 0;">Ihr Vertrag wartet auf Ihre Buchung</p>
+              style="width:60px;height:60px;display:block;margin:0 auto 12px auto;border:0;" />
+            <p style="color:#ffffff;font-size:24px;font-weight:700;margin:0;font-family:Arial,Verdana,sans-serif;">HFX Honorarfuchs</p>
+            <p style="color:#cccccc;font-size:13px;margin:6px 0 0;font-family:Arial,Verdana,sans-serif;">Ihr Vertrag wartet auf Ihre Buchung</p>
           </td>
         </tr>
 
         <!-- Greeting -->
         <tr>
-          <td style="padding:36px 40px 24px;">
-            <p style="color:#1a1a2e;font-size:16px;margin:0 0 12px;">Guten Tag${contract.vorname ? ` ${contract.vorname} ${contract.nachname || ""}` : ""},</p>
-            <p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 12px;">
-              wir haben Ihren Vertrag erhalten und für Sie vorbereitet. Mit einem Klick auf den Button unten schließen Sie die Buchung kostenpflichtig ab – Ihr Vertrag wird danach automatisch aktiviert.
+          <td style="padding:36px 40px 24px;font-family:Arial,Verdana,sans-serif;" class="mobile-padding">
+            <p style="color:#1a1a2e;font-size:16px;margin:0 0 12px;font-family:Arial,Verdana,sans-serif;">Guten Tag${contract.vorname ? ` ${contract.vorname} ${contract.nachname || ""}` : ""},</p>
+            <p style="color:#374151;font-size:14px;line-height:22px;margin:0 0 12px;font-family:Arial,Verdana,sans-serif;">
+              wir haben Ihren Vertrag erhalten und f&uuml;r Sie vorbereitet. Mit einem Klick auf den Button unten schlie&szlig;en Sie die Buchung kostenpflichtig ab &ndash; Ihr Vertrag wird danach automatisch aktiviert.
             </p>
-            <p style="color:#374151;font-size:14px;line-height:1.7;margin:0;">
-              Im Anhang finden Sie Ihre Vertragsübersicht sowie unsere AGB als PDF.
+            <p style="color:#374151;font-size:14px;line-height:22px;margin:0;font-family:Arial,Verdana,sans-serif;">
+              Im Anhang finden Sie Ihre Vertrags&uuml;bersicht sowie unsere AGB als PDF.
             </p>
           </td>
         </tr>
 
         <!-- Contract Details Box -->
         <tr>
-          <td style="padding:0 40px 28px;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;overflow:hidden;">
+          <td style="padding:0 40px 28px;" class="mobile-padding">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e2e8f0;">
               <tr>
-                <td style="background:#0b367f;padding:12px 20px;">
-                  <p style="color:#ffffff;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin:0;">📋 Ihre Vertragsdetails</p>
+                <td style="background-color:#0b367f;padding:12px 20px;">
+                  <p style="color:#ffffff;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0;font-family:Arial,Verdana,sans-serif;">Ihre Vertragsdetails</p>
                 </td>
               </tr>
               <tr>
-                <td style="padding:20px;">
-                  <table width="100%" cellpadding="0" cellspacing="0">
+                <td style="padding:20px;background-color:#f8fafc;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                     ${contract.hfx_customer_number ? `
                     <tr>
-                      <td style="padding:6px 0;font-size:13px;color:#6b7280;width:160px;vertical-align:top;">HFX-Kundennummer</td>
-                      <td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;font-family:monospace;">${contract.hfx_customer_number}</td>
+                      <td width="160" valign="top" style="padding:6px 0;font-size:13px;color:#6b7280;font-family:Arial,Verdana,sans-serif;">HFX-Kundennummer</td>
+                      <td valign="top" style="padding:6px 0;font-size:13px;color:#111827;font-weight:bold;font-family:Courier New,monospace;">${contract.hfx_customer_number}</td>
                     </tr>` : ""}
                     <tr>
-                      <td style="padding:6px 0;font-size:13px;color:#6b7280;width:160px;vertical-align:top;">Produkt</td>
-                      <td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">${contract.product_name}</td>
+                      <td width="160" valign="top" style="padding:6px 0;font-size:13px;color:#6b7280;font-family:Arial,Verdana,sans-serif;">Produkt</td>
+                      <td valign="top" style="padding:6px 0;font-size:13px;color:#111827;font-weight:bold;font-family:Arial,Verdana,sans-serif;">${contract.product_name}</td>
                     </tr>
                     ${contract.praxis ? `
                     <tr>
-                      <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Praxis</td>
-                      <td style="padding:6px 0;font-size:13px;color:#111827;">${contract.praxis}</td>
+                      <td width="160" valign="top" style="padding:6px 0;font-size:13px;color:#6b7280;font-family:Arial,Verdana,sans-serif;">Praxis</td>
+                      <td valign="top" style="padding:6px 0;font-size:13px;color:#111827;font-family:Arial,Verdana,sans-serif;">${contract.praxis}</td>
                     </tr>` : ""}
-                     <tr>
-                       <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Monatspreis</td>
-                       <td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">${priceFormatted}</td>
-                     </tr>
-                     <tr>
-                       <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Kündigung</td>
-                       <td style="padding:6px 0;font-size:13px;color:#111827;">Unbefristet · 6 Monate Frist zum Monatsende</td>
-                     </tr>
+                    <tr>
+                      <td width="160" valign="top" style="padding:6px 0;font-size:13px;color:#6b7280;font-family:Arial,Verdana,sans-serif;">Monatspreis</td>
+                      <td valign="top" style="padding:6px 0;font-size:13px;color:#111827;font-weight:bold;font-family:Arial,Verdana,sans-serif;">${priceFormatted}</td>
+                    </tr>
+                    <tr>
+                      <td width="160" valign="top" style="padding:6px 0;font-size:13px;color:#6b7280;font-family:Arial,Verdana,sans-serif;">K&uuml;ndigung</td>
+                      <td valign="top" style="padding:6px 0;font-size:13px;color:#111827;font-family:Arial,Verdana,sans-serif;">Unbefristet &middot; 6 Monate Frist zum Monatsende</td>
+                    </tr>
                   </table>
                 </td>
               </tr>
@@ -584,23 +614,54 @@ Deno.serve(async (req) => {
           </td>
         </tr>
 
-        ${ctaBlock}
+        <!-- CTA Block -->
+        <tr>
+          <td style="padding:0 40px 28px;" class="mobile-padding">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0b367f;">
+              <tr><td style="padding:28px 32px;text-align:center;">
+                <p style="color:#cccccc;font-size:14px;line-height:22px;margin:0 0 20px;font-family:Arial,Verdana,sans-serif;">
+                  Ihr Vertrag wurde f&uuml;r Sie vorbereitet.<br />
+                  Bitte schlie&szlig;en Sie die Buchung verbindlich ab &ndash; Ihre Zahlung aktiviert den Vertrag automatisch.
+                </p>
+                <!--[if mso]>
+                <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${buchenUrl}" style="height:50px;v-text-anchor:middle;width:280px;" arcsize="16%" strokecolor="#ffffff" fillcolor="#ffffff">
+                  <w:anchorlock/>
+                  <center style="color:#0b367f;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;">Verbindlich buchen &rarr;</center>
+                </v:roundrect>
+                <![endif]-->
+                <!--[if !mso]><!-->
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+                  <tr><td style="background-color:#ffffff;padding:16px 40px;text-align:center;">
+                    <a href="${buchenUrl}"
+                       style="display:inline-block;color:#0b367f;font-size:16px;font-weight:bold;text-decoration:none;font-family:Arial,Verdana,sans-serif;">
+                      Verbindlich buchen &rarr;
+                    </a>
+                  </td></tr>
+                </table>
+                <!--<![endif]-->
+                <p style="color:#999999;font-size:11px;margin:14px 0 0;font-family:Arial,Verdana,sans-serif;">
+                  Sichere Zahlung via Stripe &middot; Kreditkarte oder SEPA-Lastschrift &middot; SSL-verschl&uuml;sselt
+                </p>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
 
         <!-- AGB hint -->
         <tr>
-          <td style="padding:0 40px 16px;">
-            <p style="color:#6b7280;font-size:12px;line-height:1.6;margin:0;">
-              📄 Die AGB und Ihre Vertragsübersicht finden Sie als PDF im Anhang dieser E-Mail.
+          <td style="padding:0 40px 16px;" class="mobile-padding">
+            <p style="color:#6b7280;font-size:12px;line-height:19px;margin:0;font-family:Arial,Verdana,sans-serif;">
+              Die AGB und Ihre Vertrags&uuml;bersicht finden Sie als PDF im Anhang dieser E-Mail.
             </p>
           </td>
         </tr>
 
         <!-- Sign-off -->
         <tr>
-          <td style="padding:0 40px 32px;">
-            <p style="color:#374151;font-size:14px;line-height:1.7;margin:0;">
-              Bei Fragen stehen wir Ihnen gerne unter <a href="mailto:info@hfx-honorarfuchs.de" style="color:#0b367f;">info@hfx-honorarfuchs.de</a> zur Verfügung.<br><br>
-              Mit freundlichen Grüßen,<br>
+          <td style="padding:0 40px 32px;" class="mobile-padding">
+            <p style="color:#374151;font-size:14px;line-height:22px;margin:0;font-family:Arial,Verdana,sans-serif;">
+              Bei Fragen stehen wir Ihnen gerne unter <a href="mailto:info@hfx-honorarfuchs.de" style="color:#0b367f;">info@hfx-honorarfuchs.de</a> zur Verf&uuml;gung.<br /><br />
+              Mit freundlichen Gr&uuml;&szlig;en,<br />
               <strong>Ihr HFX Honorarfuchs Team</strong>
             </p>
           </td>
@@ -608,15 +669,17 @@ Deno.serve(async (req) => {
 
         <!-- Footer -->
         <tr>
-          <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
-            <p style="color:#9ca3af;font-size:11px;margin:0;">
-              HFX Honorarfuchs • Diese E-Mail wurde automatisch generiert.<br>
-              © ${new Date().getFullYear()} HFX Honorarfuchs GmbH
+          <td style="background-color:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;" class="mobile-padding">
+            <p style="color:#9ca3af;font-size:11px;margin:0;font-family:Arial,Verdana,sans-serif;">
+              HFX Honorarfuchs &bull; Diese E-Mail wurde automatisch generiert.<br />
+              &copy; ${new Date().getFullYear()} HFX Honorarfuchs GmbH
             </p>
           </td>
         </tr>
 
       </table>
+      <!--[if mso]></td></tr></table><![endif]-->
+
     </td></tr>
   </table>
 </body>
