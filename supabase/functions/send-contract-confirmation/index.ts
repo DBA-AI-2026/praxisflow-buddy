@@ -689,7 +689,7 @@ Deno.serve(async (req) => {
           `Produkt: ${contract.product_name}`,
           contract.praxis ? `Praxis: ${contract.praxis}` : null,
           `Monatspreis: ${priceFormatted}`,
-          "Kündigung: Unbefristet, 6 Monate Frist zum Monatsende",
+          
           "",
           `Bitte schließen Sie die Buchung verbindlich ab:\n${buchenUrl}`,
           "",
