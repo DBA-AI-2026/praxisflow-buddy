@@ -30,6 +30,8 @@ const RECHTSFORMEN = [
   "Sonstiges",
 ];
 
+const DEFAULT_AGB_URL = "https://praxisflow-buddy.lovable.app/templates/vertrag-honorarfuchs.pdf";
+
 interface ContractSummary {
   praxis: string | null;
   customer_name: string;
