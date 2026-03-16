@@ -514,8 +514,9 @@ Deno.serve(async (req) => {
     body { margin: 0; padding: 0; width: 100% !important; }
     @media only screen and (max-width: 620px) {
       .email-container { width: 100% !important; max-width: 100% !important; }
-      .mobile-padding { padding-left: 20px !important; padding-right: 20px !important; }
+      .mobile-padding { padding-left: 12px !important; padding-right: 12px !important; }
       .mobile-full { width: 100% !important; }
+      .cta-inner { padding-left: 12px !important; padding-right: 12px !important; }
     }
   </style>
 </head>
