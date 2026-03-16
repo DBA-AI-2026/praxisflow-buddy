@@ -602,20 +602,18 @@ Deno.serve(async (req) => {
                   Bitte schlie&szlig;en Sie die Buchung verbindlich ab &ndash; Ihre Zahlung aktiviert den Vertrag automatisch.
                 </p>
                 <!--[if mso]>
-                <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${buchenUrl}" style="height:50px;v-text-anchor:middle;width:280px;" arcsize="16%" strokecolor="#ffffff" fillcolor="#ffffff">
+                <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${buchenUrl}" style="height:50px;v-text-anchor:middle;width:260px;" arcsize="16%" strokecolor="#ffffff" fillcolor="#ffffff">
                   <w:anchorlock/>
-                  <center style="color:#0b367f;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;">Verbindlich buchen &#8594;</center>
+                  <center style="color:#0b367f;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;">Jetzt buchen</center>
                 </v:roundrect>
                 <![endif]-->
                 <!--[if !mso]><!-->
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="width:auto;max-width:100%;">
-                  <tr><td style="background-color:#ffffff;padding:16px 32px;text-align:center;border-radius:8px;">
-                    <a href="${buchenUrl}"
-                       style="display:block;color:#0b367f;font-size:15px;font-weight:bold;text-decoration:none;font-family:Arial,Verdana,sans-serif;white-space:nowrap;">
-                      Verbindlich buchen &#8594;
-                    </a>
-                  </td></tr>
-                </table>
+                <div style="text-align:center;">
+                  <a href="${buchenUrl}"
+                     style="display:inline-block;background-color:#ffffff;color:#0b367f;font-size:16px;font-weight:bold;text-decoration:none;font-family:Arial,Verdana,sans-serif;padding:16px 40px;border-radius:8px;mso-padding-alt:0;text-align:center;">
+                    Jetzt buchen &#8594;
+                  </a>
+                </div>
                 <!--<![endif]-->
                 <p style="color:#999999;font-size:11px;margin:14px 0 0;font-family:Arial,Verdana,sans-serif;">
                   Sichere Zahlung via Stripe &middot; Kreditkarte oder SEPA-Lastschrift &middot; SSL-verschl&uuml;sselt
