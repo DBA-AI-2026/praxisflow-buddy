@@ -581,10 +581,6 @@ Deno.serve(async (req) => {
                       <td width="160" valign="top" style="padding:6px 0;font-size:13px;color:#6b7280;font-family:Arial,Verdana,sans-serif;">Monatspreis</td>
                       <td valign="top" style="padding:6px 0;font-size:13px;color:#111827;font-weight:bold;font-family:Arial,Verdana,sans-serif;">${priceFormatted}</td>
                     </tr>
-                    <tr>
-                      <td width="160" valign="top" style="padding:6px 0;font-size:13px;color:#6b7280;font-family:Arial,Verdana,sans-serif;">K&uuml;ndigung</td>
-                      <td valign="top" style="padding:6px 0;font-size:13px;color:#111827;font-family:Arial,Verdana,sans-serif;">Unbefristet &middot; 6 Monate Frist zum Monatsende</td>
-                    </tr>
                   </table>
                 </td>
               </tr>
@@ -693,7 +689,7 @@ Deno.serve(async (req) => {
           `Produkt: ${contract.product_name}`,
           contract.praxis ? `Praxis: ${contract.praxis}` : null,
           `Monatspreis: ${priceFormatted}`,
-          "Kündigung: Unbefristet, 6 Monate Frist zum Monatsende",
+          
           "",
           `Bitte schließen Sie die Buchung verbindlich ab:\n${buchenUrl}`,
           "",
