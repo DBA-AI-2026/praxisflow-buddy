@@ -271,6 +271,7 @@ export default function Dashboard() {
           const { data: leads } = await supabase
             .from("leads")
             .select("id, praxis_name, vorname, nachname, status, created_at, updated_at")
+            .not("status", "eq", "kunde")
             .gte("updated_at", since)
             .order("updated_at", { ascending: false })
             .limit(8);
