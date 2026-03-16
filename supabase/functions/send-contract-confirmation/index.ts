@@ -228,11 +228,11 @@ async function buildContractPdf(contract: Record<string, unknown>, logoBytes?: A
   y -= 6;
 
   // Laufzeit
-  sectionHeader("LAUFZEIT & KÜNDIGUNG");
+  sectionHeader("LAUFZEIT");
   const endDateLabel = endDate === "2099-12-31" ? "Unbefristet" : formatDate(endDate);
   const laufzeitLabel = durationMonths === 0 ? "Unbefristet" : `${durationMonths} Monate`;
   fieldRow("Vertragsbeginn", formatDate(contract.start_date as string), "Vertragsende", endDateLabel);
-  fieldRow("Laufzeit", laufzeitLabel, "Kündigungsfrist", `${contract.cancellation_period_months ?? 6} Monate zum Monatsende`);
+  fieldRow("Laufzeit", laufzeitLabel);
   y -= 10;
 
   // Preisübersicht
