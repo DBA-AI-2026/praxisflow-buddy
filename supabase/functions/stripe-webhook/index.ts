@@ -569,8 +569,7 @@ async function sendVertragsbestaetigung(
   drawRow("Vertragsbeginn", startFormatted);
   drawRow("Monatspreis netto", `${netFormatted} €`);
   drawRow("Monatspreis brutto (inkl. 19% MwSt.)", `${grossFormatted} €`, true);
-  drawRow("Laufzeit", "Unbefristet");
-  drawRow("Kündigungsfrist", "6 Monate zum Monatsende");
+   drawRow("Laufzeit", "Unbefristet");
   drawRow("Zahlung", "Automatisch via Stripe (monatlich)");
 
   y -= 20;
