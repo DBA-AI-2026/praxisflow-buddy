@@ -514,8 +514,9 @@ Deno.serve(async (req) => {
     body { margin: 0; padding: 0; width: 100% !important; }
     @media only screen and (max-width: 620px) {
       .email-container { width: 100% !important; max-width: 100% !important; }
-      .mobile-padding { padding-left: 20px !important; padding-right: 20px !important; }
+      .mobile-padding { padding-left: 12px !important; padding-right: 12px !important; }
       .mobile-full { width: 100% !important; }
+      .cta-inner { padding-left: 12px !important; padding-right: 12px !important; }
     }
   </style>
 </head>
@@ -595,7 +596,7 @@ Deno.serve(async (req) => {
         <tr>
           <td style="padding:0 40px 28px;" class="mobile-padding">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0b367f;">
-              <tr><td style="padding:28px 32px;text-align:center;">
+              <tr><td style="padding:28px 16px;text-align:center;">
                 <p style="color:#cccccc;font-size:14px;line-height:22px;margin:0 0 20px;font-family:Arial,Verdana,sans-serif;">
                   Ihr Vertrag wurde f&uuml;r Sie vorbereitet.<br />
                   Bitte schlie&szlig;en Sie die Buchung verbindlich ab &ndash; Ihre Zahlung aktiviert den Vertrag automatisch.
@@ -603,15 +604,15 @@ Deno.serve(async (req) => {
                 <!--[if mso]>
                 <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${buchenUrl}" style="height:50px;v-text-anchor:middle;width:280px;" arcsize="16%" strokecolor="#ffffff" fillcolor="#ffffff">
                   <w:anchorlock/>
-                  <center style="color:#0b367f;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;">Verbindlich buchen &rarr;</center>
+                  <center style="color:#0b367f;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;">Verbindlich buchen &#8594;</center>
                 </v:roundrect>
                 <![endif]-->
                 <!--[if !mso]><!-->
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
-                  <tr><td style="background-color:#ffffff;padding:16px 40px;text-align:center;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="width:auto;max-width:100%;">
+                  <tr><td style="background-color:#ffffff;padding:16px 32px;text-align:center;border-radius:8px;">
                     <a href="${buchenUrl}"
-                       style="display:inline-block;color:#0b367f;font-size:16px;font-weight:bold;text-decoration:none;font-family:Arial,Verdana,sans-serif;">
-                      Verbindlich buchen &rarr;
+                       style="display:block;color:#0b367f;font-size:15px;font-weight:bold;text-decoration:none;font-family:Arial,Verdana,sans-serif;white-space:nowrap;">
+                      Verbindlich buchen &#8594;
                     </a>
                   </td></tr>
                 </table>
