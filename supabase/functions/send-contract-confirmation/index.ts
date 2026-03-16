@@ -482,30 +482,7 @@ Deno.serve(async (req) => {
       // Default hardcoded template
       console.log("[send-contract-confirmation] Using default booking-link template");
 
-      const ctaBlock = `
-        <tr>
-          <td style="padding:0 40px 28px;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#0b367f,#1a4a9e);border-radius:10px;overflow:hidden;">
-              <tr><td style="padding:28px 32px;text-align:center;">
-                <p style="color:rgba(255,255,255,0.9);font-size:14px;line-height:1.6;margin:0 0 20px;">
-                  Ihr Vertrag wurde für Sie vorbereitet.<br>
-                  Bitte schließen Sie die Buchung verbindlich ab – Ihre Zahlung aktiviert den Vertrag automatisch.
-                </p>
-                <table cellpadding="0" cellspacing="0" align="center">
-                  <tr><td style="background:#ffffff;border-radius:8px;padding:0;">
-                    <a href="${buchenUrl}"
-                       style="display:block;padding:16px 40px;color:#0b367f;font-size:16px;font-weight:700;text-decoration:none;letter-spacing:0.01em;">
-                      Verbindlich buchen →
-                    </a>
-                  </td></tr>
-                </table>
-                <p style="color:rgba(255,255,255,0.6);font-size:11px;margin:14px 0 0;">
-                  Sichere Zahlung via Stripe · Kreditkarte oder SEPA-Lastschrift · SSL-verschlüsselt
-                </p>
-              </td></tr>
-            </table>
-          </td>
-        </tr>`;
+      // CTA block is now inlined in the template below
 
       html = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="de">
