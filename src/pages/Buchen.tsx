@@ -148,6 +148,7 @@ export default function Buchen() {
 
   const [contract, setContract] = useState<ContractSummary | null>(null);
   const [agbUrl, setAgbUrl] = useState<string | null>(null);
+  const [hasProductSpecificAgb, setHasProductSpecificAgb] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
