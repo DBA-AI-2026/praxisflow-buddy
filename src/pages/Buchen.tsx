@@ -462,11 +462,17 @@ export default function Buchen() {
             <label htmlFor="agb" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
               Ich akzeptiere die{" "}
               <a
-                href={agbUrl || "https://praxisflow-buddy.lovable.app/templates/vertrag-honorarfuchs.pdf"}
+                href={agbUrl || (hasProductSpecificAgb ? "#" : DEFAULT_AGB_URL)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline inline-flex items-center gap-0.5"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  if (!agbUrl && hasProductSpecificAgb) {
+                    e.preventDefault();
+                    return;
+                  }
+                  e.stopPropagation();
+                }}
               >
                 Allgemeinen Geschäftsbedingungen (AGB)
                 <ExternalLink className="h-3 w-3" />
