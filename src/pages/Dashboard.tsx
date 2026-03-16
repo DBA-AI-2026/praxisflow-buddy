@@ -201,6 +201,8 @@ export default function Dashboard() {
   // Recent leads
   const { data: recentLeads = [] } = useQuery({
     queryKey: ["dashboard-recent-leads"],
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data } = await supabase
         .from("leads")
