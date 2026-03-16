@@ -207,6 +207,7 @@ export default function Dashboard() {
       const { data } = await supabase
         .from("leads")
         .select("id, praxis_name, vorname, nachname, status, created_at, abrechnungszentrum, qodia_synced")
+        .not("status", "eq", "kunde")
         .order("created_at", { ascending: false })
         .limit(5);
       return data ?? [];
