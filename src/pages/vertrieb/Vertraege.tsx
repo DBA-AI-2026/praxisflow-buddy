@@ -1538,9 +1538,63 @@ export default function Vertraege() {
     }
   };
 
+  const normalizeProductKey = (value: string) =>
+    value
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, "");
+
+  const resolveProductAgbPath = (contractData: Record<string, any>) => {
+    const candidates = [
+      ...(Array.isArray(contractData.modules) ? contractData.modules : []),
+      ...(Array.isArray(contractData.selected_products) ? contractData.selected_products : []),
+      ...String(contractData.product_name || "").split(","),
+    ]
+      .map((name) => String(name || "").trim())
+      .filter(Boolean);
+
+    if (candidates.length === 0) return null;
+
+    const exactMatch = products.find((product: any) =>
+      product?.agb_pdf_path &&
+      candidates.some((candidate) => candidate.toLowerCase() === String(product.name || "").toLowerCase())
+    );
+    if (exactMatch?.agb_pdf_path) return exactMatch.agb_pdf_path as string;
+
+    const fuzzyMatch = products.find((product: any) => {
+      if (!product?.agb_pdf_path || !product?.name) return false;
+      const normalizedProduct = normalizeProductKey(String(product.name));
+      return candidates.some((candidate) => {
+        const normalizedCandidate = normalizeProductKey(candidate);
+        return (
+          normalizedCandidate === normalizedProduct ||
+          normalizedCandidate.includes(normalizedProduct) ||
+          normalizedProduct.includes(normalizedCandidate)
+        );
+      });
+    });
+
+    return (fuzzyMatch?.agb_pdf_path as string | null) ?? null;
+  };
+
   const handleTemplatePdf = async (contractData: Record<string, any>) => {
     try {
-      // Load the template PDF
+      // Prefer product-specific AGB in preview (e.g. HFX GOÄ)
+      const productAgbPath = resolveProductAgbPath(contractData);
+      if (productAgbPath) {
+        const { data: agbBlob, error: agbError } = await supabase.storage
+          .from("contracts")
+          .download(productAgbPath);
+
+        if (!agbError && agbBlob) {
+          const agbBytes = await agbBlob.arrayBuffer();
+          openPdfBlob(new Uint8Array(agbBytes));
+          return;
+        }
+      }
+
+      // Fallback: standard template PDF
       const templateRes = await fetch("/templates/vertrag-honorarfuchs.pdf");
       const templateBytes = await templateRes.arrayBuffer();
 
