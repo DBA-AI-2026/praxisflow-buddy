@@ -186,6 +186,8 @@ export default function Dashboard() {
   // Recent contracts
   const { data: recentContracts = [] } = useQuery({
     queryKey: ["dashboard-recent-contracts"],
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data } = await supabase
         .from("contracts")
