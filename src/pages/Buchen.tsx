@@ -201,12 +201,14 @@ export default function Buchen() {
           ]);
 
           if (matchedProduct?.agb_pdf_path) {
+            setHasProductSpecificAgb(true);
             const { data: signed } = await supabase.storage
               .from("contracts")
               .createSignedUrl(matchedProduct.agb_pdf_path, 3600);
-            if (signed?.signedUrl) {
-              setAgbUrl(signed.signedUrl);
-            }
+            setAgbUrl(signed?.signedUrl ?? null);
+          } else {
+            setHasProductSpecificAgb(false);
+            setAgbUrl(DEFAULT_AGB_URL);
           }
         }
         setLoading(false);
