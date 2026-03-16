@@ -30,6 +30,8 @@ const RECHTSFORMEN = [
   "Sonstiges",
 ];
 
+const DEFAULT_AGB_URL = "https://praxisflow-buddy.lovable.app/templates/vertrag-honorarfuchs.pdf";
+
 interface ContractSummary {
   praxis: string | null;
   customer_name: string;
@@ -146,6 +148,7 @@ export default function Buchen() {
 
   const [contract, setContract] = useState<ContractSummary | null>(null);
   const [agbUrl, setAgbUrl] = useState<string | null>(null);
+  const [hasProductSpecificAgb, setHasProductSpecificAgb] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -198,12 +201,14 @@ export default function Buchen() {
           ]);
 
           if (matchedProduct?.agb_pdf_path) {
+            setHasProductSpecificAgb(true);
             const { data: signed } = await supabase.storage
               .from("contracts")
               .createSignedUrl(matchedProduct.agb_pdf_path, 3600);
-            if (signed?.signedUrl) {
-              setAgbUrl(signed.signedUrl);
-            }
+            setAgbUrl(signed?.signedUrl ?? null);
+          } else {
+            setHasProductSpecificAgb(false);
+            setAgbUrl(DEFAULT_AGB_URL);
           }
         }
         setLoading(false);
@@ -457,11 +462,17 @@ export default function Buchen() {
             <label htmlFor="agb" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
               Ich akzeptiere die{" "}
               <a
-                href={agbUrl || "https://praxisflow-buddy.lovable.app/templates/vertrag-honorarfuchs.pdf"}
+                href={agbUrl || (hasProductSpecificAgb ? "#" : DEFAULT_AGB_URL)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline inline-flex items-center gap-0.5"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  if (!agbUrl && hasProductSpecificAgb) {
+                    e.preventDefault();
+                    return;
+                  }
+                  e.stopPropagation();
+                }}
               >
                 Allgemeinen Geschäftsbedingungen (AGB)
                 <ExternalLink className="h-3 w-3" />
