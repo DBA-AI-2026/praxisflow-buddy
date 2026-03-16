@@ -290,6 +290,7 @@ export default function Auth() {
                     <Input
                       id="login-email"
                       type="email"
+                      autoComplete="username"
                       placeholder="ihre.email@example.com"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
@@ -311,6 +312,7 @@ export default function Auth() {
                     <Input
                       id="login-password"
                       type="password"
+                      autoComplete="current-password"
                       placeholder="••••••••"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
