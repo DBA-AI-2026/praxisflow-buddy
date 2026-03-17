@@ -482,28 +482,45 @@ export default function Interessenten() {
                         )}
                       </TableCell>
                       <TableCell className="text-center">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              {lead.qodia_synced ? (
-                                <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
-                              ) : (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 mx-auto text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                                  disabled={syncingQodia}
-                                  onClick={() => syncToQodia(lead.id)}
-                                >
-                                  <RefreshCw className={`h-3.5 w-3.5 ${syncingQodia ? "animate-spin" : ""}`} />
-                                </Button>
-                              )}
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {lead.qodia_synced ? "Bei Qodia registriert" : "Noch nicht bei Qodia – klicken zum Synchronisieren"}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <div className="flex flex-col items-center gap-0.5">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                {lead.qodia_synced ? (
+                                  <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 mx-auto text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                    disabled={syncingQodia}
+                                    onClick={() => syncToQodia(lead.id)}
+                                  >
+                                    <RefreshCw className={`h-3.5 w-3.5 ${syncingQodia ? "animate-spin" : ""}`} />
+                                  </Button>
+                                )}
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {lead.qodia_synced ? "Bei Qodia registriert" : "Noch nicht bei Qodia – klicken zum Synchronisieren"}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          {lead.qodia_conflict && !lead.qodia_synced && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-orange-600 bg-orange-50 border border-orange-200 rounded-full px-1.5 py-0 leading-4 cursor-default">
+                                    <AlertTriangle className="h-2.5 w-2.5" />
+                                    E-Mail Konflikt
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Qodia meldet: E-Mail-Adresse bereits vorhanden (409).<br />Das Konto existiert in Qodia, aber der Sync ist fehlgeschlagen.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {format(new Date(lead.created_at), "dd.MM.yy HH:mm", { locale: de })}

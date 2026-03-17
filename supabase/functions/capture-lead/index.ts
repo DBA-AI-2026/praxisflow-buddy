@@ -657,11 +657,16 @@ Deno.serve(async (req) => {
       });
 
       if (qodiaResponse.ok) {
-        await supabase.from("leads").update({ qodia_synced: true }).eq("id", lead.id);
+        await supabase.from("leads").update({ qodia_synced: true, qodia_conflict: false }).eq("id", lead.id);
         console.log(`Lead synced to Qodia: ${lead.hfx_customer_number}`);
       } else {
         const errText = await qodiaResponse.text();
         console.error(`Qodia sync failed (${qodiaResponse.status}):`, errText);
+        // Mark conflict if Qodia reports email already exists (409)
+        if (qodiaResponse.status === 409) {
+          await supabase.from("leads").update({ qodia_conflict: true }).eq("id", lead.id);
+          console.log(`Qodia conflict (409) for ${lead.hfx_customer_number} – marked as conflict`);
+        }
       }
     } catch (qodiaErr) {
       console.error("Qodia sync error:", qodiaErr);
