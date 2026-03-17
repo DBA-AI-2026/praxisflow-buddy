@@ -37,6 +37,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, UserPlus, Mail, Package, Users, Heart, ChevronsUpDown, Check, X } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 const schema = z.object({
@@ -51,7 +52,6 @@ const schema = z.object({
   abrechnungszentrum: z.string().default("keins"),
   mp_nummer: z.string().trim().max(50).default(""),
   nachricht: z.string().trim().max(1000).default(""),
-  send_confirmation_email: z.boolean().default(true),
   interested_products: z.array(z.string()).default([]),
   assigned_to: z.string().nullable().default(null),
   tippgeber_id: z.string().nullable().default(null),
@@ -234,7 +234,6 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
       abrechnungszentrum: "keins",
       mp_nummer: "",
       nachricht: "",
-      send_confirmation_email: true,
       interested_products: [],
       assigned_to: null,
       tippgeber_id: null,
@@ -258,7 +257,6 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
           mp_nummer: values.mp_nummer || null,
           nachricht: values.nachricht || null,
           source: "manual",
-          send_confirmation_email: values.send_confirmation_email,
           interested_products: values.interested_products,
           assigned_to: values.assigned_to || undefined,
           tippgeber_id: values.tippgeber_id || undefined,
@@ -276,7 +274,7 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
       } else {
         toast({
           title: "Interessent erstellt",
-          description: `${values.vorname} ${values.nachname} (${values.praxis_name}) wurde angelegt. HFX-Nr.: ${data?.hfx_customer_number}${values.send_confirmation_email ? " – Bestätigungs-E-Mail versendet." : ""}`,
+          description: `${values.vorname} ${values.nachname} (${values.praxis_name}) wurde angelegt. HFX-Nr.: ${data?.hfx_customer_number} – Bestätigungs-E-Mail versendet.`,
         });
       }
 
@@ -582,32 +580,13 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
               )}
             />
 
-            {/* Email option */}
-            <FormField
-              control={form.control}
-              name="send_confirmation_email"
-              render={({ field }) => (
-                <FormItem className="flex items-center gap-3 rounded-lg border border-border p-3 bg-muted/30">
-                  <FormControl>
-                    <input
-                      type="checkbox"
-                      checked={field.value}
-                      onChange={field.onChange}
-                      className="h-4 w-4 accent-primary"
-                    />
-                  </FormControl>
-                  <div className="flex-1">
-                    <FormLabel className="flex items-center gap-2 cursor-pointer mb-0">
-                      <Mail className="h-4 w-4 text-primary" />
-                      Bestätigungs-E-Mail mit Zugangsdaten senden
-                    </FormLabel>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Gleicher Flow wie Homepage-Lead: E-Mail, Qodia-Sync, PLZ-Zuweisung
-                    </p>
-                  </div>
-                </FormItem>
-              )}
-            />
+            {/* Bestätigungs-E-Mail wird immer automatisch gesendet */}
+            <div className="flex items-center gap-3 rounded-lg border border-border p-3 bg-muted/30">
+              <Mail className="h-4 w-4 text-primary shrink-0" />
+              <p className="text-sm text-muted-foreground">
+                Bestätigungs-E-Mail mit Zugangsdaten wird automatisch gesendet.
+              </p>
+            </div>
 
             <div className="flex justify-end gap-3 pt-2 border-t">
               <Button
