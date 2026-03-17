@@ -6,8 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Search, Users, FileText, Building2, CheckCircle2, XCircle,
-  UserPlus, Phone, UserCheck, FilePlus, Upload, Ban, Send,
-  Loader2, Globe, PenLine, ArrowRight, RefreshCw,
+   UserPlus, Phone, UserCheck, FilePlus, Upload, Ban, Send,
+  Loader2, Globe, PenLine, ArrowRight, RefreshCw, AlertTriangle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -43,20 +43,37 @@ const contractStatusCfg: Record<string, { label: string; cls: string }> = {
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
-function QodiaIcon({ synced }: { synced: boolean }) {
+function QodiaIcon({ synced, conflict }: { synced: boolean; conflict?: boolean }) {
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          {synced
-            ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
-            : <XCircle className="h-4 w-4 text-muted-foreground/40 shrink-0" />}
-        </TooltipTrigger>
-        <TooltipContent>
-          {synced ? "Bei Qodia registriert" : "Noch nicht bei Qodia registriert"}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <div className="flex flex-col items-center gap-0.5">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {synced
+              ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+              : <XCircle className="h-4 w-4 text-muted-foreground/40 shrink-0" />}
+          </TooltipTrigger>
+          <TooltipContent>
+            {synced ? "Bei Qodia registriert" : "Noch nicht bei Qodia registriert"}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      {conflict && !synced && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-orange-600 bg-orange-50 border border-orange-200 rounded-full px-1.5 py-0 leading-4 cursor-default whitespace-nowrap">
+                <AlertTriangle className="h-2.5 w-2.5" />
+                E-Mail Konflikt
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Qodia meldet: E-Mail bereits vorhanden (409).<br />Das Konto existiert in Qodia, der Sync ist fehlgeschlagen.</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+    </div>
   );
 }
 
@@ -387,7 +404,7 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
                   </td>
                   <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-1">
-                      <QodiaIcon synced={!!lead.qodia_synced} />
+                      <QodiaIcon synced={!!lead.qodia_synced} conflict={!!lead.qodia_conflict} />
                       {!lead.qodia_synced && lead.hfx_customer_number && (
                         <TooltipProvider>
                           <Tooltip>
