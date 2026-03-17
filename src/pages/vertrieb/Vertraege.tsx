@@ -803,9 +803,9 @@ export default function Vertraege() {
         }
       }
 
-      // Auto-open template PDF after creating a new contract (only if not a draft)
+      // Auto-open contract summary PDF after creating a new contract (only if not a draft)
       if (!editId && variables.status !== "entwurf") {
-        handleTemplatePdf(form);
+        handlePreviewPdf(form);
         // Send contract PDF email to sales partner
         if (profile?.email) {
           try {
