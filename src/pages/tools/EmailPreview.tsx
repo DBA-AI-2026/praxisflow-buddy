@@ -1157,7 +1157,7 @@ function buildBookingLinkHtml() {
           <tr><td style="padding:6px 0;font-size:13px;color:#6b7280;">Produkt</td><td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">HFX EBM</td></tr>
           <tr><td style="padding:6px 0;font-size:13px;color:#6b7280;">Praxis</td><td style="padding:6px 0;font-size:13px;color:#111827;">${MOCK.praxis_name}</td></tr>
           <tr><td style="padding:6px 0;font-size:13px;color:#6b7280;">Monatspreis</td><td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">99,00 €/Monat</td></tr>
-          <tr><td style="padding:6px 0;font-size:13px;color:#6b7280;">Kündigung</td><td style="padding:6px 0;font-size:13px;color:#111827;">Unbefristet · 6 Monate Frist zum Monatsende</td></tr>
+          <tr><td style="padding:6px 0;font-size:13px;color:#6b7280;">Vertragsbeginn</td><td style="padding:6px 0;font-size:13px;color:#111827;">01.04.2026</td></tr>
         </table>
       </td></tr>
     </table>
