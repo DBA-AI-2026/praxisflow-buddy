@@ -45,7 +45,7 @@ const MOCK = {
 };
 
 // ─── Templates ────────────────────────────────────────────────────────────────
-type TemplateId = "lead-confirmation" | "contract-customer" | "contract-customer-pdf-send" | "contract-partner" | "contract-paper-confirmation" | "booking-link" | "post-payment-contract-pdf" | "invoice" | "invoice-pdf" | "dashboard-credentials" | "demo-expiry-customer" | "ad-tipp-lead" | "ad-demo-reminder" | "ad-new-lead" | "ad-lead-assignment";
+type TemplateId = "lead-confirmation" | "contract-customer" | "contract-customer-pdf-send" | "contract-partner" | "contract-paper-confirmation" | "booking-link" | "post-payment-contract-pdf" | "invoice" | "invoice-pdf" | "dashboard-credentials" | "demo-expiry-customer" | "ad-tipp-lead" | "ad-demo-reminder" | "ad-new-lead" | "ad-lead-assignment" | "admin-access-request";
 
 interface Template {
   id: TemplateId;
