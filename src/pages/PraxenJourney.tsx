@@ -6,8 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Search, Users, FileText, Building2, CheckCircle2, XCircle,
-  UserPlus, Phone, UserCheck, FilePlus, Upload, Ban, Send,
-  Loader2, Globe, PenLine, ArrowRight, RefreshCw,
+   UserPlus, Phone, UserCheck, FilePlus, Upload, Ban, Send,
+  Loader2, Globe, PenLine, ArrowRight, RefreshCw, AlertTriangle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
