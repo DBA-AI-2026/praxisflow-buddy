@@ -290,32 +290,24 @@ Deno.serve(async (req) => {
       );
     }
 
-    // For homepage submissions, validate abrechnungszentrum strictly.
-    // Manual entries (internal) can use any of the extended list.
-    const validAbrechnungszentrenHomepage = ["nein", "CareCapital", "privadis", "anderes"];
-    const validAbrechnungszentrenManual = ["nein", "keins", "CareCapital", "privadis", "anderes", "ZAB", "PVS", "DZR", "ARZ", "Sonstiges"];
-    const validAbrechnungszentren = leadSource === "manual" ? validAbrechnungszentrenManual : validAbrechnungszentrenHomepage;
-    if (!validAbrechnungszentren.includes(abrechnungszentrum)) {
-      return new Response(
-        JSON.stringify({ error: "Ungültiges Abrechnungszentrum" }),
-        { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
-      );
+    // Normalize abrechnungszentrum: known values stay as-is, unknown free-text from
+    // WordPress (e.g. "anderes Abrechnungszentrum") is accepted and stored as-is.
+    // Only reject if completely empty (already caught by required-field check above).
+    const knownAbrechnungszentren = ["nein", "keins", "CareCapital", "privadis", "anderes", "ZAB", "PVS", "DZR", "ARZ", "Sonstiges"];
+    const normalizedAz = knownAbrechnungszentren.includes(abrechnungszentrum) ? abrechnungszentrum : abrechnungszentrum;
+    // Log if we received an unknown but accepted value
+    if (!knownAbrechnungszentren.includes(abrechnungszentrum)) {
+      console.log(`Abrechnungszentrum "${abrechnungszentrum}" is not in known list – accepting as free-text value`);
     }
 
     // MP-Nummer validation: must be exactly 5 digits if provided (homepage only; manual entries allow free text)
     if (leadSource === "homepage" && mp_nummer && !/^\d{5}$/.test(mp_nummer.trim())) {
-      return new Response(
-        JSON.stringify({ error: "MP-Nummer muss genau 5-stellig sein (nur Ziffern)" }),
-        { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
-      );
+      console.log(`MP-Nummer "${mp_nummer}" is not 5 digits – accepting anyway for homepage lead`);
     }
 
-    // MP-Nummer required for CareCapital and privadis
+    // MP-Nummer is optional for CareCapital/privadis – log a warning but don't reject
     if ((abrechnungszentrum === "CareCapital" || abrechnungszentrum === "privadis") && !mp_nummer) {
-      return new Response(
-        JSON.stringify({ error: "MP-Nummer ist bei CareCapital/privadis erforderlich" }),
-        { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
-      );
+      console.log(`MP-Nummer missing for ${abrechnungszentrum} – accepting lead without it`);
     }
 
     // Save to database using service role
