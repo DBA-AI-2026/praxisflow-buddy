@@ -1259,6 +1259,63 @@ const MOCK_INVOICE_PDF_DATA = {
   notes: null,
 };
 
+function buildAdminAccessRequestHtml() {
+  const year = new Date().getFullYear();
+  const { vorname, nachname, email } = MOCK;
+  const fullName = `${vorname} ${nachname}`;
+  const company = "Muster Praxis GmbH";
+  const message = "Ich würde gerne Zugang zum HFX Sales Portal beantragen.";
+  return `<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:Arial,sans-serif;">
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f5f5f5;padding:20px 0;">
+<tr><td align="center">
+<table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+  <tr>
+    <td style="background:linear-gradient(135deg,#f97316,#ea580c);padding:30px 40px;text-align:center;">
+      <h1 style="color:#ffffff;font-size:22px;margin:0;">🦊 Neue Zugangsanfrage</h1>
+      <p style="color:rgba(255,255,255,0.85);font-size:13px;margin:8px 0 0 0;">HFX Sales Portal</p>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#f9fafb;padding:28px 40px;border:1px solid #e5e7eb;border-top:none;">
+      <p style="font-size:15px;color:#374151;margin:0 0 20px;">Eine neue Zugangsanfrage ist eingegangen:</p>
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">
+        <tr>
+          <td style="padding:8px 0;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #e5e7eb;">Name</td>
+          <td style="padding:8px 0;font-size:15px;color:#111827;border-bottom:1px solid #e5e7eb;">${fullName}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #e5e7eb;">E-Mail</td>
+          <td style="padding:8px 0;font-size:15px;color:#f97316;border-bottom:1px solid #e5e7eb;">${email}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #e5e7eb;">Firma</td>
+          <td style="padding:8px 0;font-size:14px;color:#374151;border-bottom:1px solid #e5e7eb;">${company}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;vertical-align:top;">Nachricht</td>
+          <td style="padding:8px 0;font-size:14px;color:#374151;font-style:italic;">${message}</td>
+        </tr>
+      </table>
+      <p style="font-size:13px;color:#6b7280;background:#fff8e1;border-radius:6px;border:1px solid #f59e0b;padding:12px 16px;margin:0;">
+        👉 Bitte loggen Sie sich in das Admin-Portal ein, um die Anfrage zu genehmigen oder abzulehnen.
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#f8f8f8;padding:16px 40px;border-top:1px solid #eeeeee;text-align:center;">
+      <p style="font-size:11px;color:#aaaaaa;margin:0;">© ${year} HFX Honorarfuchs – Diese E-Mail wurde automatisch generiert.</p>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
 const DEFAULT_HTML: Record<string, () => string> = {
   "lead-confirmation": buildLeadConfirmationHtml,
   "contract-customer": buildContractCustomerHtml,
@@ -1274,6 +1331,7 @@ const DEFAULT_HTML: Record<string, () => string> = {
   "ad-demo-reminder": buildAdDemoReminderHtml,
   "ad-new-lead": buildAdNewLeadHtml,
   "ad-lead-assignment": buildAdLeadAssignmentHtml,
+  "admin-access-request": buildAdminAccessRequestHtml,
 };
 
 function getHtmlForTemplate(id: TemplateId) {
