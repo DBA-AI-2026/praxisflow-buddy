@@ -365,20 +365,11 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
   }> = [
     {
       key: "confirmation_email_sent",
-      label: "Bestätigungs-E-Mail",
+      label: "Bestätigungs-E-Mail mit Zugangsdaten",
       value: lead.confirmation_email_sent,
       onTrigger: sendConfirmationEmail,
       triggering: sendingConfirmEmail,
       triggerLabel: "E-Mail senden",
-    },
-    {
-      key: "credentials_sent_at",
-      label: "Zugangsdaten versendet",
-      value: !!lead.credentials_sent_at,
-      timestamp: lead.credentials_sent_at,
-      onTrigger: sendCredentialsSync,
-      triggering: sendingCredentials,
-      triggerLabel: "Zugangsdaten senden",
     },
     {
       key: "qodia_synced",
@@ -394,9 +385,13 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
       value: lead.salesforce_synced,
     },
     {
-      key: "honorarplus_synced",
-      label: "HonorarPlus",
-      value: lead.honorarplus_synced,
+      key: "credentials_resend",
+      label: "Zugangsdaten erneut zusenden",
+      value: !!lead.credentials_sent_at,
+      timestamp: lead.credentials_sent_at,
+      onTrigger: sendCredentialsSync,
+      triggering: sendingCredentials,
+      triggerLabel: "Zusenden",
     },
   ];
 
