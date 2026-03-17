@@ -51,7 +51,6 @@ const schema = z.object({
   abrechnungszentrum: z.string().default("keins"),
   mp_nummer: z.string().trim().max(50).default(""),
   nachricht: z.string().trim().max(1000).default(""),
-  send_confirmation_email: z.boolean().default(true),
   interested_products: z.array(z.string()).default([]),
   assigned_to: z.string().nullable().default(null),
   tippgeber_id: z.string().nullable().default(null),

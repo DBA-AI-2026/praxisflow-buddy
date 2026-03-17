@@ -253,8 +253,9 @@ Deno.serve(async (req) => {
     
     // Detect whether this is a manual internal entry or a homepage submission
     const leadSource: string = rawBody.source === "manual" ? "manual" : "homepage";
-    const sendConfirmationEmail: boolean = rawBody.send_confirmation_email !== false; // default true
-    console.log(`Lead request – source: ${leadSource}, sendEmail: ${sendConfirmationEmail}`);
+    // Confirmation email is ALWAYS sent, regardless of source or parameter
+    const sendConfirmationEmail = true;
+    console.log(`Lead request – source: ${leadSource}, sendEmail: always true`);
     console.log(`Raw body received:`, JSON.stringify(rawBody));
 
     // Map CF7 field names to our internal format
