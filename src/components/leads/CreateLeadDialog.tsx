@@ -256,7 +256,6 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
           mp_nummer: values.mp_nummer || null,
           nachricht: values.nachricht || null,
           source: "manual",
-          send_confirmation_email: values.send_confirmation_email,
           interested_products: values.interested_products,
           assigned_to: values.assigned_to || undefined,
           tippgeber_id: values.tippgeber_id || undefined,
@@ -274,7 +273,7 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
       } else {
         toast({
           title: "Interessent erstellt",
-          description: `${values.vorname} ${values.nachname} (${values.praxis_name}) wurde angelegt. HFX-Nr.: ${data?.hfx_customer_number}${values.send_confirmation_email ? " – Bestätigungs-E-Mail versendet." : ""}`,
+          description: `${values.vorname} ${values.nachname} (${values.praxis_name}) wurde angelegt. HFX-Nr.: ${data?.hfx_customer_number} – Bestätigungs-E-Mail versendet.`,
         });
       }
 
