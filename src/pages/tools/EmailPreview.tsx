@@ -189,6 +189,15 @@ const TEMPLATES: Template[] = [
     description: "AD-Benachrichtigung parallel zur Kunden-Erinnerung bei Demo-Ablauf",
     category: "intern",
   },
+  {
+    id: "admin-access-request",
+    label: "Admin: Neue Zugangsanfrage",
+    subject: "Neue Zugangsanfrage: Max Mustermann",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "Benachrichtigung an Admin (info@honorarfuchs.de) wenn jemand über die Login-Seite Zugang zum Sales Portal beantragt",
+    category: "intern",
+  },
 ];
 
 // ─── HTML builders ────────────────────────────────────────────────────────────
