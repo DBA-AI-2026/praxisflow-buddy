@@ -684,28 +684,6 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
             <div className="space-y-2">
               <Button
                 className="w-full justify-start gap-2"
-                disabled={sendingBuchungsmail}
-                onClick={sendBuchungsmail}
-              >
-                {sendingBuchungsmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                Buchungsmail erneut senden
-              </Button>
-
-
-              {!lead.qodia_synced && (
-                <Button
-                  variant="outline"
-                  className="w-full justify-start gap-2 border-border text-muted-foreground hover:bg-muted"
-                  disabled={syncingQodia}
-                  onClick={syncToQodia}
-                >
-                  <RefreshCw className={`h-4 w-4 ${syncingQodia ? "animate-spin" : ""}`} />
-                  Bei Qodia registrieren
-                </Button>
-              )}
-
-              <Button
-                className="w-full justify-start gap-2"
                 onClick={() => {
                   onClose();
                   navigate("/vertrieb/vertraege", {
@@ -729,8 +707,30 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
                 }}
               >
                 <FilePlus className="h-4 w-4" />
-                Digitalen Vertrag erstellen
+                Digitalen Vertragsabschluss starten
               </Button>
+
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-2"
+                disabled={sendingBuchungsmail}
+                onClick={sendBuchungsmail}
+              >
+                {sendingBuchungsmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                Buchungslink per Mail versenden (nur bei bestehenden Verträgen)
+              </Button>
+
+              {!lead.qodia_synced && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-2 border-border text-muted-foreground hover:bg-muted"
+                  disabled={syncingQodia}
+                  onClick={syncToQodia}
+                >
+                  <RefreshCw className={`h-4 w-4 ${syncingQodia ? "animate-spin" : ""}`} />
+                  Bei Qodia registrieren
+                </Button>
+              )}
             </div>
           </TabsContent>
         </Tabs>
