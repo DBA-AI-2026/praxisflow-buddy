@@ -375,7 +375,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
       key: "qodia_synced",
       label: "Qodia",
       value: lead.qodia_synced,
-      onTrigger: !lead.qodia_synced ? syncToQodia : undefined,
+      onTrigger: syncToQodia,
       triggering: syncingQodia,
       triggerLabel: "Registrieren",
     },
