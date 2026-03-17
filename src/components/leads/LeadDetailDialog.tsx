@@ -659,7 +659,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
                           )}
                         </div>
                       </div>
-                      {onTrigger && (
+                      {onTrigger && !isSynced && (
                         <Button
                           size="sm"
                           variant="ghost"
