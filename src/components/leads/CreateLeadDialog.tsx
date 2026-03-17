@@ -579,32 +579,13 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
               )}
             />
 
-            {/* Email option */}
-            <FormField
-              control={form.control}
-              name="send_confirmation_email"
-              render={({ field }) => (
-                <FormItem className="flex items-center gap-3 rounded-lg border border-border p-3 bg-muted/30">
-                  <FormControl>
-                    <input
-                      type="checkbox"
-                      checked={field.value}
-                      onChange={field.onChange}
-                      className="h-4 w-4 accent-primary"
-                    />
-                  </FormControl>
-                  <div className="flex-1">
-                    <FormLabel className="flex items-center gap-2 cursor-pointer mb-0">
-                      <Mail className="h-4 w-4 text-primary" />
-                      Bestätigungs-E-Mail mit Zugangsdaten senden
-                    </FormLabel>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Gleicher Flow wie Homepage-Lead: E-Mail, Qodia-Sync, PLZ-Zuweisung
-                    </p>
-                  </div>
-                </FormItem>
-              )}
-            />
+            {/* Bestätigungs-E-Mail wird immer automatisch gesendet */}
+            <div className="flex items-center gap-3 rounded-lg border border-border p-3 bg-muted/30">
+              <Mail className="h-4 w-4 text-primary shrink-0" />
+              <p className="text-sm text-muted-foreground">
+                Bestätigungs-E-Mail mit Zugangsdaten wird automatisch gesendet.
+              </p>
+            </div>
 
             <div className="flex justify-end gap-3 pt-2 border-t">
               <Button
