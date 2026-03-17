@@ -328,9 +328,12 @@ export default function Buchen() {
     return (
       <div className="min-h-screen bg-background py-12 px-4">
         <div className="max-w-lg mx-auto space-y-8">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-primary">🦊 HFX Honorarfuchs</p>
-            <p className="text-sm text-muted-foreground mt-1">Verbindliche Buchung</p>
+          <div className="text-center flex flex-col items-center gap-2">
+            <div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center border border-border">
+              <img src={fuchsLogo} alt="HFX Honorarfuchs" className="w-10 h-10 object-contain" />
+            </div>
+            <p className="text-2xl font-bold text-primary">HFX Honorarfuchs</p>
+            <p className="text-sm text-muted-foreground -mt-1">Verbindliche Buchung</p>
           </div>
           <StepIndicator currentStep={2} />
           <div className="bg-card border rounded-xl p-10 text-center space-y-4 shadow-sm">
