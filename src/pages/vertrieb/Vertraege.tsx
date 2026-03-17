@@ -1580,21 +1580,7 @@ export default function Vertraege() {
 
   const handleTemplatePdf = async (contractData: Record<string, any>) => {
     try {
-      // Prefer product-specific AGB in preview (e.g. HFX GOÄ)
-      const productAgbPath = resolveProductAgbPath(contractData);
-      if (productAgbPath) {
-        const { data: agbBlob, error: agbError } = await supabase.storage
-          .from("contracts")
-          .download(productAgbPath);
-
-        if (!agbError && agbBlob) {
-          const agbBytes = await agbBlob.arrayBuffer();
-          openPdfBlob(new Uint8Array(agbBytes));
-          return;
-        }
-      }
-
-      // Fallback: standard template PDF
+      // Always show the filled contract template PDF (what the customer receives)
       const templateRes = await fetch("/templates/vertrag-honorarfuchs.pdf");
       const templateBytes = await templateRes.arrayBuffer();
 
