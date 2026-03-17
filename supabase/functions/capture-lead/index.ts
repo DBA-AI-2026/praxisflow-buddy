@@ -436,7 +436,7 @@ Deno.serve(async (req) => {
         nachname: nachname.trim().slice(0, 100),
         email: email.trim().toLowerCase().slice(0, 255),
         plz: plz.trim().slice(0, 10),
-        mobilnummer: (mobilnummer || "").trim().slice(0, 30),
+        mobilnummer: (mobilnummer || "").trim().slice(0, 30) || "nicht angegeben",
         abrechnungszentrum,
         mp_nummer: mp_nummer?.trim().slice(0, 50) || null,
         nachricht: nachricht?.trim().slice(0, 2000) || null,
