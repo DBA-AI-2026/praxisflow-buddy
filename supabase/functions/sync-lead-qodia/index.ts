@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
     console.log(`Qodia response (${qodiaResponse.status}):`, responseBody);
 
     if (qodiaResponse.ok) {
-      await supabase.from("leads").update({ qodia_synced: true }).eq("id", lead.id);
+      await supabase.from("leads").update({ qodia_synced: true, qodia_conflict: false }).eq("id", lead.id);
       return new Response(
         JSON.stringify({
           success: true,
@@ -133,9 +133,14 @@ Deno.serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } else {
+      // Mark conflict if email already exists in Qodia (409)
+      if (qodiaResponse.status === 409) {
+        await supabase.from("leads").update({ qodia_conflict: true }).eq("id", lead.id);
+      }
       return new Response(
         JSON.stringify({
           success: false,
+          conflict: qodiaResponse.status === 409,
           error: `Qodia-Fehler (${qodiaResponse.status}): ${responseBody}`,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
