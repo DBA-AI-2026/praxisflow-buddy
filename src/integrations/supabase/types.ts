@@ -903,6 +903,7 @@ export type Database = {
           ort: string | null
           plz: string
           praxis_name: string
+          qodia_conflict: boolean
           qodia_synced: boolean
           registration_attempts: number
           salesforce_id: string | null
@@ -933,6 +934,7 @@ export type Database = {
           ort?: string | null
           plz: string
           praxis_name: string
+          qodia_conflict?: boolean
           qodia_synced?: boolean
           registration_attempts?: number
           salesforce_id?: string | null
@@ -963,6 +965,7 @@ export type Database = {
           ort?: string | null
           plz?: string
           praxis_name?: string
+          qodia_conflict?: boolean
           qodia_synced?: boolean
           registration_attempts?: number
           salesforce_id?: string | null
