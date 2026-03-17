@@ -686,24 +686,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
                 className="w-full justify-start gap-2"
                 onClick={() => {
                   onClose();
-                  navigate("/vertrieb/vertraege", {
-                    state: {
-                      fromLead: {
-                        lead_id: lead.id,
-                        hfx_customer_number: lead.hfx_customer_number,
-                        praxis: lead.praxis_name,
-                        vorname: lead.vorname,
-                        nachname: lead.nachname,
-                        email: lead.email,
-                        plz: lead.plz,
-                        ort: lead.ort || "",
-                        adresse: lead.adresse || "",
-                        telefon: lead.mobilnummer,
-                        mp_nr: lead.mp_nummer || "",
-                        nachricht: lead.nachricht || "",
-                      },
-                    },
-                  });
+                  navigate(`/vertrieb/vertraege?leadId=${lead.id}`);
                 }}
               >
                 <FilePlus className="h-4 w-4" />
