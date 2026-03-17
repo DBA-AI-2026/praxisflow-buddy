@@ -233,7 +233,6 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
       abrechnungszentrum: "keins",
       mp_nummer: "",
       nachricht: "",
-      send_confirmation_email: true,
       interested_products: [],
       assigned_to: null,
       tippgeber_id: null,
