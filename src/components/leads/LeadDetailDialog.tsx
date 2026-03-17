@@ -375,7 +375,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
       key: "qodia_synced",
       label: "Qodia",
       value: lead.qodia_synced,
-      onTrigger: !lead.qodia_synced ? syncToQodia : undefined,
+      onTrigger: syncToQodia,
       triggering: syncingQodia,
       triggerLabel: "Registrieren",
     },
@@ -659,7 +659,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
                           )}
                         </div>
                       </div>
-                      {onTrigger && (
+                      {onTrigger && !isSynced && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -720,15 +720,6 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
                 Buchungslink per Mail versenden (nur bei bestehenden Verträgen)
               </Button>
 
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-2 border-border text-muted-foreground hover:bg-muted"
-                disabled={syncingQodia}
-                onClick={syncToQodia}
-              >
-                <RefreshCw className={`h-4 w-4 ${syncingQodia ? "animate-spin" : ""}`} />
-                {lead.qodia_synced ? "Erneut bei Qodia synchronisieren" : "Bei Qodia registrieren"}
-              </Button>
             </div>
           </TabsContent>
         </Tabs>
