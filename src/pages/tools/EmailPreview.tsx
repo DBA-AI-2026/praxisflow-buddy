@@ -1418,7 +1418,7 @@ export default function EmailPreview() {
   const getRenderedHtml = useCallback(
     (tpl: Template, mode: "email" | "pdf") => {
       const key = getStorageKey(tpl, mode);
-      return customHtml[key] ?? getHtmlForTemplate(key as TemplateId);
+      return patchLogo(customHtml[key] ?? getHtmlForTemplate(key as TemplateId));
     },
     [customHtml]
   );
