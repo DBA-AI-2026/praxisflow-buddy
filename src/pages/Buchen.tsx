@@ -386,6 +386,14 @@ export default function Buchen() {
   return (
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-lg mx-auto space-y-6">
+        {/* Preview banner */}
+        {isPreview && (
+          <div className="bg-warning/10 border border-warning/30 rounded-lg px-4 py-3 flex items-center gap-2 text-sm text-warning">
+            <Eye className="h-4 w-4 shrink-0" />
+            <span><strong>Vorschau-Modus</strong> – Musterdaten, keine echte Buchung möglich</span>
+          </div>
+        )}
+
         {/* Brand header */}
         <div className="text-center flex flex-col items-center gap-2">
           <div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center border border-border">
