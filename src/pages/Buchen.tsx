@@ -165,6 +165,7 @@ export default function Buchen() {
   const [searchParams] = useSearchParams();
   const contractId = searchParams.get("contract_id");
   const productParam = searchParams.get("product");
+  const isPreview = searchParams.get("preview") === "true";
 
   const [contract, setContract] = useState<ContractSummary | null>(null);
   const [agbUrl, setAgbUrl] = useState<string | null>(null);
