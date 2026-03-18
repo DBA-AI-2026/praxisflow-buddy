@@ -29,7 +29,7 @@ const LOGO_OLD = "https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/pub
 const LOGO_NEW = "https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fuchs-bildmarke.png";
 
 function patchLogo(html: string): string {
-  return html.replaceAll(LOGO_OLD, LOGO_NEW);
+  return html.split(LOGO_OLD).join(LOGO_NEW);
 }
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
