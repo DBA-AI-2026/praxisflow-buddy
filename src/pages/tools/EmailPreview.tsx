@@ -1343,7 +1343,7 @@ const DEFAULT_HTML: Record<string, () => string> = {
 };
 
 function getHtmlForTemplate(id: TemplateId) {
-  return DEFAULT_HTML[id]?.() ?? "";
+  return patchLogo(DEFAULT_HTML[id]?.() ?? "");
 }
 
 /** IDs where we show the live pdf-lib PDF preview button */
