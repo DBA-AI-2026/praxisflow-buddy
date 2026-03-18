@@ -24,6 +24,14 @@ import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
 import { showPdfInViewer } from "@/lib/pdfViewerState";
 import { Textarea } from "@/components/ui/textarea";
 
+// ─── Logo URLs ────────────────────────────────────────────────────────────────
+const LOGO_OLD = "https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg";
+const LOGO_NEW = "https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fuchs-bildmarke.png";
+
+function patchLogo(html: string): string {
+  return html.split(LOGO_OLD).join(LOGO_NEW);
+}
+
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK = {
   hfx_customer_number: "HFX-I01019",
@@ -1335,7 +1343,7 @@ const DEFAULT_HTML: Record<string, () => string> = {
 };
 
 function getHtmlForTemplate(id: TemplateId) {
-  return DEFAULT_HTML[id]?.() ?? "";
+  return patchLogo(DEFAULT_HTML[id]?.() ?? "");
 }
 
 /** IDs where we show the live pdf-lib PDF preview button */
@@ -1410,7 +1418,7 @@ export default function EmailPreview() {
   const getRenderedHtml = useCallback(
     (tpl: Template, mode: "email" | "pdf") => {
       const key = getStorageKey(tpl, mode);
-      return customHtml[key] ?? getHtmlForTemplate(key as TemplateId);
+      return patchLogo(customHtml[key] ?? getHtmlForTemplate(key as TemplateId));
     },
     [customHtml]
   );
