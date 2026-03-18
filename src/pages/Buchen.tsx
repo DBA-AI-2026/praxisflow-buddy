@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
-import { CheckCircle2, Loader2, AlertCircle, ExternalLink, CreditCard, FileText, PartyPopper, Eye } from "lucide-react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { CheckCircle2, Loader2, AlertCircle, ExternalLink, CreditCard, FileText, PartyPopper, Eye, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -163,6 +163,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
 
 export default function Buchen() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const contractId = searchParams.get("contract_id");
   const productParam = searchParams.get("product");
   const isPreview = searchParams.get("preview") === "true";
@@ -388,9 +389,18 @@ export default function Buchen() {
       <div className="max-w-lg mx-auto space-y-6">
         {/* Preview banner */}
         {isPreview && (
-          <div className="bg-warning/10 border border-warning/30 rounded-lg px-4 py-3 flex items-center gap-2 text-sm text-warning">
-            <Eye className="h-4 w-4 shrink-0" />
-            <span><strong>Vorschau-Modus</strong> – Musterdaten, keine echte Buchung möglich</span>
+          <div className="space-y-2">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Zurück
+            </button>
+            <div className="bg-warning/10 border border-warning/30 rounded-lg px-4 py-3 flex items-center gap-2 text-sm text-warning">
+              <Eye className="h-4 w-4 shrink-0" />
+              <span><strong>Vorschau-Modus</strong> – Musterdaten, keine echte Buchung möglich</span>
+            </div>
           </div>
         )}
 
