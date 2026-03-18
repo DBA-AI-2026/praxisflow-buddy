@@ -1158,7 +1158,8 @@ function buildBookingLinkHtml() {
 <tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.10);max-width:600px;">
   <tr><td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:36px 40px;text-align:center;">
-    <p style="color:#ffffff;font-size:24px;font-weight:700;margin:0;">🦊 HFX Honorarfuchs</p>
+    <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fuchs-bildmarke.png" alt="HFX Logo" style="width:60px;height:60px;border-radius:50%;background-color:#ffffff;padding:4px;object-fit:contain;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;" />
+    <p style="color:#ffffff;font-size:24px;font-weight:700;margin:0;">HFX Honorarfuchs</p>
     <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:6px 0 0;">Ihr Vertrag wartet auf Ihre Buchung</p>
   </td></tr>
   <tr><td style="padding:36px 40px 24px;">
