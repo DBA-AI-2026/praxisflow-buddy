@@ -530,9 +530,9 @@ Deno.serve(async (req) => {
         <!-- Header -->
         <tr>
           <td align="center" style="background-color:#0b367f;padding:36px 40px;" class="mobile-padding">
-            <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg"
+            <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fuchs-bildmarke.png"
               alt="HFX Honorarfuchs" width="60" height="60"
-              style="width:60px;height:60px;display:block;margin:0 auto 12px auto;border:0;" />
+              style="width:60px;height:60px;display:block;margin:0 auto 12px auto;border:0;border-radius:50%;background-color:#ffffff;padding:4px;" />
             <p style="color:#ffffff;font-size:24px;font-weight:700;margin:0;font-family:Arial,Verdana,sans-serif;">HFX Honorarfuchs</p>
             <p style="color:#cccccc;font-size:13px;margin:6px 0 0;font-family:Arial,Verdana,sans-serif;">Ihr Vertrag wartet auf Ihre Buchung</p>
           </td>
