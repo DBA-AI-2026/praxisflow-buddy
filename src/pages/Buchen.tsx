@@ -410,8 +410,8 @@ export default function Buchen() {
           </div>
 
           <div className="bg-card border rounded-xl p-8 text-center space-y-5 shadow-sm">
-            <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="h-8 w-8 text-green-600" />
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="h-8 w-8 text-primary" />
             </div>
             <div className="space-y-1">
               <h2 className="text-xl font-bold text-foreground">Vielen Dank für Ihre Buchung!</h2>
