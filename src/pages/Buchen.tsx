@@ -545,13 +545,15 @@ export default function Buchen() {
             type="submit"
             className="w-full"
             size="lg"
-            disabled={!canSubmit || submitting}
+            disabled={!canSubmit || submitting || isPreview}
           >
             {submitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 Weiterleitung zu Stripe…
               </>
+            ) : isPreview ? (
+              "Vorschau – keine echte Buchung"
             ) : (
               "Weiter zur Zahlung →"
             )}
