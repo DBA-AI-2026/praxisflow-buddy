@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { CheckCircle2, Loader2, AlertCircle, ExternalLink, CreditCard, FileText, PartyPopper } from "lucide-react";
+import { CheckCircle2, Loader2, AlertCircle, ExternalLink, CreditCard, FileText, PartyPopper, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
