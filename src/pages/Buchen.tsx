@@ -350,7 +350,7 @@ export default function Buchen() {
   }
 
   // ── Step 2: Redirecting to Stripe ─────────────────────────────────────────
-  if (currentStep === 2 && submitting) {
+  if (currentStep === 2) {
     return (
       <div className="min-h-screen bg-background py-12 px-4">
         <div className="max-w-lg mx-auto space-y-8">
@@ -389,7 +389,72 @@ export default function Buchen() {
     );
   }
 
-  // ── Step 1: Form ──────────────────────────────────────────────────────────
+  // ── Step 3: Bestätigung (Preview only) ───────────────────────────────────
+  if (currentStep === 3 && isPreview) {
+    return (
+      <div className="min-h-screen bg-background py-12 px-4">
+        <div className="max-w-lg mx-auto space-y-8">
+          <div className="text-center flex flex-col items-center gap-2">
+            <div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center border border-border">
+              <img src={fuchsLogo} alt="HFX Honorarfuchs" className="w-10 h-10 object-contain" />
+            </div>
+            <p className="text-2xl font-bold text-primary">HFX Honorarfuchs</p>
+            <p className="text-sm text-muted-foreground -mt-1">Verbindliche Buchung</p>
+          </div>
+          <StepIndicator currentStep={3} />
+
+          {/* Preview banner */}
+          <div className="bg-warning/10 border border-warning/30 rounded-lg px-4 py-3 flex items-center gap-2 text-sm text-warning">
+            <Eye className="h-4 w-4 shrink-0" />
+            <span><strong>Vorschau-Modus</strong> – Musterdaten, keine echte Buchung</span>
+          </div>
+
+          <div className="bg-card border rounded-xl p-8 text-center space-y-5 shadow-sm">
+            <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="h-8 w-8 text-green-600" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-xl font-bold text-foreground">Vielen Dank für Ihre Buchung!</h2>
+              <p className="text-sm text-muted-foreground">Ihr Vertrag wurde erfolgreich abgeschlossen.</p>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-4 text-sm text-left space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Praxis</span>
+                <span className="font-medium">Musterpraxis Dr. Müller</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Produkt</span>
+                <span className="font-medium">HFX GOÄ</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">HFX-Nr.</span>
+                <span className="font-mono">HFX-2024-0042</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Monatspreis brutto</span>
+                <span className="font-bold text-primary">58,31 €</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Zahlungsart</span>
+                <span>SEPA-Lastschrift</span>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Eine Bestätigungs-E-Mail wurde an <strong>dr.mueller@musterpraxis.de</strong> gesendet.
+            </p>
+          </div>
+
+          <button
+            onClick={() => setCurrentStep(1)}
+            className="w-full flex items-center justify-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Zurück zur Vorschau (Schritt 1)
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-lg mx-auto space-y-6">
