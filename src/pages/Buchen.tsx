@@ -389,9 +389,18 @@ export default function Buchen() {
       <div className="max-w-lg mx-auto space-y-6">
         {/* Preview banner */}
         {isPreview && (
-          <div className="bg-warning/10 border border-warning/30 rounded-lg px-4 py-3 flex items-center gap-2 text-sm text-warning">
-            <Eye className="h-4 w-4 shrink-0" />
-            <span><strong>Vorschau-Modus</strong> – Musterdaten, keine echte Buchung möglich</span>
+          <div className="space-y-2">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Zurück
+            </button>
+            <div className="bg-warning/10 border border-warning/30 rounded-lg px-4 py-3 flex items-center gap-2 text-sm text-warning">
+              <Eye className="h-4 w-4 shrink-0" />
+              <span><strong>Vorschau-Modus</strong> – Musterdaten, keine echte Buchung möglich</span>
+            </div>
           </div>
         )}
 
