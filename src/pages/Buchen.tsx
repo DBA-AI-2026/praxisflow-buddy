@@ -260,10 +260,11 @@ export default function Buchen() {
   const monthlyGross = monthlyNet * 1.19;
 
   const canSubmit =
-    fachrichtung &&
+    isPreview ||
+    (fachrichtung &&
     rechtsform &&
     agbAccepted &&
-    (!isEBM || (bsnr.trim() && lanr.trim()));
+    (!isEBM || (bsnr.trim() && lanr.trim())));
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
