@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { CheckCircle2, Loader2, AlertCircle, ExternalLink, CreditCard, FileText, PartyPopper } from "lucide-react";
+import { CheckCircle2, Loader2, AlertCircle, ExternalLink, CreditCard, FileText, PartyPopper, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -165,6 +165,7 @@ export default function Buchen() {
   const [searchParams] = useSearchParams();
   const contractId = searchParams.get("contract_id");
   const productParam = searchParams.get("product");
+  const isPreview = searchParams.get("preview") === "true";
 
   const [contract, setContract] = useState<ContractSummary | null>(null);
   const [agbUrl, setAgbUrl] = useState<string | null>(null);
@@ -187,6 +188,24 @@ export default function Buchen() {
   const isEBM = (contract?.product_name || productParam || "").includes("EBM");
 
   useEffect(() => {
+    // Preview mode: show mock data without a real contract
+    if (isPreview) {
+      setContract({
+        praxis: "Musterpraxis Dr. Müller",
+        customer_name: "Dr. Anna Müller",
+        product_name: "HFX GOÄ - die KI für ihre Privatabrechnung",
+        modules: null,
+        monthly_price: 49,
+        hfx_customer_number: "HFX-2024-0042",
+        fachrichtung: null,
+        rechtsform: null,
+      });
+      setAgbUrl(DEFAULT_AGB_URL);
+      setHasProductSpecificAgb(false);
+      setLoading(false);
+      return;
+    }
+
     if (!contractId) {
       setNotFound(true);
       setLoading(false);
@@ -233,7 +252,7 @@ export default function Buchen() {
         }
         setLoading(false);
       });
-  }, [contractId, productParam]);
+  }, [contractId, productParam, isPreview]);
 
   const productName = contract?.product_name || productParam || "";
   const monthlyNet = contract?.monthly_price ?? 0;
@@ -367,6 +386,14 @@ export default function Buchen() {
   return (
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-lg mx-auto space-y-6">
+        {/* Preview banner */}
+        {isPreview && (
+          <div className="bg-warning/10 border border-warning/30 rounded-lg px-4 py-3 flex items-center gap-2 text-sm text-warning">
+            <Eye className="h-4 w-4 shrink-0" />
+            <span><strong>Vorschau-Modus</strong> – Musterdaten, keine echte Buchung möglich</span>
+          </div>
+        )}
+
         {/* Brand header */}
         <div className="text-center flex flex-col items-center gap-2">
           <div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center border border-border">
@@ -518,13 +545,15 @@ export default function Buchen() {
             type="submit"
             className="w-full"
             size="lg"
-            disabled={!canSubmit || submitting}
+            disabled={!canSubmit || submitting || isPreview}
           >
             {submitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 Weiterleitung zu Stripe…
               </>
+            ) : isPreview ? (
+              "Vorschau – keine echte Buchung"
             ) : (
               "Weiter zur Zahlung →"
             )}
