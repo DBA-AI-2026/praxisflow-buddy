@@ -188,6 +188,24 @@ export default function Buchen() {
   const isEBM = (contract?.product_name || productParam || "").includes("EBM");
 
   useEffect(() => {
+    // Preview mode: show mock data without a real contract
+    if (isPreview) {
+      setContract({
+        praxis: "Musterpraxis Dr. Müller",
+        customer_name: "Dr. Anna Müller",
+        product_name: "HFX GOÄ - die KI für ihre Privatabrechnung",
+        modules: null,
+        monthly_price: 49,
+        hfx_customer_number: "HFX-2024-0042",
+        fachrichtung: null,
+        rechtsform: null,
+      });
+      setAgbUrl(DEFAULT_AGB_URL);
+      setHasProductSpecificAgb(false);
+      setLoading(false);
+      return;
+    }
+
     if (!contractId) {
       setNotFound(true);
       setLoading(false);
@@ -234,7 +252,7 @@ export default function Buchen() {
         }
         setLoading(false);
       });
-  }, [contractId, productParam]);
+  }, [contractId, productParam, isPreview]);
 
   const productName = contract?.product_name || productParam || "";
   const monthlyNet = contract?.monthly_price ?? 0;
