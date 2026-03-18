@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
         .footer { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; font-size: 14px; color: #6b7280; }
       </style></head><body><div class="container">
         <div class="header">
-          <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg" alt="Honorarfuchs Logo" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; margin-bottom: 12px;" />
+          <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fuchs-bildmarke.png" alt="Honorarfuchs Logo" style="width: 60px; height: 60px; border-radius: 50%; background-color: #ffffff; padding: 4px; object-fit: contain; margin-bottom: 12px;" />
           <h1 style="margin: 0; font-size: 28px;">Vertragsbestätigung</h1>
           <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Honorarfuchs</p>
         </div>
@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
         .footer { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; font-size: 14px; color: #6b7280; }
       </style></head><body><div class="container">
         <div class="header">
-          <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg" alt="Honorarfuchs Logo" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; margin-bottom: 12px;" />
+          <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fuchs-bildmarke.png" alt="Honorarfuchs Logo" style="width: 60px; height: 60px; border-radius: 50%; background-color: #ffffff; padding: 4px; object-fit: contain; margin-bottom: 12px;" />
           <h1 style="margin: 0; font-size: 28px;">Neuer Vertrag abgeschlossen</h1>
           <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Vertriebspartner-Kopie</p>
         </div>
