@@ -163,6 +163,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
 
 export default function Buchen() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const contractId = searchParams.get("contract_id");
   const productParam = searchParams.get("product");
   const isPreview = searchParams.get("preview") === "true";
