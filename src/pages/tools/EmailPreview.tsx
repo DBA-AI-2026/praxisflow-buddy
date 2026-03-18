@@ -24,6 +24,14 @@ import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
 import { showPdfInViewer } from "@/lib/pdfViewerState";
 import { Textarea } from "@/components/ui/textarea";
 
+// ─── Logo URLs ────────────────────────────────────────────────────────────────
+const LOGO_OLD = "https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg";
+const LOGO_NEW = "https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fuchs-bildmarke.png";
+
+function patchLogo(html: string): string {
+  return html.replaceAll(LOGO_OLD, LOGO_NEW);
+}
+
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK = {
   hfx_customer_number: "HFX-I01019",
