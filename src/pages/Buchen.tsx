@@ -267,6 +267,12 @@ export default function Buchen() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Preview: just advance steps without API call
+    if (isPreview) {
+      setCurrentStep(2);
+      setTimeout(() => setCurrentStep(3), 1500);
+      return;
+    }
     if (!canSubmit || !contractId) return;
 
     setSubmitting(true);
