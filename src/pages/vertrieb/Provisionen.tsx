@@ -381,7 +381,7 @@ const Provisionen = () => {
 
   const openCreateDialog = () => {
     setEditingItem(null);
-    setForm({ product_name: "", commission_type: "prozent", commission_value: 0, description: "", is_active: true });
+    setForm({ product_name: "", commission_type: "prozent", commission_value: 0, description: "", is_active: true, sprint_start: "", sprint_end: "", sprint_target_1: 0, sprint_target_2: 0, sprint_bonus_1: 0, sprint_bonus_2: 0 });
     setDialogOpen(true);
   };
 
@@ -393,6 +393,12 @@ const Provisionen = () => {
       commission_value: item.commission_value,
       description: item.description || "",
       is_active: item.is_active,
+      sprint_start: item.sprint_start || "",
+      sprint_end: item.sprint_end || "",
+      sprint_target_1: item.sprint_target_1 || 0,
+      sprint_target_2: item.sprint_target_2 || 0,
+      sprint_bonus_1: item.sprint_bonus_1 || 0,
+      sprint_bonus_2: item.sprint_bonus_2 || 0,
     });
     setDialogOpen(true);
   };
