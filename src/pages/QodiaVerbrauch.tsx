@@ -318,7 +318,7 @@ export default function QodiaVerbrauch() {
                           ) : (
                             <Badge
                               variant="outline"
-                              className="border-green-500/50 text-green-600 bg-green-50 text-xs"
+                              className="border-success/50 text-success bg-success/10 text-xs"
                             >
                               OK
                             </Badge>
