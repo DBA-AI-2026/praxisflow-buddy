@@ -707,21 +707,24 @@ const Provisionen = () => {
                     <Input type="date" value={form.sprint_end} onChange={(e) => setForm({ ...form, sprint_end: e.target.value })} />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-end">
                   <div className="grid gap-1.5">
                     <Label className="text-xs">Ziel 1: ≥ Menge</Label>
                     <Input type="number" min={0} value={form.sprint_target_1} onChange={(e) => setForm({ ...form, sprint_target_1: parseInt(e.target.value) || 0 })} placeholder="z.B. 10" />
                   </div>
+                  <span className="pb-2 text-sm font-medium text-muted-foreground">+</span>
                   <div className="grid gap-1.5">
                     <Label className="text-xs">Ziel 2: ≥ Menge</Label>
                     <Input type="number" min={0} value={form.sprint_target_2} onChange={(e) => setForm({ ...form, sprint_target_2: parseInt(e.target.value) || 0 })} placeholder="z.B. 20" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <p className="text-xs text-muted-foreground">Die Sprint-Boni sind additiv: bei Erreichen von Ziel 2 werden beide Boni ausgezahlt.</p>
+                <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-end">
                   <div className="grid gap-1.5">
                     <Label className="text-xs">Sprint-Bonus 1 (€)</Label>
                     <Input type="number" min={0} step={1} value={form.sprint_bonus_1} onChange={(e) => setForm({ ...form, sprint_bonus_1: parseFloat(e.target.value) || 0 })} placeholder="z.B. 500" />
                   </div>
+                  <span className="pb-2 text-sm font-medium text-muted-foreground">+</span>
                   <div className="grid gap-1.5">
                     <Label className="text-xs">Sprint-Bonus 2 (€)</Label>
                     <Input type="number" min={0} step={1} value={form.sprint_bonus_2} onChange={(e) => setForm({ ...form, sprint_bonus_2: parseFloat(e.target.value) || 0 })} placeholder="z.B. 1000" />
