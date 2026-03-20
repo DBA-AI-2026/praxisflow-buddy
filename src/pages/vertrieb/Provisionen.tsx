@@ -249,23 +249,34 @@ const Provisionen = () => {
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof form & { id?: string }) => {
+      const sprintFields = data.commission_type === "festbetrag" ? {
+        sprint_start: data.sprint_start || null,
+        sprint_end: data.sprint_end || null,
+        sprint_target_1: data.sprint_target_1 || null,
+        sprint_target_2: data.sprint_target_2 || null,
+        sprint_bonus_1: data.sprint_bonus_1 || 0,
+        sprint_bonus_2: data.sprint_bonus_2 || 0,
+      } : {
+        sprint_start: null,
+        sprint_end: null,
+        sprint_target_1: null,
+        sprint_target_2: null,
+        sprint_bonus_1: 0,
+        sprint_bonus_2: 0,
+      };
+      const payload = {
+        product_name: data.product_name,
+        commission_type: data.commission_type,
+        commission_value: data.commission_value,
+        description: data.description || null,
+        is_active: data.is_active,
+        ...sprintFields,
+      };
       if (data.id) {
-        const { error } = await supabase.from("product_commissions").update({
-          product_name: data.product_name,
-          commission_type: data.commission_type,
-          commission_value: data.commission_value,
-          description: data.description || null,
-          is_active: data.is_active,
-        }).eq("id", data.id);
+        const { error } = await supabase.from("product_commissions").update(payload as any).eq("id", data.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("product_commissions").insert({
-          product_name: data.product_name,
-          commission_type: data.commission_type,
-          commission_value: data.commission_value,
-          description: data.description || null,
-          is_active: data.is_active,
-        });
+        const { error } = await supabase.from("product_commissions").insert(payload as any);
         if (error) throw error;
       }
     },
