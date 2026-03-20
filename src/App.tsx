@@ -43,6 +43,7 @@ import DemoSuccess from "./pages/DemoSuccess";
 import ContractConfirmation from "./pages/ContractConfirmation";
 import MandateSuccess from "./pages/MandateSuccess";
 import Buchen from "./pages/Buchen";
+import QodiaVerbrauch from "./pages/QodiaVerbrauch";
 
 const queryClient = new QueryClient();
 

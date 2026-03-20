@@ -69,6 +69,9 @@ export const routePermissions: RoutePermission[] = [
   // Buchhaltung
   { path: "/buchhaltung", allowedRoles: ["admin"] },
 
+  // Qodia-Verbrauch
+  { path: "/qodia-verbrauch", allowedRoles: ["admin", "sales_lead"] },
+
 ];
 
 export function getRoutePermission(path: string): RoutePermission | undefined {
