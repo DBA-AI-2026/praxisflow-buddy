@@ -10,9 +10,7 @@ const APP_URL = "https://praxisflow-buddy.lovable.app";
 
 // Products that are available for the digital booking flow
 const VALID_PRODUCTS = [
-  "HFX EBM",
   "HFX GOÄ - die KI für ihre Privatabrechnung",
-  "HFX GOÄ/GOZ Live-Check",
 ];
 
 Deno.serve(async (req) => {
