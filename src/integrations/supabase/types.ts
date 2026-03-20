@@ -1172,6 +1172,12 @@ export type Database = {
           id: string
           is_active: boolean
           product_name: string
+          sprint_bonus_1: number | null
+          sprint_bonus_2: number | null
+          sprint_end: string | null
+          sprint_start: string | null
+          sprint_target_1: number | null
+          sprint_target_2: number | null
           updated_at: string
         }
         Insert: {
@@ -1182,6 +1188,12 @@ export type Database = {
           id?: string
           is_active?: boolean
           product_name: string
+          sprint_bonus_1?: number | null
+          sprint_bonus_2?: number | null
+          sprint_end?: string | null
+          sprint_start?: string | null
+          sprint_target_1?: number | null
+          sprint_target_2?: number | null
           updated_at?: string
         }
         Update: {
@@ -1192,6 +1204,12 @@ export type Database = {
           id?: string
           is_active?: boolean
           product_name?: string
+          sprint_bonus_1?: number | null
+          sprint_bonus_2?: number | null
+          sprint_end?: string | null
+          sprint_start?: string | null
+          sprint_target_1?: number | null
+          sprint_target_2?: number | null
           updated_at?: string
         }
         Relationships: []

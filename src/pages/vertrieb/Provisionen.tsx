@@ -32,6 +32,12 @@ interface ProductCommission {
   commission_value: number;
   description: string | null;
   is_active: boolean;
+  sprint_start: string | null;
+  sprint_end: string | null;
+  sprint_target_1: number | null;
+  sprint_target_2: number | null;
+  sprint_bonus_1: number | null;
+  sprint_bonus_2: number | null;
 }
 
 interface CommissionPayout {
@@ -178,6 +184,12 @@ const Provisionen = () => {
     commission_value: 0,
     description: "",
     is_active: true,
+    sprint_start: "",
+    sprint_end: "",
+    sprint_target_1: 0,
+    sprint_target_2: 0,
+    sprint_bonus_1: 0,
+    sprint_bonus_2: 0,
   });
 
   // Payout state
@@ -237,23 +249,34 @@ const Provisionen = () => {
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof form & { id?: string }) => {
+      const sprintFields = data.commission_type === "festbetrag" ? {
+        sprint_start: data.sprint_start || null,
+        sprint_end: data.sprint_end || null,
+        sprint_target_1: data.sprint_target_1 || null,
+        sprint_target_2: data.sprint_target_2 || null,
+        sprint_bonus_1: data.sprint_bonus_1 || 0,
+        sprint_bonus_2: data.sprint_bonus_2 || 0,
+      } : {
+        sprint_start: null,
+        sprint_end: null,
+        sprint_target_1: null,
+        sprint_target_2: null,
+        sprint_bonus_1: 0,
+        sprint_bonus_2: 0,
+      };
+      const payload = {
+        product_name: data.product_name,
+        commission_type: data.commission_type,
+        commission_value: data.commission_value,
+        description: data.description || null,
+        is_active: data.is_active,
+        ...sprintFields,
+      };
       if (data.id) {
-        const { error } = await supabase.from("product_commissions").update({
-          product_name: data.product_name,
-          commission_type: data.commission_type,
-          commission_value: data.commission_value,
-          description: data.description || null,
-          is_active: data.is_active,
-        }).eq("id", data.id);
+        const { error } = await supabase.from("product_commissions").update(payload as any).eq("id", data.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("product_commissions").insert({
-          product_name: data.product_name,
-          commission_type: data.commission_type,
-          commission_value: data.commission_value,
-          description: data.description || null,
-          is_active: data.is_active,
-        });
+        const { error } = await supabase.from("product_commissions").insert(payload as any);
         if (error) throw error;
       }
     },
@@ -358,7 +381,7 @@ const Provisionen = () => {
 
   const openCreateDialog = () => {
     setEditingItem(null);
-    setForm({ product_name: "", commission_type: "prozent", commission_value: 0, description: "", is_active: true });
+    setForm({ product_name: "", commission_type: "prozent", commission_value: 0, description: "", is_active: true, sprint_start: "", sprint_end: "", sprint_target_1: 0, sprint_target_2: 0, sprint_bonus_1: 0, sprint_bonus_2: 0 });
     setDialogOpen(true);
   };
 
@@ -370,6 +393,12 @@ const Provisionen = () => {
       commission_value: item.commission_value,
       description: item.description || "",
       is_active: item.is_active,
+      sprint_start: item.sprint_start || "",
+      sprint_end: item.sprint_end || "",
+      sprint_target_1: item.sprint_target_1 || 0,
+      sprint_target_2: item.sprint_target_2 || 0,
+      sprint_bonus_1: item.sprint_bonus_1 || 0,
+      sprint_bonus_2: item.sprint_bonus_2 || 0,
     });
     setDialogOpen(true);
   };
@@ -663,6 +692,44 @@ const Provisionen = () => {
               <Label htmlFor="description">Beschreibung (optional)</Label>
               <Input id="description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Kurze Beschreibung" />
             </div>
+
+            {/* Sprint Section – only for Festbetrag */}
+            {form.commission_type === "festbetrag" && (
+              <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+                <p className="text-sm font-semibold tracking-wide text-foreground">SPRINT</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Anfangsdatum</Label>
+                    <Input type="date" value={form.sprint_start} onChange={(e) => setForm({ ...form, sprint_start: e.target.value })} />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Enddatum</Label>
+                    <Input type="date" value={form.sprint_end} onChange={(e) => setForm({ ...form, sprint_end: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Ziel 1: ≥ Menge</Label>
+                    <Input type="number" min={0} value={form.sprint_target_1} onChange={(e) => setForm({ ...form, sprint_target_1: parseInt(e.target.value) || 0 })} placeholder="z.B. 10" />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Ziel 2: ≥ Menge</Label>
+                    <Input type="number" min={0} value={form.sprint_target_2} onChange={(e) => setForm({ ...form, sprint_target_2: parseInt(e.target.value) || 0 })} placeholder="z.B. 20" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Sprint-Bonus 1 (€)</Label>
+                    <Input type="number" min={0} step={1} value={form.sprint_bonus_1} onChange={(e) => setForm({ ...form, sprint_bonus_1: parseFloat(e.target.value) || 0 })} placeholder="z.B. 500" />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Sprint-Bonus 2 (€)</Label>
+                    <Input type="number" min={0} step={1} value={form.sprint_bonus_2} onChange={(e) => setForm({ ...form, sprint_bonus_2: parseFloat(e.target.value) || 0 })} placeholder="z.B. 1000" />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center gap-3">
               <Switch checked={form.is_active} onCheckedChange={(checked) => setForm({ ...form, is_active: checked })} />
               <Label>Aktiv</Label>
