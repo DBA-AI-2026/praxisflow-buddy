@@ -114,22 +114,8 @@ export default function QodiaVerbrauch() {
     }, 0) ?? 0;
 
   return (
-    <MainLayout>
+    <MainLayout title="Qodia-Verbrauch" subtitle="Live-Verbrauchsabfrage aller aktiven HFX GOÄ Kunden">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <TrendingUp className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">
-              Qodia-Verbrauch
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Live-Verbrauchsabfrage aller aktiven HFX GOÄ Kunden
-            </p>
-          </div>
-        </div>
 
         {/* Filter Card */}
         <Card>
