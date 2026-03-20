@@ -692,6 +692,44 @@ const Provisionen = () => {
               <Label htmlFor="description">Beschreibung (optional)</Label>
               <Input id="description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Kurze Beschreibung" />
             </div>
+
+            {/* Sprint Section – only for Festbetrag */}
+            {form.commission_type === "festbetrag" && (
+              <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+                <p className="text-sm font-semibold tracking-wide text-foreground">SPRINT</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Anfangsdatum</Label>
+                    <Input type="date" value={form.sprint_start} onChange={(e) => setForm({ ...form, sprint_start: e.target.value })} />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Enddatum</Label>
+                    <Input type="date" value={form.sprint_end} onChange={(e) => setForm({ ...form, sprint_end: e.target.value })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Ziel 1: ≥ Menge</Label>
+                    <Input type="number" min={0} value={form.sprint_target_1} onChange={(e) => setForm({ ...form, sprint_target_1: parseInt(e.target.value) || 0 })} placeholder="z.B. 10" />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Ziel 2: ≥ Menge</Label>
+                    <Input type="number" min={0} value={form.sprint_target_2} onChange={(e) => setForm({ ...form, sprint_target_2: parseInt(e.target.value) || 0 })} placeholder="z.B. 20" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Sprint-Bonus 1 (€)</Label>
+                    <Input type="number" min={0} step={1} value={form.sprint_bonus_1} onChange={(e) => setForm({ ...form, sprint_bonus_1: parseFloat(e.target.value) || 0 })} placeholder="z.B. 500" />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Sprint-Bonus 2 (€)</Label>
+                    <Input type="number" min={0} step={1} value={form.sprint_bonus_2} onChange={(e) => setForm({ ...form, sprint_bonus_2: parseFloat(e.target.value) || 0 })} placeholder="z.B. 1000" />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center gap-3">
               <Switch checked={form.is_active} onCheckedChange={(checked) => setForm({ ...form, is_active: checked })} />
               <Label>Aktiv</Label>
