@@ -1,52 +1,65 @@
 
+## Plan: Qodia-Schnittstelle – Nur Success zurückgeben (keine URL)
 
-## Plan: Sprint-Bonus-Felder für "Festbetrag pro Abschluss"
+### Änderung gegenüber dem bisherigen Plan
 
-### Was gebaut wird
+Der bisherige Plan sah vor, dass die Funktion `{ booking_url, contract_id }` zurückgibt und Qodia den Kunden direkt auf diese URL weiterleitet.
 
-Im Dialog "Provisionssatz erstellen/bearbeiten" wird unterhalb des Betrags-Felds ein neuer **SPRINT**-Bereich angezeigt, aber **nur** wenn das Provisionsmodell "Festbetrag pro Abschluss" ausgewählt ist. Dieser Bereich enthält:
+**Neu**: Die Funktion gibt nur `{ success: true, contract_id: "..." }` zurück. Qodia muss keine URL öffnen – der Kunde erhält die Buchungs-E-Mail mit dem Link direkt von uns.
 
-- **Anfangsdatum** (Datepicker)
-- **Enddatum** (Datepicker)
-- **Ziel 1**: >= Menge (Zahl)
-- **Ziel 2**: Menge >= (Zahl)
-- **Sprint-Bonus 1**: xxx € (Zahl)
-- **Sprint-Bonus 2**: xxx € (Zahl)
+### Wie der Flow jetzt aussieht
 
-### Datenbankänderung
+```text
+Qodia-Button → POST qodia-initiate-booking
+    │
+    ├─ API-Key prüfen
+    ├─ Lead suchen / Vertrag anlegen (status="eingegangen")
+    ├─ Buchungs-E-Mail an Kunden senden (via send-contract-confirmation intern)
+    │
+    ▼
+{ "success": true, "contract_id": "..." }   ← nur das, keine URL
 
-Neue Spalten in `product_commissions`:
-
-```sql
-ALTER TABLE product_commissions
-  ADD COLUMN sprint_start date,
-  ADD COLUMN sprint_end date,
-  ADD COLUMN sprint_target_1 integer,
-  ADD COLUMN sprint_target_2 integer,
-  ADD COLUMN sprint_bonus_1 numeric DEFAULT 0,
-  ADD COLUMN sprint_bonus_2 numeric DEFAULT 0;
+Kein Redirect durch Qodia nötig.
+Kunde bekommt E-Mail → klickt selbst auf "Jetzt buchen" → /buchen?...
 ```
-
-Alle Spalten nullable, keine Pflichtfelder – Sprint ist optional.
-
-### Frontend-Änderung
-
-**Datei: `src/pages/vertrieb/Provisionen.tsx`**
-
-1. **`ProductCommission` Interface erweitern** um die 6 neuen Felder
-2. **`form` State erweitern** um Sprint-Felder (Defaults: null/0)
-3. **Im Dialog** (Zeile ~660): Wenn `form.commission_type === "festbetrag"`, einen neuen Abschnitt "SPRINT" mit Separator rendern:
-   - 2 Datepicker nebeneinander (Anfang/Ende)
-   - 2 Zahl-Inputs nebeneinander (Ziel 1 / Ziel 2)
-   - 2 Zahl-Inputs nebeneinander (Sprint-Bonus 1 / Sprint-Bonus 2)
-4. **`saveMutation`** erweitern: die 6 Sprint-Felder beim Insert/Update mitspeichern
-5. **`openEditDialog`** erweitern: Sprint-Felder aus bestehendem Eintrag laden
-6. **Tabelle** (optional): Aktive Sprints als kleine Badge/Info in der Provisionssatz-Tabelle anzeigen
 
 ### Betroffene Dateien
 
 | Datei | Änderung |
 |---|---|
-| Migration (SQL) | 6 neue Spalten in `product_commissions` |
-| `src/pages/vertrieb/Provisionen.tsx` | Interface, Form-State, Dialog-UI, Save-Logik |
+| `supabase/functions/qodia-initiate-booking/index.ts` | Neu erstellen – Response enthält nur `{ success, contract_id }` |
+| `supabase/config.toml` | `verify_jwt = false` für neue Funktion |
 
+### API-Spezifikation (final)
+
+**Request:**
+```http
+POST /functions/v1/qodia-initiate-booking
+x-api-key: <QODIA_API_KEY>
+Content-Type: application/json
+
+{ "hfx_customer_number": "HFX-D00042", "product_name": "HFX GOÄ - die KI für ihre Privatabrechnung" }
+```
+
+**Erfolg (200):**
+```json
+{ "success": true, "contract_id": "uuid..." }
+```
+
+**Fehler:**
+| Code | Bedeutung |
+|---|---|
+| `401` | API-Key fehlt oder falsch |
+| `400` | Pflichtfeld fehlt oder Produkt nicht konfiguriert |
+| `404` | HFX-Nummer nicht gefunden |
+| `409` | Vertrag für dieses Produkt bereits aktiv |
+
+### Interner Aufbau der Edge Function
+
+1. `x-api-key` gegen `QODIA_API_KEY` Secret prüfen
+2. Body validieren (`hfx_customer_number`, `product_name`)
+3. Lead in `leads` per `hfx_customer_number` suchen
+4. Aktiven Vertrag prüfen → `409` falls vorhanden
+5. Offenen `eingegangen`-Vertrag wiederverwenden oder neuen erstellen
+6. `send-contract-confirmation` intern per `fetch` mit Service-Role-Key aufrufen → Buchungs-E-Mail geht an Kunden
+7. Response: `{ success: true, contract_id }`
