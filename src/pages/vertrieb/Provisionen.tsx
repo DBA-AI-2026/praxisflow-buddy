@@ -594,6 +594,7 @@ const Provisionen = () => {
                   </CardTitle>
                   <CardDescription>
                     {isAdmin ? "Legen Sie die Provisionssätze für jedes Produkt fest" : "Übersicht der aktuellen Provisionssätze"}
+                    <span className="block text-xs text-muted-foreground mt-1">Alle Provisionssätze abzüglich Tippgeber-Provisionen</span>
                   </CardDescription>
                 </div>
                 {isAdmin && (
