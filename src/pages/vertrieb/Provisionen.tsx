@@ -32,6 +32,12 @@ interface ProductCommission {
   commission_value: number;
   description: string | null;
   is_active: boolean;
+  sprint_start: string | null;
+  sprint_end: string | null;
+  sprint_target_1: number | null;
+  sprint_target_2: number | null;
+  sprint_bonus_1: number | null;
+  sprint_bonus_2: number | null;
 }
 
 interface CommissionPayout {
