@@ -142,15 +142,14 @@ Deno.serve(async (req) => {
           const data = await res.json();
 
           if (!res.ok || !data.success) {
+            const noAccount = res.status === 403 || res.status === 404;
             return {
               hfx_customer_number: contract.hfx_customer_number,
               customer_name: contract.customer_name,
               email: contract.email,
-              error:
-                data.error ||
-                (res.status === 403
-                  ? "Kein Qodia-Account vorhanden"
-                  : `Fehler ${res.status}`),
+              error: noAccount
+                ? "Kein Qodia-Account vorhanden"
+                : data.error || `Fehler ${res.status}`,
               usage: null,
             };
           }
