@@ -184,6 +184,12 @@ const Provisionen = () => {
     commission_value: 0,
     description: "",
     is_active: true,
+    sprint_start: "",
+    sprint_end: "",
+    sprint_target_1: 0,
+    sprint_target_2: 0,
+    sprint_bonus_1: 0,
+    sprint_bonus_2: 0,
   });
 
   // Payout state
