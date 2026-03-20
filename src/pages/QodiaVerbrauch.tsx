@@ -187,7 +187,7 @@ export default function QodiaVerbrauch() {
             </Card>
             <Card>
               <CardContent className="pt-5">
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-2xl font-bold text-success">
                   {totalSuccess}
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">
