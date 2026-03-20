@@ -43,3 +43,5 @@ project_id = "gvsxentbbzuyanqbqvea"
     verify_jwt = false
   [functions.qodia-initiate-booking]
     verify_jwt = false
+  [functions.qodia-usage-query]
+    verify_jwt = false

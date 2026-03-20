@@ -80,6 +80,7 @@ const adminNavigation: NavItem[] = [
   { name: "Zugangsanfragen", href: "/admin/access-requests", icon: UserPlus, roles: ["admin"], adminOnly: true },
   { name: "Benutzerverwaltung", href: "/admin/users", icon: Users, roles: ["admin"], adminOnly: true },
   { name: "Produktverwaltung", href: "/admin/products", icon: Package, roles: ["admin"], adminOnly: true },
+  { name: "Qodia-Verbrauch", href: "/qodia-verbrauch", icon: BarChart3, roles: ["admin", "sales_lead"] },
   { name: "E-Mail-Vorschau", href: "/admin/email-preview", icon: FileText, roles: ["admin"], adminOnly: true },
   { name: "Buchungsformular-Vorschau", href: "/buchen?preview=true", icon: Eye, roles: ["admin"], adminOnly: true },
   { name: "E-Mail-Einstellungen", href: "/admin/email-settings", icon: Mail, roles: ["admin"], adminOnly: true },

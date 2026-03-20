@@ -43,6 +43,7 @@ import DemoSuccess from "./pages/DemoSuccess";
 import ContractConfirmation from "./pages/ContractConfirmation";
 import MandateSuccess from "./pages/MandateSuccess";
 import Buchen from "./pages/Buchen";
+import QodiaVerbrauch from "./pages/QodiaVerbrauch";
 
 const queryClient = new QueryClient();
 
@@ -95,6 +96,7 @@ const App = () => (
             <Route path="/admin/plz-mapping" element={<ProtectedRoute><PlzMapping /></ProtectedRoute>} />
             <Route path="/buchhaltung" element={<ProtectedRoute><Buchhaltung /></ProtectedRoute>} />
             <Route path="/praxen-journey" element={<ProtectedRoute><PraxenJourney /></ProtectedRoute>} />
+            <Route path="/qodia-verbrauch" element={<ProtectedRoute><QodiaVerbrauch /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
