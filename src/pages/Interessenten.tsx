@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import {
   Table,
   TableBody,
@@ -85,6 +86,7 @@ export default function Interessenten() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { isAdmin, isSalesLead, isRegionalLead } = useUserRole();
+  const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions } = useRegionalTeam();
 
   const canAssign = isAdmin || isSalesLead || isRegionalLead;
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
@@ -209,6 +211,7 @@ export default function Interessenten() {
   });
 
   const filtered = leads.filter((l: any) => {
+    if (!matchesTeamFilter(l.assigned_to)) return false;
     const s = search.toLowerCase();
     return (
       !s ||
@@ -255,6 +258,18 @@ export default function Interessenten() {
               <SelectItem value="abgelehnt">Abgelehnt</SelectItem>
             </SelectContent>
           </Select>
+          {isRegionalLead && teamFilterOptions.length > 1 && (
+            <Select value={teamFilter} onValueChange={setTeamFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {teamFilterOptions.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Button onClick={() => setCreateLeadOpen(true)} className="shrink-0 gap-2">
             <UserPlus className="h-4 w-4" />
             Neuer Interessent

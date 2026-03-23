@@ -62,6 +62,7 @@ const validateLanr = (value: string): string | null => {
   return null;
 };
 import { useUserRole } from "@/hooks/useUserRole";
+import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -350,7 +351,8 @@ export default function Vertraege() {
   const [leadTippgeberName, setLeadTippgeberName] = useState<string | null>(null);
   const [deleteContractTarget, setDeleteContractTarget] = useState<any | null>(null);
   const { user, profile } = useAuth();
-  const { isAdmin, isVertragsabteilung } = useUserRole();
+  const { isAdmin, isVertragsabteilung, isRegionalLead } = useUserRole();
+  const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions } = useRegionalTeam();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

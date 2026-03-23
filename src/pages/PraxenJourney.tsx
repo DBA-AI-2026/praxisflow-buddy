@@ -14,12 +14,16 @@ import { de } from "date-fns/locale";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
 import { UploadPaperContractDialog } from "@/components/leads/UploadPaperContractDialog";
 import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 // ─── Status configs ──────────────────────────────────────────────────────────
 
@@ -151,7 +155,7 @@ const CLOSED_LEAD_STATUSES = ["kein_abschluss", "abgelehnt"];
 type LeadSourceFilter = "alle" | "homepage" | "manuell";
 type LeadStatusFilter = "aktiv" | "kein_abschluss" | "abgelehnt" | "alle";
 
-function InteressentenTab({ search, highlightId }: { search: string; highlightId?: string }) {
+function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }: { search: string; highlightId?: string; teamFilter: string; matchesTeamFilter: (id?: string | null) => boolean }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAdmin, isSalesLead, isRegionalLead } = useUserRole();
@@ -202,6 +206,7 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
     if (statusFilter === "aktiv" && !ACTIVE_LEAD_STATUSES.includes(l.status)) return false;
     if (statusFilter === "kein_abschluss" && l.status !== "kein_abschluss") return false;
     if (statusFilter === "abgelehnt" && l.status !== "abgelehnt") return false;
+    if (!matchesTeamFilter(l.assigned_to)) return false;
 
     if (!s) return true;
     return (
@@ -455,7 +460,7 @@ function InteressentenTab({ search, highlightId }: { search: string; highlightId
 
 // ─── Tab: Verträge (Im Prozess + Abgeschlossen) ──────────────────────────────
 
-function VertraegeTab({ search, highlightId, missingEmailCount }: { search: string; highlightId?: string; missingEmailCount: number }) {
+function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilter }: { search: string; highlightId?: string; missingEmailCount: number; matchesTeamFilter: (id?: string | null) => boolean }) {
   const [groupFilter, setGroupFilter] = useState<"prozess" | "abgeschlossen">("prozess");
   const [statusFilter, setStatusFilter] = useState<string>("alle");
   const navigate = useNavigate();
@@ -518,6 +523,7 @@ function VertraegeTab({ search, highlightId, missingEmailCount }: { search: stri
   const s = search.toLowerCase();
   const filtered = groupContracts.filter((c: any) => {
     if (statusFilter !== "alle" && c.status !== statusFilter) return false;
+    if (!matchesTeamFilter(c.sales_partner_id) && !matchesTeamFilter(c.created_by)) return false;
     if (!s) return true;
     return (
       c.customer_name?.toLowerCase().includes(s) ||
@@ -683,7 +689,7 @@ function VertraegeTab({ search, highlightId, missingEmailCount }: { search: stri
 
 // ─── Tab: Kunden ──────────────────────────────────────────────────────────────
 
-function KundenTab({ search, highlightId }: { search: string; highlightId?: string }) {
+function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string; highlightId?: string; matchesTeamFilter: (id?: string | null) => boolean }) {
   const navigate = useNavigate();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
   useEffect(() => {
@@ -737,6 +743,7 @@ function KundenTab({ search, highlightId }: { search: string; highlightId?: stri
 
   const seenKeys = new Set<string>();
   const rows = activeContracts.filter((c: any) => {
+    if (!matchesTeamFilter(c.sales_partner_id) && !matchesTeamFilter(c.created_by)) return false;
     const key = c.hfx_customer_number
       ? `hfx:${c.hfx_customer_number}`
       : `name:${(c.praxis || c.customer_name || "").toLowerCase().trim()}`;
@@ -930,6 +937,8 @@ export default function PraxenJourney() {
     urlTab === "vertraege" ? "vertraege" : urlTab === "kunden" ? "kunden" : "leads"
   );
 
+  const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions, isRegionalLead } = useRegionalTeam();
+
   const { data: counts = { leads: 0, contracts: 0, kunden: 0, missingEmail: 0 } } = useQuery({
     queryKey: ["journey-counts"],
     queryFn: async () => {
@@ -959,7 +968,7 @@ export default function PraxenJourney() {
         <JourneyTabBar activeTab={tab} onSelect={(t) => setTab(t as any)} tabs={tabs} />
 
         {/* Search bar */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/10">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/10 gap-3 flex-wrap">
           <div className="relative w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
@@ -969,19 +978,34 @@ export default function PraxenJourney() {
               className="pl-8 h-8 text-sm"
             />
           </div>
-          {/* Warning notice inline — only for vertraege tab */}
-          {tab === "vertraege" && counts.missingEmail > 0 && (
-            <div className="flex items-center gap-2 text-xs text-warning font-medium">
-              <FileText className="h-3.5 w-3.5" />
-              <span>{counts.missingEmail} Vertrag{counts.missingEmail > 1 ? "e" : ""} ohne Bestätigungs-E-Mail</span>
-            </div>
-          )}
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Team filter — only for Regionalleiter */}
+            {isRegionalLead && teamFilterOptions.length > 1 && (
+              <Select value={teamFilter} onValueChange={setTeamFilter}>
+                <SelectTrigger className="h-8 w-52 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {teamFilterOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {/* Warning notice inline — only for vertraege tab */}
+            {tab === "vertraege" && counts.missingEmail > 0 && (
+              <div className="flex items-center gap-2 text-xs text-warning font-medium">
+                <FileText className="h-3.5 w-3.5" />
+                <span>{counts.missingEmail} Vertrag{counts.missingEmail > 1 ? "e" : ""} ohne Bestätigungs-E-Mail</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tab content */}
-        {tab === "leads" && <InteressentenTab search={search} highlightId={urlId} />}
-        {tab === "vertraege" && <VertraegeTab search={search} highlightId={urlId} missingEmailCount={counts.missingEmail} />}
-        {tab === "kunden" && <KundenTab search={search} highlightId={urlId} />}
+        {tab === "leads" && <InteressentenTab search={search} highlightId={urlId} teamFilter={teamFilter} matchesTeamFilter={matchesTeamFilter} />}
+        {tab === "vertraege" && <VertraegeTab search={search} highlightId={urlId} missingEmailCount={counts.missingEmail} matchesTeamFilter={matchesTeamFilter} />}
+        {tab === "kunden" && <KundenTab search={search} highlightId={urlId} matchesTeamFilter={matchesTeamFilter} />}
       </div>
     </MainLayout>
   );
