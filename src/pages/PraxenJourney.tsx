@@ -522,6 +522,7 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
   const s = search.toLowerCase();
   const filtered = groupContracts.filter((c: any) => {
     if (statusFilter !== "alle" && c.status !== statusFilter) return false;
+    if (!matchesTeamFilter(c.sales_partner_id) && !matchesTeamFilter(c.created_by)) return false;
     if (!s) return true;
     return (
       c.customer_name?.toLowerCase().includes(s) ||
