@@ -62,6 +62,7 @@ const validateLanr = (value: string): string | null => {
   return null;
 };
 import { useUserRole } from "@/hooks/useUserRole";
+import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
