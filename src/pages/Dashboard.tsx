@@ -77,8 +77,7 @@ function getQuickLinks(role: AppRole | null): QuickLink[] {
     case "admin":
     default:
       return [
-        { to: "/interessenten", label: "Neuer Interessent", icon: UserPlus, primary: true },
-        { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle },
+        { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle, primary: true },
         { to: "/interessenten", label: "Interessenten", icon: Users },
         { to: "/praxen", label: "Kunden", icon: Eye },
       ];
