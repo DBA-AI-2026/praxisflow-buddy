@@ -459,7 +459,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
 
 // ─── Tab: Verträge (Im Prozess + Abgeschlossen) ──────────────────────────────
 
-function VertraegeTab({ search, highlightId, missingEmailCount }: { search: string; highlightId?: string; missingEmailCount: number }) {
+function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilter }: { search: string; highlightId?: string; missingEmailCount: number; matchesTeamFilter: (id?: string | null) => boolean }) {
   const [groupFilter, setGroupFilter] = useState<"prozess" | "abgeschlossen">("prozess");
   const [statusFilter, setStatusFilter] = useState<string>("alle");
   const navigate = useNavigate();
