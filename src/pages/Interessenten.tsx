@@ -211,6 +211,7 @@ export default function Interessenten() {
   });
 
   const filtered = leads.filter((l: any) => {
+    if (!matchesTeamFilter(l.assigned_to)) return false;
     const s = search.toLowerCase();
     return (
       !s ||
