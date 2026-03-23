@@ -95,7 +95,8 @@ export default function DemoTracking() {
       d.hfx_customer_number?.toLowerCase().includes(search.toLowerCase()) ||
       d.email?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "alle" || d.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchTeam = isRegionalLead ? matchesTeamFilter(d.created_by) : true;
+    return matchSearch && matchStatus && matchTeam;
   });
 
   const testphaseCount = demos.filter((d: any) => d.status === "testphase").length;
