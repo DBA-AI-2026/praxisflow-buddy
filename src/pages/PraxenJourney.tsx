@@ -206,6 +206,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
     if (statusFilter === "aktiv" && !ACTIVE_LEAD_STATUSES.includes(l.status)) return false;
     if (statusFilter === "kein_abschluss" && l.status !== "kein_abschluss") return false;
     if (statusFilter === "abgelehnt" && l.status !== "abgelehnt") return false;
+    if (!matchesTeamFilter(l.assigned_to)) return false;
 
     if (!s) return true;
     return (
