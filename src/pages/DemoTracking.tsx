@@ -45,6 +45,8 @@ export default function DemoTracking() {
   const [form, setForm] = useState({ company_name: "", contact_name: "", email: "", telefon: "", product_name: "", notes: "" });
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isRegionalLead } = useUserRole();
+  const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions } = useRegionalTeam();
   const queryClient = useQueryClient();
 
   const { data: demos = [], isLoading } = useQuery({
