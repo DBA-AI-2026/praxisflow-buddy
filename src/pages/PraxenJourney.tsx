@@ -155,7 +155,7 @@ const CLOSED_LEAD_STATUSES = ["kein_abschluss", "abgelehnt"];
 type LeadSourceFilter = "alle" | "homepage" | "manuell";
 type LeadStatusFilter = "aktiv" | "kein_abschluss" | "abgelehnt" | "alle";
 
-function InteressentenTab({ search, highlightId }: { search: string; highlightId?: string }) {
+function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }: { search: string; highlightId?: string; teamFilter: string; matchesTeamFilter: (id?: string | null) => boolean }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAdmin, isSalesLead, isRegionalLead } = useUserRole();
