@@ -687,7 +687,7 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
 
 // ─── Tab: Kunden ──────────────────────────────────────────────────────────────
 
-function KundenTab({ search, highlightId }: { search: string; highlightId?: string }) {
+function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string; highlightId?: string; matchesTeamFilter: (id?: string | null) => boolean }) {
   const navigate = useNavigate();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
   useEffect(() => {
