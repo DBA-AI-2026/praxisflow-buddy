@@ -244,7 +244,7 @@ export default function Reservierungen() {
 
       {/* Action Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="outline" className="gap-1">
             <Building2 className="h-3 w-3" />
             {reservations?.length || 0} Reservierungen
@@ -253,6 +253,18 @@ export default function Reservierungen() {
             <CheckCircle2 className="h-3 w-3" />
             {reservations?.filter(r => new Date(r.reserved_until) > new Date()).length || 0} Aktiv
           </Badge>
+          {isRegionalLead && (
+            <Select value={teamFilter} onValueChange={setTeamFilter}>
+              <SelectTrigger className="w-52 h-8 text-xs">
+                <SelectValue placeholder="Team filtern" />
+              </SelectTrigger>
+              <SelectContent>
+                {teamFilterOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
