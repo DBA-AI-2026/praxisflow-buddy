@@ -258,6 +258,18 @@ export default function Interessenten() {
               <SelectItem value="abgelehnt">Abgelehnt</SelectItem>
             </SelectContent>
           </Select>
+          {isRegionalLead && teamFilterOptions.length > 1 && (
+            <Select value={teamFilter} onValueChange={setTeamFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {teamFilterOptions.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Button onClick={() => setCreateLeadOpen(true)} className="shrink-0 gap-2">
             <UserPlus className="h-4 w-4" />
             Neuer Interessent
