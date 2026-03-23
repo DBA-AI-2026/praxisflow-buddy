@@ -351,6 +351,14 @@ export default function Dashboard() {
         </div>
         {/* Quick Actions – rollenspezifisch */}
         <div className="flex gap-2 flex-wrap">
+          <Button
+            size="sm"
+            onClick={() => setCreateLeadOpen(true)}
+            className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <UserPlus className="h-4 w-4" />
+            Neuer Interessent
+          </Button>
           {getQuickLinks(role).map((ql) => (
             <Link
               key={ql.to + ql.label}
@@ -361,15 +369,6 @@ export default function Dashboard() {
               {ql.label}
             </Link>
           ))}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCreateLeadOpen(true)}
-            className="gap-2"
-          >
-            <UserPlus className="h-4 w-4" />
-            Neuer Interessent
-          </Button>
         </div>
       </div>
 
