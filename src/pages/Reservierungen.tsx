@@ -481,7 +481,9 @@ export default function Reservierungen() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reservations.map((reservation) => {
+                  {reservations.filter(reservation => 
+                    isRegionalLead ? matchesTeamFilter(reservation.reserved_by) : true
+                  ).map((reservation) => {
                     const status = getReservationStatus(reservation.reserved_until);
                     return (
                       <TableRow key={reservation.id}>
