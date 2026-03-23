@@ -117,18 +117,18 @@ const Vertriebler = () => {
         }
       });
 
-      // Merge data
-      const result: VertrieblerRow[] = [];
-      const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || []);
+      // Merge data – use a Map keyed by user_id to guarantee deduplication
+      const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
+      const resultMap = new Map<string, VertrieblerRow>();
 
       for (const role of roles) {
+        // Skip if we already have this user (keep the first/highest-priority role)
+        if (resultMap.has(role.user_id)) continue;
+
         const profile = profileMap.get(role.user_id);
         if (!profile) continue;
 
-        // Avoid duplicates if user has multiple relevant roles - take the first one
-        if (result.some((r) => r.user_id === role.user_id)) continue;
-
-        result.push({
+        resultMap.set(role.user_id, {
           user_id: role.user_id,
           full_name: profile.full_name,
           email: profile.email,
@@ -137,7 +137,7 @@ const Vertriebler = () => {
         });
       }
 
-      return result.sort((a, b) => a.full_name.localeCompare(b.full_name));
+      return [...resultMap.values()].sort((a, b) => a.full_name.localeCompare(b.full_name));
     },
   });
 
