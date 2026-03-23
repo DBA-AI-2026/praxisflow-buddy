@@ -58,6 +58,8 @@ export default function Reservierungen() {
   const [isChecking, setIsChecking] = useState(false);
   const { toast } = useToast();
   const { user, profile } = useAuth();
+  const { isRegionalLead } = useUserRole();
+  const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions } = useRegionalTeam();
   const queryClient = useQueryClient();
 
   // Fetch reservations
