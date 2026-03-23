@@ -25,6 +25,8 @@ import { CsvImportDialog } from "@/components/demo-tracking/CsvImportDialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
