@@ -937,6 +937,8 @@ export default function PraxenJourney() {
     urlTab === "vertraege" ? "vertraege" : urlTab === "kunden" ? "kunden" : "leads"
   );
 
+  const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions, isRegionalLead } = useRegionalTeam();
+
   const { data: counts = { leads: 0, contracts: 0, kunden: 0, missingEmail: 0 } } = useQuery({
     queryKey: ["journey-counts"],
     queryFn: async () => {
@@ -966,7 +968,7 @@ export default function PraxenJourney() {
         <JourneyTabBar activeTab={tab} onSelect={(t) => setTab(t as any)} tabs={tabs} />
 
         {/* Search bar */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/10">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/10 gap-3 flex-wrap">
           <div className="relative w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
@@ -976,19 +978,34 @@ export default function PraxenJourney() {
               className="pl-8 h-8 text-sm"
             />
           </div>
-          {/* Warning notice inline — only for vertraege tab */}
-          {tab === "vertraege" && counts.missingEmail > 0 && (
-            <div className="flex items-center gap-2 text-xs text-warning font-medium">
-              <FileText className="h-3.5 w-3.5" />
-              <span>{counts.missingEmail} Vertrag{counts.missingEmail > 1 ? "e" : ""} ohne Bestätigungs-E-Mail</span>
-            </div>
-          )}
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Team filter — only for Regionalleiter */}
+            {isRegionalLead && teamFilterOptions.length > 1 && (
+              <Select value={teamFilter} onValueChange={setTeamFilter}>
+                <SelectTrigger className="h-8 w-52 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {teamFilterOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {/* Warning notice inline — only for vertraege tab */}
+            {tab === "vertraege" && counts.missingEmail > 0 && (
+              <div className="flex items-center gap-2 text-xs text-warning font-medium">
+                <FileText className="h-3.5 w-3.5" />
+                <span>{counts.missingEmail} Vertrag{counts.missingEmail > 1 ? "e" : ""} ohne Bestätigungs-E-Mail</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tab content */}
-        {tab === "leads" && <InteressentenTab search={search} highlightId={urlId} />}
-        {tab === "vertraege" && <VertraegeTab search={search} highlightId={urlId} missingEmailCount={counts.missingEmail} />}
-        {tab === "kunden" && <KundenTab search={search} highlightId={urlId} />}
+        {tab === "leads" && <InteressentenTab search={search} highlightId={urlId} teamFilter={teamFilter} matchesTeamFilter={matchesTeamFilter} />}
+        {tab === "vertraege" && <VertraegeTab search={search} highlightId={urlId} missingEmailCount={counts.missingEmail} matchesTeamFilter={matchesTeamFilter} />}
+        {tab === "kunden" && <KundenTab search={search} highlightId={urlId} matchesTeamFilter={matchesTeamFilter} />}
       </div>
     </MainLayout>
   );
