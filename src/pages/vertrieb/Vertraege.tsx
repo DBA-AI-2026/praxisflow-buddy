@@ -1107,7 +1107,10 @@ export default function Vertraege() {
         c.email?.toLowerCase().includes(q) ||
         c.rechnungs_email?.toLowerCase().includes(q);
       const matchesStatus = statusFilter ? c.status === statusFilter : true;
-      return matchesSearch && matchesStatus;
+      const matchesTeam = isRegionalLead
+        ? matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by)
+        : true;
+      return matchesSearch && matchesStatus && matchesTeam;
     })
     .sort((a: any, b: any) => {
       const aVal = new Date(a[sortField] || 0).getTime();
