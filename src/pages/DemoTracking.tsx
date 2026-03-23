@@ -25,6 +25,8 @@ import { CsvImportDialog } from "@/components/demo-tracking/CsvImportDialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -43,6 +45,8 @@ export default function DemoTracking() {
   const [form, setForm] = useState({ company_name: "", contact_name: "", email: "", telefon: "", product_name: "", notes: "" });
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isRegionalLead } = useUserRole();
+  const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions } = useRegionalTeam();
   const queryClient = useQueryClient();
 
   const { data: demos = [], isLoading } = useQuery({
@@ -91,7 +95,8 @@ export default function DemoTracking() {
       d.hfx_customer_number?.toLowerCase().includes(search.toLowerCase()) ||
       d.email?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "alle" || d.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchTeam = isRegionalLead ? matchesTeamFilter(d.created_by) : true;
+    return matchSearch && matchStatus && matchTeam;
   });
 
   const testphaseCount = demos.filter((d: any) => d.status === "testphase").length;
@@ -138,7 +143,7 @@ export default function DemoTracking() {
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
-        <div className="flex gap-3 flex-1 w-full sm:w-auto">
+        <div className="flex gap-3 flex-1 w-full sm:w-auto flex-wrap">
           <div className="relative flex-1 sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input placeholder="Suche..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
@@ -155,6 +160,18 @@ export default function DemoTracking() {
               <SelectItem value="abgebrochen">Abgebrochen</SelectItem>
             </SelectContent>
           </Select>
+          {isRegionalLead && (
+            <Select value={teamFilter} onValueChange={setTeamFilter}>
+              <SelectTrigger className="w-52">
+                <SelectValue placeholder="Team filtern" />
+              </SelectTrigger>
+              <SelectContent>
+                {teamFilterOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setCsvOpen(true)}>

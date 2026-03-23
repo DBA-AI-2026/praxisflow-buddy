@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Plus, Calendar, Building2, User, AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, addMonths } from "date-fns";
@@ -56,6 +58,8 @@ export default function Reservierungen() {
   const [isChecking, setIsChecking] = useState(false);
   const { toast } = useToast();
   const { user, profile } = useAuth();
+  const { isRegionalLead } = useUserRole();
+  const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions } = useRegionalTeam();
   const queryClient = useQueryClient();
 
   // Fetch reservations
@@ -240,7 +244,7 @@ export default function Reservierungen() {
 
       {/* Action Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="outline" className="gap-1">
             <Building2 className="h-3 w-3" />
             {reservations?.length || 0} Reservierungen
@@ -249,6 +253,18 @@ export default function Reservierungen() {
             <CheckCircle2 className="h-3 w-3" />
             {reservations?.filter(r => new Date(r.reserved_until) > new Date()).length || 0} Aktiv
           </Badge>
+          {isRegionalLead && (
+            <Select value={teamFilter} onValueChange={setTeamFilter}>
+              <SelectTrigger className="w-52 h-8 text-xs">
+                <SelectValue placeholder="Team filtern" />
+              </SelectTrigger>
+              <SelectContent>
+                {teamFilterOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -465,7 +481,9 @@ export default function Reservierungen() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reservations.map((reservation) => {
+                  {reservations.filter(reservation => 
+                    isRegionalLead ? matchesTeamFilter(reservation.reserved_by) : true
+                  ).map((reservation) => {
                     const status = getReservationStatus(reservation.reserved_until);
                     return (
                       <TableRow key={reservation.id}>

@@ -1107,7 +1107,10 @@ export default function Vertraege() {
         c.email?.toLowerCase().includes(q) ||
         c.rechnungs_email?.toLowerCase().includes(q);
       const matchesStatus = statusFilter ? c.status === statusFilter : true;
-      return matchesSearch && matchesStatus;
+      const matchesTeam = isRegionalLead
+        ? matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by)
+        : true;
+      return matchesSearch && matchesStatus && matchesTeam;
     })
     .sort((a: any, b: any) => {
       const aVal = new Date(a[sortField] || 0).getTime();
@@ -1632,14 +1635,28 @@ export default function Vertraege() {
     <MainLayout title="Vertragserfassung" subtitle="Verträge anlegen und verwalten">
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Suche nach Kunde, Produkt oder Partner..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex gap-3 flex-1 w-full sm:w-auto">
+          <div className="relative flex-1 sm:max-w-xs">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Suche nach Kunde, Produkt oder Partner..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          {isRegionalLead && (
+            <Select value={teamFilter} onValueChange={setTeamFilter}>
+              <SelectTrigger className="w-52">
+                <SelectValue placeholder="Team filtern" />
+              </SelectTrigger>
+              <SelectContent>
+                {teamFilterOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
         <div className="flex gap-2">
           <Button onClick={() => { setForm({ ...emptyForm, sales_partner_name: profile?.full_name || "" }); setDialogOpen(true); }}>
