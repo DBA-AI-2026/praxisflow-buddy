@@ -143,7 +143,7 @@ export default function DemoTracking() {
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
-        <div className="flex gap-3 flex-1 w-full sm:w-auto">
+        <div className="flex gap-3 flex-1 w-full sm:w-auto flex-wrap">
           <div className="relative flex-1 sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input placeholder="Suche..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
@@ -160,6 +160,18 @@ export default function DemoTracking() {
               <SelectItem value="abgebrochen">Abgebrochen</SelectItem>
             </SelectContent>
           </Select>
+          {isRegionalLead && (
+            <Select value={teamFilter} onValueChange={setTeamFilter}>
+              <SelectTrigger className="w-52">
+                <SelectValue placeholder="Team filtern" />
+              </SelectTrigger>
+              <SelectContent>
+                {teamFilterOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setCsvOpen(true)}>
