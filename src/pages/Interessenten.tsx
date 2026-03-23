@@ -86,6 +86,7 @@ export default function Interessenten() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { isAdmin, isSalesLead, isRegionalLead } = useUserRole();
+  const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions } = useRegionalTeam();
 
   const canAssign = isAdmin || isSalesLead || isRegionalLead;
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
