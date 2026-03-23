@@ -742,6 +742,7 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
 
   const seenKeys = new Set<string>();
   const rows = activeContracts.filter((c: any) => {
+    if (!matchesTeamFilter(c.sales_partner_id) && !matchesTeamFilter(c.created_by)) return false;
     const key = c.hfx_customer_number
       ? `hfx:${c.hfx_customer_number}`
       : `name:${(c.praxis || c.customer_name || "").toLowerCase().trim()}`;
