@@ -2884,9 +2884,9 @@ export default function Vertraege() {
                   type="number"
                   min={0}
                   step={0.01}
-                  value={(form as any).qodia_unit_price ?? 0}
+                  value={(form as any).qodia_unit_price ?? 0.99}
                   onChange={(e) => set("qodia_unit_price" as any, parseFloat(e.target.value) || 0)}
-                  placeholder="z.B. 0.25"
+                  placeholder="z.B. 0.99"
                   className="max-w-[180px]"
                 />
                 <p className="text-xs text-muted-foreground">Interner Stückpreis für variablen Qodia-Verbrauch. Wird von Qodia gemeldete Mengen multipliziert.</p>
