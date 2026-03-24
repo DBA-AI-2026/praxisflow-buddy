@@ -2376,7 +2376,7 @@ export default function Vertraege() {
                     selected_products: next,
                     monthly_price: totalMonthly,
                     one_time_fee: totalOneTime,
-                    qodia_unit_price: unitProduct ? unitPrice : 0,
+                    qodia_unit_price: unitProduct ? unitPrice : 0.99,
                   } as any));
                 };
 
