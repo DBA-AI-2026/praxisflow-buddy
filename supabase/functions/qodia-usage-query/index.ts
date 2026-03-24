@@ -138,14 +138,16 @@ Deno.serve(async (req) => {
           try { data = JSON.parse(rawText); } catch { /* not JSON */ }
 
           if (!res.ok || !data.success) {
-            const noAccount = res.status === 404;
+            // 403 = kein Account / kein externer Benutzer (laut API-Doku)
+            const noAccount = res.status === 403 || res.status === 404;
+            const errorMsg = (data.error as string) || (data.message as string) || `Fehler ${res.status}`;
             return {
               hfx_customer_number: contract.hfx_customer_number,
               customer_name: contract.customer_name,
               email: contract.email,
-              error: noAccount
+              error: noAccount && (errorMsg === "Access denied" || errorMsg === "User not found")
                 ? "Kein Qodia-Account vorhanden"
-                : (data.error as string) || (data.message as string) || `Fehler ${res.status}: ${rawText}`,
+                : errorMsg,
               usage: null,
             };
           }
