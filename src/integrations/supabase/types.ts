@@ -271,6 +271,69 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_cases: {
+        Row: {
+          assigned_to: string | null
+          case_number: string
+          case_type: string
+          contract_id: string | null
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          id: string
+          notes: string | null
+          resolved_at: string | null
+          status: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          case_number?: string
+          case_type?: string
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          id?: string
+          notes?: string | null
+          resolved_at?: string | null
+          status?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          case_number?: string
+          case_type?: string
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          id?: string
+          notes?: string | null
+          resolved_at?: string | null
+          status?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_cases_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_cases_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           adresse: string | null
@@ -282,6 +345,7 @@ export type Database = {
           bsnr: string | null
           cancellation_period_months: number
           confirmation_email_sent_at: string | null
+          contract_number: string | null
           created_at: string
           created_by: string | null
           creditreform_approval_note: string | null
@@ -354,6 +418,7 @@ export type Database = {
           bsnr?: string | null
           cancellation_period_months?: number
           confirmation_email_sent_at?: string | null
+          contract_number?: string | null
           created_at?: string
           created_by?: string | null
           creditreform_approval_note?: string | null
@@ -426,6 +491,7 @@ export type Database = {
           bsnr?: string | null
           cancellation_period_months?: number
           confirmation_email_sent_at?: string | null
+          contract_number?: string | null
           created_at?: string
           created_by?: string | null
           creditreform_approval_note?: string | null
@@ -493,7 +559,7 @@ export type Database = {
             foreignKeyName: "contracts_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
-            referencedRelation: "praxen"
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
           {
@@ -593,6 +659,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      customers: {
+        Row: {
+          adresse: string | null
+          bsnr: string | null
+          created_at: string
+          email: string | null
+          hfx_customer_number: string
+          id: string
+          lanr: string | null
+          mp_nr: string | null
+          nachname: string | null
+          notes: string | null
+          ort: string | null
+          plz: string | null
+          praxis_name: string | null
+          salesforce_id: string | null
+          telefon: string | null
+          updated_at: string
+          vorname: string | null
+        }
+        Insert: {
+          adresse?: string | null
+          bsnr?: string | null
+          created_at?: string
+          email?: string | null
+          hfx_customer_number: string
+          id?: string
+          lanr?: string | null
+          mp_nr?: string | null
+          nachname?: string | null
+          notes?: string | null
+          ort?: string | null
+          plz?: string | null
+          praxis_name?: string | null
+          salesforce_id?: string | null
+          telefon?: string | null
+          updated_at?: string
+          vorname?: string | null
+        }
+        Update: {
+          adresse?: string | null
+          bsnr?: string | null
+          created_at?: string
+          email?: string | null
+          hfx_customer_number?: string
+          id?: string
+          lanr?: string | null
+          mp_nr?: string | null
+          nachname?: string | null
+          notes?: string | null
+          ort?: string | null
+          plz?: string | null
+          praxis_name?: string | null
+          salesforce_id?: string | null
+          telefon?: string | null
+          updated_at?: string
+          vorname?: string | null
+        }
+        Relationships: []
       }
       demo_downloads: {
         Row: {
