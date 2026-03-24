@@ -453,44 +453,61 @@ Deno.serve(async (req) => {
           .update({ status: "versendet", email_sent_at: now, revenue_id: revenueRow?.id ?? null })
           .eq("id", invoice.id);
 
-        // Auto-generate commission payout if contract has a sales partner
+        // Auto-generate commission payout
         if (contract.sales_partner_id) {
-          const { data: productCommission } = await supabase
-            .from("product_commissions")
-            .select("*")
-            .eq("product_name", contract.product_name)
-            .eq("is_active", true)
-            .maybeSingle();
+          const isGoae = /GOÄ|GOA/i.test(contract.product_name || "");
 
-          if (productCommission) {
-            let commissionAmount = 0;
-            if (productCommission.commission_type === "prozent") {
-              commissionAmount = Math.round(baseNetAmount * productCommission.commission_value) / 100;
-            } else {
-              commissionAmount = Number(productCommission.commission_value);
-            }
+          if (isGoae) {
+            // ── HFX GOÄ: Rollenbasierte Provisionslogik ──────────────────────
+            await createGoaeCommissions({
+              supabase,
+              contract,
+              invoice,
+              netAmount,
+              baseNetAmount,
+              usageChargeIds,
+              periodMonthStr,
+              today,
+            });
+          } else {
+            // ── Andere Produkte: klassische product_commissions-Logik ─────────
+            const { data: productCommission } = await supabase
+              .from("product_commissions")
+              .select("*")
+              .eq("product_name", contract.product_name)
+              .eq("is_active", true)
+              .maybeSingle();
 
-            if (commissionAmount > 0) {
-              const { data: existingPayout } = await supabase
-                .from("commission_payouts")
-                .select("id")
-                .eq("invoice_id", invoice.id)
-                .maybeSingle();
+            if (productCommission) {
+              let commissionAmount = 0;
+              if (productCommission.commission_type === "prozent") {
+                commissionAmount = Math.round(baseNetAmount * productCommission.commission_value) / 100;
+              } else {
+                commissionAmount = Number(productCommission.commission_value);
+              }
 
-              if (!existingPayout) {
-                await supabase.from("commission_payouts").insert({
-                  sales_partner_id: contract.sales_partner_id,
-                  sales_partner_name: contract.sales_partner_name || "Unbekannt",
-                  contract_id: contract.id,
-                  invoice_id: invoice.id,
-                  product_name: contract.product_name,
-                  commission_type: productCommission.commission_type,
-                  commission_rate: productCommission.commission_value,
-                  commission_amount: commissionAmount,
-                  period_month: periodMonthStr,
-                  status: "pending",
-                });
-                console.log(`[auto-invoice] Created commission payout ${commissionAmount} € for partner ${contract.sales_partner_name}`);
+              if (commissionAmount > 0) {
+                const { data: existingPayout } = await supabase
+                  .from("commission_payouts")
+                  .select("id")
+                  .eq("invoice_id", invoice.id)
+                  .maybeSingle();
+
+                if (!existingPayout) {
+                  await supabase.from("commission_payouts").insert({
+                    sales_partner_id: contract.sales_partner_id,
+                    sales_partner_name: contract.sales_partner_name || "Unbekannt",
+                    contract_id: contract.id,
+                    invoice_id: invoice.id,
+                    product_name: contract.product_name,
+                    commission_type: productCommission.commission_type,
+                    commission_rate: productCommission.commission_value,
+                    commission_amount: commissionAmount,
+                    period_month: periodMonthStr,
+                    status: "pending",
+                  });
+                  console.log(`[auto-invoice] Created commission payout ${commissionAmount} € for partner ${contract.sales_partner_name}`);
+                }
               }
             }
           }
