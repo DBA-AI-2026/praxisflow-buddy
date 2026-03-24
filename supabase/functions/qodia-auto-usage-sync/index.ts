@@ -2,9 +2,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 Deno.serve(async (req) => {
   try {
-    // Allow cron trigger via secret header
-    const cronSecret = req.headers.get("x-cron-secret");
-    if (cronSecret !== Deno.env.get("CRON_SECRET")) {
+    // Allow cron trigger via Authorization (anon key) or cron secret header
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const cronSecret = req.headers.get("x-cron-secret") ?? "";
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const validCron = cronSecret === Deno.env.get("CRON_SECRET");
+    const validAnon = authHeader === `Bearer ${anonKey}`;
+    if (!validCron && !validAnon) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
