@@ -16,7 +16,7 @@ const logStep = (step: string, details?: unknown) => {
 // Stripe Coupon ID for HFX GOÄ promo: 100% off for 18 months (covers until 31.12.2026)
 // Applied automatically for contracts signed before 30.06.2026
 const GOA_PROMO_COUPON_ID = "Z6xkvF0U";
-const GOA_PROMO_PRICE_ID = "price_1T7z2Z6v0qHdbOipvyPDB9mB";
+const GOA_PROMO_PRICE_ID = "price_1TERR350U5wLsXk2G6CMcuGV";
 const GOA_PROMO_DEADLINE = new Date("2026-06-30T23:59:59Z");
 
 serve(async (req) => {
