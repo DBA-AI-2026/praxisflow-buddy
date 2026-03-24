@@ -158,7 +158,8 @@ type LeadStatusFilter = "aktiv" | "kein_abschluss" | "abgelehnt" | "alle";
 function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }: { search: string; highlightId?: string; teamFilter: string; matchesTeamFilter: (id?: string | null) => boolean }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isAdmin, isSalesLead, isRegionalLead } = useUserRole();
+  const { isAdmin, isSalesLead, isRegionalLead, isSalesPartner, isTippgeber, role } = useUserRole();
+  const { user } = useAuth();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
 
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("alle");
@@ -176,13 +177,24 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
   }, [highlightId]);
 
   const { data: leads = [], isLoading } = useQuery({
-    queryKey: ["journey-leads"],
+    queryKey: ["journey-leads", user?.id, role],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from("leads")
         .select("*")
         .neq("status", "kunde")
         .order("created_at", { ascending: false });
+
+      // Tippgeber: nur eigene weitergeleitete Leads
+      if (isTippgeber && user?.id) {
+        query = query.eq("tippgeber_id", user.id);
+      }
+      // Sales Partner: nur zugewiesene Leads
+      else if (isSalesPartner && user?.id) {
+        query = query.eq("assigned_to", user.id);
+      }
+
+      const { data } = await query;
       return data ?? [];
     },
   });
