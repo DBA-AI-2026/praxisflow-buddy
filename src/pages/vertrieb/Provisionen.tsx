@@ -168,10 +168,13 @@ async function generateCommissionPdf(
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 const Provisionen = () => {
-  const { isAdmin } = useUserRole();
+  const { isAdmin, isSalesPartner, isTippgeber } = useUserRole();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Sales partner and Tippgeber see only own payouts
+  const isOwnView = isSalesPartner || isTippgeber;
 
   // Commission rates dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
