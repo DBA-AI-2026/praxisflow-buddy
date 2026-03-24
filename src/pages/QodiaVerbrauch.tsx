@@ -77,15 +77,7 @@ export default function QodiaVerbrauch() {
         throw new Error(invokeError.message || "Fehler beim Abruf");
       }
 
-      const data = invokeData;
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Fehler beim Abruf");
-      }
-
-      setResults(data.results ?? []);
+      setResults(invokeData?.results ?? []);
     } catch (err) {
       toast({
         title: "Fehler beim Abruf",
