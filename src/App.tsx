@@ -45,6 +45,7 @@ import MandateSuccess from "./pages/MandateSuccess";
 import Buchen from "./pages/Buchen";
 import QodiaVerbrauch from "./pages/QodiaVerbrauch";
 import AgbManagement from "./pages/admin/AgbManagement";
+import Kunden from "./pages/Kunden";
 
 const queryClient = new QueryClient();
 
