@@ -14,6 +14,7 @@ import { de } from "date-fns/locale";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/hooks/useAuth";
 import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
 import { UploadPaperContractDialog } from "@/components/leads/UploadPaperContractDialog";
