@@ -182,6 +182,11 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Verbrauchsnettobetrag separat ermitteln (für Stripe-Beschreibung und Provisionen)
+        const usageNetAmount = positions
+          .slice(1)
+          .reduce((s, p) => s + p.quantity * p.unit_price, 0);
+
         // Recalculate totals
         const netAmount = positions.reduce((s, p) => s + p.quantity * p.unit_price, 0);
         const taxAmount = Math.round(netAmount * taxRate) / 100;
