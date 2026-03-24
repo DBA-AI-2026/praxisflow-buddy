@@ -323,7 +323,7 @@ Deno.serve(async (req) => {
             gross_amount: grossAmount,
             status: "entwurf",
             stripe_invoice_id: stripeInvoiceId,
-            notes: `Automatisch generiert – Laufzeit: ${billingPeriod}${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv" : ""}`,
+            notes: `Automatisch generiert – Laufzeit: ${billingPeriod}${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} Qodia-Verbrauchsposten: ${usageNetAmount.toFixed(2)} € netto` : ""}`,
           })
           .select()
           .single();
