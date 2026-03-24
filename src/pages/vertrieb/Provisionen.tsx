@@ -892,7 +892,7 @@ const Provisionen = () => {
                                       200 € Prämie auslösen
                                     </Button>
                                   ) : (
-                                    <Badge className="bg-amber-100 text-amber-800 border-0" variant="secondary">
+                                    <Badge variant="secondary" className="border-0">
                                       🎉 Bereit – Admin ausstehend
                                     </Badge>
                                   )
