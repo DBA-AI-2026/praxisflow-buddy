@@ -11,9 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 import {
   Euro, TrendingUp, Users, Calendar, Settings, Plus, Pencil, Trash2, Loader2,
   Percent, CalendarDays, CheckCircle2, Clock, Banknote, FileDown, ChevronDown, ChevronRight,
+  Zap, Award, Gift, Info,
 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
