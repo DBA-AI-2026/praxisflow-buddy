@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/hooks/useAuth";
 import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import {
   Table,
@@ -85,10 +86,13 @@ export default function Interessenten() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { isAdmin, isSalesLead, isRegionalLead } = useUserRole();
+  const { isAdmin, isSalesLead, isRegionalLead, isTippgeber, isSalesPartner } = useUserRole();
+  const { user } = useAuth();
   const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions } = useRegionalTeam();
 
   const canAssign = isAdmin || isSalesLead || isRegionalLead;
+  // Tippgeber can create leads but cannot update status or assign
+  const canOnlyViewOwn = isTippgeber || isSalesPartner;
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
   const [uploadContractLead, setUploadContractLead] = useState<any>(null);
 
@@ -211,6 +215,12 @@ export default function Interessenten() {
   });
 
   const filtered = leads.filter((l: any) => {
+    // Tippgeber and sales_partner can only see their own leads
+    if (canOnlyViewOwn && l.assigned_to !== user?.id && l.tippgeber_id !== user?.id) {
+      // sales_partner: assigned_to === user; tippgeber: tippgeber_id === user
+      if (isTippgeber && l.tippgeber_id !== user?.id) return false;
+      if (isSalesPartner && l.assigned_to !== user?.id) return false;
+    }
     if (!matchesTeamFilter(l.assigned_to)) return false;
     const s = search.toLowerCase();
     return (
@@ -374,26 +384,30 @@ export default function Interessenten() {
                         </span>
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Select
-                          value={lead.status}
-                          onValueChange={(val) => {
-                            const order = ["neu", "kontaktiert", "qualifiziert", "vertrag", "kein_abschluss", "abgelehnt"];
-                            const currentIdx = order.indexOf(lead.status);
-                            if (val === "neu" && currentIdx > 1) return;
-                            updateStatusMutation.mutate({ id: lead.id, status: val });
-                          }}
-                        >
-                          <SelectTrigger className="h-7 w-[130px]">
-                            <Badge variant={sc.variant} className="text-xs">{sc.label}</Badge>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(statusConfig)
-                              .filter(([key]) => key !== "kunde")
-                              .map(([key, cfg]) => (
-                                <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
+                        {canOnlyViewOwn ? (
+                          <Badge variant={sc.variant} className="text-xs">{sc.label}</Badge>
+                        ) : (
+                          <Select
+                            value={lead.status}
+                            onValueChange={(val) => {
+                              const order = ["neu", "kontaktiert", "qualifiziert", "vertrag", "kein_abschluss", "abgelehnt"];
+                              const currentIdx = order.indexOf(lead.status);
+                              if (val === "neu" && currentIdx > 1) return;
+                              updateStatusMutation.mutate({ id: lead.id, status: val });
+                            }}
+                          >
+                            <SelectTrigger className="h-7 w-[130px]">
+                              <Badge variant={sc.variant} className="text-xs">{sc.label}</Badge>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(statusConfig)
+                                .filter(([key]) => key !== "kunde")
+                                .map(([key, cfg]) => (
+                                  <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         {(() => {
