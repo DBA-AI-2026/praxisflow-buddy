@@ -328,10 +328,12 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
           ))}
         </div>
 
-        <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5 h-8 shrink-0">
-          <UserPlus className="h-3.5 w-3.5" />
-          Neuer Interessent
-        </Button>
+        {!isTippgeber && (
+          <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5 h-8 shrink-0">
+            <UserPlus className="h-3.5 w-3.5" />
+            Neuer Interessent
+          </Button>
+        )}
       </div>
 
       {/* Table */}
