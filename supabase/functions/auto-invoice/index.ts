@@ -282,7 +282,7 @@ Deno.serve(async (req) => {
               customer: contract.stripe_customer_id,
               auto_advance: false,
               collection_method: "charge_automatically",
-              description: `${contract.product_name} – ${billingPeriod}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}`,
+              description: `${contract.product_name} – ${billingPeriod}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}${usageChargeIds.length > 0 ? ` | Verbrauch: ${usageChargeIds.length} Qodia-Vorgänge (${usageNetAmount.toFixed(2)} €)` : ""}`,
               metadata: {
                 hfx_contract_id: contract.id,
                 hfx_customer_number: contract.hfx_customer_number || "",
