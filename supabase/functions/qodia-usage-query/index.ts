@@ -59,14 +59,8 @@ Deno.serve(async (req) => {
       hfx_customer_number?: string;
     };
 
-    // Service role client for querying contracts
-    const serviceClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
     // Fetch active HFX GOÄ contracts with email
-    let contractQuery = serviceClient
+    let contractQuery = supabase
       .from("contracts")
       .select("id, customer_name, email, hfx_customer_number, product_name")
       .ilike("product_name", "HFX GOÄ%")
