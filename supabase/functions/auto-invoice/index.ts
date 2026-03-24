@@ -359,7 +359,7 @@ Deno.serve(async (req) => {
               <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug (SEPA via Stripe)</strong></p>
               <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">Der Betrag wird automatisch von Ihrem hinterlegten SEPA-Konto eingezogen.</p>
               <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">📅 <strong>Einzugsdatum:</strong> ${collectionDateFormatted}</p>
-              ${usageNetAmount > 0 ? `<p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">📊 <strong>Enthält Qodia-Verbrauch:</strong> ${usageChargeIds.length} Vorgänge × ${(usageNetAmount / usageChargeIds.reduce((s, _, i) => s + (positions[i + 1]?.quantity || 0), 0) || 0.99).toFixed(2)} € = ${usageNetAmount.toFixed(2)} € (zzgl. MwSt.)</p>` : ""}
+              ${usageNetAmount > 0 ? `<p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">📊 <strong>Enthält Qodia-Verbrauch:</strong> ${usageNetAmount.toFixed(2)} € netto (${usageChargeIds.length} abgerechnete Vorgänge, zzgl. MwSt.)</p>` : ""}
             </div>`
           : grossAmount === 0
           ? `<div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
