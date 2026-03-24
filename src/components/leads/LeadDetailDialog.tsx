@@ -685,8 +685,11 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
               <Button
                 className="w-full justify-start gap-2"
                 onClick={() => {
+                  // Pass tippgeber_id so it can be set on the contract
+                  const params = new URLSearchParams({ leadId: lead.id });
+                  if (lead.tippgeber_id) params.set("tippgeberId", lead.tippgeber_id);
                   onClose();
-                  navigate(`/vertrieb/vertraege?leadId=${lead.id}`);
+                  navigate(`/vertrieb/vertraege?${params.toString()}`);
                 }}
               >
                 <FilePlus className="h-4 w-4" />
