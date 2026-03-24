@@ -750,8 +750,8 @@ const Provisionen = () => {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
-                {/* AD Karte */}
+                <div className="grid gap-4 md:grid-cols-3">
+                 {/* AD Karte */}
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="flex items-center gap-2 text-base">
@@ -762,17 +762,21 @@ const Provisionen = () => {
                   <CardContent className="space-y-3 text-sm">
                     <div className="rounded-md bg-muted/50 p-3">
                       <p className="font-semibold">1. Festbetrag bei Vertragsabschluss</p>
-                      <p className="text-muted-foreground mt-1">100 € einmalig bei erster Rechnung</p>
+                      <p className="text-2xl font-bold text-primary mt-1">100 €</p>
+                      <p className="text-muted-foreground mt-1">Einmalig bei erster Rechnung</p>
                     </div>
                     <div className="rounded-md bg-muted/50 p-3">
-                      <p className="font-semibold">2. 10% auf Verbrauchserlöse</p>
-                      <p className="text-muted-foreground mt-1">Nur auf Qodia-Verbrauchskosten (nicht Grundgebühr), für 24 Monate ab Vertragsbeginn</p>
+                      <p className="font-semibold">2. Verbrauchsprovision</p>
+                      <p className="text-2xl font-bold text-primary mt-1">10 %</p>
+                      <p className="text-muted-foreground mt-1">Auf Qodia-Verbrauchskosten (nicht Grundgebühr), für 24 Monate ab Vertragsbeginn</p>
                     </div>
-                    <div className="rounded-md border border-border bg-muted/30 p-3">
-                      <p className="font-semibold text-foreground flex items-center gap-1">
+                    <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-3">
+                      <p className="font-semibold text-amber-800 dark:text-amber-400 flex items-center gap-1">
                         <Award className="h-3.5 w-3.5" /> SPRINT-Bonus bis 31.12.2026
                       </p>
-                      <p className="text-muted-foreground mt-1">Ab ≥ 25 GOÄ-Abschlüssen: Festbetrag steigt auf <strong>250 €</strong> pro Vertrag</p>
+                      <p className="text-amber-700 dark:text-amber-500 mt-1">
+                        Ab ≥ 25 GOÄ-Abschlüssen: Festbetrag steigt auf <strong>250 €</strong> pro Vertrag (+ 150 € Bonus)
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
