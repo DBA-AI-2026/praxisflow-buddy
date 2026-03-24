@@ -85,10 +85,13 @@ export default function Interessenten() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { isAdmin, isSalesLead, isRegionalLead } = useUserRole();
+  const { isAdmin, isSalesLead, isRegionalLead, isTippgeber, isSalesPartner } = useUserRole();
+  const { user } = useAuth();
   const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions } = useRegionalTeam();
 
   const canAssign = isAdmin || isSalesLead || isRegionalLead;
+  // Tippgeber can create leads but cannot update status or assign
+  const canOnlyViewOwn = isTippgeber || isSalesPartner;
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
   const [uploadContractLead, setUploadContractLead] = useState<any>(null);
 
