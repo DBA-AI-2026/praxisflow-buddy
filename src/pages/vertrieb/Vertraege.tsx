@@ -675,7 +675,7 @@ export default function Vertraege() {
         stundenaufwand_pro_woche: data.stundenaufwand_pro_woche || null,
         rechnungs_email: data.rechnungs_email || null,
         selected_addon_modules: data.selected_modules.length > 0 ? data.selected_modules : [],
-        qodia_unit_price: (data as any).qodia_unit_price ?? 0,
+        qodia_unit_price: (data as any).qodia_unit_price ?? 0.99,
         ...(data.mandate_accepted && !editId ? { mandate_accepted_at: new Date().toISOString() } : {}),
         ...(documentUrl ? { document_url: documentUrl, document_name: documentName } : {}),
         ...(leadHfxNumber && !editId ? { hfx_customer_number: leadHfxNumber } : {}),
