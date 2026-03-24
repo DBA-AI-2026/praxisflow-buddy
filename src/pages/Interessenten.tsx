@@ -215,6 +215,12 @@ export default function Interessenten() {
   });
 
   const filtered = leads.filter((l: any) => {
+    // Tippgeber and sales_partner can only see their own leads
+    if (canOnlyViewOwn && l.assigned_to !== user?.id && l.tippgeber_id !== user?.id) {
+      // sales_partner: assigned_to === user; tippgeber: tippgeber_id === user
+      if (isTippgeber && l.tippgeber_id !== user?.id) return false;
+      if (isSalesPartner && l.assigned_to !== user?.id) return false;
+    }
     if (!matchesTeamFilter(l.assigned_to)) return false;
     const s = search.toLowerCase();
     return (
