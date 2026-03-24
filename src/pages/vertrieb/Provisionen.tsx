@@ -750,8 +750,8 @@ const Provisionen = () => {
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
-                {/* AD Karte */}
+                <div className="grid gap-4 md:grid-cols-3">
+                 {/* AD Karte */}
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="flex items-center gap-2 text-base">
@@ -762,17 +762,21 @@ const Provisionen = () => {
                   <CardContent className="space-y-3 text-sm">
                     <div className="rounded-md bg-muted/50 p-3">
                       <p className="font-semibold">1. Festbetrag bei Vertragsabschluss</p>
-                      <p className="text-muted-foreground mt-1">100 € einmalig bei erster Rechnung</p>
+                      <p className="text-2xl font-bold text-primary mt-1">100 €</p>
+                      <p className="text-muted-foreground mt-1">Einmalig bei erster Rechnung</p>
                     </div>
                     <div className="rounded-md bg-muted/50 p-3">
-                      <p className="font-semibold">2. 10% auf Verbrauchserlöse</p>
-                      <p className="text-muted-foreground mt-1">Nur auf Qodia-Verbrauchskosten (nicht Grundgebühr), für 24 Monate ab Vertragsbeginn</p>
+                      <p className="font-semibold">2. Verbrauchsprovision</p>
+                      <p className="text-2xl font-bold text-primary mt-1">10 %</p>
+                      <p className="text-muted-foreground mt-1">Auf Qodia-Verbrauchskosten (nicht Grundgebühr), für 24 Monate ab Vertragsbeginn</p>
                     </div>
-                    <div className="rounded-md border border-border bg-muted/30 p-3">
-                      <p className="font-semibold text-foreground flex items-center gap-1">
+                    <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/20 p-3">
+                      <p className="font-semibold text-amber-800 dark:text-amber-400 flex items-center gap-1">
                         <Award className="h-3.5 w-3.5" /> SPRINT-Bonus bis 31.12.2026
                       </p>
-                      <p className="text-muted-foreground mt-1">Ab ≥ 25 GOÄ-Abschlüssen: Festbetrag steigt auf <strong>250 €</strong> pro Vertrag</p>
+                      <p className="text-amber-700 dark:text-amber-500 mt-1">
+                        Ab ≥ 25 GOÄ-Abschlüssen: Festbetrag steigt auf <strong>250 €</strong> pro Vertrag (+ 150 € Bonus)
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -787,14 +791,15 @@ const Provisionen = () => {
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
                     <div className="rounded-md bg-muted/50 p-3">
-                      <p className="font-semibold">10% auf alle Erlöse</p>
+                      <p className="font-semibold">Provision auf alle Erlöse</p>
+                      <p className="text-2xl font-bold text-primary mt-1">10 %</p>
                       <p className="text-muted-foreground mt-1">Grundgebühr + Verbrauchskosten, zeitlich unbegrenzt solange Vertrag aktiv</p>
                     </div>
                     <div className="rounded-md bg-muted/50 p-3">
                       <p className="font-semibold">Keine Vertretungsmacht</p>
                       <p className="text-muted-foreground mt-1">Nur Steuerung der Praxis durch digitale Vertragsstrecke</p>
                     </div>
-                    <div className="rounded-md border border-muted p-3">
+                    <div className="rounded-md border border-border p-3">
                       <p className="font-medium">⚠️ Erlischt bei Kündigung</p>
                       <p className="text-muted-foreground mt-1">Provision endet zum Kündigungstermin des Vertrags</p>
                     </div>
@@ -811,14 +816,15 @@ const Provisionen = () => {
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
                     <div className="rounded-md bg-muted/50 p-3">
-                      <p className="font-semibold">200 € Einmalprämie</p>
-                      <p className="text-muted-foreground mt-1">Sobald kumulierter Gesamterlös (Monatspauschale + Verbrauch) aus der Praxis ≥ 500 € erreicht</p>
+                      <p className="font-semibold">Einmalprämie</p>
+                      <p className="text-2xl font-bold text-primary mt-1">200 €</p>
+                      <p className="text-muted-foreground mt-1">Sobald kumulierter Gesamterlös (Monatspauschale + Verbrauch) ≥ 500 € erreicht</p>
                     </div>
                     <div className="rounded-md bg-muted/50 p-3">
                       <p className="font-semibold">Manuell durch Admin</p>
-                      <p className="text-muted-foreground mt-1">Auszahlung wird manuell im Tab "Tippgeber-Meilensteine" ausgelöst</p>
+                      <p className="text-muted-foreground mt-1">Auszahlung wird manuell im Tab „Tippgeber-Meilensteine" ausgelöst</p>
                     </div>
-                    <div className="rounded-md border border-muted p-3">
+                    <div className="rounded-md border border-border p-3">
                       <p className="font-medium">Unabhängig von AD-Provision</p>
                       <p className="text-muted-foreground mt-1">Tippgeber-Prämie wird nicht vom AD-Provisionssatz abgezogen</p>
                     </div>
