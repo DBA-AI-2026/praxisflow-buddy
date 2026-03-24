@@ -872,8 +872,8 @@ const Provisionen = () => {
                                 <p className="text-xs text-muted-foreground mt-0.5">{m.contracts?.product_name}</p>
                               </div>
                               <div className="flex items-center gap-2">
-                                {m.payout_triggered ? (
-                                  <Badge className="bg-green-100 text-green-800 border-0" variant="secondary">
+                                 {m.payout_triggered ? (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-800 border-0">
                                     <CheckCircle2 className="h-3 w-3 mr-1" /> Ausgezahlt
                                   </Badge>
                                 ) : m.milestone_reached ? (
