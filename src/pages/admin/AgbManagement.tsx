@@ -96,14 +96,8 @@ export default function AgbManagement() {
   const withoutAgb = activeProducts.filter((p) => !p.agb_pdf_path);
 
   return (
-    <MainLayout>
+    <MainLayout title="AGB-Verwaltung" subtitle="Produktspezifische AGB-PDFs verwalten">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">AGB-Verwaltung</h1>
-          <p className="text-muted-foreground mt-1">
-            Produktspezifische AGB-PDFs verwalten. Diese werden auf der Buchungsseite und in E-Mails verwendet.
-          </p>
-        </div>
 
         {/* Summary */}
         <div className="flex gap-3 flex-wrap">
