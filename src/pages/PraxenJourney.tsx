@@ -14,6 +14,7 @@ import { de } from "date-fns/locale";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/hooks/useAuth";
 import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
 import { UploadPaperContractDialog } from "@/components/leads/UploadPaperContractDialog";
@@ -158,7 +159,8 @@ type LeadStatusFilter = "aktiv" | "kein_abschluss" | "abgelehnt" | "alle";
 function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }: { search: string; highlightId?: string; teamFilter: string; matchesTeamFilter: (id?: string | null) => boolean }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isAdmin, isSalesLead, isRegionalLead } = useUserRole();
+  const { isAdmin, isSalesLead, isRegionalLead, isSalesPartner, isTippgeber, role } = useUserRole();
+  const { user } = useAuth();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
 
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("alle");
@@ -176,13 +178,24 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
   }, [highlightId]);
 
   const { data: leads = [], isLoading } = useQuery({
-    queryKey: ["journey-leads"],
+    queryKey: ["journey-leads", user?.id, role],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from("leads")
         .select("*")
         .neq("status", "kunde")
         .order("created_at", { ascending: false });
+
+      // Tippgeber: nur eigene weitergeleitete Leads
+      if (isTippgeber && user?.id) {
+        query = query.eq("tippgeber_id", user.id);
+      }
+      // Sales Partner: nur zugewiesene Leads
+      else if (isSalesPartner && user?.id) {
+        query = query.eq("assigned_to", user.id);
+      }
+
+      const { data } = await query;
       return data ?? [];
     },
   });
@@ -206,7 +219,8 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
     if (statusFilter === "aktiv" && !ACTIVE_LEAD_STATUSES.includes(l.status)) return false;
     if (statusFilter === "kein_abschluss" && l.status !== "kein_abschluss") return false;
     if (statusFilter === "abgelehnt" && l.status !== "abgelehnt") return false;
-    if (!matchesTeamFilter(l.assigned_to)) return false;
+    // Team filter only applies to admin/sales_lead/regional_lead — partner/tippgeber already filtered at DB level
+    if (!isSalesPartner && !isTippgeber && !matchesTeamFilter(l.assigned_to)) return false;
 
     if (!s) return true;
     return (
@@ -314,10 +328,12 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
           ))}
         </div>
 
-        <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5 h-8 shrink-0">
-          <UserPlus className="h-3.5 w-3.5" />
-          Neuer Interessent
-        </Button>
+        {!isTippgeber && (
+          <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5 h-8 shrink-0">
+            <UserPlus className="h-3.5 w-3.5" />
+            Neuer Interessent
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -467,6 +483,8 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
   const queryClient = useQueryClient();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
   const [sendingBuchungsmail, setSendingBuchungsmail] = useState<string | null>(null);
+  const { isSalesPartner, isTippgeber, role } = useUserRole();
+  const { user } = useAuth();
 
   const sendBuchungsmail = async (contract: any, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -497,12 +515,23 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
   }, [highlightId]);
 
   const { data: contracts = [], isLoading } = useQuery({
-    queryKey: ["journey-contracts-all"],
+    queryKey: ["journey-contracts-all", user?.id, role],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from("contracts")
-        .select("id, customer_name, product_name, status, monthly_price, hfx_customer_number, email, vorname, nachname, praxis, created_at, start_date, confirmation_email_sent_at, customer_confirmed_at, sales_partner_name")
+        .select("id, customer_name, product_name, status, monthly_price, hfx_customer_number, email, vorname, nachname, praxis, created_at, start_date, confirmation_email_sent_at, customer_confirmed_at, sales_partner_name, sales_partner_id, created_by")
         .order("created_at", { ascending: false });
+
+      // Sales Partner: nur eigene Verträge
+      if (isSalesPartner && user?.id) {
+        query = query.or(`sales_partner_id.eq.${user.id},created_by.eq.${user.id}`);
+      }
+      // Tippgeber: keine Vertragsansicht
+      if (isTippgeber) {
+        return [];
+      }
+
+      const { data } = await query;
       return data ?? [];
     },
   });
@@ -523,7 +552,8 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
   const s = search.toLowerCase();
   const filtered = groupContracts.filter((c: any) => {
     if (statusFilter !== "alle" && c.status !== statusFilter) return false;
-    if (!matchesTeamFilter(c.sales_partner_id) && !matchesTeamFilter(c.created_by)) return false;
+    // Team filter only for admin/sales_lead/regional_lead — sales_partner already filtered at DB level
+    if (!isSalesPartner && !isTippgeber && !matchesTeamFilter(c.sales_partner_id) && !matchesTeamFilter(c.created_by)) return false;
     if (!s) return true;
     return (
       c.customer_name?.toLowerCase().includes(s) ||
@@ -692,6 +722,8 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
 function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string; highlightId?: string; matchesTeamFilter: (id?: string | null) => boolean }) {
   const navigate = useNavigate();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
+  const { isSalesPartner, isTippgeber, role } = useUserRole();
+  const { user } = useAuth();
   useEffect(() => {
     if (highlightId && highlightRef.current) {
       setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
@@ -700,13 +732,23 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
   const [sendingId, setSendingId] = useState<string | null>(null);
 
   const { data: activeContracts = [], isLoading } = useQuery({
-    queryKey: ["journey-kunden"],
+    queryKey: ["journey-kunden", user?.id, role],
     queryFn: async () => {
-      const { data } = await supabase
+      // Tippgeber haben keine Kunden-Ansicht
+      if (isTippgeber) return [];
+
+      let query = supabase
         .from("contracts")
-        .select("id, customer_name, hfx_customer_number, mp_nr, email, praxis, vorname, nachname, product_name, monthly_price, start_date, plz, ort, customer_id, sales_partner_name")
+        .select("id, customer_name, hfx_customer_number, mp_nr, email, praxis, vorname, nachname, product_name, monthly_price, start_date, plz, ort, customer_id, sales_partner_name, sales_partner_id, created_by")
         .eq("status", "aktiv")
         .order("start_date", { ascending: false });
+
+      // Sales Partner: nur eigene Kunden
+      if (isSalesPartner && user?.id) {
+        query = query.or(`sales_partner_id.eq.${user.id},created_by.eq.${user.id}`);
+      }
+
+      const { data } = await query;
       return data ?? [];
     },
   });
