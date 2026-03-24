@@ -73,24 +73,21 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
       const customerName = `${data.vorname} ${data.nachname}`.trim();
       const now = new Date().toISOString();
 
-      // Upsert customers record (find or create by email/name)
+      // Find or create customers record
       let customerId: string | null = null;
       try {
-        // Try to find existing customer by email
         let existingCustomer: any = null;
         if (data.email) {
-          const { data: found } = await supabase
-            .from("customers" as any)
+          const { data: found } = await (supabase.from as any)("customers")
             .select("id")
             .eq("email", data.email)
             .maybeSingle();
           existingCustomer = found;
         }
         if (!existingCustomer) {
-          const { data: newCust } = await supabase
-            .from("customers" as any)
+          const { data: newCust } = await (supabase.from as any)("customers")
             .insert({
-              hfx_customer_number: `PENDING-${Date.now()}`, // will be overwritten after contract
+              hfx_customer_number: `PENDING-${Date.now()}`,
               praxis_name: data.praxis,
               vorname: data.vorname,
               nachname: data.nachname,
@@ -102,17 +99,62 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
             })
             .select("id")
             .single();
-          customerId = newCust?.id || null;
+          customerId = (newCust as any)?.id || null;
         } else {
-          customerId = existingCustomer.id;
+          customerId = (existingCustomer as any).id;
         }
       } catch (_) {
-        // Non-fatal: customer creation failure doesn't block contract
+        // Non-fatal
       }
 
       const { data: inserted, error } = await supabase
         .from("contracts")
         .insert({
+          customer_name: customerName,
+          praxis: data.praxis,
+          vorname: data.vorname,
+          nachname: data.nachname,
+          email: data.email || null,
+          telefon: data.telefon || null,
+          adresse: data.adresse || null,
+          plz: data.plz || null,
+          ort: data.ort || null,
+          product_name: data.product_name,
+          modules: [data.product_name],
+          monthly_price: data.monthly_price,
+          license_count: data.license_count,
+          start_date: data.start_date,
+          end_date: "2099-12-31",
+          duration_months: 0,
+          cancellation_period_months: 6,
+          auto_renewal: false,
+          one_time_fee: 0,
+          discount_percent: 0,
+          payment_interval: "monatlich",
+          rechnungs_email: data.rechnungs_email || null,
+          status: "aktiv",
+          notes: `[Papier]${data.notes ? " " + data.notes : ""}`,
+          created_by: user.id,
+          sales_partner_id: user.id,
+          sales_partner_name: profile?.full_name || "",
+          approved_by: user.id,
+          approved_at: now,
+          ...(customerId ? { customer_id: customerId } : {}),
+        })
+        .select("id, hfx_customer_number")
+        .single();
+
+      if (error) throw error;
+
+      // Update customers record with the real hfx_customer_number once assigned
+      if (customerId && (inserted as any)?.hfx_customer_number) {
+        await (supabase.from as any)("customers")
+          .update({ hfx_customer_number: (inserted as any).hfx_customer_number })
+          .eq("id", customerId);
+      }
+
+      // Create praxen entry (legacy compatibility)
+      await supabase.from("praxen").insert({
         name: data.praxis || customerName,
         adresse: data.adresse || null,
         plz: data.plz || null,
@@ -127,6 +169,7 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
       });
 
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
       queryClient.invalidateQueries({ queryKey: ["praxen"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-kpis"] });
 
