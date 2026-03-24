@@ -48,6 +48,7 @@ interface Lead {
   adresse?: string;
   mobilnummer: string;
   mp_nummer?: string;
+  tippgeber_id?: string | null;
 }
 
 interface Props {
