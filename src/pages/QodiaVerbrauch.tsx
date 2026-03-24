@@ -49,18 +49,6 @@ export default function QodiaVerbrauch() {
     setResults(null);
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        toast({
-          title: "Nicht angemeldet",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const body: Record<string, string> = {
         startDate,
         endDate,
