@@ -718,6 +718,8 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
 function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string; highlightId?: string; matchesTeamFilter: (id?: string | null) => boolean }) {
   const navigate = useNavigate();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
+  const { isSalesPartner, isTippgeber, role } = useUserRole();
+  const { user } = useAuth();
   useEffect(() => {
     if (highlightId && highlightRef.current) {
       setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
@@ -726,13 +728,23 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
   const [sendingId, setSendingId] = useState<string | null>(null);
 
   const { data: activeContracts = [], isLoading } = useQuery({
-    queryKey: ["journey-kunden"],
+    queryKey: ["journey-kunden", user?.id, role],
     queryFn: async () => {
-      const { data } = await supabase
+      // Tippgeber haben keine Kunden-Ansicht
+      if (isTippgeber) return [];
+
+      let query = supabase
         .from("contracts")
-        .select("id, customer_name, hfx_customer_number, mp_nr, email, praxis, vorname, nachname, product_name, monthly_price, start_date, plz, ort, customer_id, sales_partner_name")
+        .select("id, customer_name, hfx_customer_number, mp_nr, email, praxis, vorname, nachname, product_name, monthly_price, start_date, plz, ort, customer_id, sales_partner_name, sales_partner_id, created_by")
         .eq("status", "aktiv")
         .order("start_date", { ascending: false });
+
+      // Sales Partner: nur eigene Kunden
+      if (isSalesPartner && user?.id) {
+        query = query.or(`sales_partner_id.eq.${user.id},created_by.eq.${user.id}`);
+      }
+
+      const { data } = await query;
       return data ?? [];
     },
   });
