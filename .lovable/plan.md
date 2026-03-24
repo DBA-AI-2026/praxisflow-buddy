@@ -1,85 +1,82 @@
 
-## Was geändert wird
+## Analyse des IST-Zustands
 
-Die neuen Provisionsregeln gelten **ausschließlich für HFX GOÄ-Verträge**. Alle anderen Produkte behalten die bestehende Logik (Abfrage aus `product_commissions`).
+Die Funktion `auto-invoice` lädt bereits `usage_charges` und fügt sie als Positionen hinzu. Die Grundstruktur für den gemeinsamen Einzug ist vorhanden. 
+
+Konkrete Lücken / Probleme:
+
+1. **E-Mail-Betreff-Bug (Zeile 408)**: `subjectSuffix = grossAmount === 0 ? " (kein Zahlbetrag)" : ""` — wird korrekt gesetzt, da grossAmount die Summe aus Grundgebühr + Verbrauch ist. ✓ Bereits korrekt.
+
+2. **E-Mail-Positionsfilter-Bug (Zeile 341-349)**: `filter(p => p.unit_price > 0 || isInWaiverPeriod)` zeigt beim Waiver immer die 0 €-Grundgebühr-Zeile an — auch wenn Verbrauch > 0 ist. Das ist verwirrend. **Fix nötig**: Wenn Verbrauch vorhanden, soll die 0€-Grundgebühr-Zeile trotzdem sichtbar bleiben, aber mit dem Label "Einführungsangebot".
+
+3. **Stripe-Beschreibung (Zeile 280)**: Enthält nur Produktname und HFX-Nr. Soll die Anzahl Qodia-Vorgänge explizit nennen.
+
+4. **Stripe-Einzug bei Waiver + Verbrauch (Zeile 256)**: `if (hasStripeCustomer && grossAmount > 0)` — bei Waiver-Grundgebühr (0€) + Verbrauch > 0 ist grossAmount > 0 → Stripe-Einzug wird korrekt ausgelöst. ✓ Bereits korrekt.
+
+5. **`usageNetAmount` ist im Hauptfluss nicht sauber getrennt berechnet** — wird nur innerhalb `createGoaeCommissions` berechnet. Für GOÄ-Provisionen brauchen wir es aber bereits im Hauptfluss für die Stripe-Beschreibung.
+
+6. **`notes` in der DB-Rechnung (Zeile 321)**: Kein Hinweis auf Anzahl Qodia-Vorgänge und deren Betrag.
+
+7. **`customer_revenues` (Zeile 445)**: `notes` enthält bereits "+ X Nutzungsposten" — gut.
 
 ---
 
-## Provisionsmodell – Zusammenfassung
+## Was geändert wird (nur `supabase/functions/auto-invoice/index.ts`)
 
-| Rolle | Regelwerk | Zeitlich |
+### Änderung 1 — `usageNetAmount` sauber im Hauptfluss berechnen (nach Zeile 183)
+
+```typescript
+// Verbrauchsnettobetrag separat ermitteln (für Stripe-Beschreibung und Provisionen)
+const usageNetAmount = positions
+  .slice(1) // alle Positionen nach der Grundgebühr
+  .reduce((s, p) => s + p.quantity * p.unit_price, 0);
+```
+
+### Änderung 2 — Stripe invoice `description` ergänzen (Zeile 280)
+
+```typescript
+description: `${contract.product_name} – ${billingPeriod}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}${usageChargeIds.length > 0 ? ` | Verbrauch: ${usageChargeIds.length} Qodia-Vorgänge (${usageNetAmount.toFixed(2)} €)` : ""}`,
+```
+
+### Änderung 3 — Stripe `invoiceItems`: Grundgebühr und Verbrauch klarer beschriften (Zeile 258-267)
+
+Momentan wird die Beschreibung der Position direkt aus `pos.description` übernommen — das ist bereits korrekt. Keine Änderung nötig, da die Positionen schon unterschiedliche Descriptions haben.
+
+### Änderung 4 — `notes` in DB-Rechnung präziser (Zeile 321)
+
+```typescript
+notes: `Automatisch generiert – Laufzeit: ${billingPeriod}${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} Qodia-Verbrauchsposten: ${usageNetAmount.toFixed(2)} € netto` : ""}`,
+```
+
+### Änderung 5 — E-Mail: Waiver-0€-Position nur zeigen wenn kein Verbrauch
+
+Aktuell (Zeile 341-349): `filter(p => p.unit_price > 0 || isInWaiverPeriod)` — zeigt Waiver-0€-Zeile immer.
+
+Neues Verhalten:
+- Waiver aktiv + kein Verbrauch → zeige 0€-Grundgebühr-Zeile (Nachweis)
+- Waiver aktiv + Verbrauch vorhanden → zeige Waiver-Zeile UND alle Verbrauchszeilen (klar für den Kunden)
+- Kein Waiver + kein Verbrauch → zeige nur Grundgebühr
+- Kein Waiver + Verbrauch → zeige beide
+
+Konkret: Filter anpassen zu `filter(p => p.unit_price > 0 || (isInWaiverPeriod && p === positions[0]))` — zeigt immer die Grundgebühr-Position (auch bei 0 € im Waiver), aber filtert sonstige 0€-Positionen heraus.
+
+### Änderung 6 — E-Mail: Zahlungshinweis-Zusammenfassung um Verbrauch ergänzen
+
+Im Payment-Block bei Stripe-Einzug (Zeile 353-357): wenn `usageNetAmount > 0`, kurze Zeile ergänzen:
+```
+📊 Enthält: Qodia-Verbrauch ${usageChargeIds.length} Vorgänge × 0,99 € = ${usageNetAmount.toFixed(2)} € (zzgl. MwSt.)
+```
+
+---
+
+## Zusammenfassung
+
+| # | Was | Wo |
 |---|---|---|
-| AD (user / regional_lead / sales_lead) | 100 € Festbetrag bei Vertragsabschluss + 10% auf Verbrauchserlöse | 24 Monate ab Vertragsbeginn |
-| Vertriebspartner (sales_partner) | 10% auf alle Erlöse (Grundgebühr + Verbrauch) | Unbegrenzt, solange Vertrag aktiv |
-| Tippgeber | 200 € Einmalzahlung, manuell durch Admin ausgelöst | Einmalig nach Erreichen von 500 € kumuliertem Erlös |
-| Sprint-Bonus (AD) | +150 € pro Vertrag (= 250 € gesamt) wenn ≥ 25 Abschlüsse bis 31.12.2026 | bis 31.12.2026 |
+| 1 | `usageNetAmount` im Hauptfluss berechnen | nach Zeile 183 |
+| 2 | Stripe invoice description um Verbrauchshinweis ergänzen | Zeile 280 |
+| 3 | DB `notes` um Qodia-Verbrauchsdetails ergänzen | Zeile 321 |
+| 4 | E-Mail-Positionsfilter präzisieren | Zeile 341 |
+| 5 | Stripe-Zahlungsblock um Verbrauchsübersicht ergänzen | Zeile 353 |
 
----
-
-## Datenbankänderungen (1 Migration)
-
-**Tabelle `commission_payouts`** – neue Felder:
-- `commission_role` text → `'ad'`, `'sales_partner'`, `'tippgeber'`
-- `payout_trigger` text → `'contract_signup'`, `'usage_revenue'`, `'tippgeber_milestone'`
-- `contract_start_date` date → für 24-Monats-Prüfung
-
-**Neue Tabelle `tippgeber_milestone_tracking`**:
-```sql
-id, tippgeber_id, contract_id, cumulative_revenue, milestone_reached, 
-milestone_reached_at, payout_triggered, created_at
-```
-RLS: Admin kann alles, Tippgeber sehen eigene Einträge.
-
-**Tabelle `contracts`** – neues Feld:
-- `tippgeber_id` uuid → wird bei Lead-Konvertierung übertragen (Spalte existiert schon in `leads`)
-
----
-
-## Betroffene Dateien
-
-### 1. `supabase/functions/auto-invoice/index.ts`
-Aktuellen Provisionsblock (Zeilen 456–496) ersetzen durch eine Funktion `createGoaeCommissions(contract, invoice, netAmount, usageNetAmount, isFirstInvoice)`:
-
-```
-Falls contract.product_name enthält 'GOÄ' oder 'GOA':
-  → Neue Logik (rollenbasiert, siehe unten)
-Sonst:
-  → Bestehende product_commissions-Logik (unverändert)
-```
-
-**GOÄ-Logik im Detail:**
-
-1. **AD-Provision** (wenn `sales_partner_id` einen User mit Rolle `user`, `regional_lead` oder `sales_lead` hat):
-   - Bei erster Rechnung: Festbetrag 100 € (payout_trigger = `contract_signup`)
-     - Sprint-Check: Vertragsanzahl des AD >= 25 bis 31.12.2026 → 250 € statt 100 €
-   - Bei jeder Rechnung: 10% auf `usageNetAmount` (nur Verbrauchspositionen, nicht Grundgebühr), solange `invoice_date <= contract.start_date + 24 Monate`
-   
-2. **Vertriebspartner-Provision** (wenn `sales_partner_id` einen User mit Rolle `sales_partner` hat):
-   - 10% auf gesamten `netAmount` (Grundgebühr + Verbrauch)
-   - Nur wenn Vertrag `status = 'aktiv'`
-
-3. **Tippgeber-Meilenstein** (wenn `contracts.tippgeber_id` gesetzt):
-   - Kumulierten Nettobetrag aus allen Rechnungen dieses Vertrags berechnen
-   - Wenn >= 500 € und noch kein Milestone-Eintrag vorhanden → Eintrag in `tippgeber_milestone_tracking` anlegen (Auszahlung selbst erfolgt manuell durch Admin)
-
-### 2. Migration: DB-Änderungen
-Neue Migration-Datei für:
-- `ALTER TABLE commission_payouts ADD COLUMN commission_role text, payout_trigger text, contract_start_date date`
-- `CREATE TABLE tippgeber_milestone_tracking` mit RLS
-- `ALTER TABLE contracts ADD COLUMN tippgeber_id uuid`
-
-### 3. `src/components/leads/LeadDetailDialog.tsx`
-Bei Konvertierung eines Leads zu einem Vertrag: `lead.tippgeber_id` → `contracts.tippgeber_id` übernehmen.
-
-### 4. `src/pages/vertrieb/Provisionen.tsx`
-- Tab "Provisionssätze": Neue Section "HFX GOÄ-Regelwerk" mit beschreibenden Cards (nicht editierbar, da fix im Code)
-- Tippgeber-Meilenstein-View: Admins sehen `tippgeber_milestone_tracking` und können Auszahlungen manuell auslösen
-- Tippgeber-eigene Ansicht: Fortschrittsanzeige zur 500 €-Schwelle
-
----
-
-## Was bleibt unverändert
-
-- Alle anderen Produkte (HFX EBM, Benchmark, Wingmann etc.) laufen weiterhin über die bestehende `product_commissions`-Tabelle
-- Bestehende `commission_payouts` bleiben unverändert, neue Felder sind `nullable`
-- Sprint-Konfiguration bleibt in `product_commissions` (Festbetrag-Typ mit Sprint-Feldern)
+**Keine DB-Migration nötig. Keine Frontend-Änderungen nötig.**
