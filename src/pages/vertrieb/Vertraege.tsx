@@ -675,7 +675,7 @@ export default function Vertraege() {
         stundenaufwand_pro_woche: data.stundenaufwand_pro_woche || null,
         rechnungs_email: data.rechnungs_email || null,
         selected_addon_modules: data.selected_modules.length > 0 ? data.selected_modules : [],
-        qodia_unit_price: (data as any).qodia_unit_price ?? 0,
+        qodia_unit_price: (data as any).qodia_unit_price ?? 0.99,
         ...(data.mandate_accepted && !editId ? { mandate_accepted_at: new Date().toISOString() } : {}),
         ...(documentUrl ? { document_url: documentUrl, document_name: documentName } : {}),
         ...(leadHfxNumber && !editId ? { hfx_customer_number: leadHfxNumber } : {}),
@@ -2376,7 +2376,7 @@ export default function Vertraege() {
                     selected_products: next,
                     monthly_price: totalMonthly,
                     one_time_fee: totalOneTime,
-                    qodia_unit_price: unitProduct ? unitPrice : 0,
+                    qodia_unit_price: unitProduct ? unitPrice : 0.99,
                   } as any));
                 };
 
@@ -2884,9 +2884,9 @@ export default function Vertraege() {
                   type="number"
                   min={0}
                   step={0.01}
-                  value={(form as any).qodia_unit_price ?? 0}
+                  value={(form as any).qodia_unit_price ?? 0.99}
                   onChange={(e) => set("qodia_unit_price" as any, parseFloat(e.target.value) || 0)}
-                  placeholder="z.B. 0.25"
+                  placeholder="z.B. 0.99"
                   className="max-w-[180px]"
                 />
                 <p className="text-xs text-muted-foreground">Interner Stückpreis für variablen Qodia-Verbrauch. Wird von Qodia gemeldete Mengen multipliziert.</p>
