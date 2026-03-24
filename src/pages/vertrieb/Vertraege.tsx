@@ -742,30 +742,82 @@ export default function Vertraege() {
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
       toast({ title: editId ? "Vertrag aktualisiert" : "Vertrag erstellt" });
 
-      // Shared helper: create Praxen entry + convert lead to "kunde"
+      // Shared helper: upsert customers entry, update contract FK, create case, convert lead
       const activateContract = async (hfxNr: string | null, praxisData: {
         name: string; adresse?: string | null; plz?: string | null; ort?: string | null;
         telefon?: string | null; email?: string | null; mp_nr?: string | null;
         produkt?: string | null; module?: string[]; preis?: number; buchungs_datum?: string;
         converted_from_lead_id?: string | null;
-      }) => {
+        vorname?: string | null; nachname?: string | null; bsnr?: string | null; lanr?: string | null;
+      }, cId: string) => {
         // Convert linked lead to "kunde"
         if (hfxNr) {
           await supabase.from("leads").update({ status: "kunde" }).eq("hfx_customer_number", hfxNr);
         }
-        // Create praxen entry if not exists
-        const existingCheck = hfxNr
+
+        // Upsert customer record
+        let customerId: string | null = null;
+        if (hfxNr) {
+          const { data: existingCust } = await (supabase as any)
+            .from("customers")
+            .select("id")
+            .eq("hfx_customer_number", hfxNr)
+            .maybeSingle();
+
+          if (existingCust) {
+            customerId = existingCust.id;
+          } else {
+            const { data: newCust } = await (supabase as any)
+              .from("customers")
+              .insert({
+                hfx_customer_number: hfxNr,
+                praxis_name: praxisData.name,
+                vorname: praxisData.vorname || null,
+                nachname: praxisData.nachname || null,
+                email: praxisData.email || null,
+                telefon: praxisData.telefon || null,
+                adresse: praxisData.adresse || null,
+                plz: praxisData.plz || null,
+                ort: praxisData.ort || null,
+                bsnr: praxisData.bsnr || null,
+                lanr: praxisData.lanr || null,
+              })
+              .select("id")
+              .single();
+            customerId = newCust?.id ?? null;
+          }
+        }
+
+        // Link contract to customer
+        if (customerId && cId) {
+          await supabase.from("contracts").update({ customer_id: customerId }).eq("id", cId);
+        }
+
+        // Create neuabschluss case
+        if (cId) {
+          await (supabase as any).from("contract_cases").insert({
+            customer_id: customerId,
+            contract_id: cId,
+            case_type: "neuabschluss",
+            status: "abgeschlossen",
+            title: `Neuabschluss – ${praxisData.produkt || praxisData.name}`,
+            created_by: user?.id,
+          });
+        }
+
+        // Create praxen entry if not exists (legacy compatibility)
+        const existingPraxen = hfxNr
           ? await supabase.from("praxen").select("id").eq("mp_nr", hfxNr).maybeSingle()
           : { data: null };
-        if (!existingCheck.data) {
+        if (!existingPraxen.data) {
           await supabase.from("praxen").insert({ ...praxisData, status: "aktiv" });
           queryClient.invalidateQueries({ queryKey: ["praxen"] });
           toast({ title: "✅ Kunde angelegt", description: `${praxisData.name} wurde erfolgreich als Kunden hinterlegt.` });
         }
-        queryClient.invalidateQueries({ queryKey: ["leads"] });
+        queryClient.invalidateQueries({ queryKey: ["leads", "customers"] });
       };
 
-      // When a new contract is signed (status = aktiv), auto-create Praxen entry
+      // When a new contract is signed (status = aktiv), auto-create customers + case
       if (!editId && variables.status === "aktiv" && contractId) {
         // Set approved_by/approved_at
         await supabase.from("contracts").update({
@@ -776,18 +828,22 @@ export default function Vertraege() {
         const hfxNr = leadHfxNumber || variables.mp_nr || null;
         await activateContract(hfxNr, {
           name: variables.praxis || `${variables.vorname} ${variables.nachname}`.trim() || "Unbekannt",
+          vorname: variables.vorname || null,
+          nachname: variables.nachname || null,
           adresse: variables.praxisanschrift || variables.adresse || null,
           plz: variables.plz || null,
           ort: variables.ort || null,
           telefon: variables.telefon || null,
           email: variables.email || null,
           mp_nr: hfxNr,
+          bsnr: variables.bsnr || null,
+          lanr: variables.lanr || null,
           produkt: variables.selected_products.join(", ") || null,
           module: variables.selected_products,
           preis: variables.monthly_price || 0,
           buchungs_datum: variables.start_date || new Date().toISOString().split("T")[0],
           converted_from_lead_id: fromLeadId || null,
-        });
+        }, contractId);
       }
 
       // For new contracts with status "eingegangen": send booking email to customer
@@ -1309,6 +1365,43 @@ export default function Vertraege() {
         const { data: inserted, error } = await supabase.from("contracts").insert(record).select("id").single();
         if (error) throw error;
         contractId = inserted.id;
+
+        // Upsert customers entry and link to contract
+        const hfxNr2 = leadHfxNumber || form.mp_nr || null;
+        if (hfxNr2 && contractId) {
+          const { data: existingCust2 } = await (supabase as any)
+            .from("customers").select("id").eq("hfx_customer_number", hfxNr2).maybeSingle();
+          let custId2 = existingCust2?.id ?? null;
+          if (!custId2) {
+            const { data: newCust2 } = await (supabase as any)
+              .from("customers")
+              .insert({
+                hfx_customer_number: hfxNr2,
+                praxis_name: form.praxis || `${form.vorname || ""} ${form.nachname || ""}`.trim() || null,
+                vorname: form.vorname || null,
+                nachname: form.nachname || null,
+                email: form.email || null,
+                telefon: form.telefon || null,
+                adresse: form.adresse || null,
+                plz: form.plz || null,
+                ort: form.ort || null,
+                bsnr: form.bsnr || null,
+              })
+              .select("id").single();
+            custId2 = newCust2?.id ?? null;
+          }
+          if (custId2) {
+            await supabase.from("contracts").update({ customer_id: custId2 }).eq("id", contractId);
+            await (supabase as any).from("contract_cases").insert({
+              customer_id: custId2,
+              contract_id: contractId,
+              case_type: "neuabschluss",
+              status: "offen",
+              title: `Neuabschluss – ${form.selected_products.join(", ") || "Produkt"}`,
+              created_by: user?.id,
+            });
+          }
+        }
       }
 
       // Send booking confirmation email
