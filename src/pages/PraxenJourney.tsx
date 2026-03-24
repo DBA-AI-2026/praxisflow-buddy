@@ -512,12 +512,23 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
   }, [highlightId]);
 
   const { data: contracts = [], isLoading } = useQuery({
-    queryKey: ["journey-contracts-all"],
+    queryKey: ["journey-contracts-all", user?.id, role],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from("contracts")
-        .select("id, customer_name, product_name, status, monthly_price, hfx_customer_number, email, vorname, nachname, praxis, created_at, start_date, confirmation_email_sent_at, customer_confirmed_at, sales_partner_name")
+        .select("id, customer_name, product_name, status, monthly_price, hfx_customer_number, email, vorname, nachname, praxis, created_at, start_date, confirmation_email_sent_at, customer_confirmed_at, sales_partner_name, sales_partner_id, created_by")
         .order("created_at", { ascending: false });
+
+      // Sales Partner: nur eigene Verträge
+      if (isSalesPartner && user?.id) {
+        query = query.or(`sales_partner_id.eq.${user.id},created_by.eq.${user.id}`);
+      }
+      // Tippgeber: keine Vertragsansicht
+      if (isTippgeber) {
+        return [];
+      }
+
+      const { data } = await query;
       return data ?? [];
     },
   });
