@@ -1,82 +1,209 @@
 
 ## Analyse des IST-Zustands
 
-Die Funktion `auto-invoice` lädt bereits `usage_charges` und fügt sie als Positionen hinzu. Die Grundstruktur für den gemeinsamen Einzug ist vorhanden. 
+### Kernprobleme
+1. **Keine `customers`-Tabelle** – Kundenstammdaten leben in `contracts` (Felder: `vorname`, `nachname`, `praxis`), `leads`, und `praxen` (veraltet, redundant).
+2. **`hfx_customer_number`** ist bereits produktiv im Format `HFX-I01000` (via `auto_assign_lead_hfx_number`-Trigger). Diese Nummer darf nicht geändert werden.
+3. **Kein `contract_number`** – Verträge haben keine eigene lesbare Nummer.
+4. **Kein `contract_cases`-System** – operative Vorgänge sind nicht modelliert.
+5. **`praxen`-Tabelle** ist ein veraltetes Konstrukt; die `/praxen`-Seite mergt manuell Daten aus `praxen` + `contracts`.
+6. **`Vertraege.tsx`** ist 3155 Zeilen – sie übernimmt Kundenstammdaten direkt und würde von einer sauberen Trennung profitieren.
 
-Konkrete Lücken / Probleme:
-
-1. **E-Mail-Betreff-Bug (Zeile 408)**: `subjectSuffix = grossAmount === 0 ? " (kein Zahlbetrag)" : ""` — wird korrekt gesetzt, da grossAmount die Summe aus Grundgebühr + Verbrauch ist. ✓ Bereits korrekt.
-
-2. **E-Mail-Positionsfilter-Bug (Zeile 341-349)**: `filter(p => p.unit_price > 0 || isInWaiverPeriod)` zeigt beim Waiver immer die 0 €-Grundgebühr-Zeile an — auch wenn Verbrauch > 0 ist. Das ist verwirrend. **Fix nötig**: Wenn Verbrauch vorhanden, soll die 0€-Grundgebühr-Zeile trotzdem sichtbar bleiben, aber mit dem Label "Einführungsangebot".
-
-3. **Stripe-Beschreibung (Zeile 280)**: Enthält nur Produktname und HFX-Nr. Soll die Anzahl Qodia-Vorgänge explizit nennen.
-
-4. **Stripe-Einzug bei Waiver + Verbrauch (Zeile 256)**: `if (hasStripeCustomer && grossAmount > 0)` — bei Waiver-Grundgebühr (0€) + Verbrauch > 0 ist grossAmount > 0 → Stripe-Einzug wird korrekt ausgelöst. ✓ Bereits korrekt.
-
-5. **`usageNetAmount` ist im Hauptfluss nicht sauber getrennt berechnet** — wird nur innerhalb `createGoaeCommissions` berechnet. Für GOÄ-Provisionen brauchen wir es aber bereits im Hauptfluss für die Stripe-Beschreibung.
-
-6. **`notes` in der DB-Rechnung (Zeile 321)**: Kein Hinweis auf Anzahl Qodia-Vorgänge und deren Betrag.
-
-7. **`customer_revenues` (Zeile 445)**: `notes` enthält bereits "+ X Nutzungsposten" — gut.
+### Was NICHT geändert wird (Stabilität)
+- `hfx_customer_number`-Format (`HFX-I01000`) bleibt exakt so
+- `auto-invoice`, `qodia-usage-query` und alle Edge Functions laufen weiterhin via `hfx_customer_number`
+- `contracts`-Tabelle bleibt die primäre Tabelle – keine Breaking Changes
+- `praxen`-Tabelle bleibt für Kompatibilität erhalten
 
 ---
 
-## Was geändert wird (nur `supabase/functions/auto-invoice/index.ts`)
+## Zielbild: 3-Ebenen-Architektur
 
-### Änderung 1 — `usageNetAmount` sauber im Hauptfluss berechnen (nach Zeile 183)
-
-```typescript
-// Verbrauchsnettobetrag separat ermitteln (für Stripe-Beschreibung und Provisionen)
-const usageNetAmount = positions
-  .slice(1) // alle Positionen nach der Grundgebühr
-  .reduce((s, p) => s + p.quantity * p.unit_price, 0);
-```
-
-### Änderung 2 — Stripe invoice `description` ergänzen (Zeile 280)
-
-```typescript
-description: `${contract.product_name} – ${billingPeriod}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}${usageChargeIds.length > 0 ? ` | Verbrauch: ${usageChargeIds.length} Qodia-Vorgänge (${usageNetAmount.toFixed(2)} €)` : ""}`,
-```
-
-### Änderung 3 — Stripe `invoiceItems`: Grundgebühr und Verbrauch klarer beschriften (Zeile 258-267)
-
-Momentan wird die Beschreibung der Position direkt aus `pos.description` übernommen — das ist bereits korrekt. Keine Änderung nötig, da die Positionen schon unterschiedliche Descriptions haben.
-
-### Änderung 4 — `notes` in DB-Rechnung präziser (Zeile 321)
-
-```typescript
-notes: `Automatisch generiert – Laufzeit: ${billingPeriod}${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} Qodia-Verbrauchsposten: ${usageNetAmount.toFixed(2)} € netto` : ""}`,
-```
-
-### Änderung 5 — E-Mail: Waiver-0€-Position nur zeigen wenn kein Verbrauch
-
-Aktuell (Zeile 341-349): `filter(p => p.unit_price > 0 || isInWaiverPeriod)` — zeigt Waiver-0€-Zeile immer.
-
-Neues Verhalten:
-- Waiver aktiv + kein Verbrauch → zeige 0€-Grundgebühr-Zeile (Nachweis)
-- Waiver aktiv + Verbrauch vorhanden → zeige Waiver-Zeile UND alle Verbrauchszeilen (klar für den Kunden)
-- Kein Waiver + kein Verbrauch → zeige nur Grundgebühr
-- Kein Waiver + Verbrauch → zeige beide
-
-Konkret: Filter anpassen zu `filter(p => p.unit_price > 0 || (isInWaiverPeriod && p === positions[0]))` — zeigt immer die Grundgebühr-Position (auch bei 0 € im Waiver), aber filtert sonstige 0€-Positionen heraus.
-
-### Änderung 6 — E-Mail: Zahlungshinweis-Zusammenfassung um Verbrauch ergänzen
-
-Im Payment-Block bei Stripe-Einzug (Zeile 353-357): wenn `usageNetAmount > 0`, kurze Zeile ergänzen:
-```
-📊 Enthält: Qodia-Verbrauch ${usageChargeIds.length} Vorgänge × 0,99 € = ${usageNetAmount.toFixed(2)} € (zzgl. MwSt.)
+```text
+customers (Stammdaten)
+  hfx_customer_number = HFX-I01000  ← unveränderlich
+  └── contracts (ein Vertrag pro Produkt)
+        contract_number = HFX-I01000-V001
+        └── contract_cases (Vorgänge)
+              case_number = HFX-VG-2026-000471
 ```
 
 ---
 
-## Zusammenfassung
+## Phase 1: Datenbank-Migration
 
-| # | Was | Wo |
-|---|---|---|
-| 1 | `usageNetAmount` im Hauptfluss berechnen | nach Zeile 183 |
-| 2 | Stripe invoice description um Verbrauchshinweis ergänzen | Zeile 280 |
-| 3 | DB `notes` um Qodia-Verbrauchsdetails ergänzen | Zeile 321 |
-| 4 | E-Mail-Positionsfilter präzisieren | Zeile 341 |
-| 5 | Stripe-Zahlungsblock um Verbrauchsübersicht ergänzen | Zeile 353 |
+Eine einzige Migration mit:
 
-**Keine DB-Migration nötig. Keine Frontend-Änderungen nötig.**
+**1. Neue Tabelle `customers`**
+```sql
+CREATE TABLE public.customers (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  hfx_customer_number text UNIQUE NOT NULL,  -- z.B. HFX-I01000
+  praxis_name text,
+  vorname text,
+  nachname text,
+  email text,
+  telefon text,
+  adresse text,
+  plz text,
+  ort text,
+  mp_nr text,
+  bsnr text,
+  lanr text,
+  salesforce_id text,
+  notes text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
+-- RLS: Admin alles, andere Rollen sehen Kunden deren Verträge sie sehen dürfen
+```
+
+**2. `contracts`: neue Spalten**
+```sql
+ALTER TABLE public.contracts
+  ADD COLUMN customer_id uuid REFERENCES public.customers(id),
+  ADD COLUMN contract_number text UNIQUE;
+```
+
+**3. Sequenz + Trigger für `contract_number`**
+```sql
+-- Trigger: generiert HFX-I01000-V001 basierend auf customer.hfx_customer_number
+-- Zähler: COUNT bestehender Verträge für diesen Kunden + 1
+```
+
+**4. Neue Tabelle `contract_cases`**
+```sql
+CREATE TABLE public.contract_cases (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  case_number text UNIQUE NOT NULL,  -- HFX-VG-2026-000471
+  customer_id uuid REFERENCES public.customers(id),
+  contract_id uuid REFERENCES public.contracts(id),
+  case_type text NOT NULL DEFAULT 'neuabschluss',
+  -- neuabschluss | aenderung | upgrade | kuendigung | verlaengerung | support
+  status text NOT NULL DEFAULT 'offen',
+  -- offen | in_bearbeitung | abgeschlossen
+  title text,
+  notes text,
+  created_by uuid,
+  assigned_to uuid,
+  resolved_at timestamptz,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+CREATE SEQUENCE public.case_number_seq START WITH 1;
+-- Trigger: HFX-VG-YYYY-XXXXXX
+ALTER TABLE public.contract_cases ENABLE ROW LEVEL SECURITY;
+```
+
+**5. Migrationsdaten: bestehende `contracts` → `customers`**
+```sql
+-- 1 customers-Zeile pro einzigartiger hfx_customer_number aus contracts
+INSERT INTO customers (hfx_customer_number, praxis_name, vorname, nachname, email, ...)
+SELECT DISTINCT ON (hfx_customer_number) hfx_customer_number, praxis, vorname, ...
+FROM contracts WHERE hfx_customer_number IS NOT NULL;
+
+-- FK setzen
+UPDATE contracts SET customer_id = c.id
+FROM customers c WHERE c.hfx_customer_number = contracts.hfx_customer_number;
+
+-- contract_number vergeben (retroaktiv)
+UPDATE contracts SET contract_number =
+  hfx_customer_number || '-V' || LPAD(ROW_NUMBER() OVER (PARTITION BY hfx_customer_number ORDER BY created_at)::text, 3, '0')
+WHERE hfx_customer_number IS NOT NULL;
+
+-- Erster Vorgang pro Vertrag: Neuabschluss
+INSERT INTO contract_cases (case_number, customer_id, contract_id, case_type, status, title, ...)
+SELECT ... FROM contracts WHERE ...;
+```
+
+**6. RLS Policies**
+- `customers`: Admin alles; `sales_lead`/`regional_lead` alles; `user`/`sales_partner` nur Kunden mit eigenem Vertrag; `tippgeber` nur eigene referrals
+- `contract_cases`: gleiche Logik wie `contracts`
+
+---
+
+## Phase 2: UI-Änderungen
+
+### 2a. Neue Seite `/kunden` + Sidebar-Link
+
+Neue Datei `src/pages/Kunden.tsx`:
+- Lädt aus `customers` (statt `praxen` + `contracts` mischen)
+- Tabelle: HFX-Nr. | Praxis | E-Mail | Ort | Anzahl Verträge | Status
+- Klick → Detailansicht mit **3 Tabs**:
+  - **Stammdaten** (Adresse, Kontakt, MP-Nr.)
+  - **Verträge** (Liste: `contract_number`, Produkt, Preis, Status)
+  - **Vorgänge** (Liste: `case_number`, Typ, Status, Datum + Button "Neuer Vorgang")
+
+Sidebar: neuer Eintrag "Kunden" unter Vertrieb (ersetzt /praxen visuell, /praxen bleibt weiter erreichbar als Alias).
+
+### 2b. `src/pages/vertrieb/Vertraege.tsx`
+- Neue Spalte `contract_number` in der Tabelle anzeigen (Format: `HFX-I01000-V001`)
+- Filter nach `contract_number` ergänzen
+
+### 2c. `src/pages/Praxen.tsx`
+- Daten aus `customers`-Tabelle laden (statt `praxen` + `contracts` kombinieren)
+- `contract_number` in der Detailansicht anzeigen
+
+### 2d. Lead-Konvertierung (`src/components/leads/LeadDetailDialog.tsx`)
+- Bei "Lead → Vertrag konvertieren": zuerst `customers`-Eintrag anlegen (oder bestehenden per `hfx_customer_number` finden), dann `customer_id` auf den neuen Vertrag setzen + automatisch einen `contract_cases`-Eintrag vom Typ `neuabschluss` erstellen
+
+### 2e. `PaperContractDialog.tsx`
+- Gleiche Logik: `customers`-Eintrag anlegen/finden bei Papiervertrag-Erfassung
+
+---
+
+## Phase 3: Kunden-Detailseite mit 3 Tabs
+
+```text
+/kunden → Kundenliste
+/kunden/:id → Detailansicht
+  Tab 1: Stammdaten (editierbar für Admin)
+  Tab 2: Verträge  → contract_number, Produkt, Monatspreis, Status, Startdatum
+  Tab 3: Vorgänge  → case_number, Typ, Status, erstellt von, Datum
+                     + Button "Neuer Vorgang" (Typ, Notizen)
+```
+
+---
+
+## Dateiübersicht
+
+| Datei | Art |
+|---|---|
+| Migration (neu) | `customers`, `contract_cases`, Trigger, Sequenz, Migrationsdaten, RLS |
+| `src/pages/Kunden.tsx` | **Neue Datei** – Kundenliste + 3-Tab-Detail |
+| `src/App.tsx` | Route `/kunden` hinzufügen, `/kunden/:id` |
+| `src/components/layout/Sidebar.tsx` | Link "Kunden" ergänzen |
+| `src/pages/Praxen.tsx` | Daten aus `customers` laden |
+| `src/pages/vertrieb/Vertraege.tsx` | `contract_number` Spalte anzeigen |
+| `src/components/leads/LeadDetailDialog.tsx` | `customers`-Eintrag bei Konvertierung anlegen |
+| `src/components/contracts/PaperContractDialog.tsx` | `customers`-Eintrag anlegen |
+
+---
+
+## Nummerierungslogik (konkret)
+
+| Ebene | Format | Beispiel | Erzeugung |
+|---|---|---|---|
+| Kunde | `HFX-IXXXXX` | `HFX-I01000` | bereits vorhanden, unverändert |
+| Vertrag | `HFX-IXXXXX-VXXX` | `HFX-I01000-V001` | DB-Trigger bei INSERT auf `contracts` |
+| Vorgang | `HFX-VG-YYYY-XXXXXX` | `HFX-VG-2026-000471` | DB-Trigger mit Jahres-Sequenz |
+
+---
+
+## Migrations-Sicherheit
+
+- Alle neuen Felder in `contracts` sind `NULLABLE` → keine bestehenden Inserts brechen
+- `hfx_customer_number` in `contracts`, `leads`, `usage_charges` bleibt unverändert
+- `praxen`-Tabelle bleibt; `/praxen`-Route bleibt als Fallback
+- Edge Functions `auto-invoice`, `qodia-*` laufen weiterhin via `hfx_customer_number`
+
+---
+
+## Schritte in Reihenfolge
+
+1. **DB-Migration**: `customers` + `contract_cases` + Trigger + Migrationsdaten
+2. **Neue Seite `Kunden.tsx`**: Kundenliste + 3-Tab-Detail inkl. Vorgänge-Verwaltung
+3. **App.tsx + Sidebar**: Route und Navigationslink
+4. **Vertraege.tsx**: `contract_number` anzeigen
+5. **LeadDetailDialog + PaperContractDialog**: `customers`-Eintrag bei Konvertierung
