@@ -49,18 +49,6 @@ export default function QodiaVerbrauch() {
     setResults(null);
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        toast({
-          title: "Nicht angemeldet",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const body: Record<string, string> = {
         startDate,
         endDate,
@@ -69,26 +57,15 @@ export default function QodiaVerbrauch() {
         body.hfx_customer_number = hfxFilter.trim();
       }
 
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const res = await fetch(
-        `${supabaseUrl}/functions/v1/qodia-usage-query`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify(body),
-        }
-      );
+      const { data: invokeData, error: invokeError } = await supabase.functions.invoke("qodia-usage-query", {
+        body,
+      });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Fehler beim Abruf");
+      if (invokeError) {
+        throw new Error(invokeError.message || "Fehler beim Abruf");
       }
 
-      setResults(data.results ?? []);
+      setResults(invokeData?.results ?? []);
     } catch (err) {
       toast({
         title: "Fehler beim Abruf",
