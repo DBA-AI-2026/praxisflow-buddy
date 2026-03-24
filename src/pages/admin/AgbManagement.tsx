@@ -102,7 +102,7 @@ export default function AgbManagement() {
         {/* Summary */}
         <div className="flex gap-3 flex-wrap">
           <Badge variant="outline" className="gap-1.5 py-1.5 px-3">
-            <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+            <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
             {withAgb.length} mit AGB
           </Badge>
           <Badge variant="outline" className="gap-1.5 py-1.5 px-3">
