@@ -480,6 +480,8 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
   const queryClient = useQueryClient();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
   const [sendingBuchungsmail, setSendingBuchungsmail] = useState<string | null>(null);
+  const { isSalesPartner, isTippgeber, role } = useUserRole();
+  const { user } = useAuth();
 
   const sendBuchungsmail = async (contract: any, e: React.MouseEvent) => {
     e.stopPropagation();
