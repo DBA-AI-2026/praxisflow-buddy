@@ -56,6 +56,7 @@ const dashboardNav: NavItem[] = [
 ];
 
 const vertriebNavigation: NavItem[] = [
+  { name: "Interessenten", href: "/interessenten", icon: UserPlus, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "tippgeber", "admin"] },
   { name: "Kunden-Journey", href: "/praxen-journey", icon: Building2, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
   { name: "Reservierungen", href: "/reservierungen", icon: BookMarked, roles: ["user", "sales_partner", "regional_lead", "admin"] },
   { name: "HFX EBM Lizenzen", href: "/lizenzen", icon: Key, roles: allRoles },
@@ -71,7 +72,6 @@ const allgemeinNavigation: NavItem[] = [
 
 const vertriebsAdminNavigation: NavItem[] = [
   { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users, roles: ["sales_lead", "regional_lead", "admin"] },
-  { name: "Interessenten", href: "/interessenten", icon: UserPlus, roles: ["tippgeber"] },
   { name: "Provisionen", href: "/vertrieb/provisionen", icon: BarChart3, roles: ["user", "sales_partner", "tippgeber", "sales_lead", "regional_lead", "admin"] },
   { name: "Tipp-Leads", href: "/tipp-leads", icon: Lightbulb, roles: ["tippgeber", "admin", "sales_lead"] },
   { name: "PLZ-Zuordnung", href: "/admin/plz-mapping", icon: MapPin, roles: ["admin", "sales_lead"] },
