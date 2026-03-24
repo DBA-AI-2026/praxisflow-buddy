@@ -10,13 +10,13 @@ const corsHeaders = {
 const APP_URL = "https://praxisflow-buddy.lovable.app";
 
 const STRIPE_PRODUCT_MAP: Record<string, { price_id: string; recurring: boolean }> = {
-  "HFX EBM": { price_id: "price_1T7z1h6v0qHdbOip4A7qocQC", recurring: true },
-  "HFX GOÄ - die KI für ihre Privatabrechnung": { price_id: "price_1T7z2Z6v0qHdbOipvyPDB9mB", recurring: true },
-  "HFX GOÄ/GOZ Live-Check": { price_id: "price_1T7z3X6v0qHdbOiplCCLqD2n", recurring: false },
+  "HFX EBM": { price_id: "price_1TERRU50U5wLsXk2vhiRszuy", recurring: true },
+  "HFX GOÄ - die KI für ihre Privatabrechnung": { price_id: "price_1TERR350U5wLsXk2G6CMcuGV", recurring: true },
+  "HFX GOÄ/GOZ Live-Check": { price_id: "price_1TERZH50U5wLsXk2FzJL0VSl", recurring: false },
 };
 
 const GOA_PROMO_COUPON_ID = "Z6xkvF0U";
-const GOA_PROMO_PRICE_ID = "price_1T7z2Z6v0qHdbOipvyPDB9mB";
+const GOA_PROMO_PRICE_ID = "price_1TERR350U5wLsXk2G6CMcuGV";
 const GOA_PROMO_DEADLINE = new Date("2026-06-30T23:59:59Z");
 
 Deno.serve(async (req) => {
