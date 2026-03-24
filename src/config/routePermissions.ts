@@ -47,6 +47,7 @@ export const routePermissions: RoutePermission[] = [
   { path: "/admin/audit-logs", allowedRoles: ["admin"] },
   { path: "/admin/settings", allowedRoles: ["admin"] },
   { path: "/admin/products", allowedRoles: ["admin"] },
+  { path: "/admin/agb", allowedRoles: ["admin"] },
   
   // Tools
   { path: "/tools/pdf-coordinates", allowedRoles: ["admin"] },

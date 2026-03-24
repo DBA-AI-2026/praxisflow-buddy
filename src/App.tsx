@@ -85,6 +85,7 @@ const App = () => (
             <Route path="/admin/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
             <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
+            <Route path="/admin/agb" element={<ProtectedRoute><AgbManagement /></ProtectedRoute>} />
             <Route path="/tipp-leads" element={<ProtectedRoute><TippLeadsPage /></ProtectedRoute>} />
             <Route path="/tippgeber" element={<ProtectedRoute><TippLeadsPage /></ProtectedRoute>} />
             <Route path="/admin/tipp-leads" element={<ProtectedRoute><TippLeadsPage /></ProtectedRoute>} />

@@ -163,7 +163,7 @@ function ProductAgbRow({
           {product.agb_pdf_path ? (
             <span className="text-xs text-muted-foreground">{product.agb_pdf_path}</span>
           ) : (
-            <span className="text-xs text-amber-500">Kein AGB-PDF hinterlegt</span>
+            <span className="text-xs text-destructive">Kein AGB-PDF hinterlegt</span>
           )}
         </div>
 
