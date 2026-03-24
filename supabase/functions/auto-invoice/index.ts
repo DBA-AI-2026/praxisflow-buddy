@@ -453,44 +453,61 @@ Deno.serve(async (req) => {
           .update({ status: "versendet", email_sent_at: now, revenue_id: revenueRow?.id ?? null })
           .eq("id", invoice.id);
 
-        // Auto-generate commission payout if contract has a sales partner
+        // Auto-generate commission payout
         if (contract.sales_partner_id) {
-          const { data: productCommission } = await supabase
-            .from("product_commissions")
-            .select("*")
-            .eq("product_name", contract.product_name)
-            .eq("is_active", true)
-            .maybeSingle();
+          const isGoae = /GOÄ|GOA/i.test(contract.product_name || "");
 
-          if (productCommission) {
-            let commissionAmount = 0;
-            if (productCommission.commission_type === "prozent") {
-              commissionAmount = Math.round(baseNetAmount * productCommission.commission_value) / 100;
-            } else {
-              commissionAmount = Number(productCommission.commission_value);
-            }
+          if (isGoae) {
+            // ── HFX GOÄ: Rollenbasierte Provisionslogik ──────────────────────
+            await createGoaeCommissions({
+              supabase,
+              contract,
+              invoice,
+              netAmount,
+              baseNetAmount,
+              usageChargeIds,
+              periodMonthStr,
+              today,
+            });
+          } else {
+            // ── Andere Produkte: klassische product_commissions-Logik ─────────
+            const { data: productCommission } = await supabase
+              .from("product_commissions")
+              .select("*")
+              .eq("product_name", contract.product_name)
+              .eq("is_active", true)
+              .maybeSingle();
 
-            if (commissionAmount > 0) {
-              const { data: existingPayout } = await supabase
-                .from("commission_payouts")
-                .select("id")
-                .eq("invoice_id", invoice.id)
-                .maybeSingle();
+            if (productCommission) {
+              let commissionAmount = 0;
+              if (productCommission.commission_type === "prozent") {
+                commissionAmount = Math.round(baseNetAmount * productCommission.commission_value) / 100;
+              } else {
+                commissionAmount = Number(productCommission.commission_value);
+              }
 
-              if (!existingPayout) {
-                await supabase.from("commission_payouts").insert({
-                  sales_partner_id: contract.sales_partner_id,
-                  sales_partner_name: contract.sales_partner_name || "Unbekannt",
-                  contract_id: contract.id,
-                  invoice_id: invoice.id,
-                  product_name: contract.product_name,
-                  commission_type: productCommission.commission_type,
-                  commission_rate: productCommission.commission_value,
-                  commission_amount: commissionAmount,
-                  period_month: periodMonthStr,
-                  status: "pending",
-                });
-                console.log(`[auto-invoice] Created commission payout ${commissionAmount} € for partner ${contract.sales_partner_name}`);
+              if (commissionAmount > 0) {
+                const { data: existingPayout } = await supabase
+                  .from("commission_payouts")
+                  .select("id")
+                  .eq("invoice_id", invoice.id)
+                  .maybeSingle();
+
+                if (!existingPayout) {
+                  await supabase.from("commission_payouts").insert({
+                    sales_partner_id: contract.sales_partner_id,
+                    sales_partner_name: contract.sales_partner_name || "Unbekannt",
+                    contract_id: contract.id,
+                    invoice_id: invoice.id,
+                    product_name: contract.product_name,
+                    commission_type: productCommission.commission_type,
+                    commission_rate: productCommission.commission_value,
+                    commission_amount: commissionAmount,
+                    period_month: periodMonthStr,
+                    status: "pending",
+                  });
+                  console.log(`[auto-invoice] Created commission payout ${commissionAmount} € for partner ${contract.sales_partner_name}`);
+                }
               }
             }
           }
@@ -518,6 +535,215 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// HFX GOÄ: Rollenbasierte Provisionslogik
+// ────────────────────────────────────────────────────────────────────────────
+
+async function createGoaeCommissions(params: {
+  supabase: ReturnType<typeof import("https://esm.sh/@supabase/supabase-js@2").createClient>;
+  contract: any;
+  invoice: any;
+  netAmount: number;
+  baseNetAmount: number;
+  usageChargeIds: string[];
+  periodMonthStr: string;
+  today: Date;
+}) {
+  const { supabase, contract, invoice, netAmount, baseNetAmount, usageChargeIds, periodMonthStr, today } = params;
+
+  // Net amount from usage charges (excluding base fee)
+  let usageNetAmount = 0;
+  if (usageChargeIds.length > 0) {
+    const { data: charges } = await supabase
+      .from("usage_charges")
+      .select("net_amount")
+      .in("id", usageChargeIds);
+    if (charges) {
+      usageNetAmount = charges.reduce((s: number, c: any) => s + Number(c.net_amount), 0);
+    }
+  }
+
+  // Check if this is the first invoice for this contract
+  const { count: invoiceCount } = await supabase
+    .from("invoices")
+    .select("id", { count: "exact", head: true })
+    .eq("contract_id", contract.id);
+  const isFirstInvoice = (invoiceCount || 0) <= 1;
+
+  // Fetch the role of the sales_partner_id
+  const { data: roleRow } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", contract.sales_partner_id)
+    .maybeSingle();
+  const partnerRole = roleRow?.role || null;
+
+  const adRoles = ["user", "regional_lead", "sales_lead"];
+  const isAdRole = adRoles.includes(partnerRole);
+  const isSalesPartner = partnerRole === "sales_partner";
+
+  // ── AD-Provision ─────────────────────────────────────────────────────────
+  if (isAdRole) {
+    // 1. Festbetrag bei Vertragsabschluss (erste Rechnung)
+    if (isFirstInvoice) {
+      let fixedAmount = 100; // Basis-Festbetrag
+
+      // Sprint-Check: AD hat >= 25 GOÄ-Verträge bis 31.12.2026?
+      const sprintEnd = new Date("2026-12-31");
+      if (today <= sprintEnd) {
+        const { count: contractCount } = await supabase
+          .from("contracts")
+          .select("id", { count: "exact", head: true })
+          .eq("sales_partner_id", contract.sales_partner_id)
+          .or("product_name.ilike.%GOÄ%,product_name.ilike.%GOA%")
+          .in("status", ["aktiv", "gekündigt", "beendet"]);
+        if ((contractCount || 0) >= 25) {
+          fixedAmount = 250; // Sprint-Bonus: 100 + 150
+        }
+      }
+
+      const { data: existingFixed } = await supabase
+        .from("commission_payouts")
+        .select("id")
+        .eq("contract_id", contract.id)
+        .eq("payout_trigger", "contract_signup")
+        .maybeSingle();
+
+      if (!existingFixed) {
+        await supabase.from("commission_payouts").insert({
+          sales_partner_id: contract.sales_partner_id,
+          sales_partner_name: contract.sales_partner_name || "Unbekannt",
+          contract_id: contract.id,
+          invoice_id: invoice.id,
+          product_name: contract.product_name,
+          commission_type: "festbetrag",
+          commission_rate: fixedAmount,
+          commission_amount: fixedAmount,
+          period_month: periodMonthStr,
+          status: "pending",
+          commission_role: "ad",
+          payout_trigger: "contract_signup",
+          contract_start_date: contract.start_date,
+        });
+        console.log(`[auto-invoice] GOÄ AD fixed payout ${fixedAmount} € for ${contract.sales_partner_name}`);
+      }
+    }
+
+    // 2. 10% auf Verbrauchserlöse, max. 24 Monate nach Vertragsbeginn
+    if (usageNetAmount > 0) {
+      const contractStart = new Date(contract.start_date);
+      const monthsElapsed = (today.getFullYear() - contractStart.getFullYear()) * 12 + (today.getMonth() - contractStart.getMonth());
+      if (monthsElapsed <= 24) {
+        const usageCommission = Math.round(usageNetAmount * 10) / 100;
+        if (usageCommission > 0) {
+          await supabase.from("commission_payouts").insert({
+            sales_partner_id: contract.sales_partner_id,
+            sales_partner_name: contract.sales_partner_name || "Unbekannt",
+            contract_id: contract.id,
+            invoice_id: invoice.id,
+            product_name: contract.product_name,
+            commission_type: "prozent",
+            commission_rate: 10,
+            commission_amount: usageCommission,
+            period_month: periodMonthStr,
+            status: "pending",
+            commission_role: "ad",
+            payout_trigger: "usage_revenue",
+            contract_start_date: contract.start_date,
+          });
+          console.log(`[auto-invoice] GOÄ AD usage payout ${usageCommission} € for ${contract.sales_partner_name}`);
+        }
+      } else {
+        console.log(`[auto-invoice] GOÄ AD usage provision expired (${monthsElapsed} months) for contract ${contract.id}`);
+      }
+    }
+  }
+
+  // ── Vertriebspartner-Provision ────────────────────────────────────────────
+  if (isSalesPartner && contract.status === "aktiv") {
+    const totalCommission = Math.round(netAmount * 10) / 100;
+    if (totalCommission > 0) {
+      const { data: existingPayout } = await supabase
+        .from("commission_payouts")
+        .select("id")
+        .eq("invoice_id", invoice.id)
+        .eq("commission_role", "sales_partner")
+        .maybeSingle();
+
+      if (!existingPayout) {
+        await supabase.from("commission_payouts").insert({
+          sales_partner_id: contract.sales_partner_id,
+          sales_partner_name: contract.sales_partner_name || "Unbekannt",
+          contract_id: contract.id,
+          invoice_id: invoice.id,
+          product_name: contract.product_name,
+          commission_type: "prozent",
+          commission_rate: 10,
+          commission_amount: totalCommission,
+          period_month: periodMonthStr,
+          status: "pending",
+          commission_role: "sales_partner",
+          payout_trigger: "usage_revenue",
+          contract_start_date: contract.start_date,
+        });
+        console.log(`[auto-invoice] GOÄ sales_partner payout ${totalCommission} € for ${contract.sales_partner_name}`);
+      }
+    }
+  }
+
+  // ── Tippgeber-Meilenstein (500 € Kumulierschwelle) ────────────────────────
+  if (contract.tippgeber_id) {
+    // Kumulierten Nettobetrag aller Rechnungen für diesen Vertrag berechnen
+    const { data: allInvoices } = await supabase
+      .from("invoices")
+      .select("net_amount")
+      .eq("contract_id", contract.id)
+      .in("status", ["versendet", "bezahlt"]);
+
+    const cumulativeRevenue = (allInvoices || []).reduce((s: number, inv: any) => s + Number(inv.net_amount), 0);
+
+    // Prüfen ob Meilenstein bereits vorhanden
+    const { data: existingMilestone } = await supabase
+      .from("tippgeber_milestone_tracking")
+      .select("id, milestone_reached")
+      .eq("tippgeber_id", contract.tippgeber_id)
+      .eq("contract_id", contract.id)
+      .maybeSingle();
+
+    if (existingMilestone) {
+      // Update kumulierten Betrag
+      if (!existingMilestone.milestone_reached && cumulativeRevenue >= 500) {
+        await supabase
+          .from("tippgeber_milestone_tracking")
+          .update({
+            cumulative_revenue: cumulativeRevenue,
+            milestone_reached: true,
+            milestone_reached_at: new Date().toISOString(),
+          })
+          .eq("id", existingMilestone.id);
+        console.log(`[auto-invoice] GOÄ Tippgeber milestone reached for contract ${contract.id} (${cumulativeRevenue} €)`);
+      } else {
+        await supabase
+          .from("tippgeber_milestone_tracking")
+          .update({ cumulative_revenue: cumulativeRevenue })
+          .eq("id", existingMilestone.id);
+      }
+    } else {
+      // Neuen Meilenstein-Eintrag anlegen
+      await supabase.from("tippgeber_milestone_tracking").insert({
+        tippgeber_id: contract.tippgeber_id,
+        contract_id: contract.id,
+        cumulative_revenue: cumulativeRevenue,
+        milestone_reached: cumulativeRevenue >= 500,
+        milestone_reached_at: cumulativeRevenue >= 500 ? new Date().toISOString() : null,
+      });
+      if (cumulativeRevenue >= 500) {
+        console.log(`[auto-invoice] GOÄ Tippgeber milestone newly reached for contract ${contract.id}`);
+      }
+    }
+  }
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // EMAIL: SEPA-Mandatsanforderung
