@@ -738,6 +738,187 @@ const Provisionen = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* ── HFX GOÄ Regelwerk Tab ── */}
+          {(isAdmin || isTippgeber) && (
+            <TabsContent value="goae" className="mt-4 space-y-4">
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
+                <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold text-foreground">HFX GOÄ – Sonderregelwerk (nur für Verträge mit GOÄ im Produktnamen)</p>
+                  <p className="text-sm text-muted-foreground mt-1">Alle anderen Produkte laufen weiterhin über die konfigurierbaren Provisionssätze.</p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                {/* AD Karte */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Zap className="h-4 w-4 text-primary" />
+                      AD / Gebietsleiter / Sales Lead
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm">
+                    <div className="rounded-md bg-muted/50 p-3">
+                      <p className="font-semibold">1. Festbetrag bei Vertragsabschluss</p>
+                      <p className="text-muted-foreground mt-1">100 € einmalig bei erster Rechnung</p>
+                    </div>
+                    <div className="rounded-md bg-muted/50 p-3">
+                      <p className="font-semibold">2. 10% auf Verbrauchserlöse</p>
+                      <p className="text-muted-foreground mt-1">Nur auf Qodia-Verbrauchskosten (nicht Grundgebühr), für 24 Monate ab Vertragsbeginn</p>
+                    </div>
+                    <div className="rounded-md border border-amber-300 bg-amber-50 p-3">
+                      <p className="font-semibold text-amber-800 flex items-center gap-1">
+                        <Award className="h-3.5 w-3.5" /> SPRINT-Bonus bis 31.12.2026
+                      </p>
+                      <p className="text-amber-700 mt-1">Ab ≥ 25 GOÄ-Abschlüssen: Festbetrag steigt auf <strong>250 €</strong> pro Vertrag</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Vertriebspartner Karte */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <TrendingUp className="h-4 w-4 text-primary" />
+                      Vertriebspartner
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm">
+                    <div className="rounded-md bg-muted/50 p-3">
+                      <p className="font-semibold">10% auf alle Erlöse</p>
+                      <p className="text-muted-foreground mt-1">Grundgebühr + Verbrauchskosten, zeitlich unbegrenzt solange Vertrag aktiv</p>
+                    </div>
+                    <div className="rounded-md bg-muted/50 p-3">
+                      <p className="font-semibold">Keine Vertretungsmacht</p>
+                      <p className="text-muted-foreground mt-1">Nur Steuerung der Praxis durch digitale Vertragsstrecke</p>
+                    </div>
+                    <div className="rounded-md border border-muted p-3">
+                      <p className="font-medium">⚠️ Erlischt bei Kündigung</p>
+                      <p className="text-muted-foreground mt-1">Provision endet zum Kündigungstermin des Vertrags</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Tippgeber Karte */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Gift className="h-4 w-4 text-primary" />
+                      Tippgeber
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm">
+                    <div className="rounded-md bg-muted/50 p-3">
+                      <p className="font-semibold">200 € Einmalprämie</p>
+                      <p className="text-muted-foreground mt-1">Sobald kumulierter Gesamterlös (Monatspauschale + Verbrauch) aus der Praxis ≥ 500 € erreicht</p>
+                    </div>
+                    <div className="rounded-md bg-muted/50 p-3">
+                      <p className="font-semibold">Manuell durch Admin</p>
+                      <p className="text-muted-foreground mt-1">Auszahlung wird manuell im Tab "Tippgeber-Meilensteine" ausgelöst</p>
+                    </div>
+                    <div className="rounded-md border border-muted p-3">
+                      <p className="font-medium">Unabhängig von AD-Provision</p>
+                      <p className="text-muted-foreground mt-1">Tippgeber-Prämie wird nicht vom AD-Provisionssatz abgezogen</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          )}
+
+          {/* ── Tippgeber Milestones Tab ── */}
+          {(isAdmin || isTippgeber) && (
+            <TabsContent value="milestones" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Gift className="h-5 w-5" />
+                    Tippgeber-Meilensteine (500 € Schwelle)
+                  </CardTitle>
+                  <CardDescription>
+                    {isAdmin
+                      ? "Sobald ein Tippgeber die 500 € Erlöse-Schwelle erreicht hat, kann die Einmalprämie von 200 € manuell ausgelöst werden."
+                      : "Ihr Fortschritt zur Einmalprämie von 200 € pro eingereichtem Lead."}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {milestones.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Gift className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                      <p className="font-medium">Keine Meilensteine vorhanden</p>
+                      <p className="text-sm mt-1">Sobald ein GOÄ-Vertrag mit Tippgeber-Zuordnung Rechnungen generiert, erscheinen hier die Fortschritte.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {milestones.map((m: any) => {
+                        const progress = Math.min(100, Math.round((Number(m.cumulative_revenue) / 500) * 100));
+                        return (
+                          <div key={m.id} className="rounded-lg border p-4 space-y-3">
+                            <div className="flex items-start justify-between gap-3 flex-wrap">
+                              <div>
+                                <p className="font-semibold text-foreground">
+                                  {m.contracts?.customer_name || "—"}
+                                  {m.contracts?.hfx_customer_number && (
+                                    <span className="ml-2 text-xs font-mono text-muted-foreground">{m.contracts.hfx_customer_number}</span>
+                                  )}
+                                </p>
+                                {isAdmin && (
+                                  <p className="text-sm text-muted-foreground">
+                                    Tippgeber: {m.tippgeber_profile?.full_name || m.tippgeber_id}
+                                  </p>
+                                )}
+                                <p className="text-xs text-muted-foreground mt-0.5">{m.contracts?.product_name}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {m.payout_triggered ? (
+                                  <Badge className="bg-green-100 text-green-800 border-0" variant="secondary">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" /> Ausgezahlt
+                                  </Badge>
+                                ) : m.milestone_reached ? (
+                                  isAdmin ? (
+                                    <Button
+                                      size="sm"
+                                      className="h-8 text-xs"
+                                      disabled={triggeringMilestone === m.id}
+                                      onClick={() => triggerMilestonePayout(m)}
+                                    >
+                                      {triggeringMilestone === m.id ? (
+                                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                      ) : (
+                                        <Gift className="h-3 w-3 mr-1" />
+                                      )}
+                                      200 € Prämie auslösen
+                                    </Button>
+                                  ) : (
+                                    <Badge className="bg-amber-100 text-amber-800 border-0" variant="secondary">
+                                      🎉 Bereit – Admin ausstehend
+                                    </Badge>
+                                  )
+                                ) : (
+                                  <Badge variant="secondary" className="text-muted-foreground">In Bearbeitung</Badge>
+                                )}
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>Kumulierter Erlös</span>
+                                <span className="font-medium text-foreground">
+                                  {fmtEur(Number(m.cumulative_revenue))} / 500 €
+                                </span>
+                              </div>
+                              <Progress value={progress} className="h-2" />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
 
