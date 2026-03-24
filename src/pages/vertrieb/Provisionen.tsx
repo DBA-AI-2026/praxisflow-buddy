@@ -407,17 +407,20 @@ const Provisionen = () => {
   };
 
   return (
-    <MainLayout title="Provisionen" subtitle="Übersicht aller Vertriebsprovisionen">
+    <MainLayout
+      title="Provisionen"
+      subtitle={isOwnView ? "Ihre persönliche Provisionsübersicht" : "Übersicht aller Vertriebsprovisionen"}
+    >
       <div className="space-y-6">
 
         {/* Stats */}
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+        <div className={`grid gap-4 ${isOwnView ? "grid-cols-2 lg:grid-cols-3" : "grid-cols-2 lg:grid-cols-5"}`}>
           {[
             { label: "Gesamt", value: fmtEur(stats.total), sub: "Alle Provisionen", icon: <Euro className="h-4 w-4 text-muted-foreground" /> },
             { label: "Ausstehend", value: fmtEur(stats.pending), sub: "Noch nicht freigegeben", icon: <Clock className="h-4 w-4 text-muted-foreground" />, highlight: "orange" },
             { label: "Freigegeben", value: fmtEur(stats.approved), sub: "Bereit zur Auszahlung", icon: <CheckCircle2 className="h-4 w-4 text-muted-foreground" />, highlight: "blue" },
             { label: "Ausgezahlt", value: fmtEur(stats.paid), sub: "Bereits überwiesen", icon: <TrendingUp className="h-4 w-4 text-muted-foreground" />, highlight: "green" },
-            { label: "Aktive Partner", value: stats.partners.toString(), sub: "Mit Provisionen", icon: <Users className="h-4 w-4 text-muted-foreground" /> },
+            ...(!isOwnView ? [{ label: "Aktive Partner", value: stats.partners.toString(), sub: "Mit Provisionen", icon: <Users className="h-4 w-4 text-muted-foreground" /> }] : []),
           ].map((card) => (
             <Card key={card.label}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -437,7 +440,7 @@ const Provisionen = () => {
         <Tabs defaultValue="payouts">
           <TabsList>
             <TabsTrigger value="payouts">Provisionsauszahlungen ({payouts.length})</TabsTrigger>
-            <TabsTrigger value="rates">Provisionssätze ({commissions.length})</TabsTrigger>
+            {!isOwnView && <TabsTrigger value="rates">Provisionssätze ({commissions.length})</TabsTrigger>}
           </TabsList>
 
           {/* ── Payouts Tab ── */}
