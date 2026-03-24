@@ -226,6 +226,76 @@ const Provisionen = () => {
     },
   });
 
+  // Tippgeber milestone tracking
+  const { data: milestones = [], refetch: refetchMilestones } = useQuery({
+    queryKey: ["tippgeber-milestones", user?.id, isAdmin, isTippgeber],
+    queryFn: async () => {
+      let query = supabase
+        .from("tippgeber_milestone_tracking" as any)
+        .select(`
+          *,
+          contracts:contract_id(customer_name, product_name, hfx_customer_number),
+          tippgeber_profile:tippgeber_id(full_name)
+        `)
+        .order("created_at", { ascending: false });
+      if (isTippgeber && !isAdmin) {
+        query = query.eq("tippgeber_id", user?.id);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+    enabled: !!(isAdmin || isTippgeber),
+  });
+
+  const [triggeringMilestone, setTriggeringMilestone] = useState<string | null>(null);
+
+  const triggerMilestonePayout = async (milestone: any) => {
+    if (!isAdmin) return;
+    setTriggeringMilestone(milestone.id);
+    try {
+      // Create commission payout for tippgeber
+      const { data: payout, error: payoutError } = await supabase
+        .from("commission_payouts")
+        .insert({
+          sales_partner_id: milestone.tippgeber_id,
+          sales_partner_name: milestone.tippgeber_profile?.full_name || "Tippgeber",
+          contract_id: milestone.contract_id,
+          product_name: milestone.contracts?.product_name || "HFX GOÄ",
+          commission_type: "festbetrag",
+          commission_rate: 200,
+          commission_amount: 200,
+          period_month: new Date().toISOString().slice(0, 7),
+          status: "approved",
+          commission_role: "tippgeber",
+          payout_trigger: "tippgeber_milestone",
+        })
+        .select("id")
+        .single();
+
+      if (payoutError) throw payoutError;
+
+      // Mark milestone as payout triggered
+      await supabase
+        .from("tippgeber_milestone_tracking" as any)
+        .update({
+          payout_triggered: true,
+          payout_triggered_at: new Date().toISOString(),
+          payout_triggered_by: user?.id,
+          payout_id: payout.id,
+        })
+        .eq("id", milestone.id);
+
+      queryClient.invalidateQueries({ queryKey: ["commission-payouts"] });
+      refetchMilestones();
+      toast({ title: "Einmalprämie ausgelöst", description: "200 € Tippgeber-Provision wurde erstellt und freigegeben." });
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    } finally {
+      setTriggeringMilestone(null);
+    }
+  };
+
   // ── Stats ──
 
   const stats = useMemo(() => {
