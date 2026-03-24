@@ -69,18 +69,15 @@ export default function QodiaVerbrauch() {
         body.hfx_customer_number = hfxFilter.trim();
       }
 
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const res = await fetch(
-        `${supabaseUrl}/functions/v1/qodia-usage-query`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify(body),
-        }
-      );
+      const { data: invokeData, error: invokeError } = await supabase.functions.invoke("qodia-usage-query", {
+        body,
+      });
+
+      if (invokeError) {
+        throw new Error(invokeError.message || "Fehler beim Abruf");
+      }
+
+      const data = invokeData;
 
       const data = await res.json();
 
