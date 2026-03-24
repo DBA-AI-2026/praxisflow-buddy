@@ -791,14 +791,15 @@ const Provisionen = () => {
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
                     <div className="rounded-md bg-muted/50 p-3">
-                      <p className="font-semibold">10% auf alle Erlöse</p>
+                      <p className="font-semibold">Provision auf alle Erlöse</p>
+                      <p className="text-2xl font-bold text-primary mt-1">10 %</p>
                       <p className="text-muted-foreground mt-1">Grundgebühr + Verbrauchskosten, zeitlich unbegrenzt solange Vertrag aktiv</p>
                     </div>
                     <div className="rounded-md bg-muted/50 p-3">
                       <p className="font-semibold">Keine Vertretungsmacht</p>
                       <p className="text-muted-foreground mt-1">Nur Steuerung der Praxis durch digitale Vertragsstrecke</p>
                     </div>
-                    <div className="rounded-md border border-muted p-3">
+                    <div className="rounded-md border border-border p-3">
                       <p className="font-medium">⚠️ Erlischt bei Kündigung</p>
                       <p className="text-muted-foreground mt-1">Provision endet zum Kündigungstermin des Vertrags</p>
                     </div>
@@ -815,14 +816,15 @@ const Provisionen = () => {
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
                     <div className="rounded-md bg-muted/50 p-3">
-                      <p className="font-semibold">200 € Einmalprämie</p>
-                      <p className="text-muted-foreground mt-1">Sobald kumulierter Gesamterlös (Monatspauschale + Verbrauch) aus der Praxis ≥ 500 € erreicht</p>
+                      <p className="font-semibold">Einmalprämie</p>
+                      <p className="text-2xl font-bold text-primary mt-1">200 €</p>
+                      <p className="text-muted-foreground mt-1">Sobald kumulierter Gesamterlös (Monatspauschale + Verbrauch) ≥ 500 € erreicht</p>
                     </div>
                     <div className="rounded-md bg-muted/50 p-3">
                       <p className="font-semibold">Manuell durch Admin</p>
-                      <p className="text-muted-foreground mt-1">Auszahlung wird manuell im Tab "Tippgeber-Meilensteine" ausgelöst</p>
+                      <p className="text-muted-foreground mt-1">Auszahlung wird manuell im Tab „Tippgeber-Meilensteine" ausgelöst</p>
                     </div>
-                    <div className="rounded-md border border-muted p-3">
+                    <div className="rounded-md border border-border p-3">
                       <p className="font-medium">Unabhängig von AD-Provision</p>
                       <p className="text-muted-foreground mt-1">Tippgeber-Prämie wird nicht vom AD-Provisionssatz abgezogen</p>
                     </div>
