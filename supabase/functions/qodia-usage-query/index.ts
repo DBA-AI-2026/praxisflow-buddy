@@ -131,17 +131,21 @@ Deno.serve(async (req) => {
             }
           );
 
-          const data = await res.json();
+          const rawText = await res.text();
+          console.log(`[qodia-usage-query] ${contract.hfx_customer_number} (${contract.email}) → HTTP ${res.status}: ${rawText}`);
+
+          let data: Record<string, unknown> = {};
+          try { data = JSON.parse(rawText); } catch { /* not JSON */ }
 
           if (!res.ok || !data.success) {
-            const noAccount = res.status === 403 || res.status === 404;
+            const noAccount = res.status === 404;
             return {
               hfx_customer_number: contract.hfx_customer_number,
               customer_name: contract.customer_name,
               email: contract.email,
               error: noAccount
                 ? "Kein Qodia-Account vorhanden"
-                : data.error || `Fehler ${res.status}`,
+                : (data.error as string) || (data.message as string) || `Fehler ${res.status}: ${rawText}`,
               usage: null,
             };
           }
