@@ -106,7 +106,7 @@ export default function AgbManagement() {
             {withAgb.length} mit AGB
           </Badge>
           <Badge variant="outline" className="gap-1.5 py-1.5 px-3">
-            <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+            <AlertCircle className="h-3.5 w-3.5 text-destructive" />
             {withoutAgb.length} ohne AGB
           </Badge>
         </div>
