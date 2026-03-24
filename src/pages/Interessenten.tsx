@@ -384,26 +384,30 @@ export default function Interessenten() {
                         </span>
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Select
-                          value={lead.status}
-                          onValueChange={(val) => {
-                            const order = ["neu", "kontaktiert", "qualifiziert", "vertrag", "kein_abschluss", "abgelehnt"];
-                            const currentIdx = order.indexOf(lead.status);
-                            if (val === "neu" && currentIdx > 1) return;
-                            updateStatusMutation.mutate({ id: lead.id, status: val });
-                          }}
-                        >
-                          <SelectTrigger className="h-7 w-[130px]">
-                            <Badge variant={sc.variant} className="text-xs">{sc.label}</Badge>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(statusConfig)
-                              .filter(([key]) => key !== "kunde")
-                              .map(([key, cfg]) => (
-                                <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
+                        {canOnlyViewOwn ? (
+                          <Badge variant={sc.variant} className="text-xs">{sc.label}</Badge>
+                        ) : (
+                          <Select
+                            value={lead.status}
+                            onValueChange={(val) => {
+                              const order = ["neu", "kontaktiert", "qualifiziert", "vertrag", "kein_abschluss", "abgelehnt"];
+                              const currentIdx = order.indexOf(lead.status);
+                              if (val === "neu" && currentIdx > 1) return;
+                              updateStatusMutation.mutate({ id: lead.id, status: val });
+                            }}
+                          >
+                            <SelectTrigger className="h-7 w-[130px]">
+                              <Badge variant={sc.variant} className="text-xs">{sc.label}</Badge>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(statusConfig)
+                                .filter(([key]) => key !== "kunde")
+                                .map(([key, cfg]) => (
+                                  <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         {(() => {
