@@ -73,6 +73,40 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
       const customerName = `${data.vorname} ${data.nachname}`.trim();
       const now = new Date().toISOString();
 
+      // Find or create customers record
+      let customerId: string | null = null;
+      try {
+        let existingCustomer: any = null;
+        if (data.email) {
+          const { data: found } = await (supabase.from as any)("customers")
+            .select("id")
+            .eq("email", data.email)
+            .maybeSingle();
+          existingCustomer = found;
+        }
+        if (!existingCustomer) {
+          const { data: newCust } = await (supabase.from as any)("customers")
+            .insert({
+              hfx_customer_number: `PENDING-${Date.now()}`,
+              praxis_name: data.praxis,
+              vorname: data.vorname,
+              nachname: data.nachname,
+              email: data.email || null,
+              telefon: data.telefon || null,
+              adresse: data.adresse || null,
+              plz: data.plz || null,
+              ort: data.ort || null,
+            })
+            .select("id")
+            .single();
+          customerId = (newCust as any)?.id || null;
+        } else {
+          customerId = (existingCustomer as any).id;
+        }
+      } catch (_) {
+        // Non-fatal
+      }
+
       const { data: inserted, error } = await supabase
         .from("contracts")
         .insert({
@@ -90,8 +124,8 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
           monthly_price: data.monthly_price,
           license_count: data.license_count,
           start_date: data.start_date,
-          end_date: UNBEFRISTET_END_DATE,
-          duration_months: 0, // unbefristet
+          end_date: "2099-12-31",
+          duration_months: 0,
           cancellation_period_months: 6,
           auto_renewal: false,
           one_time_fee: 0,
@@ -105,13 +139,21 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
           sales_partner_name: profile?.full_name || "",
           approved_by: user.id,
           approved_at: now,
+          ...(customerId ? { customer_id: customerId } : {}),
         })
-        .select("id")
+        .select("id, hfx_customer_number")
         .single();
 
       if (error) throw error;
 
-      // Create praxen entry
+      // Update customers record with the real hfx_customer_number once assigned
+      if (customerId && (inserted as any)?.hfx_customer_number) {
+        await (supabase.from as any)("customers")
+          .update({ hfx_customer_number: (inserted as any).hfx_customer_number })
+          .eq("id", customerId);
+      }
+
+      // Create praxen entry (legacy compatibility)
       await supabase.from("praxen").insert({
         name: data.praxis || customerName,
         adresse: data.adresse || null,
@@ -127,6 +169,7 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
       });
 
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
       queryClient.invalidateQueries({ queryKey: ["praxen"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-kpis"] });
 

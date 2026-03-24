@@ -45,6 +45,7 @@ import MandateSuccess from "./pages/MandateSuccess";
 import Buchen from "./pages/Buchen";
 import QodiaVerbrauch from "./pages/QodiaVerbrauch";
 import AgbManagement from "./pages/admin/AgbManagement";
+import Kunden from "./pages/Kunden";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +69,8 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/reservierungen" element={<ProtectedRoute><Reservierungen /></ProtectedRoute>} />
             <Route path="/praxen" element={<ProtectedRoute><Praxen /></ProtectedRoute>} />
+            <Route path="/kunden" element={<ProtectedRoute><Kunden /></ProtectedRoute>} />
+            <Route path="/kunden/:id" element={<ProtectedRoute><Kunden /></ProtectedRoute>} />
             <Route path="/interessenten" element={<ProtectedRoute><Interessenten /></ProtectedRoute>} />
             <Route path="/demo-tracking" element={<ProtectedRoute><DemoTracking /></ProtectedRoute>} />
             <Route path="/tickets" element={<ProtectedRoute><Tickets /></ProtectedRoute>} />

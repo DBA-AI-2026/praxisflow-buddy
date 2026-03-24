@@ -1758,6 +1758,7 @@ export default function Vertraege() {
             <table className="data-table w-full">
               <thead>
                <tr className="bg-accent/5">
+                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Vertragsnr.</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">HFX-Nr.</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Praxis / Name</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">E-Mail</th>
@@ -1784,8 +1785,11 @@ export default function Vertraege() {
               </thead>
               <tbody className="divide-y divide-border/50">
                  {filtered.map((c: any) => (
-                   <tr key={c.id} className="hover:bg-muted/30 transition-colors">
-                       <td className="py-3.5 px-4 text-xs text-muted-foreground font-mono whitespace-nowrap">
+                    <tr key={c.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="py-3.5 px-4 text-xs font-mono font-semibold text-primary whitespace-nowrap">
+                          {c.contract_number || "–"}
+                        </td>
+                        <td className="py-3.5 px-4 text-xs text-muted-foreground font-mono whitespace-nowrap">
                          <div className="flex items-center gap-1.5">
                            <span>{c.hfx_customer_number || "–"}</span>
                            {c.hfx_customer_number && (
