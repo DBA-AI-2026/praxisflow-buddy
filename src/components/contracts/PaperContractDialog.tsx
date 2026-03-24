@@ -73,46 +73,46 @@ export function PaperContractDialog({ open, onOpenChange }: Props) {
       const customerName = `${data.vorname} ${data.nachname}`.trim();
       const now = new Date().toISOString();
 
+      // Upsert customers record (find or create by email/name)
+      let customerId: string | null = null;
+      try {
+        // Try to find existing customer by email
+        let existingCustomer: any = null;
+        if (data.email) {
+          const { data: found } = await supabase
+            .from("customers" as any)
+            .select("id")
+            .eq("email", data.email)
+            .maybeSingle();
+          existingCustomer = found;
+        }
+        if (!existingCustomer) {
+          const { data: newCust } = await supabase
+            .from("customers" as any)
+            .insert({
+              hfx_customer_number: `PENDING-${Date.now()}`, // will be overwritten after contract
+              praxis_name: data.praxis,
+              vorname: data.vorname,
+              nachname: data.nachname,
+              email: data.email || null,
+              telefon: data.telefon || null,
+              adresse: data.adresse || null,
+              plz: data.plz || null,
+              ort: data.ort || null,
+            })
+            .select("id")
+            .single();
+          customerId = newCust?.id || null;
+        } else {
+          customerId = existingCustomer.id;
+        }
+      } catch (_) {
+        // Non-fatal: customer creation failure doesn't block contract
+      }
+
       const { data: inserted, error } = await supabase
         .from("contracts")
         .insert({
-          customer_name: customerName,
-          praxis: data.praxis,
-          vorname: data.vorname,
-          nachname: data.nachname,
-          email: data.email || null,
-          telefon: data.telefon || null,
-          adresse: data.adresse || null,
-          plz: data.plz || null,
-          ort: data.ort || null,
-          product_name: data.product_name,
-          modules: [data.product_name],
-          monthly_price: data.monthly_price,
-          license_count: data.license_count,
-          start_date: data.start_date,
-          end_date: UNBEFRISTET_END_DATE,
-          duration_months: 0, // unbefristet
-          cancellation_period_months: 6,
-          auto_renewal: false,
-          one_time_fee: 0,
-          discount_percent: 0,
-          payment_interval: "monatlich",
-          rechnungs_email: data.rechnungs_email || null,
-          status: "aktiv",
-          notes: `[Papier]${data.notes ? " " + data.notes : ""}`,
-          created_by: user.id,
-          sales_partner_id: user.id,
-          sales_partner_name: profile?.full_name || "",
-          approved_by: user.id,
-          approved_at: now,
-        })
-        .select("id")
-        .single();
-
-      if (error) throw error;
-
-      // Create praxen entry
-      await supabase.from("praxen").insert({
         name: data.praxis || customerName,
         adresse: data.adresse || null,
         plz: data.plz || null,
