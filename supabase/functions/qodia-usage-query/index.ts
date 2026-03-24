@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
 
         try {
           const res = await fetch(
-            "https://api.qodia.de/api/external/usage",
+            "https://auth.qodia.de/api/external/usage",
             {
               method: "POST",
               headers: {
