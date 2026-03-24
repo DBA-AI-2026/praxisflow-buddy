@@ -163,13 +163,16 @@ export type Database = {
           approved_by: string | null
           commission_amount: number
           commission_rate: number
+          commission_role: string | null
           commission_type: string
           contract_id: string | null
+          contract_start_date: string | null
           created_at: string
           exported_at: string | null
           id: string
           invoice_id: string | null
           paid_at: string | null
+          payout_trigger: string | null
           pdf_path: string | null
           period_month: string
           product_name: string
@@ -182,13 +185,16 @@ export type Database = {
           approved_by?: string | null
           commission_amount?: number
           commission_rate?: number
+          commission_role?: string | null
           commission_type?: string
           contract_id?: string | null
+          contract_start_date?: string | null
           created_at?: string
           exported_at?: string | null
           id?: string
           invoice_id?: string | null
           paid_at?: string | null
+          payout_trigger?: string | null
           pdf_path?: string | null
           period_month: string
           product_name: string
@@ -201,13 +207,16 @@ export type Database = {
           approved_by?: string | null
           commission_amount?: number
           commission_rate?: number
+          commission_role?: string | null
           commission_type?: string
           contract_id?: string | null
+          contract_start_date?: string | null
           created_at?: string
           exported_at?: string | null
           id?: string
           invoice_id?: string | null
           paid_at?: string | null
+          payout_trigger?: string | null
           pdf_path?: string | null
           period_month?: string
           product_name?: string
@@ -328,6 +337,7 @@ export type Database = {
           stripe_subscription_id: string | null
           stundenaufwand_pro_woche: string | null
           telefon: string | null
+          tippgeber_id: string | null
           updated_at: string
           vertrieb_signature_data: string | null
           vorname: string | null
@@ -399,6 +409,7 @@ export type Database = {
           stripe_subscription_id?: string | null
           stundenaufwand_pro_woche?: string | null
           telefon?: string | null
+          tippgeber_id?: string | null
           updated_at?: string
           vertrieb_signature_data?: string | null
           vorname?: string | null
@@ -470,6 +481,7 @@ export type Database = {
           stripe_subscription_id?: string | null
           stundenaufwand_pro_woche?: string | null
           telefon?: string | null
+          tippgeber_id?: string | null
           updated_at?: string
           vertrieb_signature_data?: string | null
           vorname?: string | null
@@ -1583,6 +1595,66 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      tippgeber_milestone_tracking: {
+        Row: {
+          contract_id: string | null
+          created_at: string
+          cumulative_revenue: number
+          id: string
+          milestone_reached: boolean
+          milestone_reached_at: string | null
+          payout_id: string | null
+          payout_triggered: boolean
+          payout_triggered_at: string | null
+          payout_triggered_by: string | null
+          tippgeber_id: string
+          updated_at: string
+        }
+        Insert: {
+          contract_id?: string | null
+          created_at?: string
+          cumulative_revenue?: number
+          id?: string
+          milestone_reached?: boolean
+          milestone_reached_at?: string | null
+          payout_id?: string | null
+          payout_triggered?: boolean
+          payout_triggered_at?: string | null
+          payout_triggered_by?: string | null
+          tippgeber_id: string
+          updated_at?: string
+        }
+        Update: {
+          contract_id?: string | null
+          created_at?: string
+          cumulative_revenue?: number
+          id?: string
+          milestone_reached?: boolean
+          milestone_reached_at?: string | null
+          payout_id?: string | null
+          payout_triggered?: boolean
+          payout_triggered_at?: string | null
+          payout_triggered_by?: string | null
+          tippgeber_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tippgeber_milestone_tracking_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tippgeber_milestone_tracking_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "commission_payouts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       usage_charges: {
         Row: {
