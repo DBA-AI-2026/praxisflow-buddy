@@ -182,6 +182,11 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Verbrauchsnettobetrag separat ermitteln (für Stripe-Beschreibung und Provisionen)
+        const usageNetAmount = positions
+          .slice(1)
+          .reduce((s, p) => s + p.quantity * p.unit_price, 0);
+
         // Recalculate totals
         const netAmount = positions.reduce((s, p) => s + p.quantity * p.unit_price, 0);
         const taxAmount = Math.round(netAmount * taxRate) / 100;
@@ -277,7 +282,7 @@ Deno.serve(async (req) => {
               customer: contract.stripe_customer_id,
               auto_advance: false,
               collection_method: "charge_automatically",
-              description: `${contract.product_name} – ${billingPeriod}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}`,
+              description: `${contract.product_name} – ${billingPeriod}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}${usageChargeIds.length > 0 ? ` | Verbrauch: ${usageChargeIds.length} Qodia-Vorgänge (${usageNetAmount.toFixed(2)} €)` : ""}`,
               metadata: {
                 hfx_contract_id: contract.id,
                 hfx_customer_number: contract.hfx_customer_number || "",
@@ -318,7 +323,7 @@ Deno.serve(async (req) => {
             gross_amount: grossAmount,
             status: "entwurf",
             stripe_invoice_id: stripeInvoiceId,
-            notes: `Automatisch generiert – Laufzeit: ${billingPeriod}${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv" : ""}`,
+            notes: `Automatisch generiert – Laufzeit: ${billingPeriod}${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} Qodia-Verbrauchsposten: ${usageNetAmount.toFixed(2)} € netto` : ""}`,
           })
           .select()
           .single();
@@ -339,7 +344,7 @@ Deno.serve(async (req) => {
 
         // ── Send invoice email ────────────────────────────────────────────────
         const positionsHtml = positions
-          .filter(p => p.unit_price > 0 || isInWaiverPeriod) // Zeige Waiver-Positionen mit 0 € an
+          .filter(p => p.unit_price > 0 || (isInWaiverPeriod && p === positions[0])) // Grundgebühr immer zeigen (auch bei 0 €/Waiver), sonstige 0€-Pos ausblenden
           .map((p) => `
           <tr>
             <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">${p.description}</td>
@@ -354,6 +359,7 @@ Deno.serve(async (req) => {
               <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug (SEPA via Stripe)</strong></p>
               <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">Der Betrag wird automatisch von Ihrem hinterlegten SEPA-Konto eingezogen.</p>
               <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">📅 <strong>Einzugsdatum:</strong> ${collectionDateFormatted}</p>
+              ${usageNetAmount > 0 ? `<p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">📊 <strong>Enthält Qodia-Verbrauch:</strong> ${usageNetAmount.toFixed(2)} € netto (${usageChargeIds.length} abgerechnete Vorgänge, zzgl. MwSt.)</p>` : ""}
             </div>`
           : grossAmount === 0
           ? `<div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
