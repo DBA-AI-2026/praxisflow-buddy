@@ -134,6 +134,7 @@ export function UploadPaperContractDialog({ open, onOpenChange, lead }: Props) {
           sales_partner_id: user.id,
           sales_partner_name: profile?.full_name || "",
           notes: "[Papier] Vertrag per Upload eingereicht",
+          tippgeber_id: lead.tippgeber_id || null,
         })
         .select("id, customer_confirmation_token")
         .single();
