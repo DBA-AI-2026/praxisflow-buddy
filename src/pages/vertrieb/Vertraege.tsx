@@ -1365,6 +1365,43 @@ export default function Vertraege() {
         const { data: inserted, error } = await supabase.from("contracts").insert(record).select("id").single();
         if (error) throw error;
         contractId = inserted.id;
+
+        // Upsert customers entry and link to contract
+        const hfxNr2 = leadHfxNumber || form.mp_nr || null;
+        if (hfxNr2 && contractId) {
+          const { data: existingCust2 } = await (supabase as any)
+            .from("customers").select("id").eq("hfx_customer_number", hfxNr2).maybeSingle();
+          let custId2 = existingCust2?.id ?? null;
+          if (!custId2) {
+            const { data: newCust2 } = await (supabase as any)
+              .from("customers")
+              .insert({
+                hfx_customer_number: hfxNr2,
+                praxis_name: form.praxis || `${form.vorname || ""} ${form.nachname || ""}`.trim() || null,
+                vorname: form.vorname || null,
+                nachname: form.nachname || null,
+                email: form.email || null,
+                telefon: form.telefon || null,
+                adresse: form.adresse || null,
+                plz: form.plz || null,
+                ort: form.ort || null,
+                bsnr: form.bsnr || null,
+              })
+              .select("id").single();
+            custId2 = newCust2?.id ?? null;
+          }
+          if (custId2) {
+            await supabase.from("contracts").update({ customer_id: custId2 }).eq("id", contractId);
+            await (supabase as any).from("contract_cases").insert({
+              customer_id: custId2,
+              contract_id: contractId,
+              case_type: "neuabschluss",
+              status: "offen",
+              title: `Neuabschluss – ${form.selected_products.join(", ") || "Produkt"}`,
+              created_by: user?.id,
+            });
+          }
+        }
       }
 
       // Send booking confirmation email
