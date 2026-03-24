@@ -44,6 +44,7 @@ import ContractConfirmation from "./pages/ContractConfirmation";
 import MandateSuccess from "./pages/MandateSuccess";
 import Buchen from "./pages/Buchen";
 import QodiaVerbrauch from "./pages/QodiaVerbrauch";
+import AgbManagement from "./pages/admin/AgbManagement";
 
 const queryClient = new QueryClient();
 
