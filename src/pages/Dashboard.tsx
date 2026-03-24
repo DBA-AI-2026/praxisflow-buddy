@@ -50,9 +50,10 @@ function getQuickLinks(role: AppRole | null): QuickLink[] {
       ];
     case "sales_partner":
       return [
-        { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle, primary: true },
-        { to: "/interessenten", label: "Interessenten", icon: Users },
+        { to: "/interessenten", label: "Interessenten", icon: Users, primary: true },
+        { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle },
         { to: "/reservierungen", label: "Reservierungen", icon: BookMarked },
+        { to: "/vertrieb/provisionen", label: "Provisionen", icon: BarChart3 },
       ];
     case "regional_lead":
       return [
@@ -122,9 +123,9 @@ const onboardingConfig: Partial<Record<AppRole, { icon: React.ElementType; title
   sales_partner: {
     icon: FileText,
     title: "Willkommen als Vertriebspartner!",
-    text: "Legen Sie jetzt Ihren ersten Vertrag an oder erfassen Sie neue Interessenten in Ihrem Vertriebsgebiet.",
-    cta: "Ersten Vertrag erstellen",
-    to: "/vertrieb/vertraege",
+    text: "Legen Sie jetzt Ihren ersten Interessenten an oder erstellen Sie direkt einen Vertrag.",
+    cta: "Interessenten erfassen",
+    to: "/interessenten",
   },
   regional_lead: {
     icon: BarChart3,
@@ -149,9 +150,31 @@ const onboardingConfig: Partial<Record<AppRole, { icon: React.ElementType; title
   },
 };
 
+// Which KPI cards to show per role
+type KpiKey = "praxen" | "demos" | "leads" | "revenue" | "contracts" | "tippLeads" | "provisionen";
+function getKpiKeys(role: AppRole | null): KpiKey[] {
+  switch (role) {
+    case "tippgeber":
+      return ["tippLeads", "provisionen"];
+    case "sales_partner":
+      return ["leads", "contracts", "provisionen"];
+    case "user":
+      return ["leads", "praxen", "demos"];
+    case "regional_lead":
+      return ["leads", "contracts", "praxen", "provisionen"];
+    case "vertragsabteilung":
+      return ["contracts", "praxen", "revenue"];
+    case "sales_lead":
+      return ["leads", "contracts", "praxen", "revenue"];
+    case "admin":
+    default:
+      return ["praxen", "demos", "leads", "revenue"];
+  }
+}
+
 export default function Dashboard() {
-  const { profile } = useAuth();
-  const { role, isAdmin, isVertragsabteilung } = useUserRole();
+  const { profile, user } = useAuth();
+  const { role, isAdmin, isTippgeber, isSalesPartner } = useUserRole();
   const { previewRole, isPreviewActive, setPreviewRole } = useRolePreview();
   const navigate = useNavigate();
   const [bannerDismissed, setBannerDismissed] = useState(false);
@@ -159,82 +182,137 @@ export default function Dashboard() {
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "Willkommen";
 
-  // Live KPIs from DB
+  const canSeeLeads = role !== "tippgeber" && role !== "vertragsabteilung";
+  const canSeeContracts = role !== "tippgeber";
+  const canCreateLead = role !== "tippgeber" && role !== "vertragsabteilung";
+
+  // Live KPIs from DB – filtered by role
   const { data: kpis } = useQuery({
-    queryKey: ["dashboard-kpis"],
+    queryKey: ["dashboard-kpis", role, user?.id],
     staleTime: 0,
     refetchOnMount: "always",
     queryFn: async () => {
-      const [praxen, demos, tickets, contracts, revenues] = await Promise.all([
-        supabase.from("praxen").select("id", { count: "exact", head: true }).eq("status", "aktiv"),
-        supabase.from("demo_downloads").select("id", { count: "exact", head: true }).eq("status", "aktiv"),
-        supabase.from("leads").select("id", { count: "exact", head: true }).eq("status", "neu"),
-        supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "gezeichnet"),
-        supabase.from("customer_revenues").select("gross_amount").eq("payment_status", "bezahlt"),
+      const kpiKeys = getKpiKeys(role);
+
+      const [praxen, demos, leads, contracts, revenues, tippLeads, payouts] = await Promise.all([
+        kpiKeys.includes("praxen")
+          ? supabase.from("praxen").select("id", { count: "exact", head: true }).eq("status", "aktiv")
+          : Promise.resolve({ count: null }),
+        kpiKeys.includes("demos")
+          ? supabase.from("demo_downloads").select("id", { count: "exact", head: true }).eq("status", "aktiv")
+          : Promise.resolve({ count: null }),
+        kpiKeys.includes("leads")
+          ? (() => {
+              let q = supabase.from("leads").select("id", { count: "exact", head: true }).eq("status", "neu");
+              // sales_partner / user see only own leads
+              if (role === "sales_partner") q = q.eq("assigned_to", user?.id ?? "");
+              return q;
+            })()
+          : Promise.resolve({ count: null }),
+        kpiKeys.includes("contracts")
+          ? (() => {
+              let q = supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "gezeichnet");
+              if (role === "sales_partner") q = q.eq("sales_partner_id", user?.id ?? "");
+              return q;
+            })()
+          : Promise.resolve({ count: null }),
+        kpiKeys.includes("revenue")
+          ? supabase.from("customer_revenues").select("gross_amount").eq("payment_status", "bezahlt")
+          : Promise.resolve({ data: null }),
+        kpiKeys.includes("tippLeads")
+          ? supabase.from("tipp_leads").select("id", { count: "exact", head: true })
+          : Promise.resolve({ count: null }),
+        kpiKeys.includes("provisionen")
+          ? supabase.from("commission_payouts").select("commission_amount").eq("sales_partner_id", user?.id ?? "")
+          : Promise.resolve({ data: null }),
       ]);
-      const monthRevenue = (revenues.data ?? []).reduce((s, r) => s + (r.gross_amount ?? 0), 0);
+
+      const monthRevenue = (revenues.data ?? []).reduce((s: number, r: any) => s + (r.gross_amount ?? 0), 0);
+      const totalProvision = (payouts.data ?? []).reduce((s: number, r: any) => s + Number(r.commission_amount ?? 0), 0);
+
       return {
         activePraxen: praxen.count ?? 0,
         activeDemos: demos.count ?? 0,
-        openLeads: tickets.count ?? 0,
+        openLeads: leads.count ?? 0,
         pendingContracts: contracts.count ?? 0,
         monthRevenue,
+        tippLeadsCount: tippLeads.count ?? 0,
+        totalProvision,
+        kpiKeys,
       };
     },
   });
 
-  // Recent contracts
+  // Recent contracts – only for roles that can see them
   const { data: recentContracts = [] } = useQuery({
-    queryKey: ["dashboard-recent-contracts"],
+    queryKey: ["dashboard-recent-contracts", role, user?.id],
     staleTime: 0,
     refetchOnMount: "always",
+    enabled: canSeeContracts,
     queryFn: async () => {
-      const { data } = await supabase
+      let q = supabase
         .from("contracts")
         .select("id, customer_name, product_name, status, created_at, monthly_price, hfx_customer_number")
         .order("created_at", { ascending: false })
         .limit(5);
+      if (role === "sales_partner") q = q.eq("sales_partner_id", user?.id ?? "");
+      const { data } = await q;
       return data ?? [];
     },
   });
 
-  // Recent leads
+  // Recent leads – only for roles that can see them
   const { data: recentLeads = [] } = useQuery({
-    queryKey: ["dashboard-recent-leads"],
+    queryKey: ["dashboard-recent-leads", role, user?.id],
     staleTime: 0,
     refetchOnMount: "always",
+    enabled: canSeeLeads,
+    queryFn: async () => {
+      let q = supabase
+        .from("leads")
+        .select("id, praxis_name, vorname, nachname, status, created_at, abrechnungszentrum, qodia_synced, assigned_to, tippgeber_id")
+        .not("status", "eq", "kunde")
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (role === "sales_partner") q = q.eq("assigned_to", user?.id ?? "");
+      const { data } = await q;
+      return data ?? [];
+    },
+  });
+
+  // Recent tipp-leads – only for tippgeber
+  const { data: recentTippLeads = [] } = useQuery({
+    queryKey: ["dashboard-recent-tipp-leads", user?.id],
+    staleTime: 0,
+    refetchOnMount: "always",
+    enabled: isTippgeber,
     queryFn: async () => {
       const { data } = await supabase
-        .from("leads")
-        .select("id, praxis_name, vorname, nachname, status, created_at, abrechnungszentrum, qodia_synced")
-        .not("status", "eq", "kunde")
+        .from("tipp_leads")
+        .select("id, praxis_name, arzt_name, status, created_at")
         .order("created_at", { ascending: false })
         .limit(5);
       return data ?? [];
     },
   });
 
-  // Onboarding check: does this user already have relevant data?
+  // Onboarding check
   const { data: hasOwnData } = useQuery({
     queryKey: ["dashboard-onboarding-check", role],
     enabled: !!role && role !== "admin",
     queryFn: async () => {
       if (role === "tippgeber") {
-        const { count } = await supabase
-          .from("tipp_leads")
-          .select("id", { count: "exact", head: true });
+        const { count } = await supabase.from("tipp_leads").select("id", { count: "exact", head: true });
         return (count ?? 0) > 0;
       }
-      const { count } = await supabase
-        .from("contracts")
-        .select("id", { count: "exact", head: true });
+      const { count } = await supabase.from("contracts").select("id", { count: "exact", head: true });
       return (count ?? 0) > 0;
     },
   });
 
-  // Activity feed: last 48h changes, role-filtered
+  // Activity feed: role-filtered
   const { data: activityFeed = [] } = useQuery({
-    queryKey: ["dashboard-activity", role],
+    queryKey: ["dashboard-activity", role, user?.id],
     enabled: !!role,
     staleTime: 0,
     refetchOnMount: "always",
@@ -242,7 +320,7 @@ export default function Dashboard() {
       const since = subHours(new Date(), 48).toISOString();
       const items: ActivityItem[] = [];
 
-      if (role === "tippgeber") {
+      if (isTippgeber) {
         const { data } = await supabase
           .from("tipp_leads")
           .select("id, praxis_name, arzt_name, status, created_at, updated_at")
@@ -254,27 +332,31 @@ export default function Dashboard() {
           status: r.status, time: r.updated_at, link: "/tipp-leads",
         }));
       } else {
-        // Contracts
-        const { data: contracts } = await supabase
-          .from("contracts")
-          .select("id, customer_name, product_name, status, created_at, updated_at")
-          .gte("updated_at", since)
-          .order("updated_at", { ascending: false })
-          .limit(8);
-        (contracts ?? []).forEach((r) => items.push({
-          id: r.id, type: "contract", label: r.customer_name, sub: r.product_name,
-          status: r.status, time: r.updated_at, link: `/praxen-journey?tab=vertraege&id=${r.id}`,
-        }));
+        if (canSeeContracts) {
+          let cq = supabase
+            .from("contracts")
+            .select("id, customer_name, product_name, status, created_at, updated_at")
+            .gte("updated_at", since)
+            .order("updated_at", { ascending: false })
+            .limit(8);
+          if (isSalesPartner) cq = cq.eq("sales_partner_id", user?.id ?? "");
+          const { data: contracts } = await cq;
+          (contracts ?? []).forEach((r) => items.push({
+            id: r.id, type: "contract", label: r.customer_name, sub: r.product_name,
+            status: r.status, time: r.updated_at, link: `/praxen-journey?tab=vertraege&id=${r.id}`,
+          }));
+        }
 
-        // Leads always shown in else-branch (tippgeber is already handled above)
-        if (true) {
-          const { data: leads } = await supabase
+        if (canSeeLeads) {
+          let lq = supabase
             .from("leads")
             .select("id, praxis_name, vorname, nachname, status, created_at, updated_at")
             .not("status", "eq", "kunde")
             .gte("updated_at", since)
             .order("updated_at", { ascending: false })
             .limit(8);
+          if (isSalesPartner) lq = lq.eq("assigned_to", user?.id ?? "");
+          const { data: leads } = await lq;
           (leads ?? []).forEach((r) => items.push({
             id: r.id, type: "lead", label: r.praxis_name, sub: `${r.vorname} ${r.nachname}`.trim(),
             status: r.status, time: r.updated_at, link: `/praxen-journey?tab=leads&id=${r.id}`,
@@ -282,7 +364,6 @@ export default function Dashboard() {
         }
       }
 
-      // Sort combined by time desc, limit 12
       return items.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 12);
     },
   });
@@ -303,6 +384,8 @@ export default function Dashboard() {
     };
     return map[status] ?? "bg-muted text-muted-foreground";
   };
+
+  const kpiKeys = kpis?.kpiKeys ?? getKpiKeys(role);
 
   return (
     <MainLayout title="" subtitle="">
@@ -333,7 +416,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* === HEADER: Personalisierte Begrüßung === */}
+      {/* === HEADER === */}
       <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <p className="text-sm text-muted-foreground mb-1">
@@ -350,14 +433,16 @@ export default function Dashboard() {
         </div>
         {/* Quick Actions – rollenspezifisch */}
         <div className="flex gap-2 flex-wrap">
-          <Button
-            size="sm"
-            onClick={() => setCreateLeadOpen(true)}
-            className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            <UserPlus className="h-4 w-4" />
-            Neuer Interessent
-          </Button>
+          {canCreateLead && (
+            <Button
+              size="sm"
+              onClick={() => setCreateLeadOpen(true)}
+              className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <UserPlus className="h-4 w-4" />
+              Neuer Interessent
+            </Button>
+          )}
           {getQuickLinks(role).map((ql) => (
             <Link
               key={ql.to + ql.label}
@@ -374,7 +459,6 @@ export default function Dashboard() {
       {/* === ONBOARDING BANNER === */}
       {showOnboarding && onboarding && (
         <div className="mb-6 relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 p-5">
-          {/* Decorative sparkle */}
           <div className="absolute top-3 right-10 opacity-10">
             <Sparkles className="h-16 w-16 text-primary" />
           </div>
@@ -405,137 +489,193 @@ export default function Dashboard() {
       )}
 
       {/* === KPI CARDS === */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <KpiCard
-          title="Aktive Kunden"
-          value={kpis?.activePraxen ?? "–"}
-          icon={Building2}
-          iconClass="bg-primary/10 text-primary"
-          link="/praxen"
-        />
-        <KpiCard
-          title="Demo-Phase"
-          value={kpis?.activeDemos ?? "–"}
-          icon={FlaskConical}
-          iconClass="bg-amber-500/10 text-amber-600"
-          link="/demo-tracking"
-        />
-        <KpiCard
-          title="Neue Interessenten"
-          value={kpis?.openLeads ?? "–"}
-          icon={Users}
-          iconClass="bg-purple-500/10 text-purple-600"
-          link="/interessenten"
-        />
-        <KpiCard
-          title="Monatsumsatz"
-          value={kpis?.monthRevenue != null ? kpis.monthRevenue.toLocaleString("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }) : "–"}
-          icon={TrendingUp}
-          iconClass="bg-green-500/10 text-green-600"
-          link="/umsaetze"
-        />
+      <div className={`grid gap-4 mb-8 ${kpiKeys.length <= 2 ? "grid-cols-2" : kpiKeys.length === 3 ? "grid-cols-2 lg:grid-cols-3" : "grid-cols-2 lg:grid-cols-4"}`}>
+        {kpiKeys.includes("praxen") && (
+          <KpiCard title="Aktive Kunden" value={kpis?.activePraxen ?? "–"} icon={Building2} iconClass="bg-primary/10 text-primary" link="/praxen" />
+        )}
+        {kpiKeys.includes("demos") && (
+          <KpiCard title="Demo-Phase" value={kpis?.activeDemos ?? "–"} icon={FlaskConical} iconClass="bg-amber-500/10 text-amber-600" link="/demo-tracking" />
+        )}
+        {kpiKeys.includes("leads") && (
+          <KpiCard title="Neue Interessenten" value={kpis?.openLeads ?? "–"} icon={Users} iconClass="bg-purple-500/10 text-purple-600" link="/interessenten" />
+        )}
+        {kpiKeys.includes("contracts") && (
+          <KpiCard title="Aktive Verträge" value={kpis?.pendingContracts ?? "–"} icon={FileText} iconClass="bg-blue-500/10 text-blue-600" link="/vertrieb/vertraege" />
+        )}
+        {kpiKeys.includes("revenue") && (
+          <KpiCard
+            title="Monatsumsatz"
+            value={kpis?.monthRevenue != null ? kpis.monthRevenue.toLocaleString("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }) : "–"}
+            icon={TrendingUp}
+            iconClass="bg-green-500/10 text-green-600"
+            link="/umsaetze"
+          />
+        )}
+        {kpiKeys.includes("tippLeads") && (
+          <KpiCard title="Meine Tipp-Leads" value={kpis?.tippLeadsCount ?? "–"} icon={Lightbulb} iconClass="bg-amber-500/10 text-amber-600" link="/tipp-leads" />
+        )}
+        {kpiKeys.includes("provisionen") && (
+          <KpiCard
+            title="Meine Provisionen"
+            value={kpis?.totalProvision != null ? kpis.totalProvision.toLocaleString("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }) : "–"}
+            icon={BarChart3}
+            iconClass="bg-green-500/10 text-green-600"
+            link="/vertrieb/provisionen"
+          />
+        )}
       </div>
 
       {/* === MAIN CONTENT GRID === */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* Letzte Interessenten */}
-        <div className="card-elevated">
-          <div className="flex items-center justify-between p-4 border-b border-border">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-purple-600" />
-              <h3 className="font-semibold text-foreground">Letzte Interessenten</h3>
+        {/* Tippgeber: eigene Tipp-Leads */}
+        {isTippgeber && (
+          <div className="card-elevated lg:col-span-2">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Lightbulb className="h-4 w-4 text-amber-600" />
+                <h3 className="font-semibold text-foreground">Meine Tipp-Leads</h3>
+              </div>
+              <Link to="/tipp-leads" className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
+                Alle <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
-            <Link to="/interessenten" className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
-              Alle <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <div className="divide-y divide-border">
-            {recentLeads.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Noch keine Interessenten vorhanden.</p>
-            ) : recentLeads.map((l) => (
-              <button
-                key={l.id}
-                onClick={() => navigate(`/praxen-journey?tab=leads&id=${l.id}`)}
-                className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left group"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-foreground text-sm truncate">{l.praxis_name}</span>
-                    <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${statusBadge(l.status)}`}>
-                      {l.status}
-                    </span>
-                    {l.qodia_synced ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
-                    ) : (
-                      <XCircle className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {l.vorname} {l.nachname} · {l.abrechnungszentrum}
-                  </p>
-                </div>
-                <div className="text-right text-xs text-muted-foreground ml-2 shrink-0 flex items-center gap-2">
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {format(new Date(l.created_at), "dd.MM.yy")}
-                  </span>
-                  <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Letzte Verträge */}
-        <div className="card-elevated">
-          <div className="flex items-center justify-between p-4 border-b border-border">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" />
-              <h3 className="font-semibold text-foreground">Letzte Verträge</h3>
-            </div>
-            <Link to="/vertrieb/vertraege" className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
-              Alle <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <div className="divide-y divide-border">
-            {recentContracts.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Noch keine Verträge vorhanden.</p>
-            ) : recentContracts.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => navigate(`/praxen-journey?tab=vertraege&id=${c.id}`)}
-                className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left group"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-foreground text-sm truncate">{c.customer_name}</span>
-                    <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${statusBadge(c.status)}`}>
-                      {c.status}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {c.product_name}{c.hfx_customer_number ? ` · ${c.hfx_customer_number}` : ""}
-                  </p>
-                </div>
-                <div className="text-right text-xs text-muted-foreground ml-2 shrink-0 flex items-center gap-2">
-                  <div>
-                    <div className="flex items-center gap-1 justify-end">
-                      <Clock className="h-3 w-3" />
-                      {format(new Date(c.created_at), "dd.MM.yy")}
+            <div className="divide-y divide-border">
+              {recentTippLeads.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Noch keine Tipp-Leads eingereicht.</p>
+              ) : recentTippLeads.map((l: any) => (
+                <button
+                  key={l.id}
+                  onClick={() => navigate("/tipp-leads")}
+                  className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left group"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-foreground text-sm truncate">{l.praxis_name}</span>
+                      <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${statusBadge(l.status)}`}>
+                        {l.status}
+                      </span>
                     </div>
-                    {c.monthly_price > 0 && (
-                      <div className="font-medium text-foreground mt-0.5">
-                        {c.monthly_price.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}/Mo.
-                      </div>
-                    )}
+                    <p className="text-xs text-muted-foreground mt-0.5">{l.arzt_name}</p>
                   </div>
-                  <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
-                </div>
-              </button>
-            ))}
+                  <div className="text-right text-xs text-muted-foreground ml-2 shrink-0 flex items-center gap-2">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {format(new Date(l.created_at), "dd.MM.yy")}
+                    </span>
+                    <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Letzte Interessenten – nur für Rollen die Leads sehen */}
+        {canSeeLeads && (
+          <div className="card-elevated">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-purple-600" />
+                <h3 className="font-semibold text-foreground">
+                  {isSalesPartner ? "Meine Interessenten" : "Letzte Interessenten"}
+                </h3>
+              </div>
+              <Link to="/interessenten" className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
+                Alle <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="divide-y divide-border">
+              {recentLeads.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Noch keine Interessenten vorhanden.</p>
+              ) : recentLeads.map((l: any) => (
+                <button
+                  key={l.id}
+                  onClick={() => navigate(`/praxen-journey?tab=leads&id=${l.id}`)}
+                  className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left group"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-foreground text-sm truncate">{l.praxis_name}</span>
+                      <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${statusBadge(l.status)}`}>
+                        {l.status}
+                      </span>
+                      {l.qodia_synced ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
+                      ) : (
+                        <XCircle className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {l.vorname} {l.nachname} · {l.abrechnungszentrum}
+                    </p>
+                  </div>
+                  <div className="text-right text-xs text-muted-foreground ml-2 shrink-0 flex items-center gap-2">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {format(new Date(l.created_at), "dd.MM.yy")}
+                    </span>
+                    <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Letzte Verträge – nur für Rollen die Verträge sehen */}
+        {canSeeContracts && (
+          <div className="card-elevated">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
+                <h3 className="font-semibold text-foreground">
+                  {isSalesPartner ? "Meine Verträge" : "Letzte Verträge"}
+                </h3>
+              </div>
+              <Link to="/vertrieb/vertraege" className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
+                Alle <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="divide-y divide-border">
+              {recentContracts.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Noch keine Verträge vorhanden.</p>
+              ) : recentContracts.map((c: any) => (
+                <button
+                  key={c.id}
+                  onClick={() => navigate(`/praxen-journey?tab=vertraege&id=${c.id}`)}
+                  className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left group"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-foreground text-sm truncate">{c.customer_name}</span>
+                      <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${statusBadge(c.status)}`}>
+                        {c.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {c.product_name}{c.hfx_customer_number ? ` · ${c.hfx_customer_number}` : ""}
+                    </p>
+                  </div>
+                  <div className="text-right text-xs text-muted-foreground ml-2 shrink-0 flex items-center gap-2">
+                    <div>
+                      <div className="flex items-center gap-1 justify-end">
+                        <Clock className="h-3 w-3" />
+                        {format(new Date(c.created_at), "dd.MM.yy")}
+                      </div>
+                      {c.monthly_price > 0 && (
+                        <div className="font-medium text-foreground mt-0.5">
+                          {c.monthly_price.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}/Mo.
+                        </div>
+                      )}
+                    </div>
+                    <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
       </div>
 
