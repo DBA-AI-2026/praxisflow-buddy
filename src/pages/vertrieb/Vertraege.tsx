@@ -43,7 +43,7 @@ import { buildStripeLineItems, hasStripeProducts } from "@/lib/stripeProducts";
 import { CreditCard } from "lucide-react"; // CreditCard used for payment section
 import foxLogoUrl from "@/assets/logo.png";
 import { useAuth } from "@/hooks/useAuth";
-import { PaperContractDialog } from "@/components/contracts/PaperContractDialog";
+// PaperContractDialog import removed – paper flow decommissioned
 
 const validateBsnr = (value: string): string | null => {
   if (!value) return null;

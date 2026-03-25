@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/dialog";
 import { Search, Eye, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, Send, UserCheck, FilePlus, UserPlus, Upload, RefreshCw, Phone, FileSignature, ArrowRight, Ban, Globe } from "lucide-react";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
-import { UploadPaperContractDialog } from "@/components/leads/UploadPaperContractDialog";
+// UploadPaperContractDialog removed – paper flow decommissioned
 import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
 import {
   Tooltip,

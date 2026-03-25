@@ -17,7 +17,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useAuth } from "@/hooks/useAuth";
 import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
-import { UploadPaperContractDialog } from "@/components/leads/UploadPaperContractDialog";
+// UploadPaperContractDialog removed – paper flow decommissioned
 import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
