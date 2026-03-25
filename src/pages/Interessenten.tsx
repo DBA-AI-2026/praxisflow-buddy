@@ -70,7 +70,8 @@ function getNextStep(lead: any): NextStep {
     case "qualifiziert":
       return { label: "Vertrag erstellen", icon: <FilePlus className="h-3 w-3" />, color: "bg-success/10 text-success border-success/30", action: "contract" };
     case "vertrag":
-      return { label: "Papiervertrag einreichen", icon: <Upload className="h-3 w-3" />, color: "bg-warning/10 text-warning border-warning/30", action: "paper" };
+      // Paper flow decommissioned – show no next action for 'vertrag' status
+      return { label: "Abgeschlossen", icon: <Ban className="h-3 w-3" />, color: "bg-muted text-muted-foreground border-border", action: "none" };
     case "kein_abschluss":
     case "abgelehnt":
       return { label: "Abgeschlossen", icon: <Ban className="h-3 w-3" />, color: "bg-muted text-muted-foreground border-border", action: "none" };
@@ -94,7 +95,7 @@ export default function Interessenten() {
   // Tippgeber can create leads but cannot update status or assign
   const canOnlyViewOwn = isTippgeber || isSalesPartner;
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
-  const [uploadContractLead, setUploadContractLead] = useState<any>(null);
+  // uploadContractLead state removed – paper flow decommissioned
 
   // Fetch Gebietsleiter users for assignment
   const { data: gebietsleiter = [] } = useQuery({
