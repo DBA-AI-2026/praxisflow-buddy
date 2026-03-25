@@ -570,8 +570,8 @@ export default function Buchhaltung() {
       const netTotal = exportableFibuEvents.reduce((s: number, e: any) => s + Number(e.amount_net), 0);
 
       // Create batch record
-      const { data: batch, error: batchErr } = await supabase
-        .from("fibu_export_batches" as any)
+      const { data: batchRaw, error: batchErr } = await (supabase as any)
+        .from("fibu_export_batches")
         .insert({
           batch_reference: batchRef,
           export_type: fibuEventTypeFilter === "all" ? "all" : fibuEventTypeFilter,
@@ -587,6 +587,7 @@ export default function Buchhaltung() {
         .single();
 
       if (batchErr) throw batchErr;
+      const batch = batchRaw as { id: string };
 
       // Mark events as exported
       const eventIds = exportableFibuEvents.map((e: any) => e.id);
