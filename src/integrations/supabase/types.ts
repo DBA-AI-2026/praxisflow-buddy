@@ -1025,6 +1025,7 @@ export type Database = {
           abrechnungszentrum: string
           adresse: string | null
           assigned_to: string | null
+          assignment_source: string | null
           confirmation_email_sent: boolean
           created_at: string
           credentials_sent_at: string | null
@@ -1056,6 +1057,7 @@ export type Database = {
           abrechnungszentrum?: string
           adresse?: string | null
           assigned_to?: string | null
+          assignment_source?: string | null
           confirmation_email_sent?: boolean
           created_at?: string
           credentials_sent_at?: string | null
@@ -1087,6 +1089,7 @@ export type Database = {
           abrechnungszentrum?: string
           adresse?: string | null
           assigned_to?: string | null
+          assignment_source?: string | null
           confirmation_email_sent?: boolean
           created_at?: string
           credentials_sent_at?: string | null
@@ -1146,6 +1149,45 @@ export type Database = {
         }
         Relationships: []
       }
+      plz_assignment_log: {
+        Row: {
+          assignment_source: string
+          changed_by: string | null
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          matched_rule: string | null
+          plz: string | null
+          resolved_gebietsleiter_id: string | null
+          resolved_gebietsleiter_name: string | null
+        }
+        Insert: {
+          assignment_source: string
+          changed_by?: string | null
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          matched_rule?: string | null
+          plz?: string | null
+          resolved_gebietsleiter_id?: string | null
+          resolved_gebietsleiter_name?: string | null
+        }
+        Update: {
+          assignment_source?: string
+          changed_by?: string | null
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          matched_rule?: string | null
+          plz?: string | null
+          resolved_gebietsleiter_id?: string | null
+          resolved_gebietsleiter_name?: string | null
+        }
+        Relationships: []
+      }
       plz_gebietsleiter_mapping: {
         Row: {
           created_at: string
@@ -1154,7 +1196,9 @@ export type Database = {
           id: string
           is_active: boolean
           notes: string | null
+          plz_bis: string | null
           plz_prefix: string
+          plz_von: string | null
           priority: number
           updated_at: string
         }
@@ -1165,7 +1209,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           notes?: string | null
+          plz_bis?: string | null
           plz_prefix: string
+          plz_von?: string | null
           priority?: number
           updated_at?: string
         }
@@ -1176,7 +1222,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           notes?: string | null
+          plz_bis?: string | null
           plz_prefix?: string
+          plz_von?: string | null
           priority?: number
           updated_at?: string
         }
@@ -1637,6 +1685,7 @@ export type Database = {
           ad_email: string | null
           ad_telefon: string | null
           arzt_name: string
+          assignment_source: string | null
           created_at: string
           created_by: string
           email: string | null
@@ -1657,6 +1706,7 @@ export type Database = {
           ad_email?: string | null
           ad_telefon?: string | null
           arzt_name: string
+          assignment_source?: string | null
           created_at?: string
           created_by: string
           email?: string | null
@@ -1677,6 +1727,7 @@ export type Database = {
           ad_email?: string | null
           ad_telefon?: string | null
           arzt_name?: string
+          assignment_source?: string | null
           created_at?: string
           created_by?: string
           email?: string | null
@@ -1905,6 +1956,14 @@ export type Database = {
       is_in_regional_lead_team: {
         Args: { _regional_lead_id: string; _user_id: string }
         Returns: boolean
+      }
+      resolve_plz_ad: {
+        Args: { plz_input: string }
+        Returns: {
+          gebietsleiter_id: string
+          gebietsleiter_name: string
+          matched_rule: string
+        }[]
       }
     }
     Enums: {
