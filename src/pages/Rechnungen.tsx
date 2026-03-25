@@ -151,6 +151,13 @@ export default function Rechnungen() {
   const [usageLoading, setUsageLoading] = useState(true);
   const [invoicingChargeId, setInvoicingChargeId] = useState<string | null>(null);
 
+  // Ungeklaert resolve dialog
+  const [resolveCharge, setResolveCharge] = useState<UsageCharge | null>(null);
+  const [resolveContracts, setResolveContracts] = useState<Contract[]>([]);
+  const [resolveContractId, setResolveContractId] = useState<string>("");
+  const [resolveLoading, setResolveLoading] = useState(false);
+  const [resolveSaving, setResolveSaving] = useState(false);
+
   const [search, setSearch] = useState("");
   const [usageSearch, setUsageSearch] = useState("");
 
