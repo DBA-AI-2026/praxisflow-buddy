@@ -406,9 +406,10 @@ export default function PlzMapping() {
                       <TableRow key={entry.id} className={!entry.is_active ? "opacity-50" : ""}>
                         <TableCell>
                           {isRange ? (
-                            <span className="font-mono font-bold text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded">
+                            <span className="font-mono font-bold text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded">
                               {entry.plz_von}–{entry.plz_bis}
                             </span>
+
                           ) : (
                             <span className="font-mono font-bold text-sm bg-muted px-2 py-0.5 rounded">
                               {entry.plz_prefix}*
