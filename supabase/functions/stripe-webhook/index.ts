@@ -102,14 +102,6 @@ Deno.serve(async (req) => {
         await handleContractActivation(supabase, stripe, session);
       }
 
-      // ─── PAPER CONTRACT FLOW: LEGACY – decommissioned, not triggered anymore ─
-      // The paper contract flow has been retired as a business decision.
-      // This handler is preserved read-only to avoid breaking any in-flight
-      // old webhooks but will not be triggered by new paper contract flows.
-      if (source === "paper_contract_confirmation") {
-        console.warn("[stripe-webhook] LEGACY paper_contract_confirmation received – flow is decommissioned. No action taken.");
-        // Do NOT call handlePaperContractPayment – paper flow is retired.
-      }
 
       // ─── SEPA MANDATE SETUP: Zahlungsmethode nach Setup speichern ───────
       if (source === "sepa_mandate_setup") {
