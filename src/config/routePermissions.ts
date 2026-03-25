@@ -32,7 +32,8 @@ export const routePermissions: RoutePermission[] = [
   // Sales Lead, Regional Lead and Admin routes
   { path: "/kalender", allowedRoles: ["sales_lead", "regional_lead", "admin"] },
   { path: "/export", allowedRoles: ["sales_lead", "admin"] },
-  { path: "/integrationen", allowedRoles: ["sales_lead", "admin"] },
+  // P1-Fix: /integrationen zeigt jetzt Integrationen.tsx (Lexware-Integration), nicht Buchhaltung
+  { path: "/integrationen", allowedRoles: ["admin"] },
   
   // Vertrieb routes
   { path: "/vertrieb/vertriebler", allowedRoles: ["sales_lead", "regional_lead", "admin"] },
