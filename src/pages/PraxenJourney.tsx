@@ -17,7 +17,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useAuth } from "@/hooks/useAuth";
 import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
-import { UploadPaperContractDialog } from "@/components/leads/UploadPaperContractDialog";
+// UploadPaperContractDialog removed – paper flow decommissioned
 import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -166,7 +166,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("alle");
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("aktiv");
   const [createOpen, setCreateOpen] = useState(false);
-  const [uploadLead, setUploadLead] = useState<any>(null);
+  // uploadLead state removed – paper flow decommissioned
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
@@ -287,7 +287,8 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
       case "qualifiziert":
         return { label: "Vertrag erstellen", icon: <FilePlus className="h-3 w-3" />, cls: "bg-success/10 text-success border border-success/20 hover:bg-success/20", action: () => navigate(`/vertrieb/vertraege?leadId=${lead.id}&praxis=${encodeURIComponent(lead.praxis_name)}&vorname=${encodeURIComponent(lead.vorname)}&nachname=${encodeURIComponent(lead.nachname)}&email=${encodeURIComponent(lead.email)}&plz=${encodeURIComponent(lead.plz)}&ort=${encodeURIComponent(lead.ort || "")}&adresse=${encodeURIComponent(lead.adresse || "")}&hfx=${encodeURIComponent(lead.hfx_customer_number || "")}`) };
       case "vertrag":
-        return { label: "Papiervertrag", icon: <Upload className="h-3 w-3" />, cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20", action: () => setUploadLead(lead) };
+        // Paper flow decommissioned – no action for 'vertrag' status
+        return null;
       default:
         return null;
     }
@@ -463,13 +464,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
         />
       )}
       <CreateLeadDialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); }} />
-      {uploadLead && (
-        <UploadPaperContractDialog
-          open={!!uploadLead}
-          onOpenChange={(o) => { if (!o) { setUploadLead(null); queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); } }}
-          lead={uploadLead}
-        />
-      )}
+      {/* UploadPaperContractDialog removed – paper flow decommissioned */}
     </div>
   );
 }

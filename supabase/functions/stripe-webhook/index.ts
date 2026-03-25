@@ -102,9 +102,13 @@ Deno.serve(async (req) => {
         await handleContractActivation(supabase, stripe, session);
       }
 
-      // ─── PAPER CONTRACT: activate after customer payment ────────────────
+      // ─── PAPER CONTRACT FLOW: LEGACY – decommissioned, not triggered anymore ─
+      // The paper contract flow has been retired as a business decision.
+      // This handler is preserved read-only to avoid breaking any in-flight
+      // old webhooks but will not be triggered by new paper contract flows.
       if (source === "paper_contract_confirmation") {
-        await handlePaperContractPayment(supabase, stripe, session);
+        console.warn("[stripe-webhook] LEGACY paper_contract_confirmation received – flow is decommissioned. No action taken.");
+        // Do NOT call handlePaperContractPayment – paper flow is retired.
       }
 
       // ─── SEPA MANDATE SETUP: Zahlungsmethode nach Setup speichern ───────
@@ -391,8 +395,10 @@ async function handleContractActivation(
   }
 
   // ── 3-Tier Architecture: create Neuabschluss case (Ebene 3) ─────────────
-  // Insert a contract_case of type 'neuabschluss' so the case history is
-  // populated immediately upon digital activation (mirrors paper flow behaviour).
+  // The unique partial index idx_contract_cases_neuabschluss_unique on
+  // (contract_id) WHERE case_type = 'neuabschluss' makes this INSERT
+  // idempotent: Stripe webhook retries will simply conflict and be silently
+  // ignored, preventing duplicate neuabschluss records.
   const { error: caseErr } = await supabase
     .from("contract_cases")
     .insert({
@@ -402,10 +408,16 @@ async function handleContractActivation(
       status: "abgeschlossen",
       title: `Neuabschluss – ${contract?.product_name ?? "Produkt"}`,
       notes: `Automatisch erstellt bei digitalem Vertragsabschluss via Stripe (Session: ${session.id})`,
-    } as any);
+    } as any)
+    .throwOnError();
 
   if (caseErr) {
-    console.error("[stripe-webhook] contract_cases insert failed:", caseErr.message);
+    // Unique constraint violation (23505) = already exists → idempotent, ignore
+    if ((caseErr as any).code === "23505") {
+      console.log("[stripe-webhook] contract_case neuabschluss already exists (idempotent retry), skipping", contractId);
+    } else {
+      console.error("[stripe-webhook] contract_cases insert failed:", caseErr.message);
+    }
   } else {
     console.log("[stripe-webhook] contract_case neuabschluss created for", contractId);
   }

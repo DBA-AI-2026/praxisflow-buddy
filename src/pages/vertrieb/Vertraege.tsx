@@ -43,7 +43,7 @@ import { buildStripeLineItems, hasStripeProducts } from "@/lib/stripeProducts";
 import { CreditCard } from "lucide-react"; // CreditCard used for payment section
 import foxLogoUrl from "@/assets/logo.png";
 import { useAuth } from "@/hooks/useAuth";
-import { PaperContractDialog } from "@/components/contracts/PaperContractDialog";
+// PaperContractDialog import removed – paper flow decommissioned
 
 const validateBsnr = (value: string): string | null => {
   if (!value) return null;
@@ -334,7 +334,7 @@ const emptyForm: ContractFormData = {
 export default function Vertraege() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [paperContractOpen, setPaperContractOpen] = useState(false);
+  const [paperContractOpen, setPaperContractOpen] = useState(false); // kept for state compat, no-op
   const [editId, setEditId] = useState<string | null>(null);
   const [editingContract, setEditingContract] = useState<any | null>(null);
   const [form, setForm] = useState<ContractFormData>(emptyForm);
@@ -2032,34 +2032,9 @@ export default function Vertraege() {
                         </td>
                         <td>
                         <div className="flex flex-col gap-1">
-                          {c.notes?.startsWith("[Papier]") && (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground border rounded px-1.5 py-0.5 w-fit">
-                              📄 Papier
-                            </span>
-                          )}
-                          {/* Confirmation email indicator for paper contracts */}
-                          {c.notes?.startsWith("[Papier]") && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className={`inline-flex items-center gap-1 text-xs font-medium border rounded px-1.5 py-0.5 w-fit cursor-default ${
-                                    c.confirmation_email_sent_at
-                                      ? "text-success border-success/30 bg-success/5"
-                                      : "text-muted-foreground border-dashed"
-                                  }`}>
-                                    <Mail className="h-3 w-3" />
-                                    {c.confirmation_email_sent_at ? "Mail gesendet" : "Mail ausstehend"}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {c.confirmation_email_sent_at
-                                    ? `Bestätigungs-E-Mail gesendet am ${format(new Date(c.confirmation_email_sent_at), "dd.MM.yyyy 'um' HH:mm", { locale: de })} Uhr`
-                                    : "Bestätigungs-E-Mail wurde noch nicht versendet"}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                          {/* Resend confirmation email button – available for all contracts with email */}
+                          {/* [Papier] badge removed – paper flow decommissioned */}
+                          {/* Confirmation email indicator for paper contracts removed – paper flow decommissioned */}
+                          {/* Resend confirmation email button – available for digital contracts with email */}
                           {c.email && (
                             <TooltipProvider>
                               <Tooltip>
@@ -2083,28 +2058,7 @@ export default function Vertraege() {
                               </Tooltip>
                             </TooltipProvider>
                           )}
-                          {/* Stripe payment confirmation indicator for paper contracts */}
-                          {c.notes?.startsWith("[Papier]") && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className={`inline-flex items-center gap-1 text-xs font-medium border rounded px-1.5 py-0.5 w-fit cursor-default ${
-                                    c.customer_confirmed_at
-                                      ? "text-success border-success/30 bg-success/5"
-                                      : "text-muted-foreground border-dashed"
-                                  }`}>
-                                    <CreditCard className="h-3 w-3" />
-                                    {c.customer_confirmed_at ? "Zahlung erfolgt" : "Zahlung ausstehend"}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {c.customer_confirmed_at
-                                    ? `Stripe-Zahlung bestätigt am ${format(new Date(c.customer_confirmed_at), "dd.MM.yyyy 'um' HH:mm", { locale: de })} Uhr`
-                                    : "Kunde hat noch nicht über Stripe bezahlt"}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
+                          {/* Stripe payment confirmation indicator for paper contracts removed – paper flow decommissioned */}
                           <Button
                             variant="outline"
                             size="sm"
@@ -2133,57 +2087,7 @@ export default function Vertraege() {
                               <span className="truncate max-w-[80px]">{c.document_name || "Vertrag PDF"}</span>
                             </button>
                           )}
-                          {/* Hochgeladener Papiervertrag + Inline-Ersetzen-Button */}
-                          <div className="flex items-center gap-1">
-                            {(c as any).paper_contract_pdf_path ? (
-                              <button
-                                className="text-warning hover:underline text-xs flex items-center gap-1"
-                                onClick={async () => {
-                                  const { data, error } = await supabase.storage
-                                    .from("contracts")
-                                    .createSignedUrl((c as any).paper_contract_pdf_path, 300);
-                                  if (error || !data?.signedUrl) {
-                                    toast({ title: "Fehler beim Laden des Papiervertrags", variant: "destructive" });
-                                    return;
-                                  }
-                                  window.open(data.signedUrl, "_blank");
-                                }}
-                              >
-                                <FileText className="h-3 w-3" />
-                                <span className="truncate max-w-[80px]">Papiervertrag</span>
-                              </button>
-                            ) : null}
-                            {/* Inline-Upload: Papiervertrag hochladen oder ersetzen */}
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <label className="cursor-pointer inline-flex items-center justify-center h-5 w-5 rounded hover:bg-muted transition-colors">
-                                    {uploadingPaperId === c.id ? (
-                                      <Loader2 className="h-3 w-3 animate-spin text-warning" />
-                                    ) : (
-                                      <Upload className="h-3 w-3 text-muted-foreground" />
-                                    )}
-                                    <input
-                                      type="file"
-                                      accept=".pdf,application/pdf"
-                                      className="hidden"
-                                      disabled={uploadingPaperId === c.id}
-                                      onChange={(e) => {
-                                        const f = e.target.files?.[0];
-                                        if (f) uploadPaperContract(c.id, f);
-                                        e.target.value = "";
-                                      }}
-                                    />
-                                  </label>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {(c as any).paper_contract_pdf_path
-                                    ? "Papiervertrag ersetzen (neues PDF hochladen)"
-                                    : "Papiervertrag hochladen (PDF)"}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
+          {/* Paper contract inline upload removed – paper flow decommissioned */}
                        </div>
                      </td>
                     <td>
@@ -3217,7 +3121,7 @@ export default function Vertraege() {
         </DialogContent>
       </Dialog>
 
-      <PaperContractDialog open={paperContractOpen} onOpenChange={setPaperContractOpen} />
+      {/* PaperContractDialog removed – paper flow decommissioned */}
 
       {/* Delete Contract Confirmation */}
       <AlertDialog open={!!deleteContractTarget} onOpenChange={(open) => !open && setDeleteContractTarget(null)}>
