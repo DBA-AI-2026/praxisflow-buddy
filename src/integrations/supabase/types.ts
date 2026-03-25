@@ -2170,7 +2170,12 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      fibu_export_batch_seq_view: {
+        Row: {
+          nextval: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
