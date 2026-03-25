@@ -332,7 +332,7 @@ export default function Buchhaltung() {
   const { data: fibuEvents = [], isLoading: fibuLoading, refetch: refetchFibu } = useQuery({
     queryKey: ["fibu-events", effectiveFrom, effectiveTo, fibuEventTypeFilter, fibuStatusFilter, fibuExportStatusFilter],
     queryFn: async () => {
-      let q = supabase
+      let q = (supabase as any)
         .from("fibu_events")
         .select("*")
         .gte("occurred_at", effectiveFrom)
@@ -343,7 +343,7 @@ export default function Buchhaltung() {
       if (fibuExportStatusFilter !== "all") q = q.eq("export_status", fibuExportStatusFilter);
       const { data, error } = await q;
       if (error) throw error;
-      return data || [];
+      return (data as any[]) || [];
     },
     enabled: tab === "vorfaelle" || tab === "zahlungen",
   });
@@ -352,12 +352,12 @@ export default function Buchhaltung() {
   const { data: exportBatches = [], isLoading: batchLoading, refetch: refetchBatches } = useQuery({
     queryKey: ["fibu-export-batches"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("fibu_export_batches")
         .select("*")
         .order("exported_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+      return (data as any[]) || [];
     },
     enabled: tab === "export-protokoll",
   });
