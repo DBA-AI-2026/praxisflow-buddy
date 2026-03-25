@@ -512,7 +512,8 @@ export default function Buchhaltung() {
       // Mark original as corrected
       await supabase.from("fibu_events" as any).update({ status: "corrected" }).eq("id", originalId);
       // Load original for copying
-      const { data: orig } = await supabase.from("fibu_events" as any).select("*").eq("id", originalId).maybeSingle();
+      const { data: origRaw } = await (supabase as any).from("fibu_events").select("*").eq("id", originalId).maybeSingle();
+      const orig = origRaw as FibuEvent | null;
       if (!orig) throw new Error("Original event not found");
       // Create correction entry
       const { error } = await supabase.from("fibu_events" as any).insert({
