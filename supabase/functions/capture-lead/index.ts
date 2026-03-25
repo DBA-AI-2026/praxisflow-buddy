@@ -387,39 +387,32 @@ Deno.serve(async (req) => {
     // Generate password for Qodia access
     const generatedPassword = generatePassword(12);
 
-    // If a manual assigned_to was provided (manual lead creation), use it directly.
-    // For manual source: only assign if explicitly selected – no auto PLZ assignment.
-    // For homepage source: auto-assign Gebietsleiter based on PLZ prefix.
+    // ── PLZ-Zuordnung: Zentrale Logik via DB-Funktion resolve_plz_ad() ────────
+    // Manuelle Zuweisung überschreibt immer die Automatik.
+    // Quelle: src-of-truth = plz_gebietsleiter_mapping, verwaltet via Admin > PLZ-Zuordnung
     let assignedTo: string | null = rawBody.assigned_to || null;
     const manualAssignment = !!assignedTo;
     let assignedName: string | null = null;
+    let assignmentSource = manualAssignment ? "manual" : "none";
+    let matchedRule: string | null = null;
+
     if (!manualAssignment && leadSource !== "manual") {
       try {
-        const plzClean = plz.trim().replace(/\s/g, "");
-        if (plzClean.length >= 1) {
-          const prefix2 = plzClean.substring(0, 2);
-          const prefix1 = plzClean.substring(0, 1);
-          const prefixes = plzClean.length >= 2 ? [prefix2, prefix1] : [prefix1];
+        // Zentraler Aufruf der DB-Funktion – KEINE duplizierte Prefix-Logik hier
+        const { data: resolved, error: plzErr } = await supabase
+          .rpc("resolve_plz_ad", { plz_input: plz });
 
-          const { data: mappings } = await supabase
-            .from("plz_gebietsleiter_mapping")
-            .select("gebietsleiter_id, gebietsleiter_name, plz_prefix, priority")
-            .eq("is_active", true)
-            .in("plz_prefix", prefixes)
-            .order("priority", { ascending: false });
-
-          const bestMatch =
-            mappings?.find((m) => m.plz_prefix === prefix2) ??
-            mappings?.find((m) => m.plz_prefix === prefix1) ??
-            null;
-
-          if (bestMatch?.gebietsleiter_id) {
-            assignedTo = bestMatch.gebietsleiter_id;
-            assignedName = bestMatch.gebietsleiter_name;
-            console.log(`Lead PLZ ${plzClean} → assigned to ${assignedName} (prefix: ${bestMatch.plz_prefix})`);
-          } else {
-            console.log(`No GL mapping found for PLZ ${plzClean} (tried prefixes: ${prefixes.join(", ")})`);
-          }
+        if (plzErr) {
+          console.error("resolve_plz_ad error:", plzErr.message);
+        } else if (resolved && resolved.length > 0 && resolved[0].gebietsleiter_id) {
+          assignedTo = resolved[0].gebietsleiter_id;
+          assignedName = resolved[0].gebietsleiter_name;
+          matchedRule = resolved[0].matched_rule;
+          assignmentSource = "auto_plz";
+          console.log(`Lead PLZ ${plz} → assigned to ${assignedName} (rule: ${matchedRule})`);
+        } else {
+          assignmentSource = "none";
+          console.log(`No GL mapping found for PLZ ${plz} – status: ungeklärt`);
         }
       } catch (plzErr) {
         console.error("PLZ mapping lookup error:", plzErr);
