@@ -440,6 +440,7 @@ Deno.serve(async (req) => {
         assigned_to: assignedTo,
         tippgeber_id: rawBody.tippgeber_id || null,
         source: leadSource,
+        assignment_source: assignmentSource,
       })
       .select("id, hfx_customer_number")
       .single();
