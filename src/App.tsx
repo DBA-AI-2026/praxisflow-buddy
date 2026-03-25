@@ -7,7 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { RolePreviewProvider } from "@/contexts/RolePreviewContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
-import Praxen from "./pages/Praxen";
+// Praxen.tsx (veraltete Ansicht) — Import entfernt; /praxen leitet auf PraxenJourney um
 import Tickets from "./pages/Tickets";
 import Kalender from "./pages/Kalender";
 import Lizenzen from "./pages/Lizenzen";

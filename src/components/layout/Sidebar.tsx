@@ -58,23 +58,30 @@ const dashboardNav: NavItem[] = [
 ];
 
 // ─── VERTRIEB: Akquise & Pipeline ────────────────────────────────────────────
+// P3: Nur Akquise-relevante Punkte; Kunden/Verträge in eigene Sektion ausgelagert
 const vertriebNavigation: NavItem[] = [
   { name: "Interessenten", href: "/interessenten", icon: UserPlus, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "tippgeber", "admin"] },
-  // P2: "Kunden-Journey" ist die primäre Pipeline-Ansicht; "/kunden" bleibt als Stammdaten-Detail erreichbar
-  { name: "Kunden-Journey", href: "/praxen-journey", icon: Building2, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
-  { name: "Kunden", href: "/kunden", icon: Building2, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
-  // P1: /vertrieb/vertraege war versteckt — jetzt sichtbar in Nav
-  { name: "Verträge", href: "/vertrieb/vertraege", icon: FileSignature, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
   { name: "Reservierungen", href: "/reservierungen", icon: BookMarked, roles: ["user", "sales_partner", "regional_lead", "admin"] },
   { name: "Demo-Tracking", href: "/demo-tracking", icon: FlaskConical, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
+  { name: "Tipp-Leads", href: "/tipp-leads", icon: Lightbulb, roles: ["tippgeber", "admin", "sales_lead"] },
+];
+
+// ─── KUNDEN & VERTRÄGE ────────────────────────────────────────────────────────
+// P3: Kunden-Journey = konsolidierter Haupteinstieg (Pipeline mit Tabs)
+// Kundenstamm = direkte Stammdaten-Suche für Vertragsabteilung/Admin ohne Journey-Kontext
+// /kunden und /kunden/:id bleiben als Routen vollständig erhalten
+const kundenVertraegeNavigation: NavItem[] = [
+  { name: "Kunden-Journey", href: "/praxen-journey", icon: Building2, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
+  { name: "Kundenstamm", href: "/kunden", icon: Building2, roles: ["vertragsabteilung", "sales_lead", "regional_lead", "admin"] },
+  { name: "Verträge", href: "/vertrieb/vertraege", icon: FileSignature, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
   { name: "HFX EBM Lizenzen", href: "/lizenzen", icon: Key, roles: allRoles },
 ];
 
 // ─── FINANZEN: operative Finanzmodule (P2: aus Admin herausgelöst) ────────────
 const finanzenNavigation: NavItem[] = [
+  { name: "Umsätze", href: "/umsaetze", icon: BarChart3, roles: allRoles },
   { name: "Rechnungen & Usage", href: "/rechnungen", icon: Receipt, roles: ["admin"] },
   { name: "Buchhaltung / FiBu", href: "/buchhaltung", icon: TrendingUp, roles: ["admin"] },
-  { name: "Umsätze", href: "/umsaetze", icon: BarChart3, roles: allRoles },
   { name: "Datenexport", href: "/export", icon: FileDown, roles: ["admin", "sales_lead"] },
   { name: "Qodia-Verbrauch", href: "/qodia-verbrauch", icon: BarChart3, roles: ["admin", "sales_lead"] },
 ];
@@ -87,10 +94,10 @@ const allgemeinNavigation: NavItem[] = [
 ];
 
 // ─── VERTRIEBS-ADMIN ──────────────────────────────────────────────────────────
+// P3: Tipp-Leads in Vertrieb-Sektion verschoben (fachlich besser dort)
 const vertriebsAdminNavigation: NavItem[] = [
   { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users, roles: ["sales_lead", "regional_lead", "admin"] },
   { name: "Provisionen", href: "/vertrieb/provisionen", icon: BarChart3, roles: ["user", "sales_partner", "tippgeber", "sales_lead", "regional_lead", "admin"] },
-  { name: "Tipp-Leads", href: "/tipp-leads", icon: Lightbulb, roles: ["tippgeber", "admin", "sales_lead"] },
   { name: "PLZ-Zuordnung", href: "/admin/plz-mapping", icon: MapPin, roles: ["admin", "sales_lead"] },
 ];
 
@@ -249,6 +256,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <nav className="flex-1 space-y-1 px-2 lg:px-3 py-4 overflow-y-auto">
         <NavSection label="Übersicht" items={dashboardNav} {...sectionProps} />
         <NavSection label="Vertrieb" items={vertriebNavigation} {...sectionProps} />
+        <NavSection label="Kunden & Verträge" items={kundenVertraegeNavigation} {...sectionProps} />
         <NavSection label="Finanzen" items={finanzenNavigation} {...sectionProps} />
         <NavSection label="Allgemein" items={allgemeinNavigation} {...sectionProps} />
         <NavSection label="Vertriebs-Admin" items={vertriebsAdminNavigation} {...sectionProps} />
