@@ -427,7 +427,47 @@ export default function Rechnungen() {
   const usageStats = {
     pending: usageCharges.filter((u) => u.status === "pending").length,
     invoiced: usageCharges.filter((u) => u.status === "invoiced").length,
+    ungeklaert: usageCharges.filter((u) => u.status === "ungeklaert").length,
     pendingAmount: usageCharges.filter((u) => u.status === "pending").reduce((s, u) => s + Number(u.net_amount), 0),
+  };
+
+  // Open the resolve-dialog: load active contracts matching the charge's hfx_customer_number
+  const handleOpenResolve = async (charge: UsageCharge) => {
+    setResolveCharge(charge);
+    setResolveContractId("");
+    setResolveLoading(true);
+    const { data } = await supabase
+      .from("contracts")
+      .select("id, customer_name, hfx_customer_number, rechnungs_email, adresse, plz, ort, monthly_price, product_name, status, start_date")
+      .eq("hfx_customer_number", charge.hfx_customer_number)
+      .eq("status", "aktiv")
+      .order("product_name");
+    setResolveContracts((data as Contract[]) ?? []);
+    setResolveLoading(false);
+  };
+
+  // Assign a contract → set contract_id + status → 'pending', then allow normal manual billing
+  const handleResolveAssign = async () => {
+    if (!resolveCharge || !resolveContractId) return;
+    setResolveSaving(true);
+    try {
+      const { error } = await supabase
+        .from("usage_charges")
+        .update({
+          contract_id: resolveContractId,
+          status: "pending",
+          notes: `${resolveCharge.notes ? resolveCharge.notes + " | " : ""}Manuell zugeordnet am ${new Date().toLocaleDateString("de-DE")}`,
+        })
+        .eq("id", resolveCharge.id);
+      if (error) throw error;
+      toast({ title: "Zuordnung gespeichert", description: `Eintrag ist jetzt 'Ausstehend' und kann abgerechnet werden.` });
+      setResolveCharge(null);
+      fetchUsageCharges();
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    } finally {
+      setResolveSaving(false);
+    }
   };
 
   const handleManualInvoice = async (charge: UsageCharge) => {
