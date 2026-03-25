@@ -423,16 +423,6 @@ Deno.serve(async (req) => {
             : `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nDiese Rechnung weist keinen Zahlbetrag aus (Einführungsangebot aktiv).\nDiese Rechnung wurde automatisch generiert.`,
         });
 
-        if (sendResult.error) {
-          errors.push(`Invoice ${invoice.id}: ${sendResult.error.message}`);
-          // Note: FiBu-Block runs BEFORE this continue so email-send errors
-          // do not prevent fibu_events from being written for an already-sent invoice.
-          // Here the invoice exists but email confirmation failed – we still want
-          // the accounting record. FiBu-Block is therefore placed before this point.
-          // (see FiBu-Block below which executes before this guard)
-          continue;
-        }
-
         const now = new Date().toISOString();
 
         // Insert into customer_revenues
