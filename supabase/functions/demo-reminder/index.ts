@@ -62,11 +62,14 @@ Deno.serve(async (req) => {
     let sent = 0;
     let failed = 0;
 
-    // Stripe product map – must match src/lib/stripeProducts.ts
+    // Stripe product map – LIVE production IDs, must stay in sync with src/lib/stripeProducts.ts
+    // HFX EBM:              price_1TERRU50U5wLsXk2vhiRszuy
+    // HFX GOÄ:              price_1TERR350U5wLsXk2G6CMcuGV
+    // HFX GOÄ/GOZ Live-Check: price_1TERZH50U5wLsXk2FzJL0VSl
     const STRIPE_PRODUCT_MAP: Record<string, { price_id: string; recurring: boolean }> = {
-      "HFX EBM": { price_id: "price_1T4HDh6v0qHdbOipecPqXas5", recurring: true },
-      "HFX GOÄ - die KI für ihre Privatabrechnung": { price_id: "price_1T4HEl6v0qHdbOipmPO3EKHl", recurring: true },
-      "HFX GOÄ/GOZ Live-Check": { price_id: "price_1T4HF76v0qHdbOipbBG04A5Q", recurring: false },
+      "HFX EBM": { price_id: "price_1TERRU50U5wLsXk2vhiRszuy", recurring: true },
+      "HFX GOÄ - die KI für ihre Privatabrechnung": { price_id: "price_1TERR350U5wLsXk2G6CMcuGV", recurring: true },
+      "HFX GOÄ/GOZ Live-Check": { price_id: "price_1TERZH50U5wLsXk2FzJL0VSl", recurring: false },
     };
 
     for (const demo of demos ?? []) {
@@ -235,9 +238,10 @@ Deno.serve(async (req) => {
           .update({ reminder_sent_at: new Date().toISOString() })
           .eq("id", demo.id);
 
-        // ── Notify assigned AD (via PLZ mapping) ─────────────────────────
-        const plzPrefix2 = demo.hfx_customer_number ? null : null; // fallback: look up AD by plz if available
-        // For demo_downloads we don't have PLZ, so we look up by hfx_customer_number in leads table
+        // ── Notify assigned AD (via central resolve_plz_ad RPC) ──────────
+        // For demo_downloads we look up the linked lead to get PLZ + assigned_to.
+        // Priority: 1. manually assigned_to on lead  2. resolve_plz_ad() RPC (central DB function)
+        // The legacy inline prefix lookup has been REMOVED. All PLZ resolution uses resolve_plz_ad().
         let adEmail: string | null = null;
         if (demo.hfx_customer_number) {
           const { data: leadData } = await supabase
@@ -245,6 +249,8 @@ Deno.serve(async (req) => {
             .select("plz, assigned_to")
             .eq("hfx_customer_number", demo.hfx_customer_number)
             .maybeSingle();
+
+          // 1. Manual assignment takes priority
           if (leadData?.assigned_to) {
             const { data: adProfile } = await supabase
               .from("profiles")
@@ -253,19 +259,18 @@ Deno.serve(async (req) => {
               .maybeSingle();
             if (adProfile?.email) adEmail = adProfile.email;
           }
-          // fallback: plz_gebietsleiter_mapping if no assigned_to
+
+          // 2. Fallback: central resolve_plz_ad() RPC (sole authoritative source)
           if (!adEmail && leadData?.plz) {
-            const plz2 = leadData.plz.slice(0, 2);
-            const plz1 = leadData.plz.slice(0, 1);
-            const { data: mappings } = await supabase
-              .from("plz_gebietsleiter_mapping")
-              .select("gebietsleiter_id, plz_prefix")
-              .eq("is_active", true)
-              .in("plz_prefix", [plz2, plz1])
-              .order("priority", { ascending: false });
-            const bestMatch = mappings?.find(m => m.plz_prefix === plz2) ?? mappings?.find(m => m.plz_prefix === plz1) ?? null;
-            if (bestMatch?.gebietsleiter_id) {
-              const { data: gp } = await supabase.from("profiles").select("email").eq("user_id", bestMatch.gebietsleiter_id).maybeSingle();
+            const { data: resolved } = await supabase
+              .rpc("resolve_plz_ad", { plz_input: leadData.plz })
+              .maybeSingle();
+            if (resolved?.gebietsleiter_id) {
+              const { data: gp } = await supabase
+                .from("profiles")
+                .select("email")
+                .eq("user_id", resolved.gebietsleiter_id)
+                .maybeSingle();
               if (gp?.email) adEmail = gp.email;
             }
           }

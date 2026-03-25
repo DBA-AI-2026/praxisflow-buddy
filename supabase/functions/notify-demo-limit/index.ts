@@ -155,11 +155,15 @@ Deno.serve(async (req) => {
       (emailSettings ?? []).find((s: any) => s.setting_key === "demo_expiry_customer_reminder")?.is_enabled !== false;
 
     if (RESEND_API_KEY && demo.email && customerReminderEnabled) {
-      // Build Stripe checkout URL if possible
+      // Build Stripe checkout URL if possible.
+      // IMPORTANT: These price IDs are the LIVE production IDs from src/lib/stripeProducts.ts
+      // HFX EBM:              price_1TERRU50U5wLsXk2vhiRszuy
+      // HFX GOÄ:              price_1TERR350U5wLsXk2G6CMcuGV
+      // HFX GOÄ/GOZ Live-Check: price_1TERZH50U5wLsXk2FzJL0VSl
       const STRIPE_PRODUCT_MAP: Record<string, { price_id: string; recurring: boolean }> = {
-        "HFX EBM": { price_id: "price_1T7z1h6v0qHdbOip4A7qocQC", recurring: true },
-        "HFX GOÄ - die KI für ihre Privatabrechnung": { price_id: "price_1T7z2Z6v0qHdbOipvyPDB9mB", recurring: true },
-        "HFX GOÄ/GOZ Live-Check": { price_id: "price_1T7z3X6v0qHdbOiplCCLqD2n", recurring: false },
+        "HFX EBM": { price_id: "price_1TERRU50U5wLsXk2vhiRszuy", recurring: true },
+        "HFX GOÄ - die KI für ihre Privatabrechnung": { price_id: "price_1TERR350U5wLsXk2G6CMcuGV", recurring: true },
+        "HFX GOÄ/GOZ Live-Check": { price_id: "price_1TERZH50U5wLsXk2FzJL0VSl", recurring: false },
       };
 
       let stripeCheckoutUrl: string | null = null;
