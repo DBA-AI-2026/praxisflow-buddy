@@ -445,6 +445,7 @@ Deno.serve(async (req) => {
       .select("id, hfx_customer_number")
       .single();
 
+
     if (insertError) {
       console.error("Error inserting lead:", insertError);
       return new Response(
@@ -453,7 +454,22 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Lead created: ${lead.hfx_customer_number} for ${email} (source: ${leadSource})`);
+    console.log(`Lead created: ${lead.hfx_customer_number} for ${email} (source: ${leadSource}, assignment: ${assignmentSource})`);
+
+    // Protokolliere Zuordnung im zentralen PLZ-Assignment-Log
+    supabase.from("plz_assignment_log").insert({
+      entity_type: "lead",
+      entity_id: lead.id,
+      plz: plz.trim(),
+      resolved_gebietsleiter_id: assignedTo ?? null,
+      resolved_gebietsleiter_name: assignedName ?? null,
+      assignment_source: assignmentSource,
+      matched_rule: matchedRule,
+    }).then(({ error: logErr }) => {
+      if (logErr) console.error("plz_assignment_log insert error:", logErr.message);
+    });
+
+
 
     // Send confirmation email via Resend (skipped if sendConfirmationEmail=false)
     if (sendConfirmationEmail) {
