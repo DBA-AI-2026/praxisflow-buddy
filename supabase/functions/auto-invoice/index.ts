@@ -1,5 +1,5 @@
 import { Resend } from "npm:resend@2.0.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14.21.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -525,6 +525,101 @@ Deno.serve(async (req) => {
             }
           }
         }
+
+        // ── FiBu-Vorbereitungs-Events (Phase 2) ────────────────────────────────
+        // Erzeugt begleitende fibu_events für die FiBu-Übergabe.
+        // Fehler hier dürfen den operativen Flow NICHT unterbrechen:
+        // kein throw, kein continue – nur logging.
+        try {
+          // customer_id aus contract.customer_id (direkt im contracts-Datensatz, kein Extra-Query nötig)
+          const fibuCustomerId: string | null = contract.customer_id ?? null;
+
+          // Nettobetrag Grundgebühr inkl. anteiliger Steuer
+          const baseTaxAmount = Math.round(baseNetAmount * 19) / 100;
+          const baseGrossAmount = Math.round((baseNetAmount + baseTaxAmount) * 100) / 100;
+
+          // Event 1: invoice_base_fee_created
+          // Wird immer erzeugt – auch bei 0 € (Waiver), da FiBu-relevant (Nachweis Einführungsangebot)
+          const { error: fibuBaseErr } = await supabase.from("fibu_events").insert({
+            event_type: "invoice_base_fee_created",
+            source_module: "invoices",
+            source_reference_id: invoice.id,           // Unique-Index: (source_reference_id, event_type)
+            contract_id: contract.id,
+            customer_id: fibuCustomerId,
+            product_name: contract.product_name,
+            period_start: periodStart,
+            period_end: periodEnd,
+            amount_net: baseNetAmount,
+            tax_amount: baseTaxAmount,
+            amount_gross: baseGrossAmount,
+            currency: "EUR",
+            status: "approved",                        // maschinell erzeugt, kein manueller Review nötig
+            export_status: "open",
+            description: `Grundgebühr ${invoice.invoice_number} – ${contract.product_name} – ${billingPeriod}${isInWaiverPeriod ? " (Waiver 0 €)" : ""}`,
+            created_by: null,
+            metadata: {
+              invoice_number: invoice.invoice_number,
+              invoice_id: invoice.id,
+              stripe_invoice_id: stripeInvoiceId,
+              contract_id: contract.id,
+              hfx_customer_number: contract.hfx_customer_number ?? null,
+              waiver_active: isInWaiverPeriod,
+              billing_period: billingPeriod,
+              period_month: periodMonthStr,
+            },
+          } as any);
+          if (fibuBaseErr && (fibuBaseErr as any).code !== "23505") {
+            console.error(`[auto-invoice] fibu_events invoice_base_fee_created failed for ${invoice.invoice_number}:`, fibuBaseErr.message);
+          }
+
+          // Event 2: invoice_usage_created
+          // Nur erzeugen, wenn Qodia-Verbrauch > 0 (separate FiBu-Buchungszeile)
+          if (usageNetAmount > 0) {
+            const usageTaxAmount = Math.round(usageNetAmount * 19) / 100;
+            const usageGrossAmount = Math.round((usageNetAmount + usageTaxAmount) * 100) / 100;
+
+            const { error: fibuUsageErr } = await supabase.from("fibu_events").insert({
+              event_type: "invoice_usage_created",
+              source_module: "invoices",
+              // ':usage' Suffix stellt Unique-Index-Kompatibilität sicher (gleiche invoice.id, anderer event_type reicht für idx, aber explizit klarer)
+              source_reference_id: `${invoice.id}:usage`,
+              contract_id: contract.id,
+              customer_id: fibuCustomerId,
+              product_name: contract.product_name,
+              period_start: periodStart,
+              period_end: periodEnd,
+              amount_net: usageNetAmount,
+              tax_amount: usageTaxAmount,
+              amount_gross: usageGrossAmount,
+              currency: "EUR",
+              status: "approved",
+              export_status: "open",
+              description: `Qodia-Verbrauch ${invoice.invoice_number} – ${contract.product_name} – ${billingPeriod} (${usageChargeIds.length} Vorgänge)`,
+              created_by: null,
+              metadata: {
+                invoice_number: invoice.invoice_number,
+                invoice_id: invoice.id,
+                stripe_invoice_id: stripeInvoiceId,
+                contract_id: contract.id,
+                hfx_customer_number: contract.hfx_customer_number ?? null,
+                usage_charge_ids: usageChargeIds,
+                usage_charge_count: usageChargeIds.length,
+                usage_net_amount: usageNetAmount,
+                billing_period: billingPeriod,
+                period_month: periodMonthStr,
+              },
+            } as any);
+            if (fibuUsageErr && (fibuUsageErr as any).code !== "23505") {
+              console.error(`[auto-invoice] fibu_events invoice_usage_created failed for ${invoice.invoice_number}:`, fibuUsageErr.message);
+            }
+          }
+
+          console.log(`[auto-invoice] fibu_events created for ${invoice.invoice_number} (base: ${baseNetAmount} €${usageNetAmount > 0 ? `, usage: ${usageNetAmount} €` : ""})`);
+        } catch (fibuErr) {
+          // Isolierter Catch: FiBu-Fehler dürfen den Monatsprozess nicht unterbrechen
+          console.error(`[auto-invoice] fibu_events block failed for ${invoice.invoice_number} – operative flow unaffected:`, String(fibuErr));
+        }
+        // ── Ende FiBu-Block ─────────────────────────────────────────────────
 
         console.log(`[auto-invoice] ✓ Invoice ${invoice.invoice_number} sent to ${emailTo}${stripeInvoiceId ? ` | Stripe: ${stripeInvoiceId}` : ""}`);
         processed++;
