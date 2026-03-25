@@ -45,6 +45,8 @@ import { Plus, Pencil, Trash2, Loader2, MapPin, Search, Users, CheckCircle2, Map
 interface PlzMapping {
   id: string;
   plz_prefix: string;
+  plz_von: string | null;
+  plz_bis: string | null;
   gebietsleiter_id: string | null;
   gebietsleiter_name: string;
   notes: string | null;
@@ -52,6 +54,7 @@ interface PlzMapping {
   is_active: boolean;
   created_at: string;
 }
+
 
 interface Profile {
   user_id: string;
