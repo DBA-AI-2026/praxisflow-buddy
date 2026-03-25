@@ -166,8 +166,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("alle");
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("aktiv");
   const [createOpen, setCreateOpen] = useState(false);
-  const [uploadLead, setUploadLead] = useState<any>(null);
-  const [selectedLead, setSelectedLead] = useState<any>(null);
+  // uploadLead state removed – paper flow decommissioned
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
 
