@@ -423,11 +423,6 @@ Deno.serve(async (req) => {
             : `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nDiese Rechnung weist keinen Zahlbetrag aus (Einführungsangebot aktiv).\nDiese Rechnung wurde automatisch generiert.`,
         });
 
-        if (sendResult.error) {
-          errors.push(`Invoice ${invoice.id}: ${sendResult.error.message}`);
-          continue;
-        }
-
         const now = new Date().toISOString();
 
         // Insert into customer_revenues
@@ -527,23 +522,26 @@ Deno.serve(async (req) => {
         }
 
         // ── FiBu-Vorbereitungs-Events (Phase 2) ────────────────────────────────
-        // Erzeugt begleitende fibu_events für die FiBu-Übergabe.
-        // Fehler hier dürfen den operativen Flow NICHT unterbrechen:
-        // kein throw, kein continue – nur logging.
+        // Restpunkt 1: FiBu-Block steht VOR dem sendResult-continue-Guard.
+        //   → Auch bei E-Mail-Fehler wird das fibu_event geschrieben, da die Rechnung
+        //     bereits in der DB existiert und FiBu-relevant ist.
+        // Fehler hier dürfen den operativen Flow NICHT unterbrechen (kein throw, kein continue).
         try {
-          // customer_id aus contract.customer_id (direkt im contracts-Datensatz, kein Extra-Query nötig)
           const fibuCustomerId: string | null = contract.customer_id ?? null;
 
-          // Nettobetrag Grundgebühr inkl. anteiliger Steuer
-          const baseTaxAmount = Math.round(baseNetAmount * 19) / 100;
+          // Restpunkt 3: baseTaxAmount direkt aus den bereits korrekt berechneten
+          // Rechnungsbeträgen ableiten – verhindert ±1-Cent-Abweichung durch Doppelrundung.
+          // Wenn kein Verbrauch → ist taxAmount komplett der Grundgebühr zuzuordnen.
+          // Wenn Verbrauch vorhanden → Grundgebühr-Anteil proportional aus netAmount.
+          const baseShare = netAmount > 0 ? baseNetAmount / netAmount : 0;
+          const baseTaxAmount = Math.round(taxAmount * baseShare * 100) / 100;
           const baseGrossAmount = Math.round((baseNetAmount + baseTaxAmount) * 100) / 100;
 
-          // Event 1: invoice_base_fee_created
-          // Wird immer erzeugt – auch bei 0 € (Waiver), da FiBu-relevant (Nachweis Einführungsangebot)
+          // Event 1: invoice_base_fee_created (immer, auch bei 0 € / Waiver)
           const { error: fibuBaseErr } = await supabase.from("fibu_events").insert({
             event_type: "invoice_base_fee_created",
             source_module: "invoices",
-            source_reference_id: invoice.id,           // Unique-Index: (source_reference_id, event_type)
+            source_reference_id: invoice.id,
             contract_id: contract.id,
             customer_id: fibuCustomerId,
             product_name: contract.product_name,
@@ -553,7 +551,7 @@ Deno.serve(async (req) => {
             tax_amount: baseTaxAmount,
             amount_gross: baseGrossAmount,
             currency: "EUR",
-            status: "approved",                        // maschinell erzeugt, kein manueller Review nötig
+            status: "approved",
             export_status: "open",
             description: `Grundgebühr ${invoice.invoice_number} – ${contract.product_name} – ${billingPeriod}${isInWaiverPeriod ? " (Waiver 0 €)" : ""}`,
             created_by: null,
@@ -572,16 +570,16 @@ Deno.serve(async (req) => {
             console.error(`[auto-invoice] fibu_events invoice_base_fee_created failed for ${invoice.invoice_number}:`, fibuBaseErr.message);
           }
 
-          // Event 2: invoice_usage_created
-          // Nur erzeugen, wenn Qodia-Verbrauch > 0 (separate FiBu-Buchungszeile)
+          // Event 2: invoice_usage_created (nur wenn Qodia-Verbrauch > 0)
           if (usageNetAmount > 0) {
-            const usageTaxAmount = Math.round(usageNetAmount * 19) / 100;
+            // Restpunkt 3: Verbrauch-Anteil der Steuer analog zum Grundgebühr-Anteil
+            const usageShare = netAmount > 0 ? usageNetAmount / netAmount : 0;
+            const usageTaxAmount = Math.round(taxAmount * usageShare * 100) / 100;
             const usageGrossAmount = Math.round((usageNetAmount + usageTaxAmount) * 100) / 100;
 
             const { error: fibuUsageErr } = await supabase.from("fibu_events").insert({
               event_type: "invoice_usage_created",
               source_module: "invoices",
-              // ':usage' Suffix stellt Unique-Index-Kompatibilität sicher (gleiche invoice.id, anderer event_type reicht für idx, aber explizit klarer)
               source_reference_id: `${invoice.id}:usage`,
               contract_id: contract.id,
               customer_id: fibuCustomerId,
@@ -603,7 +601,7 @@ Deno.serve(async (req) => {
                 contract_id: contract.id,
                 hfx_customer_number: contract.hfx_customer_number ?? null,
                 usage_charge_ids: usageChargeIds,
-                usage_charge_count: usageChargeIds.length,
+                charge_count: usageChargeIds.length,  // Restpunkt 2: war usage_charge_count
                 usage_net_amount: usageNetAmount,
                 billing_period: billingPeriod,
                 period_month: periodMonthStr,
@@ -616,10 +614,16 @@ Deno.serve(async (req) => {
 
           console.log(`[auto-invoice] fibu_events created for ${invoice.invoice_number} (base: ${baseNetAmount} €${usageNetAmount > 0 ? `, usage: ${usageNetAmount} €` : ""})`);
         } catch (fibuErr) {
-          // Isolierter Catch: FiBu-Fehler dürfen den Monatsprozess nicht unterbrechen
           console.error(`[auto-invoice] fibu_events block failed for ${invoice.invoice_number} – operative flow unaffected:`, String(fibuErr));
         }
         // ── Ende FiBu-Block ─────────────────────────────────────────────────
+
+        // Restpunkt 1: sendResult-Fehlerprüfung NACH FiBu-Block –
+        //   fibu_event ist bereits geschrieben, auch wenn E-Mail fehlschlug.
+        if (sendResult.error) {
+          errors.push(`Invoice email [${invoice.invoice_number}]: ${sendResult.error.message}`);
+          continue;
+        }
 
         console.log(`[auto-invoice] ✓ Invoice ${invoice.invoice_number} sent to ${emailTo}${stripeInvoiceId ? ` | Stripe: ${stripeInvoiceId}` : ""}`);
         processed++;
@@ -649,7 +653,7 @@ Deno.serve(async (req) => {
 // ────────────────────────────────────────────────────────────────────────────
 
 async function createGoaeCommissions(params: {
-  supabase: ReturnType<typeof import("https://esm.sh/@supabase/supabase-js@2").createClient>;
+  supabase: ReturnType<typeof createClient>;
   contract: any;
   invoice: any;
   netAmount: number;
