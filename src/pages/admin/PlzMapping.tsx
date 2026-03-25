@@ -45,6 +45,8 @@ import { Plus, Pencil, Trash2, Loader2, MapPin, Search, Users, CheckCircle2, Map
 interface PlzMapping {
   id: string;
   plz_prefix: string;
+  plz_von: string | null;
+  plz_bis: string | null;
   gebietsleiter_id: string | null;
   gebietsleiter_name: string;
   notes: string | null;
@@ -52,6 +54,7 @@ interface PlzMapping {
   is_active: boolean;
   created_at: string;
 }
+
 
 interface Profile {
   user_id: string;
@@ -61,6 +64,8 @@ interface Profile {
 
 const emptyForm = {
   plz_prefix: "",
+  plz_von: "",
+  plz_bis: "",
   gebietsleiter_id: "",
   gebietsleiter_name: "",
   notes: "",
@@ -152,8 +157,12 @@ export default function PlzMapping() {
 
   const upsertMutation = useMutation({
     mutationFn: async (values: typeof emptyForm & { id?: string }) => {
+      // Wenn Range gesetzt → plz_prefix auf "" setzen (kein Prefix-Match)
+      const useRange = !!(values.plz_von?.trim() && values.plz_bis?.trim());
       const payload = {
-        plz_prefix: values.plz_prefix.trim(),
+        plz_prefix: useRange ? "" : values.plz_prefix.trim(),
+        plz_von: values.plz_von?.trim() || null,
+        plz_bis: values.plz_bis?.trim() || null,
         gebietsleiter_id: values.gebietsleiter_id || null,
         gebietsleiter_name: values.gebietsleiter_name.trim(),
         notes: values.notes?.trim() || null,
@@ -211,6 +220,8 @@ export default function PlzMapping() {
     setEditEntry(entry);
     setForm({
       plz_prefix: entry.plz_prefix,
+      plz_von: entry.plz_von || "",
+      plz_bis: entry.plz_bis || "",
       gebietsleiter_id: entry.gebietsleiter_id || "",
       gebietsleiter_name: entry.gebietsleiter_name,
       notes: entry.notes || "",
@@ -219,6 +230,7 @@ export default function PlzMapping() {
     });
     setDialogOpen(true);
   };
+
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
@@ -367,7 +379,7 @@ export default function PlzMapping() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/40">
-                  <TableHead className="w-28 font-semibold">PLZ-Präfix</TableHead>
+                  <TableHead className="w-40 font-semibold">PLZ-Bereich</TableHead>
                   <TableHead className="font-semibold">Gebietsleiter</TableHead>
                   <TableHead className="font-semibold">Regionalleiter</TableHead>
                   <TableHead className="w-24 font-semibold">Notizen</TableHead>
@@ -389,12 +401,20 @@ export default function PlzMapping() {
                       ? (rlNameByGlId[entry.gebietsleiter_id] || null)
                       : null;
                     const colorClass = rlName ? getRlColor(rlName, rlColorIndex[rlName] ?? 0) : "";
+                    const isRange = !!(entry.plz_von && entry.plz_bis);
                     return (
                       <TableRow key={entry.id} className={!entry.is_active ? "opacity-50" : ""}>
                         <TableCell>
-                          <span className="font-mono font-bold text-sm bg-muted px-2 py-0.5 rounded">
-                            {entry.plz_prefix}*
-                          </span>
+                          {isRange ? (
+                            <span className="font-mono font-bold text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded">
+                              {entry.plz_von}–{entry.plz_bis}
+                            </span>
+
+                          ) : (
+                            <span className="font-mono font-bold text-sm bg-muted px-2 py-0.5 rounded">
+                              {entry.plz_prefix}*
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="font-medium text-sm">{entry.gebietsleiter_name}</TableCell>
                         <TableCell>
@@ -454,6 +474,7 @@ export default function PlzMapping() {
               </TableBody>
             </Table>
           )}
+
         </div>
         {filtered.length > 0 && (
           <p className="text-xs text-muted-foreground text-right">
@@ -464,26 +485,71 @@ export default function PlzMapping() {
 
       {/* Create / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={handleCloseDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {editEntry ? "Zuordnung bearbeiten" : "Neue Zuordnung anlegen"}
             </DialogTitle>
           </DialogHeader>
           <form autoComplete="off" onSubmit={handleSubmit} className="space-y-4">
+            {/* Zuordnungsart: Präfix oder Range */}
+            <div className="p-3 bg-muted/50 rounded-lg space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">PLZ-Bereich (eines der beiden Felder ausfüllen)</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="plz_prefix">Präfix-Modus</Label>
+                  <Input
+                    id="plz_prefix"
+                    value={form.plz_prefix}
+                    onChange={(e) => setForm((f) => ({ ...f, plz_prefix: e.target.value, plz_von: "", plz_bis: "" }))}
+                    placeholder="z.B. 44 oder 8"
+                    disabled={!!(form.plz_von || form.plz_bis)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Alle PLZ mit diesem Anfang.
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Range-Modus</Label>
+                  <div className="flex gap-1.5 items-center">
+                    <Input
+                      value={form.plz_von}
+                      onChange={(e) => setForm((f) => ({ ...f, plz_von: e.target.value, plz_prefix: "" }))}
+                      placeholder="Von 44000"
+                      disabled={!!form.plz_prefix}
+                      className="flex-1"
+                    />
+                    <span className="text-muted-foreground text-xs">–</span>
+                    <Input
+                      value={form.plz_bis}
+                      onChange={(e) => setForm((f) => ({ ...f, plz_bis: e.target.value, plz_prefix: "" }))}
+                      placeholder="Bis 44999"
+                      disabled={!!form.plz_prefix}
+                      className="flex-1"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Exakter PLZ-Bereich (höhere Prio).
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="plz_prefix">PLZ-Präfix *</Label>
-                <Input
-                  id="plz_prefix"
-                  value={form.plz_prefix}
-                  onChange={(e) => setForm((f) => ({ ...f, plz_prefix: e.target.value }))}
-                  placeholder="z.B. 44 oder 8"
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
-                  Präfix deckt alle PLZ mit diesem Anfang ab.
-                </p>
+                <Label>Gebietsleiter *</Label>
+                <Select value={form.gebietsleiter_id} onValueChange={handleGlSelect}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Gebietsleiter auswählen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {profiles.map((p) => (
+                      <SelectItem key={p.user_id} value={p.user_id}>
+                        {p.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="priority">Priorität</Label>
@@ -495,26 +561,8 @@ export default function PlzMapping() {
                   min={0}
                   max={100}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Höhere Zahl = höhere Priorität bei Überlappung.
-                </p>
+                <p className="text-xs text-muted-foreground">Höhere Zahl = höhere Priorität.</p>
               </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Gebietsleiter *</Label>
-              <Select value={form.gebietsleiter_id} onValueChange={handleGlSelect}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Gebietsleiter auswählen..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {profiles.map((p) => (
-                    <SelectItem key={p.user_id} value={p.user_id}>
-                      {p.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="space-y-1.5">
@@ -558,6 +606,7 @@ export default function PlzMapping() {
             </DialogFooter>
           </form>
         </DialogContent>
+
       </Dialog>
 
       {/* Delete Confirm */}

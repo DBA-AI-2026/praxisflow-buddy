@@ -74,34 +74,50 @@ Deno.serve(async (req) => {
     const tippgeberName = profile?.full_name ?? "Unbekannt";
     const tippgeberEmail = profile?.email ?? null;
 
-    // ── 1. PLZ-based AD assignment from plz_gebietsleiter_mapping ──────────
-    // Look up the responsible sales rep by PLZ prefix (2-digit first, then 1-digit)
+    // ── 1. PLZ-Zuordnung: Zentrale Logik via DB-Funktion resolve_plz_ad() ────
+    // Manuelle Zuweisung (ad_email bereits auf tipp_lead gesetzt) überschreibt Automatik.
+    // Kein Treffer → adEmail bleibt null (assignment_source: 'none' = ungeklärt)
     let adEmail: string | null = null;
     let adTelefon: string | null = null;
+    let assignmentSource = "none";
+    let matchedRule: string | null = null;
+    let resolvedGlId: string | null = null;
+    let resolvedGlName: string | null = null;
 
-    const plzPrefix2 = tip.plz?.slice(0, 2) ?? "";
-    const plzPrefix1 = tip.plz?.slice(0, 1) ?? "";
+    const { data: resolved, error: plzResolveErr } = await supabase
+      .rpc("resolve_plz_ad", { plz_input: tip.plz ?? "" });
 
-    const { data: mappings } = await supabase
-      .from("plz_gebietsleiter_mapping")
-      .select("gebietsleiter_id, gebietsleiter_name, plz_prefix")
-      .eq("is_active", true)
-      .in("plz_prefix", [plzPrefix2, plzPrefix1])
-      .order("priority", { ascending: false });
+    if (plzResolveErr) {
+      console.error("resolve_plz_ad error:", plzResolveErr.message);
+    } else if (resolved && resolved.length > 0 && resolved[0].gebietsleiter_id) {
+      resolvedGlId = resolved[0].gebietsleiter_id;
+      resolvedGlName = resolved[0].gebietsleiter_name;
+      matchedRule = resolved[0].matched_rule;
+      assignmentSource = "auto_plz";
 
-    // Prefer 2-digit match over 1-digit
-    const bestMatch = mappings?.find(m => m.plz_prefix === plzPrefix2) 
-      ?? mappings?.find(m => m.plz_prefix === plzPrefix1) 
-      ?? null;
-
-    if (bestMatch?.gebietsleiter_id) {
       const { data: adProfile } = await supabase
         .from("profiles")
         .select("email")
-        .eq("user_id", bestMatch.gebietsleiter_id)
+        .eq("user_id", resolvedGlId)
         .single();
       if (adProfile?.email) adEmail = adProfile.email;
+      console.log(`Tipp-Lead PLZ ${tip.plz} → assigned to ${resolvedGlName} (rule: ${matchedRule})`);
+    } else {
+      console.log(`No GL mapping found for PLZ ${tip.plz} – ungeklärt`);
     }
+
+    // Protokolliere Zuordnung im zentralen PLZ-Assignment-Log
+    supabase.from("plz_assignment_log").insert({
+      entity_type: "tipp_lead",
+      entity_id: tippLeadId,
+      plz: tip.plz,
+      resolved_gebietsleiter_id: resolvedGlId,
+      resolved_gebietsleiter_name: resolvedGlName,
+      assignment_source: assignmentSource,
+      matched_rule: matchedRule,
+    }).then(({ error: logErr }) => {
+      if (logErr) console.error("plz_assignment_log insert error:", logErr.message);
+    });
 
     // ── 2. Salesforce: Create Lead ──────────────────────────────────────────
     const { data: sfConn } = await supabase
@@ -168,13 +184,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── 2. Update tipp_leads with SF data ──────────────────────────────────
+    // ── 2. Update tipp_leads with SF data + assignment_source ──────────────
     await supabase.from("tipp_leads").update({
       salesforce_id: sfId,
       salesforce_synced: !!sfId,
       ad_email: adEmail,
       ad_telefon: adTelefon,
+      assignment_source: assignmentSource,
     }).eq("id", tippLeadId);
+
 
     // ── 3. Load email notification settings ───────────────────────────────
     const { data: emailSettings } = await supabase
