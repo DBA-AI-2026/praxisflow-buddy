@@ -131,6 +131,57 @@ interface PreviewRevenue {
   gross_amount: number;
 }
 
+interface FibuEvent {
+  id: string;
+  event_type: string;
+  source_module: string;
+  source_reference_id: string | null;
+  customer_id: string | null;
+  contract_id: string | null;
+  product_name: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  occurred_at: string;
+  amount_net: number;
+  tax_amount: number;
+  amount_gross: number;
+  currency: string;
+  commission_type: string | null;
+  commission_base_amount: number | null;
+  commission_rate: number | null;
+  commission_amount: number | null;
+  commission_rule_version: string | null;
+  beneficiary_type: string | null;
+  beneficiary_id: string | null;
+  cost_type: string | null;
+  supplier: string | null;
+  status: string;
+  export_status: string;
+  export_batch_id: string | null;
+  exported_at: string | null;
+  correction_of_event_id: string | null;
+  description: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  created_by: string | null;
+}
+
+interface FibuExportBatch {
+  id: string;
+  batch_reference: string;
+  export_type: string;
+  period_from: string;
+  period_to: string;
+  exported_by: string | null;
+  exported_at: string;
+  record_count: number;
+  amount_net_total: number | null;
+  amount_gross_total: number | null;
+  status: string;
+  notes: string | null;
+  created_at: string;
+}
+
 // ─── Status badge helpers ────────────────────────────────────────────────────
 
 function FibuStatusBadge({ status }: { status: string }) {
