@@ -184,13 +184,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── 2. Update tipp_leads with SF data ──────────────────────────────────
+    // ── 2. Update tipp_leads with SF data + assignment_source ──────────────
     await supabase.from("tipp_leads").update({
       salesforce_id: sfId,
       salesforce_synced: !!sfId,
       ad_email: adEmail,
       ad_telefon: adTelefon,
+      assignment_source: assignmentSource,
     }).eq("id", tippLeadId);
+
 
     // ── 3. Load email notification settings ───────────────────────────────
     const { data: emailSettings } = await supabase
