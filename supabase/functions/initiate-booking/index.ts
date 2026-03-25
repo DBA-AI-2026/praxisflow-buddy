@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
       success_url: `${APP_URL}/vertrag-bestaetigen?status=success&contract_id=${contract.id}`,
       cancel_url: `${APP_URL}/buchen?contract_id=${contract.id}`,
       metadata: {
-        source: "paper_contract_confirmation",
+        source: "contract_activation",
         contract_id: contract.id,
       },
       subscription_data: priceInfo.recurring

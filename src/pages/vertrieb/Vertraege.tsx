@@ -334,13 +334,11 @@ const emptyForm: ContractFormData = {
 export default function Vertraege() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [paperContractOpen, setPaperContractOpen] = useState(false); // kept for state compat, no-op
   const [editId, setEditId] = useState<string | null>(null);
   const [editingContract, setEditingContract] = useState<any | null>(null);
   const [form, setForm] = useState<ContractFormData>(emptyForm);
   const [file, setFile] = useState<File | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
-  const [uploadingPaperId, setUploadingPaperId] = useState<string | null>(null);
   const [bicLoading, setBicLoading] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [leadHfxNumber, setLeadHfxNumber] = useState<string | null>(null);
@@ -958,29 +956,8 @@ export default function Vertraege() {
     }
   };
 
-  const uploadPaperContract = async (contractId: string, uploadFile: File) => {
-    setUploadingPaperId(contractId);
-    try {
-      const filePath = `${user?.id}/papier-${crypto.randomUUID()}-${uploadFile.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("contracts")
-        .upload(filePath, uploadFile);
-      if (uploadError) throw uploadError;
 
-      const { error: updateError } = await supabase
-        .from("contracts")
-        .update({ paper_contract_pdf_path: filePath } as any)
-        .eq("id", contractId);
-      if (updateError) throw updateError;
 
-      queryClient.invalidateQueries({ queryKey: ["contracts"] });
-      toast({ title: "Papiervertrag hochgeladen", description: uploadFile.name });
-    } catch (err: any) {
-      toast({ title: "Upload fehlgeschlagen", description: err.message, variant: "destructive" });
-    } finally {
-      setUploadingPaperId(null);
-    }
-  };
 
   const closeDialog = () => {
     setDialogOpen(false);
