@@ -653,7 +653,7 @@ Deno.serve(async (req) => {
 // ────────────────────────────────────────────────────────────────────────────
 
 async function createGoaeCommissions(params: {
-  supabase: ReturnType<typeof import("https://esm.sh/@supabase/supabase-js@2").createClient>;
+  supabase: ReturnType<typeof createClient>;
   contract: any;
   invoice: any;
   netAmount: number;
