@@ -711,12 +711,28 @@ export default function Rechnungen() {
 
           {/* ── Nutzungsgebühren Tab ── */}
           <TabsContent value="nutzungsgebuehren" className="space-y-4 mt-4">
+            {/* Ungeklaert warning banner */}
+            {usageStats.ungeklaert > 0 && (
+              <div className="flex items-start gap-3 rounded-lg border border-warning/50 bg-warning/10 p-3 text-sm">
+                <AlertTriangle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
+                <span>
+                  <strong>{usageStats.ungeklaert} ungeklärte{usageStats.ungeklaert > 1 ? "" : "r"} Eintrag{usageStats.ungeklaert > 1 ? "e" : ""}</strong> {usageStats.ungeklaert > 1 ? "benötigen" : "benötigt"} eine manuelle Vertragszuordnung, bevor eine Abrechnung möglich ist.
+                </span>
+              </div>
+            )}
+
             {/* Usage stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="pt-4">
                   <div className="text-2xl font-bold text-destructive">{usageStats.pending}</div>
                   <div className="text-xs text-muted-foreground mt-1">Offen (ausstehend)</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="text-2xl font-bold text-warning">{usageStats.ungeklaert}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Ungeklärt</div>
                 </CardContent>
               </Card>
               <Card>
@@ -775,7 +791,10 @@ export default function Rechnungen() {
                         </TableCell>
                       </TableRow>
                     ) : filteredUsage.map((uc) => (
-                      <TableRow key={uc.id}>
+                      <TableRow
+                        key={uc.id}
+                        className={uc.status === "ungeklaert" ? "bg-warning/5 border-l-2 border-l-warning" : ""}
+                      >
                         <TableCell className="font-mono font-medium">{uc.hfx_customer_number}</TableCell>
                         <TableCell className="max-w-[200px] truncate" title={uc.unit_description}>
                           {uc.unit_description}
@@ -797,6 +816,11 @@ export default function Rechnungen() {
                               <CheckCircle2 className="h-3 w-3" />
                               Abgerechnet
                             </Badge>
+                          ) : uc.status === "ungeklaert" ? (
+                            <Badge variant="outline" className="gap-1 border-warning text-warning bg-warning/10">
+                              <AlertTriangle className="h-3 w-3" />
+                              Ungeklärt
+                            </Badge>
                           ) : (
                             <Badge variant="secondary">{uc.status}</Badge>
                           )}
@@ -812,6 +836,16 @@ export default function Rechnungen() {
                             >
                               <FileText className="h-3.5 w-3.5" />
                               {invoicingChargeId === uc.id ? "Wird erstellt..." : "Manuell abrechnen"}
+                            </Button>
+                          ) : uc.status === "ungeklaert" ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleOpenResolve(uc)}
+                              className="gap-1 border-warning text-warning hover:bg-warning/10"
+                            >
+                              <UserCheck className="h-3.5 w-3.5" />
+                              Vertrag zuordnen
                             </Button>
                           ) : uc.invoice_id ? (
                             <Badge variant="outline" className="gap-1 text-xs cursor-default">
