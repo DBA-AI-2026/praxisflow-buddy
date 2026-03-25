@@ -57,6 +57,8 @@ import {
   Zap,
   Receipt,
   Link,
+  AlertTriangle,
+  UserCheck,
 } from "lucide-react";
 import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
 import { generateInvoicePdfV2 } from "@/lib/generateInvoicePdfV2";
@@ -148,6 +150,13 @@ export default function Rechnungen() {
   const [usageCharges, setUsageCharges] = useState<UsageCharge[]>([]);
   const [usageLoading, setUsageLoading] = useState(true);
   const [invoicingChargeId, setInvoicingChargeId] = useState<string | null>(null);
+
+  // Ungeklaert resolve dialog
+  const [resolveCharge, setResolveCharge] = useState<UsageCharge | null>(null);
+  const [resolveContracts, setResolveContracts] = useState<Contract[]>([]);
+  const [resolveContractId, setResolveContractId] = useState<string>("");
+  const [resolveLoading, setResolveLoading] = useState(false);
+  const [resolveSaving, setResolveSaving] = useState(false);
 
   const [search, setSearch] = useState("");
   const [usageSearch, setUsageSearch] = useState("");
@@ -418,7 +427,47 @@ export default function Rechnungen() {
   const usageStats = {
     pending: usageCharges.filter((u) => u.status === "pending").length,
     invoiced: usageCharges.filter((u) => u.status === "invoiced").length,
+    ungeklaert: usageCharges.filter((u) => u.status === "ungeklaert").length,
     pendingAmount: usageCharges.filter((u) => u.status === "pending").reduce((s, u) => s + Number(u.net_amount), 0),
+  };
+
+  // Open the resolve-dialog: load active contracts matching the charge's hfx_customer_number
+  const handleOpenResolve = async (charge: UsageCharge) => {
+    setResolveCharge(charge);
+    setResolveContractId("");
+    setResolveLoading(true);
+    const { data } = await supabase
+      .from("contracts")
+      .select("id, customer_name, hfx_customer_number, rechnungs_email, adresse, plz, ort, monthly_price, product_name, status, start_date")
+      .eq("hfx_customer_number", charge.hfx_customer_number)
+      .eq("status", "aktiv")
+      .order("product_name");
+    setResolveContracts((data as Contract[]) ?? []);
+    setResolveLoading(false);
+  };
+
+  // Assign a contract → set contract_id + status → 'pending', then allow normal manual billing
+  const handleResolveAssign = async () => {
+    if (!resolveCharge || !resolveContractId) return;
+    setResolveSaving(true);
+    try {
+      const { error } = await supabase
+        .from("usage_charges")
+        .update({
+          contract_id: resolveContractId,
+          status: "pending",
+          notes: `${resolveCharge.notes ? resolveCharge.notes + " | " : ""}Manuell zugeordnet am ${new Date().toLocaleDateString("de-DE")}`,
+        })
+        .eq("id", resolveCharge.id);
+      if (error) throw error;
+      toast({ title: "Zuordnung gespeichert", description: `Eintrag ist jetzt 'Ausstehend' und kann abgerechnet werden.` });
+      setResolveCharge(null);
+      fetchUsageCharges();
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    } finally {
+      setResolveSaving(false);
+    }
   };
 
   const handleManualInvoice = async (charge: UsageCharge) => {
@@ -662,12 +711,28 @@ export default function Rechnungen() {
 
           {/* ── Nutzungsgebühren Tab ── */}
           <TabsContent value="nutzungsgebuehren" className="space-y-4 mt-4">
+            {/* Ungeklaert warning banner */}
+            {usageStats.ungeklaert > 0 && (
+              <div className="flex items-start gap-3 rounded-lg border border-warning/50 bg-warning/10 p-3 text-sm">
+                <AlertTriangle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
+                <span>
+                  <strong>{usageStats.ungeklaert} ungeklärte{usageStats.ungeklaert > 1 ? "" : "r"} Eintrag{usageStats.ungeklaert > 1 ? "e" : ""}</strong> {usageStats.ungeklaert > 1 ? "benötigen" : "benötigt"} eine manuelle Vertragszuordnung, bevor eine Abrechnung möglich ist.
+                </span>
+              </div>
+            )}
+
             {/* Usage stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="pt-4">
                   <div className="text-2xl font-bold text-destructive">{usageStats.pending}</div>
                   <div className="text-xs text-muted-foreground mt-1">Offen (ausstehend)</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="text-2xl font-bold text-warning">{usageStats.ungeklaert}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Ungeklärt</div>
                 </CardContent>
               </Card>
               <Card>
@@ -726,7 +791,10 @@ export default function Rechnungen() {
                         </TableCell>
                       </TableRow>
                     ) : filteredUsage.map((uc) => (
-                      <TableRow key={uc.id}>
+                      <TableRow
+                        key={uc.id}
+                        className={uc.status === "ungeklaert" ? "bg-warning/5 border-l-2 border-l-warning" : ""}
+                      >
                         <TableCell className="font-mono font-medium">{uc.hfx_customer_number}</TableCell>
                         <TableCell className="max-w-[200px] truncate" title={uc.unit_description}>
                           {uc.unit_description}
@@ -748,6 +816,11 @@ export default function Rechnungen() {
                               <CheckCircle2 className="h-3 w-3" />
                               Abgerechnet
                             </Badge>
+                          ) : uc.status === "ungeklaert" ? (
+                            <Badge variant="outline" className="gap-1 border-warning text-warning bg-warning/10">
+                              <AlertTriangle className="h-3 w-3" />
+                              Ungeklärt
+                            </Badge>
                           ) : (
                             <Badge variant="secondary">{uc.status}</Badge>
                           )}
@@ -763,6 +836,16 @@ export default function Rechnungen() {
                             >
                               <FileText className="h-3.5 w-3.5" />
                               {invoicingChargeId === uc.id ? "Wird erstellt..." : "Manuell abrechnen"}
+                            </Button>
+                          ) : uc.status === "ungeklaert" ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleOpenResolve(uc)}
+                              className="gap-1 border-warning text-warning hover:bg-warning/10"
+                            >
+                              <UserCheck className="h-3.5 w-3.5" />
+                              Vertrag zuordnen
                             </Button>
                           ) : uc.invoice_id ? (
                             <Badge variant="outline" className="gap-1 text-xs cursor-default">
@@ -1066,6 +1149,93 @@ export default function Rechnungen() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Ungeklaert – Vertrag zuordnen Modal */}
+      {resolveCharge && (
+        <Dialog open={!!resolveCharge} onOpenChange={(o) => { if (!o) { setResolveCharge(null); setResolveContractId(""); } }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-warning" />
+                Ungeklärten Eintrag zuordnen
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-5 py-1">
+
+              {/* Charge summary */}
+              <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-1.5">
+                <div className="font-semibold text-warning flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Dieser Eintrag konnte nicht automatisch zugeordnet werden
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-1 text-muted-foreground">
+                  <div><span className="font-medium text-foreground">HFX-Nr.:</span> {resolveCharge.hfx_customer_number}</div>
+                  <div><span className="font-medium text-foreground">Menge:</span> {resolveCharge.quantity} Vorgänge</div>
+                  <div><span className="font-medium text-foreground">Periode:</span> {new Date(resolveCharge.period_from).toLocaleDateString("de-DE")} – {new Date(resolveCharge.period_to).toLocaleDateString("de-DE")}</div>
+                  <div><span className="font-medium text-foreground">Nettobetrag:</span> {Number(resolveCharge.net_amount).toFixed(2)} €</div>
+                </div>
+                {resolveCharge.notes && (
+                  <div className="pt-1 text-xs text-muted-foreground border-t">{resolveCharge.notes}</div>
+                )}
+              </div>
+
+              {/* Contract selector */}
+              <div className="space-y-2">
+                <Label className="font-medium">
+                  Aktiven Vertrag auswählen
+                  <span className="ml-1 font-normal text-muted-foreground text-xs">(gefiltert nach HFX-Nr. {resolveCharge.hfx_customer_number})</span>
+                </Label>
+                {resolveLoading ? (
+                  <div className="text-sm text-muted-foreground py-2">Lade Verträge…</div>
+                ) : resolveContracts.length === 0 ? (
+                  <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                    Keine aktiven Verträge für diese HFX-Nummer gefunden. Bitte prüfe den Vertragsstatus.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {resolveContracts.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setResolveContractId(c.id)}
+                        className={`w-full text-left rounded-md border p-3 text-sm transition-colors ${
+                          resolveContractId === c.id
+                            ? "border-primary bg-primary/5 ring-1 ring-primary"
+                            : "border-border hover:bg-muted/60"
+                        }`}
+                      >
+                        <div className="font-medium">{c.customer_name}</div>
+                        <div className="text-muted-foreground text-xs mt-0.5 flex flex-wrap gap-x-3">
+                          <span>{c.product_name}</span>
+                          {c.hfx_customer_number && <span className="font-mono">{c.hfx_customer_number}</span>}
+                          <span>ab {new Date(c.start_date).toLocaleDateString("de-DE")}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Nach der Zuordnung wird der Status auf <strong>Ausstehend</strong> gesetzt und der Eintrag kann normal abgerechnet werden.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setResolveCharge(null); setResolveContractId(""); }}>
+                Abbrechen
+              </Button>
+              <Button
+                onClick={handleResolveAssign}
+                disabled={!resolveContractId || resolveSaving || resolveContracts.length === 0}
+              >
+                <UserCheck className="h-4 w-4 mr-2" />
+                {resolveSaving ? "Wird gespeichert…" : "Vertrag zuordnen"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </MainLayout>
   );
 }
+
