@@ -500,6 +500,11 @@ Deno.serve(async (req) => {
                   .maybeSingle();
 
                 if (!existingPayout) {
+                  // Point 4: Derive rule version dynamically from commission_type so
+                  // fixed-fee products don't incorrectly receive the percentage rule label.
+                  const ruleVersion = productCommission.commission_type === "prozent"
+                    ? `STD-PARTNER-${productCommission.commission_value}PCT-v1`
+                    : `STD-PARTNER-FIXED-${productCommission.commission_value}EUR-v1`;
                   await supabase.from("commission_payouts").insert({
                     sales_partner_id: contract.sales_partner_id,
                     sales_partner_name: contract.sales_partner_name || "Unbekannt",
@@ -510,7 +515,7 @@ Deno.serve(async (req) => {
                     commission_rate: productCommission.commission_value,
                     commission_amount: commissionAmount,
                     commission_base_amount: baseNetAmount,
-                    commission_rule_version: "STD-PARTNER-10PCT-v1",
+                    commission_rule_version: ruleVersion,
                     period_month: periodMonthStr,
                     status: "pending",
                   });
