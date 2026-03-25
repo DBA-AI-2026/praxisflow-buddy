@@ -131,6 +131,57 @@ interface PreviewRevenue {
   gross_amount: number;
 }
 
+interface FibuEvent {
+  id: string;
+  event_type: string;
+  source_module: string;
+  source_reference_id: string | null;
+  customer_id: string | null;
+  contract_id: string | null;
+  product_name: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  occurred_at: string;
+  amount_net: number;
+  tax_amount: number;
+  amount_gross: number;
+  currency: string;
+  commission_type: string | null;
+  commission_base_amount: number | null;
+  commission_rate: number | null;
+  commission_amount: number | null;
+  commission_rule_version: string | null;
+  beneficiary_type: string | null;
+  beneficiary_id: string | null;
+  cost_type: string | null;
+  supplier: string | null;
+  status: string;
+  export_status: string;
+  export_batch_id: string | null;
+  exported_at: string | null;
+  correction_of_event_id: string | null;
+  description: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  created_by: string | null;
+}
+
+interface FibuExportBatch {
+  id: string;
+  batch_reference: string;
+  export_type: string;
+  period_from: string;
+  period_to: string;
+  exported_by: string | null;
+  exported_at: string;
+  record_count: number;
+  amount_net_total: number | null;
+  amount_gross_total: number | null;
+  status: string;
+  notes: string | null;
+  created_at: string;
+}
+
 // ─── Status badge helpers ────────────────────────────────────────────────────
 
 function FibuStatusBadge({ status }: { status: string }) {
@@ -461,7 +512,8 @@ export default function Buchhaltung() {
       // Mark original as corrected
       await supabase.from("fibu_events" as any).update({ status: "corrected" }).eq("id", originalId);
       // Load original for copying
-      const { data: orig } = await supabase.from("fibu_events" as any).select("*").eq("id", originalId).maybeSingle();
+      const { data: origRaw } = await (supabase as any).from("fibu_events").select("*").eq("id", originalId).maybeSingle();
+      const orig = origRaw as FibuEvent | null;
       if (!orig) throw new Error("Original event not found");
       // Create correction entry
       const { error } = await supabase.from("fibu_events" as any).insert({
@@ -511,16 +563,15 @@ export default function Buchhaltung() {
     }
     try {
       const year = new Date().getFullYear();
-      const seq = await supabase.rpc("nextval", { seq: "fibu_export_batch_seq" }).then(() => null).catch(() => null);
-      const seqNum = String(Date.now()).slice(-4); // fallback unique suffix
+      const seqNum = String(Date.now()).slice(-4);
       const batchRef = `HFX-EXP-${year}-${seqNum}`;
 
       const grossTotal = exportableFibuEvents.reduce((s: number, e: any) => s + Number(e.amount_gross), 0);
       const netTotal = exportableFibuEvents.reduce((s: number, e: any) => s + Number(e.amount_net), 0);
 
       // Create batch record
-      const { data: batch, error: batchErr } = await supabase
-        .from("fibu_export_batches" as any)
+      const { data: batchRaw, error: batchErr } = await (supabase as any)
+        .from("fibu_export_batches")
         .insert({
           batch_reference: batchRef,
           export_type: fibuEventTypeFilter === "all" ? "all" : fibuEventTypeFilter,
@@ -536,6 +587,7 @@ export default function Buchhaltung() {
         .single();
 
       if (batchErr) throw batchErr;
+      const batch = batchRaw as { id: string };
 
       // Mark events as exported
       const eventIds = exportableFibuEvents.map((e: any) => e.id);
