@@ -64,6 +64,8 @@ interface Profile {
 
 const emptyForm = {
   plz_prefix: "",
+  plz_von: "",
+  plz_bis: "",
   gebietsleiter_id: "",
   gebietsleiter_name: "",
   notes: "",
