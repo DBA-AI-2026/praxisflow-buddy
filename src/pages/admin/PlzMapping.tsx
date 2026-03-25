@@ -157,8 +157,12 @@ export default function PlzMapping() {
 
   const upsertMutation = useMutation({
     mutationFn: async (values: typeof emptyForm & { id?: string }) => {
+      // Wenn Range gesetzt → plz_prefix auf "" setzen (kein Prefix-Match)
+      const useRange = !!(values.plz_von?.trim() && values.plz_bis?.trim());
       const payload = {
-        plz_prefix: values.plz_prefix.trim(),
+        plz_prefix: useRange ? "" : values.plz_prefix.trim(),
+        plz_von: values.plz_von?.trim() || null,
+        plz_bis: values.plz_bis?.trim() || null,
         gebietsleiter_id: values.gebietsleiter_id || null,
         gebietsleiter_name: values.gebietsleiter_name.trim(),
         notes: values.notes?.trim() || null,
@@ -216,6 +220,8 @@ export default function PlzMapping() {
     setEditEntry(entry);
     setForm({
       plz_prefix: entry.plz_prefix,
+      plz_von: entry.plz_von || "",
+      plz_bis: entry.plz_bis || "",
       gebietsleiter_id: entry.gebietsleiter_id || "",
       gebietsleiter_name: entry.gebietsleiter_name,
       notes: entry.notes || "",
@@ -224,6 +230,7 @@ export default function PlzMapping() {
     });
     setDialogOpen(true);
   };
+
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
