@@ -162,8 +162,10 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           commission_amount: number
+          commission_base_amount: number | null
           commission_rate: number
           commission_role: string | null
+          commission_rule_version: string | null
           commission_type: string
           contract_id: string | null
           contract_start_date: string | null
@@ -184,8 +186,10 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           commission_amount?: number
+          commission_base_amount?: number | null
           commission_rate?: number
           commission_role?: string | null
+          commission_rule_version?: string | null
           commission_type?: string
           contract_id?: string | null
           contract_start_date?: string | null
@@ -206,8 +210,10 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           commission_amount?: number
+          commission_base_amount?: number | null
           commission_rate?: number
           commission_role?: string | null
+          commission_rule_version?: string | null
           commission_type?: string
           contract_id?: string | null
           contract_start_date?: string | null
@@ -831,6 +837,227 @@ export type Database = {
           template_key?: string
           updated_at?: string
           updated_by?: string | null
+        }
+        Relationships: []
+      }
+      fibu_audit_log: {
+        Row: {
+          action_type: string
+          changed_at: string
+          changed_by: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          new_value_json: Json | null
+          old_value_json: Json | null
+          reason: string | null
+        }
+        Insert: {
+          action_type: string
+          changed_at?: string
+          changed_by?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          new_value_json?: Json | null
+          old_value_json?: Json | null
+          reason?: string | null
+        }
+        Update: {
+          action_type?: string
+          changed_at?: string
+          changed_by?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          new_value_json?: Json | null
+          old_value_json?: Json | null
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      fibu_events: {
+        Row: {
+          amount_gross: number
+          amount_net: number
+          beneficiary_id: string | null
+          beneficiary_type: string | null
+          commission_amount: number | null
+          commission_base_amount: number | null
+          commission_rate: number | null
+          commission_rule_version: string | null
+          commission_type: string | null
+          contract_id: string | null
+          correction_of_event_id: string | null
+          cost_type: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          customer_id: string | null
+          description: string | null
+          event_type: string
+          export_batch_id: string | null
+          export_status: string
+          exported_at: string | null
+          id: string
+          metadata: Json | null
+          occurred_at: string
+          period_end: string | null
+          period_start: string | null
+          product_name: string | null
+          source_module: string
+          source_reference_id: string | null
+          status: string
+          supplier: string | null
+          tax_amount: number
+        }
+        Insert: {
+          amount_gross?: number
+          amount_net?: number
+          beneficiary_id?: string | null
+          beneficiary_type?: string | null
+          commission_amount?: number | null
+          commission_base_amount?: number | null
+          commission_rate?: number | null
+          commission_rule_version?: string | null
+          commission_type?: string | null
+          contract_id?: string | null
+          correction_of_event_id?: string | null
+          cost_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          customer_id?: string | null
+          description?: string | null
+          event_type: string
+          export_batch_id?: string | null
+          export_status?: string
+          exported_at?: string | null
+          id?: string
+          metadata?: Json | null
+          occurred_at?: string
+          period_end?: string | null
+          period_start?: string | null
+          product_name?: string | null
+          source_module: string
+          source_reference_id?: string | null
+          status?: string
+          supplier?: string | null
+          tax_amount?: number
+        }
+        Update: {
+          amount_gross?: number
+          amount_net?: number
+          beneficiary_id?: string | null
+          beneficiary_type?: string | null
+          commission_amount?: number | null
+          commission_base_amount?: number | null
+          commission_rate?: number | null
+          commission_rule_version?: string | null
+          commission_type?: string | null
+          contract_id?: string | null
+          correction_of_event_id?: string | null
+          cost_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          customer_id?: string | null
+          description?: string | null
+          event_type?: string
+          export_batch_id?: string | null
+          export_status?: string
+          exported_at?: string | null
+          id?: string
+          metadata?: Json | null
+          occurred_at?: string
+          period_end?: string | null
+          period_start?: string | null
+          product_name?: string | null
+          source_module?: string
+          source_reference_id?: string | null
+          status?: string
+          supplier?: string | null
+          tax_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fibu_events_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fibu_events_correction_of_event_id_fkey"
+            columns: ["correction_of_event_id"]
+            isOneToOne: false
+            referencedRelation: "fibu_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fibu_events_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fibu_events_export_batch_id_fkey"
+            columns: ["export_batch_id"]
+            isOneToOne: false
+            referencedRelation: "fibu_export_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fibu_export_batches: {
+        Row: {
+          amount_gross_total: number | null
+          amount_net_total: number | null
+          batch_reference: string
+          created_at: string
+          export_type: string
+          exported_at: string
+          exported_by: string | null
+          filter_criteria: Json | null
+          id: string
+          notes: string | null
+          period_from: string
+          period_to: string
+          record_count: number
+          status: string
+        }
+        Insert: {
+          amount_gross_total?: number | null
+          amount_net_total?: number | null
+          batch_reference: string
+          created_at?: string
+          export_type: string
+          exported_at?: string
+          exported_by?: string | null
+          filter_criteria?: Json | null
+          id?: string
+          notes?: string | null
+          period_from: string
+          period_to: string
+          record_count?: number
+          status?: string
+        }
+        Update: {
+          amount_gross_total?: number | null
+          amount_net_total?: number | null
+          batch_reference?: string
+          created_at?: string
+          export_type?: string
+          exported_at?: string
+          exported_by?: string | null
+          filter_criteria?: Json | null
+          id?: string
+          notes?: string | null
+          period_from?: string
+          period_to?: string
+          record_count?: number
+          status?: string
         }
         Relationships: []
       }

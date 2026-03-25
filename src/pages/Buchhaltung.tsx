@@ -31,6 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Download,
   TrendingUp,
@@ -51,6 +52,13 @@ import {
   Eye,
   FileCheck,
   Link2,
+  ShieldCheck,
+  AlertTriangle,
+  XCircle,
+  CreditCard,
+  History,
+  Pencil,
+  Ban,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -85,14 +93,22 @@ function downloadCsv(rows: string[][], filename: string) {
 
 // Lexware-compatible header sets
 const REVENUE_HEADERS = ["Datum", "Belegnummer", "Buchungstext", "Konto", "Gegenkonto", "Nettobetrag", "USt-Satz %", "USt-Betrag", "Bruttobetrag", "Kostenstelle", "Zahlungsart"];
-const COMMISSION_HEADERS = ["Datum", "Belegnummer", "Buchungstext", "Vertriebler", "Produkt", "Konto", "Gegenkonto", "Nettobetrag", "Provisionssatz", "Bruttobetrag"];
 const COST_HEADERS = ["Datum", "Belegnummer", "Buchungstext", "Lieferant", "Kostenkategorie", "Kunde", "HFX-Nr", "Produkt", "Konto", "Gegenkonto", "Nettobetrag", "USt-Satz %", "USt-Betrag", "Bruttobetrag"];
+
+// FiBu standardized CSV headers (all 24 mandatory fields)
+const FIBU_CSV_HEADERS = [
+  "export_batch_id", "event_id", "event_type", "occurred_at",
+  "customer_id", "contract_id", "product_name", "period_start", "period_end",
+  "amount_net", "tax_amount", "amount_gross", "currency",
+  "commission_type", "beneficiary_type", "beneficiary_id",
+  "cost_type", "source_module", "source_reference_id",
+  "status", "export_status", "correction_of_event_id",
+  "description", "created_at",
+];
 
 // Lexware Kontenrahmen (SKR03)
 const REVENUE_ACCOUNT = "8400";
 const REVENUE_CONTRA = "1400";
-const COMMISSION_ACCOUNT = "4940";
-const COMMISSION_CONTRA = "1600";
 const COST_ACCOUNT = "3300";
 const COST_CONTRA = "1600";
 
@@ -115,6 +131,38 @@ interface PreviewRevenue {
   gross_amount: number;
 }
 
+// ─── Status badge helpers ────────────────────────────────────────────────────
+
+function FibuStatusBadge({ status }: { status: string }) {
+  switch (status) {
+    case "approved": return <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">Freigegeben</Badge>;
+    case "corrected": return <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">Korrigiert</Badge>;
+    case "cancelled": return <Badge variant="destructive">Storniert</Badge>;
+    default: return <Badge variant="outline" className="text-muted-foreground">Entwurf</Badge>;
+  }
+}
+
+function FibuExportStatusBadge({ exportStatus }: { exportStatus: string }) {
+  switch (exportStatus) {
+    case "exported": return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20"><CheckCircle2 className="h-3 w-3 mr-1" />Exportiert</Badge>;
+    case "blocked": return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20"><Ban className="h-3 w-3 mr-1" />Gesperrt</Badge>;
+    default: return <Badge variant="outline" className="text-muted-foreground">Offen</Badge>;
+  }
+}
+
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  invoice_base_fee_created: "Grundgebühr",
+  invoice_usage_created: "Verbrauchsrechnung",
+  payment_received_reference: "Zahlungseingang",
+  partner_commission_approved: "Partner-Provision",
+  tipster_commission_released: "Tippgeber-Provision",
+  internal_sales_bonus_reference: "Internes Bonus",
+  vendor_cost_created: "Kosten",
+  credit_note_created: "Gutschrift",
+  correction_created: "Korrektur",
+  cancellation_created: "Storno",
+};
+
 // ─── main component ──────────────────────────────────────────────────────────
 
 export default function Buchhaltung() {
@@ -125,9 +173,19 @@ export default function Buchhaltung() {
   const [dateTo, setDateTo] = useState(format(endOfMonth(new Date()), "yyyy-MM-dd"));
   const [costDialogOpen, setCostDialogOpen] = useState(false);
   const [csvImportOpen, setCsvImportOpen] = useState(false);
+  const [includeInternal, setIncludeInternal] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // FiBu event state
+  const [fibuEventTypeFilter, setFibuEventTypeFilter] = useState("all");
+  const [fibuStatusFilter, setFibuStatusFilter] = useState("all");
+  const [fibuExportStatusFilter, setFibuExportStatusFilter] = useState("open");
+  const [correctionDialogOpen, setCorrectionDialogOpen] = useState(false);
+  const [correctionEventId, setCorrectionEventId] = useState<string | null>(null);
+  const [correctionReason, setCorrectionReason] = useState("");
+  const [exportConfirmOpen, setExportConfirmOpen] = useState(false);
 
   const effectiveFrom = periodMode === "month" ? `${selectedMonth}-01` : dateFrom;
   const effectiveTo = periodMode === "month"
@@ -220,7 +278,7 @@ export default function Buchhaltung() {
     switch (status) {
       case "success": return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">Erfolgreich</Badge>;
       case "error": return <Badge variant="destructive">Fehler</Badge>;
-      case "pending": return <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">Ausstehend</Badge>;
+      case "pending": return <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">Ausstehend</Badge>;
       default: return <Badge variant="outline">Unbekannt</Badge>;
     }
   };
@@ -240,25 +298,19 @@ export default function Buchhaltung() {
     },
   });
 
-  const { data: contracts = [] } = useQuery({
-    queryKey: ["accounting-contracts"],
+  // Commission payouts from persisted commission_payouts table (replaces live calculation)
+  const { data: commissions = [], isLoading: commLoading } = useQuery({
+    queryKey: ["accounting-commissions", effectiveFrom, effectiveTo],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("contracts")
-        .select("id, customer_name, product_name, monthly_price, sales_partner_name, sales_partner_id, start_date")
-        .eq("status", "aktiv")
-        .order("start_date", { ascending: false });
+        .from("commission_payouts")
+        .select("*")
+        .in("status", ["approved", "paid"])
+        .gte("created_at", effectiveFrom)
+        .lte("created_at", effectiveTo)
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: productCommissions = [] } = useQuery({
-    queryKey: ["product-commissions"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("product_commissions").select("*").eq("is_active", true);
-      if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
@@ -276,24 +328,50 @@ export default function Buchhaltung() {
     },
   });
 
-  // ── commission calculation ──
-  const commissions = contracts.map((c: any) => {
-    const pc = productCommissions.find((p: any) => p.product_name === c.product_name);
-    let amount = 0;
-    let rate = "–";
-    if (pc) {
-      if (pc.commission_type === "prozent") { amount = (c.monthly_price * pc.commission_value) / 100; rate = `${pc.commission_value}%`; }
-      else if (pc.commission_type === "festbetrag") { amount = pc.commission_value; rate = fmtEur(pc.commission_value); }
-      else { amount = pc.commission_value; rate = `${fmtEur(pc.commission_value)}/Monat`; }
-    }
-    return { ...c, commission_amount: amount, commission_rate: rate };
-  }).filter((c: any) => c.commission_amount > 0 && c.sales_partner_name);
+  // FiBu Events query
+  const { data: fibuEvents = [], isLoading: fibuLoading, refetch: refetchFibu } = useQuery({
+    queryKey: ["fibu-events", effectiveFrom, effectiveTo, fibuEventTypeFilter, fibuStatusFilter, fibuExportStatusFilter],
+    queryFn: async () => {
+      let q = (supabase as any)
+        .from("fibu_events")
+        .select("*")
+        .gte("occurred_at", effectiveFrom)
+        .lte("occurred_at", effectiveTo + "T23:59:59")
+        .order("occurred_at", { ascending: false });
+      if (fibuEventTypeFilter !== "all") q = q.eq("event_type", fibuEventTypeFilter);
+      if (fibuStatusFilter !== "all") q = q.eq("status", fibuStatusFilter);
+      if (fibuExportStatusFilter !== "all") q = q.eq("export_status", fibuExportStatusFilter);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data as any[]) || [];
+    },
+    enabled: tab === "vorfaelle" || tab === "zahlungen",
+  });
+
+  // FiBu export batches
+  const { data: exportBatches = [], isLoading: batchLoading, refetch: refetchBatches } = useQuery({
+    queryKey: ["fibu-export-batches"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("fibu_export_batches")
+        .select("*")
+        .order("exported_at", { ascending: false });
+      if (error) throw error;
+      return (data as any[]) || [];
+    },
+    enabled: tab === "export-protokoll",
+  });
 
   const totalRevenue = revenues.reduce((s: number, r: any) => s + (r.gross_amount ?? 0), 0);
-  const totalCommission = commissions.reduce((s: number, c: any) => s + c.commission_amount, 0);
+  const externalCommissions = commissions.filter((c: any) => c.commission_role !== "ad");
+  const internalCommissions = commissions.filter((c: any) => c.commission_role === "ad");
+  const totalCommission = externalCommissions.reduce((s: number, c: any) => s + Number(c.commission_amount), 0);
   const totalCosts = costs.reduce((s: number, c: any) => s + (c.gross_amount ?? 0), 0);
 
-  // ── CSV exports ──
+  // Exportable fibu events (status=approved AND export_status=open)
+  const exportableFibuEvents = fibuEvents.filter((e: any) => e.status === "approved" && e.export_status === "open");
+
+  // ── Legacy CSV exports (Direktexport) ──
   const exportRevenues = () => {
     const rows = [REVENUE_HEADERS, ...revenues.map((r: any) => [
       fmtDate(r.invoice_date), r.invoice_number, `Rechnung ${r.customer_name}`,
@@ -302,18 +380,26 @@ export default function Buchhaltung() {
     ])];
     const label = periodMode === "month" ? selectedMonth : `${effectiveFrom}_${effectiveTo}`;
     downloadCsv(rows, `HFX_Erlöse_${label}.csv`);
-    toast({ title: "Export erfolgreich", description: `${revenues.length} Erlösbuchungen exportiert.` });
+    toast({ title: "Direktexport erfolgreich", description: `${revenues.length} Erlösbuchungen exportiert (Legacy).` });
   };
 
-  const exportCommissions = () => {
-    const rows = [COMMISSION_HEADERS, ...commissions.map((c: any) => [
-      fmtDate(c.start_date), `PROV-${c.id.slice(0, 8).toUpperCase()}`, `Provision ${c.product_name}`,
-      c.sales_partner_name, c.product_name, COMMISSION_ACCOUNT, COMMISSION_CONTRA,
-      c.commission_amount.toFixed(2), c.commission_rate, c.commission_amount.toFixed(2)
-    ])];
+  const exportCommissionsLegacy = () => {
+    const toExport = includeInternal ? commissions : externalCommissions;
+    const rows = [
+      ["Datum", "Monat", "Vertriebler", "Rolle", "Produkt", "Basis", "Satz", "Betrag", "Regelversion", "Status"],
+      ...toExport.map((c: any) => [
+        fmtDate(c.created_at), c.period_month, c.sales_partner_name,
+        c.commission_role || "–", c.product_name,
+        c.commission_base_amount != null ? Number(c.commission_base_amount).toFixed(2) : "–",
+        c.commission_type === "prozent" ? `${c.commission_rate}%` : fmtEur(Number(c.commission_rate)),
+        Number(c.commission_amount).toFixed(2),
+        c.commission_rule_version || "–",
+        c.status,
+      ]),
+    ];
     const label = periodMode === "month" ? selectedMonth : `${effectiveFrom}_${effectiveTo}`;
     downloadCsv(rows, `HFX_Provisionen_${label}.csv`);
-    toast({ title: "Export erfolgreich", description: `${commissions.length} Provisionsbuchungen exportiert.` });
+    toast({ title: "Direktexport erfolgreich", description: `${toExport.length} Provisionsbuchungen exportiert (Legacy).` });
   };
 
   const exportCosts = () => {
@@ -326,14 +412,196 @@ export default function Buchhaltung() {
     ])];
     const label = periodMode === "month" ? selectedMonth : `${effectiveFrom}_${effectiveTo}`;
     downloadCsv(rows, `HFX_Kosten_${label}.csv`);
-    toast({ title: "Export erfolgreich", description: `${costs.length} Kostenbuchungen exportiert.` });
+    toast({ title: "Direktexport erfolgreich", description: `${costs.length} Kostenbuchungen exportiert (Legacy).` });
   };
 
-  const exportAll = () => { exportRevenues(); exportCommissions(); exportCosts(); };
+  // ── FiBu event mutations ──
+  const approveEventMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      const { error } = await supabase
+        .from("fibu_events" as any)
+        .update({ status: "approved" })
+        .eq("id", eventId);
+      if (error) throw error;
+      // Audit log
+      await supabase.from("fibu_audit_log" as any).insert({
+        entity_type: "fibu_event",
+        entity_id: eventId,
+        action_type: "status_changed",
+        new_value_json: { status: "approved" },
+        changed_by: user?.id,
+        reason: "Manual approval",
+      });
+    },
+    onSuccess: () => { toast({ title: "Vorfall freigegeben" }); refetchFibu(); },
+    onError: (e: Error) => toast({ title: "Fehler", description: e.message, variant: "destructive" }),
+  });
+
+  const blockEventMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      const { error } = await supabase
+        .from("fibu_events" as any)
+        .update({ export_status: "blocked" })
+        .eq("id", eventId);
+      if (error) throw error;
+      await supabase.from("fibu_audit_log" as any).insert({
+        entity_type: "fibu_event",
+        entity_id: eventId,
+        action_type: "blocked",
+        new_value_json: { export_status: "blocked" },
+        changed_by: user?.id,
+      });
+    },
+    onSuccess: () => { toast({ title: "Vorfall gesperrt" }); refetchFibu(); },
+    onError: (e: Error) => toast({ title: "Fehler", description: e.message, variant: "destructive" }),
+  });
+
+  const createCorrectionMutation = useMutation({
+    mutationFn: async ({ originalId, reason }: { originalId: string; reason: string }) => {
+      // Mark original as corrected
+      await supabase.from("fibu_events" as any).update({ status: "corrected" }).eq("id", originalId);
+      // Load original for copying
+      const { data: orig } = await supabase.from("fibu_events" as any).select("*").eq("id", originalId).maybeSingle();
+      if (!orig) throw new Error("Original event not found");
+      // Create correction entry
+      const { error } = await supabase.from("fibu_events" as any).insert({
+        event_type: "correction_created",
+        source_module: orig.source_module,
+        source_reference_id: null,
+        customer_id: orig.customer_id,
+        contract_id: orig.contract_id,
+        product_name: orig.product_name,
+        amount_net: -Number(orig.amount_net),
+        tax_amount: -Number(orig.tax_amount),
+        amount_gross: -Number(orig.amount_gross),
+        currency: orig.currency,
+        status: "draft",
+        export_status: "open",
+        correction_of_event_id: originalId,
+        description: `Korrektur zu: ${orig.description ?? orig.event_type}`,
+        created_by: user?.id,
+        metadata: { reason, original_id: originalId },
+      });
+      if (error) throw error;
+      await supabase.from("fibu_audit_log" as any).insert({
+        entity_type: "fibu_event",
+        entity_id: originalId,
+        action_type: "corrected",
+        new_value_json: { status: "corrected", reason },
+        changed_by: user?.id,
+        reason,
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Korrektur erstellt" });
+      setCorrectionDialogOpen(false);
+      setCorrectionEventId(null);
+      setCorrectionReason("");
+      refetchFibu();
+    },
+    onError: (e: Error) => toast({ title: "Fehler", description: e.message, variant: "destructive" }),
+  });
+
+  // ── FiBu batch export ──
+  const handleFibuExport = async () => {
+    setExportConfirmOpen(false);
+    if (exportableFibuEvents.length === 0) {
+      toast({ title: "Keine exportierbaren Vorfälle", description: "Nur Vorfälle mit Status 'Freigegeben' und Exportstatus 'Offen' können exportiert werden." });
+      return;
+    }
+    try {
+      const year = new Date().getFullYear();
+      const seq = await supabase.rpc("nextval", { seq: "fibu_export_batch_seq" }).then(() => null).catch(() => null);
+      const seqNum = String(Date.now()).slice(-4); // fallback unique suffix
+      const batchRef = `HFX-EXP-${year}-${seqNum}`;
+
+      const grossTotal = exportableFibuEvents.reduce((s: number, e: any) => s + Number(e.amount_gross), 0);
+      const netTotal = exportableFibuEvents.reduce((s: number, e: any) => s + Number(e.amount_net), 0);
+
+      // Create batch record
+      const { data: batch, error: batchErr } = await supabase
+        .from("fibu_export_batches" as any)
+        .insert({
+          batch_reference: batchRef,
+          export_type: fibuEventTypeFilter === "all" ? "all" : fibuEventTypeFilter,
+          period_from: effectiveFrom,
+          period_to: effectiveTo,
+          exported_by: user?.id,
+          record_count: exportableFibuEvents.length,
+          amount_net_total: netTotal,
+          amount_gross_total: grossTotal,
+          status: "completed",
+        })
+        .select("id")
+        .single();
+
+      if (batchErr) throw batchErr;
+
+      // Mark events as exported
+      const eventIds = exportableFibuEvents.map((e: any) => e.id);
+      await supabase
+        .from("fibu_events" as any)
+        .update({ export_status: "exported", export_batch_id: batch.id, exported_at: new Date().toISOString() })
+        .in("id", eventIds);
+
+      // Audit log
+      await supabase.from("fibu_audit_log" as any).insert({
+        entity_type: "export_batch",
+        entity_id: batch.id,
+        action_type: "exported",
+        new_value_json: { batch_reference: batchRef, record_count: eventIds.length, gross_total: grossTotal },
+        changed_by: user?.id,
+      });
+
+      // Generate and download CSV
+      downloadFibuCsv(exportableFibuEvents, batchRef, batch.id);
+
+      toast({ title: "FiBu-Export erfolgreich", description: `${eventIds.length} Vorfälle exportiert – Batch: ${batchRef}` });
+      refetchFibu();
+      refetchBatches();
+    } catch (e: any) {
+      toast({ title: "Export fehlgeschlagen", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const downloadFibuCsv = (events: any[], batchRef: string, batchId: string) => {
+    const rows = [
+      FIBU_CSV_HEADERS,
+      ...events.map((e) => [
+        batchId, e.id, e.event_type,
+        e.occurred_at ? fmtDateTime(e.occurred_at) : "",
+        e.customer_id ?? "", e.contract_id ?? "", e.product_name ?? "",
+        e.period_start ?? "", e.period_end ?? "",
+        Number(e.amount_net).toFixed(2),
+        Number(e.tax_amount).toFixed(2),
+        Number(e.amount_gross).toFixed(2),
+        e.currency ?? "EUR",
+        e.commission_type ?? "", e.beneficiary_type ?? "", e.beneficiary_id ?? "",
+        e.cost_type ?? "", e.source_module ?? "", e.source_reference_id ?? "",
+        e.status, e.export_status,
+        e.correction_of_event_id ?? "",
+        e.description ?? "", e.created_at ? fmtDateTime(e.created_at) : "",
+      ]),
+    ];
+    const label = periodMode === "month" ? selectedMonth : `${effectiveFrom}_${effectiveTo}`;
+    downloadCsv(rows, `${batchRef}_FiBu_${label}.csv`);
+  };
+
+  const handleBatchRedownload = async (batch: any) => {
+    const { data: batchEvents } = await supabase
+      .from("fibu_events" as any)
+      .select("*")
+      .eq("export_batch_id", batch.id)
+      .order("occurred_at");
+    if (batchEvents && batchEvents.length > 0) {
+      downloadFibuCsv(batchEvents, batch.batch_reference, batch.id);
+      toast({ title: "Download gestartet", description: `${batchEvents.length} Vorfälle aus Batch ${batch.batch_reference}` });
+    }
+  };
 
   return (
-    <MainLayout title="Buchhaltung" subtitle="Buchungssätze, Lexware- & DATEV-Integration für die Finanzbuchhaltung">
-      {/* Export Preview Dialog */}
+    <MainLayout title="Buchhaltung" subtitle="FiBu-Vorbereitung, Buchungssätze und kontrollierte Übergabe an die Finanzbuchhaltung">
+      {/* Export Preview Dialog (Lexware) */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
@@ -346,7 +614,6 @@ export default function Buchhaltung() {
             <div className="text-center py-12">
               <FileCheck className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
               <p className="text-lg font-medium text-foreground">Keine Daten zum Exportieren</p>
-              <p className="text-sm text-muted-foreground mt-1">Alle Umsätze wurden bereits exportiert oder es gibt keine Umsätze im gewählten Zeitraum.</p>
             </div>
           ) : (
             <>
@@ -369,7 +636,6 @@ export default function Buchhaltung() {
                     <TableRow>
                       <TableHead>Rechnungsnr.</TableHead><TableHead>Kunde</TableHead>
                       <TableHead>Produkt</TableHead><TableHead>Datum</TableHead>
-                      <TableHead className="text-right">Menge</TableHead>
                       <TableHead className="text-right">Netto</TableHead>
                       <TableHead className="text-right">Brutto</TableHead>
                     </TableRow>
@@ -381,7 +647,6 @@ export default function Buchhaltung() {
                         <TableCell>{revenue.customer_name}</TableCell>
                         <TableCell>{revenue.product_name}</TableCell>
                         <TableCell>{fmtDate(revenue.invoice_date)}</TableCell>
-                        <TableCell className="text-right">{revenue.quantity}</TableCell>
                         <TableCell className="text-right">{fmtEur(Number(revenue.net_amount))}</TableCell>
                         <TableCell className="text-right font-medium">{fmtEur(Number(revenue.gross_amount))}</TableCell>
                       </TableRow>
@@ -400,7 +665,67 @@ export default function Buchhaltung() {
         </DialogContent>
       </Dialog>
 
-      {/* Period selector (only for FiBu tabs) */}
+      {/* FiBu Export Confirm Dialog */}
+      <Dialog open={exportConfirmOpen} onOpenChange={setExportConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" />FiBu-Export bestätigen</DialogTitle>
+            <DialogDescription>
+              {exportableFibuEvents.length} Vorfälle mit Status &quot;Freigegeben&quot; und Exportstatus &quot;Offen&quot; werden exportiert und danach gesperrt (kein Doppelexport möglich).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Anzahl Vorfälle:</span>
+              <span className="font-semibold">{exportableFibuEvents.length}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Brutto-Summe:</span>
+              <span className="font-semibold">{fmtEur(exportableFibuEvents.reduce((s: number, e: any) => s + Number(e.amount_gross), 0))}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Zeitraum:</span>
+              <span className="font-mono text-xs">{effectiveFrom} – {effectiveTo}</span>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setExportConfirmOpen(false)}>Abbrechen</Button>
+            <Button onClick={handleFibuExport}>
+              <Download className="h-4 w-4 mr-2" />Export & CSV herunterladen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Correction Dialog */}
+      <Dialog open={correctionDialogOpen} onOpenChange={setCorrectionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Korrekturvorfall erstellen</DialogTitle>
+            <DialogDescription>Der ursprüngliche Vorfall wird als &quot;Korrigiert&quot; markiert. Ein neuer Korrektureintrag mit Gegenposition wird erstellt.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Begründung</Label>
+            <Textarea
+              value={correctionReason}
+              onChange={(e) => setCorrectionReason(e.target.value)}
+              placeholder="Beschreiben Sie den Korrekturgrund..."
+              rows={3}
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setCorrectionDialogOpen(false)}>Abbrechen</Button>
+            <Button
+              onClick={() => correctionEventId && createCorrectionMutation.mutate({ originalId: correctionEventId, reason: correctionReason })}
+              disabled={!correctionReason.trim() || createCorrectionMutation.isPending}
+            >
+              {createCorrectionMutation.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Erstelle...</> : "Korrektur erstellen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Period selector */}
       {tab !== "integrationen" && (
         <div className="card-elevated p-4 mb-6 flex flex-wrap gap-4 items-end">
           <div className="flex gap-2">
@@ -433,16 +758,11 @@ export default function Buchhaltung() {
               </div>
             </div>
           )}
-          <div className="ml-auto">
-            <Button onClick={exportAll} className="gap-2">
-              <Download className="h-4 w-4" />Alle 3 CSV exportieren
-            </Button>
-          </div>
         </div>
       )}
 
-      {/* Summary cards (only for FiBu tabs) */}
-      {tab !== "integrationen" && (
+      {/* Summary cards */}
+      {tab !== "integrationen" && tab !== "export-protokoll" && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className="stat-card">
             <div className="flex items-center gap-3">
@@ -458,9 +778,9 @@ export default function Buchhaltung() {
             <div className="flex items-center gap-3">
               <div className="rounded-lg p-3 bg-primary/10"><Users className="h-5 w-5 text-primary" /></div>
               <div>
-                <p className="text-sm text-muted-foreground">Provisionen</p>
+                <p className="text-sm text-muted-foreground">Provisionen (extern)</p>
                 <p className="text-xl font-semibold text-foreground">{fmtEur(totalCommission)}</p>
-                <p className="text-xs text-muted-foreground">{commissions.length} Vertriebler</p>
+                <p className="text-xs text-muted-foreground">{externalCommissions.length} Auszahlungen</p>
               </div>
             </div>
           </div>
@@ -479,10 +799,19 @@ export default function Buchhaltung() {
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+        <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="erlöse">Erlöse ({revenues.length})</TabsTrigger>
           <TabsTrigger value="provisionen">Provisionen ({commissions.length})</TabsTrigger>
           <TabsTrigger value="kosten">Kosten ({costs.length})</TabsTrigger>
+          <TabsTrigger value="vorfaelle" className="flex items-center gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5" />Geschäftsvorfälle
+          </TabsTrigger>
+          <TabsTrigger value="zahlungen" className="flex items-center gap-1.5">
+            <CreditCard className="h-3.5 w-3.5" />Zahlungseingänge
+          </TabsTrigger>
+          <TabsTrigger value="export-protokoll" className="flex items-center gap-1.5">
+            <History className="h-3.5 w-3.5" />Export-Protokoll
+          </TabsTrigger>
           <TabsTrigger value="integrationen" className="flex items-center gap-1.5">
             <Link2 className="h-3.5 w-3.5" />Integrationen
           </TabsTrigger>
@@ -492,9 +821,14 @@ export default function Buchhaltung() {
         <TabsContent value="erlöse" className="mt-4">
           <div className="card-elevated overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-border">
-              <h3 className="font-semibold text-foreground">Buchungssatz 1: Erlöse</h3>
+              <div>
+                <h3 className="font-semibold text-foreground">Buchungssatz 1: Erlöse</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Für kontrollierte FiBu-Übergaben bitte den Tab <strong>Geschäftsvorfälle</strong> nutzen.
+                </p>
+              </div>
               <Button variant="outline" size="sm" onClick={exportRevenues}>
-                <Download className="h-4 w-4 mr-2" />CSV exportieren
+                <Download className="h-4 w-4 mr-2" />CSV Direktexport (Legacy)
               </Button>
             </div>
             <div className="overflow-x-auto">
@@ -533,30 +867,50 @@ export default function Buchhaltung() {
             <div className="flex items-center justify-between p-4 border-b border-border">
               <div>
                 <h3 className="font-semibold text-foreground">Buchungssatz 2: Provisionen</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Freigegeben &amp; ausgezahlte Provisionen aus der Vertriebsabrechnung</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Freigegeben &amp; ausgezahlte Provisionen aus der Vertriebsabrechnung. Für kontrollierte FiBu-Übergaben bitte den Tab <strong>Geschäftsvorfälle</strong> nutzen.
+                </p>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={exportCommissions}>
-                  <Download className="h-4 w-4 mr-2" />CSV-Export (ohne Lexware)
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeInternal}
+                    onChange={(e) => setIncludeInternal(e.target.checked)}
+                    className="rounded"
+                  />
+                  Interner Vertrieb (AD) einschließen
+                </label>
+                <Button variant="outline" size="sm" onClick={exportCommissionsLegacy}>
+                  <Download className="h-4 w-4 mr-2" />CSV Direktexport (Legacy)
                 </Button>
               </div>
             </div>
+
+            {/* External commissions */}
+            <div className="p-4 border-b border-border bg-muted/20">
+              <h4 className="text-sm font-medium text-foreground mb-1">Externe Provisionen (Vertriebspartner &amp; Tippgeber)</h4>
+            </div>
             <div className="overflow-x-auto">
-              {commissions.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">Keine freigegebenen Provisionen im gewählten Zeitraum. Provisionen werden unter <strong>Vertrieb → Provisionen</strong> freigegeben.</div>
+              {commLoading ? (
+                <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+              ) : externalCommissions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">Keine externen Provisionen im gewählten Zeitraum.</div>
               ) : (
                 <table className="data-table">
                   <thead className="bg-muted/50">
-                    <tr><th>Monat</th><th>Vertriebler</th><th>Produkt</th><th>Konto</th><th>Satz</th><th>Betrag</th><th>Status</th></tr>
+                    <tr><th>Monat</th><th>Vertriebler</th><th>Rolle</th><th>Produkt</th><th>Basis</th><th>Regelversion</th><th>Satz</th><th>Betrag</th><th>Status</th></tr>
                   </thead>
                   <tbody>
-                    {commissions.map((c: any) => (
+                    {externalCommissions.map((c: any) => (
                       <tr key={c.id}>
-                        <td className="text-muted-foreground">{c.period_month}</td>
+                        <td className="text-muted-foreground font-mono text-xs">{c.period_month}</td>
                         <td className="font-medium text-foreground">{c.sales_partner_name}</td>
+                        <td><Badge variant="outline" className="text-xs">{c.commission_role || "partner"}</Badge></td>
                         <td className="text-muted-foreground">{c.product_name}</td>
-                        <td className="font-mono text-xs text-muted-foreground">{COMMISSION_ACCOUNT}/{COMMISSION_CONTRA}</td>
-                        <td><Badge variant="outline">{c.commission_type === "prozent" ? `${c.commission_rate}%` : `${fmtEur(c.commission_rate)}`}</Badge></td>
+                        <td className="text-right text-muted-foreground">{c.commission_base_amount != null ? fmtEur(Number(c.commission_base_amount)) : "–"}</td>
+                        <td className="font-mono text-xs text-muted-foreground">{c.commission_rule_version || "–"}</td>
+                        <td><Badge variant="outline">{c.commission_type === "prozent" ? `${c.commission_rate}%` : fmtEur(Number(c.commission_rate))}</Badge></td>
                         <td className="text-right font-semibold text-foreground">{fmtEur(Number(c.commission_amount))}</td>
                         <td><Badge variant="secondary" className={c.status === "paid" ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}>{c.status === "paid" ? "Ausgezahlt" : "Freigegeben"}</Badge></td>
                       </tr>
@@ -565,6 +919,42 @@ export default function Buchhaltung() {
                 </table>
               )}
             </div>
+
+            {/* Internal commissions (AD) – collapsible group */}
+            {includeInternal && (
+              <>
+                <div className="p-4 border-t border-b border-border bg-amber-500/5">
+                  <h4 className="text-sm font-medium text-foreground mb-0.5">Interner Vertrieb (AD-Provisionen)</h4>
+                  <p className="text-xs text-muted-foreground">Separat ausgewiesen – nicht mit externen Auszahlungen vermischen.</p>
+                </div>
+                <div className="overflow-x-auto">
+                  {internalCommissions.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">Keine internen Provisionen im gewählten Zeitraum.</div>
+                  ) : (
+                    <table className="data-table">
+                      <thead className="bg-muted/50">
+                        <tr><th>Monat</th><th>AD-Name</th><th>Auslöser</th><th>Produkt</th><th>Basis</th><th>Regelversion</th><th>Satz</th><th>Betrag</th><th>Status</th></tr>
+                      </thead>
+                      <tbody>
+                        {internalCommissions.map((c: any) => (
+                          <tr key={c.id}>
+                            <td className="text-muted-foreground font-mono text-xs">{c.period_month}</td>
+                            <td className="font-medium text-foreground">{c.sales_partner_name}</td>
+                            <td><Badge variant="outline" className="text-xs">{c.payout_trigger || "–"}</Badge></td>
+                            <td className="text-muted-foreground">{c.product_name}</td>
+                            <td className="text-right text-muted-foreground">{c.commission_base_amount != null ? fmtEur(Number(c.commission_base_amount)) : "–"}</td>
+                            <td className="font-mono text-xs text-muted-foreground">{c.commission_rule_version || "–"}</td>
+                            <td><Badge variant="outline">{c.commission_type === "prozent" ? `${c.commission_rate}%` : fmtEur(Number(c.commission_rate))}</Badge></td>
+                            <td className="text-right font-semibold text-foreground">{fmtEur(Number(c.commission_amount))}</td>
+                            <td><Badge variant="secondary" className={c.status === "paid" ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}>{c.status === "paid" ? "Ausgezahlt" : "Freigegeben"}</Badge></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </TabsContent>
 
@@ -572,13 +962,18 @@ export default function Buchhaltung() {
         <TabsContent value="kosten" className="mt-4">
           <div className="card-elevated overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-border">
-              <h3 className="font-semibold text-foreground">Buchungssatz 3: Kosten (Drittanbieter/White-Label)</h3>
+              <div>
+                <h3 className="font-semibold text-foreground">Buchungssatz 3: Kosten (Drittanbieter/White-Label)</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Für kontrollierte FiBu-Übergaben bitte den Tab <strong>Geschäftsvorfälle</strong> nutzen.
+                </p>
+              </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setCsvImportOpen(true)}>
                   <Upload className="h-4 w-4 mr-2" />CSV-Import
                 </Button>
                 <Button variant="outline" size="sm" onClick={exportCosts}>
-                  <Download className="h-4 w-4 mr-2" />CSV exportieren
+                  <Download className="h-4 w-4 mr-2" />CSV Direktexport (Legacy)
                 </Button>
                 <Button size="sm" onClick={() => setCostDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />Kostenposten
@@ -616,6 +1011,238 @@ export default function Buchhaltung() {
           </div>
         </TabsContent>
 
+        {/* ── Geschäftsvorfälle (FiBu events) ── */}
+        <TabsContent value="vorfaelle" className="mt-4 space-y-4">
+          <div className="card-elevated overflow-hidden">
+            <div className="flex flex-wrap items-center gap-3 p-4 border-b border-border">
+              <div>
+                <h3 className="font-semibold text-foreground">Geschäftsvorfälle</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Kontrollierter FiBu-Übergabepfad. Nur freigegebene, offene Vorfälle können exportiert werden.</p>
+              </div>
+              <div className="ml-auto flex flex-wrap gap-2 items-center">
+                <Select value={fibuEventTypeFilter} onValueChange={setFibuEventTypeFilter}>
+                  <SelectTrigger className="w-44 h-8 text-xs"><SelectValue placeholder="Typ" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Typen</SelectItem>
+                    {Object.entries(EVENT_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={fibuStatusFilter} onValueChange={setFibuStatusFilter}>
+                  <SelectTrigger className="w-36 h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Status</SelectItem>
+                    <SelectItem value="draft">Entwurf</SelectItem>
+                    <SelectItem value="approved">Freigegeben</SelectItem>
+                    <SelectItem value="corrected">Korrigiert</SelectItem>
+                    <SelectItem value="cancelled">Storniert</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={fibuExportStatusFilter} onValueChange={setFibuExportStatusFilter}>
+                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle</SelectItem>
+                    <SelectItem value="open">Offen</SelectItem>
+                    <SelectItem value="exported">Exportiert</SelectItem>
+                    <SelectItem value="blocked">Gesperrt</SelectItem>
+                  </SelectContent>
+                </Select>
+                {exportableFibuEvents.length > 0 && (
+                  <Button size="sm" onClick={() => setExportConfirmOpen(true)}>
+                    <Download className="h-4 w-4 mr-2" />
+                    {exportableFibuEvents.length} exportieren
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              {fibuLoading ? (
+                <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+              ) : fibuEvents.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <ShieldCheck className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                  <p>Keine Geschäftsvorfälle im gewählten Zeitraum und Filterkriterien.</p>
+                  <p className="text-xs mt-1">Vorfälle werden automatisch durch Zahlungseingänge, Rechnungserstellung und Provisionsfreigaben erzeugt.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Datum</TableHead>
+                      <TableHead>Typ</TableHead>
+                      <TableHead>Beschreibung</TableHead>
+                      <TableHead>Produkt</TableHead>
+                      <TableHead className="text-right">Brutto</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Exportstatus</TableHead>
+                      <TableHead>Aktionen</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {fibuEvents.map((e: any) => (
+                      <TableRow key={e.id} className={e.correction_of_event_id ? "opacity-70 bg-amber-500/5" : ""}>
+                        <TableCell className="text-muted-foreground text-sm">{fmtDateTime(e.occurred_at)}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {EVENT_TYPE_LABELS[e.event_type] ?? e.event_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-48 truncate text-sm">{e.description ?? "–"}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{e.product_name ?? "–"}</TableCell>
+                        <TableCell className="text-right font-semibold">{fmtEur(Number(e.amount_gross))}</TableCell>
+                        <TableCell><FibuStatusBadge status={e.status} /></TableCell>
+                        <TableCell><FibuExportStatusBadge exportStatus={e.export_status} /></TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            {e.status === "draft" && (
+                              <Button
+                                variant="ghost" size="sm"
+                                className="h-7 px-2 text-xs text-primary"
+                                onClick={() => approveEventMutation.mutate(e.id)}
+                                disabled={approveEventMutation.isPending}
+                                title="Freigeben"
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                            {e.status === "approved" && e.export_status === "open" && (
+                              <Button
+                                variant="ghost" size="sm"
+                                className="h-7 px-2 text-xs text-amber-600"
+                                onClick={() => blockEventMutation.mutate(e.id)}
+                                disabled={blockEventMutation.isPending}
+                                title="Sperren"
+                              >
+                                <Ban className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                            {e.status !== "corrected" && e.status !== "cancelled" && e.export_status !== "exported" && (
+                              <Button
+                                variant="ghost" size="sm"
+                                className="h-7 px-2 text-xs text-muted-foreground"
+                                onClick={() => { setCorrectionEventId(e.id); setCorrectionDialogOpen(true); }}
+                                title="Korrektur erstellen"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ── Zahlungseingänge ── */}
+        <TabsContent value="zahlungen" className="mt-4">
+          <div className="card-elevated overflow-hidden">
+            <div className="p-4 border-b border-border">
+              <h3 className="font-semibold text-foreground">Zahlungseingänge (Stripe)</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Bestätigte Zahlungen via Stripe – automatisch als &quot;Freigegeben&quot; klassifiziert.</p>
+            </div>
+            <div className="overflow-x-auto">
+              {fibuLoading ? (
+                <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+              ) : fibuEvents.filter((e: any) => e.event_type === "payment_received_reference").length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <CreditCard className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                  <p>Keine Zahlungseingänge im gewählten Zeitraum.</p>
+                  <p className="text-xs mt-1">Zahlungseingänge werden automatisch erfasst, wenn Stripe invoice.paid Ereignisse empfangen werden.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Datum</TableHead>
+                      <TableHead>Stripe-Invoice-ID</TableHead>
+                      <TableHead>HFX-Rechnungsnr.</TableHead>
+                      <TableHead>Produkt</TableHead>
+                      <TableHead className="text-right">Netto</TableHead>
+                      <TableHead className="text-right">Brutto</TableHead>
+                      <TableHead>Exportstatus</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {fibuEvents
+                      .filter((e: any) => e.event_type === "payment_received_reference")
+                      .map((e: any) => (
+                        <TableRow key={e.id}>
+                          <TableCell className="text-muted-foreground text-sm">{fmtDateTime(e.occurred_at)}</TableCell>
+                          <TableCell className="font-mono text-xs">{e.metadata?.stripe_invoice_id ?? e.source_reference_id ?? "–"}</TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">{e.metadata?.hfx_invoice_number ?? "–"}</TableCell>
+                          <TableCell className="text-muted-foreground">{e.product_name ?? "–"}</TableCell>
+                          <TableCell className="text-right">{fmtEur(Number(e.amount_net))}</TableCell>
+                          <TableCell className="text-right font-semibold">{fmtEur(Number(e.amount_gross))}</TableCell>
+                          <TableCell><FibuExportStatusBadge exportStatus={e.export_status} /></TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ── Export-Protokoll ── */}
+        <TabsContent value="export-protokoll" className="mt-4">
+          <div className="card-elevated overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div>
+                <h3 className="font-semibold text-foreground">Export-Protokoll</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Vollständige Historie aller FiBu-Exportbatches.</p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => refetchBatches()}><RefreshCw className="h-4 w-4 mr-2" />Aktualisieren</Button>
+            </div>
+            <div className="overflow-x-auto">
+              {batchLoading ? (
+                <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+              ) : exportBatches.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <History className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                  <p>Noch keine FiBu-Exporte durchgeführt.</p>
+                  <p className="text-xs mt-1">Exporte werden über den Tab &quot;Geschäftsvorfälle&quot; gestartet.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Batch-Referenz</TableHead>
+                      <TableHead>Typ</TableHead>
+                      <TableHead>Zeitraum</TableHead>
+                      <TableHead className="text-right">Anzahl</TableHead>
+                      <TableHead className="text-right">Brutto</TableHead>
+                      <TableHead>Exportiert am</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {exportBatches.map((b: any) => (
+                      <TableRow key={b.id}>
+                        <TableCell className="font-mono text-sm font-semibold">{b.batch_reference}</TableCell>
+                        <TableCell><Badge variant="outline" className="text-xs">{b.export_type}</Badge></TableCell>
+                        <TableCell className="text-muted-foreground text-sm font-mono text-xs">{b.period_from} – {b.period_to}</TableCell>
+                        <TableCell className="text-right">{b.record_count}</TableCell>
+                        <TableCell className="text-right font-semibold">{fmtEur(Number(b.amount_gross_total))}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{fmtDateTime(b.exported_at)}</TableCell>
+                        <TableCell><Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">{b.status}</Badge></TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => handleBatchRedownload(b)} title="CSV erneut herunterladen">
+                            <Download className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
         {/* ── Integrationen (Lexware / DATEV) ── */}
         <TabsContent value="integrationen" className="mt-4 space-y-6">
           {lexLoading ? (
@@ -635,7 +1262,6 @@ export default function Buchhaltung() {
               <TabsContent value="lexware" className="space-y-6">
                 <div className="grid gap-6 lg:grid-cols-3">
                   <div className="lg:col-span-1 space-y-6">
-                    {/* Connection */}
                     <div className="card-elevated p-6">
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold text-foreground">Verbindung</h2>
@@ -661,7 +1287,6 @@ export default function Buchhaltung() {
                       </div>
                     </div>
 
-                    {/* Auto-Sync */}
                     <div className="card-elevated p-6">
                       <div className="flex items-center gap-2 mb-4">
                         <Settings2 className="h-5 w-5 text-muted-foreground" />
@@ -705,7 +1330,6 @@ export default function Buchhaltung() {
                   </div>
 
                   <div className="lg:col-span-2 space-y-6">
-                    {/* Manual Export */}
                     <div className="card-elevated p-6">
                       <div className="flex items-center gap-2 mb-4">
                         <Upload className="h-5 w-5 text-muted-foreground" />
@@ -744,7 +1368,6 @@ export default function Buchhaltung() {
                       </div>
                     </div>
 
-                    {/* Sync History */}
                     <div className="card-elevated p-6">
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold text-foreground">Übertragungshistorie</h2>
@@ -782,17 +1405,8 @@ export default function Buchhaltung() {
                     Die DATEV-Schnittstelle befindet sich in Entwicklung. DATEV verwendet ein komplexeres Authentifizierungsverfahren (OAuth 2.0 mit SmartCard) und Batch-basierte Datenübertragung im DATEV-ASCII-Format.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                    <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20"><Clock className="h-3 w-3 mr-1" />In Entwicklung</Badge>
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20"><Clock className="h-3 w-3 mr-1" />In Entwicklung</Badge>
                     <Badge variant="outline">Geplant: Q2 2024</Badge>
-                  </div>
-                  <div className="mt-6 p-4 rounded-lg bg-muted/50 text-left max-w-lg mx-auto">
-                    <p className="text-sm font-medium text-foreground mb-2">Geplante Features:</p>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      <li>• Export im DATEV-ASCII-Format (EXTF)</li>
-                      <li>• OAuth 2.0 Authentifizierung</li>
-                      <li>• Automatischer Upload zu DATEV Unternehmen Online</li>
-                      <li>• Mandanten-Zuordnung</li>
-                    </ul>
                   </div>
                 </div>
               </TabsContent>
