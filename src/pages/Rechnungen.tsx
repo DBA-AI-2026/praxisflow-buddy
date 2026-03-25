@@ -57,6 +57,8 @@ import {
   Zap,
   Receipt,
   Link,
+  AlertTriangle,
+  UserCheck,
 } from "lucide-react";
 import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
 import { generateInvoicePdfV2 } from "@/lib/generateInvoicePdfV2";
