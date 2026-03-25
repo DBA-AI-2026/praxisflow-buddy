@@ -2032,34 +2032,9 @@ export default function Vertraege() {
                         </td>
                         <td>
                         <div className="flex flex-col gap-1">
-                          {c.notes?.startsWith("[Papier]") && (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground border rounded px-1.5 py-0.5 w-fit">
-                              📄 Papier
-                            </span>
-                          )}
-                          {/* Confirmation email indicator for paper contracts */}
-                          {c.notes?.startsWith("[Papier]") && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className={`inline-flex items-center gap-1 text-xs font-medium border rounded px-1.5 py-0.5 w-fit cursor-default ${
-                                    c.confirmation_email_sent_at
-                                      ? "text-success border-success/30 bg-success/5"
-                                      : "text-muted-foreground border-dashed"
-                                  }`}>
-                                    <Mail className="h-3 w-3" />
-                                    {c.confirmation_email_sent_at ? "Mail gesendet" : "Mail ausstehend"}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {c.confirmation_email_sent_at
-                                    ? `Bestätigungs-E-Mail gesendet am ${format(new Date(c.confirmation_email_sent_at), "dd.MM.yyyy 'um' HH:mm", { locale: de })} Uhr`
-                                    : "Bestätigungs-E-Mail wurde noch nicht versendet"}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                          {/* Resend confirmation email button – available for all contracts with email */}
+                          {/* [Papier] badge removed – paper flow decommissioned */}
+                          {/* Confirmation email indicator for paper contracts removed – paper flow decommissioned */}
+                          {/* Resend confirmation email button – available for digital contracts with email */}
                           {c.email && (
                             <TooltipProvider>
                               <Tooltip>
