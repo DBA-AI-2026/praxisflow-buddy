@@ -38,6 +38,7 @@ import { PdfViewerOverlay } from "@/components/PdfViewerOverlay";
 import Documentation from "./pages/admin/Documentation";
 import PlzMapping from "./pages/admin/PlzMapping";
 import Buchhaltung from "./pages/Buchhaltung";
+import Integrationen from "./pages/Integrationen";
 import PraxenJourney from "./pages/PraxenJourney";
 import DemoSuccess from "./pages/DemoSuccess";
 import ContractConfirmation from "./pages/ContractConfirmation";
@@ -68,7 +69,8 @@ const App = () => (
             <Route path="/buchen" element={<Buchen />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/reservierungen" element={<ProtectedRoute><Reservierungen /></ProtectedRoute>} />
-            <Route path="/praxen" element={<ProtectedRoute><Praxen /></ProtectedRoute>} />
+            {/* Legacy /praxen → redirect to /praxen-journey (Kunden-Journey ist die aktuelle Ansicht) */}
+            <Route path="/praxen" element={<ProtectedRoute><PraxenJourney /></ProtectedRoute>} />
             <Route path="/kunden" element={<ProtectedRoute><Kunden /></ProtectedRoute>} />
             <Route path="/kunden/:id" element={<ProtectedRoute><Kunden /></ProtectedRoute>} />
             <Route path="/interessenten" element={<ProtectedRoute><Interessenten /></ProtectedRoute>} />
@@ -78,8 +80,10 @@ const App = () => (
             <Route path="/lizenzen" element={<ProtectedRoute><Lizenzen /></ProtectedRoute>} />
             <Route path="/umsaetze" element={<ProtectedRoute><Umsaetze /></ProtectedRoute>} />
             <Route path="/export" element={<ProtectedRoute><Export /></ProtectedRoute>} />
-            <Route path="/integrationen" element={<ProtectedRoute><Buchhaltung /></ProtectedRoute>} />
+            {/* P1-Fix: /integrationen zeigt jetzt korrekt Integrationen.tsx (Lexware), nicht Buchhaltung */}
+            <Route path="/integrationen" element={<ProtectedRoute><Integrationen /></ProtectedRoute>} />
             <Route path="/vertrieb/vertriebler" element={<ProtectedRoute><Vertriebler /></ProtectedRoute>} />
+            {/* P1-Fix: /vertrieb/vertraege war versteckt, jetzt in Nav sichtbar */}
             <Route path="/vertrieb/vertraege" element={<ProtectedRoute><Vertraege /></ProtectedRoute>} />
             <Route path="/vertrieb/provisionen" element={<ProtectedRoute><Provisionen /></ProtectedRoute>} />
             <Route path="/rechnungen" element={<ProtectedRoute><Rechnungen /></ProtectedRoute>} />
@@ -99,6 +103,7 @@ const App = () => (
             <Route path="/sicherheit" element={<ProtectedRoute><Sicherheit /></ProtectedRoute>} />
             <Route path="/admin/documentation" element={<ProtectedRoute><Documentation /></ProtectedRoute>} />
             <Route path="/admin/plz-mapping" element={<ProtectedRoute><PlzMapping /></ProtectedRoute>} />
+            {/* P1-Fix: /buchhaltung ist die kanonische Route für FiBu/Rechnungen */}
             <Route path="/buchhaltung" element={<ProtectedRoute><Buchhaltung /></ProtectedRoute>} />
             <Route path="/praxen-journey" element={<ProtectedRoute><PraxenJourney /></ProtectedRoute>} />
             <Route path="/qodia-verbrauch" element={<ProtectedRoute><QodiaVerbrauch /></ProtectedRoute>} />

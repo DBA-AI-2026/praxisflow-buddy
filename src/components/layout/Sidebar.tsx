@@ -25,6 +25,8 @@ import {
   Mail,
   Eye,
   EyeOff,
+  Plug,
+  FileSignature,
 } from "lucide-react";
 import logo from "@/assets/fuchs-bildmarke.png";
 import { useState } from "react";
@@ -55,22 +57,36 @@ const dashboardNav: NavItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: allRoles },
 ];
 
+// ─── VERTRIEB: Akquise & Pipeline ────────────────────────────────────────────
 const vertriebNavigation: NavItem[] = [
   { name: "Interessenten", href: "/interessenten", icon: UserPlus, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "tippgeber", "admin"] },
-  { name: "Kunden", href: "/kunden", icon: Building2, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
+  // P2: "Kunden-Journey" ist die primäre Pipeline-Ansicht; "/kunden" bleibt als Stammdaten-Detail erreichbar
   { name: "Kunden-Journey", href: "/praxen-journey", icon: Building2, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
+  { name: "Kunden", href: "/kunden", icon: Building2, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
+  // P1: /vertrieb/vertraege war versteckt — jetzt sichtbar in Nav
+  { name: "Verträge", href: "/vertrieb/vertraege", icon: FileSignature, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
   { name: "Reservierungen", href: "/reservierungen", icon: BookMarked, roles: ["user", "sales_partner", "regional_lead", "admin"] },
-  { name: "HFX EBM Lizenzen", href: "/lizenzen", icon: Key, roles: allRoles },
   { name: "Demo-Tracking", href: "/demo-tracking", icon: FlaskConical, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
-  { name: "Umsätze", href: "/umsaetze", icon: TrendingUp, roles: allRoles },
+  { name: "HFX EBM Lizenzen", href: "/lizenzen", icon: Key, roles: allRoles },
 ];
 
+// ─── FINANZEN: operative Finanzmodule (P2: aus Admin herausgelöst) ────────────
+const finanzenNavigation: NavItem[] = [
+  { name: "Rechnungen & Usage", href: "/rechnungen", icon: Receipt, roles: ["admin"] },
+  { name: "Buchhaltung / FiBu", href: "/buchhaltung", icon: TrendingUp, roles: ["admin"] },
+  { name: "Umsätze", href: "/umsaetze", icon: BarChart3, roles: allRoles },
+  { name: "Datenexport", href: "/export", icon: FileDown, roles: ["admin", "sales_lead"] },
+  { name: "Qodia-Verbrauch", href: "/qodia-verbrauch", icon: BarChart3, roles: ["admin", "sales_lead"] },
+];
+
+// ─── ALLGEMEIN ────────────────────────────────────────────────────────────────
 const allgemeinNavigation: NavItem[] = [
   { name: "Tickets", href: "/tickets", icon: Ticket, roles: allRoles },
   { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "regional_lead", "admin"] },
   { name: "Sicherheit (2FA)", href: "/sicherheit", icon: ShieldCheck, roles: allRoles },
 ];
 
+// ─── VERTRIEBS-ADMIN ──────────────────────────────────────────────────────────
 const vertriebsAdminNavigation: NavItem[] = [
   { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users, roles: ["sales_lead", "regional_lead", "admin"] },
   { name: "Provisionen", href: "/vertrieb/provisionen", icon: BarChart3, roles: ["user", "sales_partner", "tippgeber", "sales_lead", "regional_lead", "admin"] },
@@ -78,21 +94,21 @@ const vertriebsAdminNavigation: NavItem[] = [
   { name: "PLZ-Zuordnung", href: "/admin/plz-mapping", icon: MapPin, roles: ["admin", "sales_lead"] },
 ];
 
+// ─── ADMINISTRATION: nur Systemkonfig (P2: operative Module herausgelöst) ─────
 const adminNavigation: NavItem[] = [
   { name: "Zugangsanfragen", href: "/admin/access-requests", icon: UserPlus, roles: ["admin"], adminOnly: true },
   { name: "Benutzerverwaltung", href: "/admin/users", icon: Users, roles: ["admin"], adminOnly: true },
   { name: "Produktverwaltung", href: "/admin/products", icon: Package, roles: ["admin"], adminOnly: true },
   { name: "AGB-Verwaltung", href: "/admin/agb", icon: FileText, roles: ["admin"], adminOnly: true },
-  { name: "Qodia-Verbrauch", href: "/qodia-verbrauch", icon: BarChart3, roles: ["admin", "sales_lead"] },
-  { name: "E-Mail-Vorschau", href: "/admin/email-preview", icon: FileText, roles: ["admin"], adminOnly: true },
-  { name: "Buchungsformular-Vorschau", href: "/buchen?preview=true", icon: Eye, roles: ["admin"], adminOnly: true },
+  // P1: /integrationen zeigt jetzt Integrationen.tsx (Lexware), korrekt unter Administration
+  { name: "Integrationen", href: "/integrationen", icon: Plug, roles: ["admin"], adminOnly: true },
   { name: "E-Mail-Einstellungen", href: "/admin/email-settings", icon: Mail, roles: ["admin"], adminOnly: true },
-  { name: "Rechnungen", href: "/rechnungen", icon: Receipt, roles: ["admin"], adminOnly: true },
-  { name: "Buchhaltung", href: "/buchhaltung", icon: TrendingUp, roles: ["admin"], adminOnly: true },
-  { name: "Datenexport", href: "/export", icon: FileDown, roles: ["admin"], adminOnly: true },
   { name: "Audit-Protokoll", href: "/admin/audit-logs", icon: ClipboardList, roles: ["admin"], adminOnly: true },
   { name: "Einstellungen", href: "/admin/settings", icon: Settings, roles: ["admin"], adminOnly: true },
   { name: "Dokumentation", href: "/admin/documentation", icon: FileText, roles: ["admin"], adminOnly: true },
+  // Dev-Tools bleiben erreichbar, aber als letzter Punkt ohne eigene Sektion
+  { name: "E-Mail-Vorschau", href: "/admin/email-preview", icon: Eye, roles: ["admin"], adminOnly: true },
+  { name: "Buchungsformular-Vorschau", href: "/buchen?preview=true", icon: Eye, roles: ["admin"], adminOnly: true },
 ];
 
 interface NavSectionProps {
@@ -233,6 +249,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <nav className="flex-1 space-y-1 px-2 lg:px-3 py-4 overflow-y-auto">
         <NavSection label="Übersicht" items={dashboardNav} {...sectionProps} />
         <NavSection label="Vertrieb" items={vertriebNavigation} {...sectionProps} />
+        <NavSection label="Finanzen" items={finanzenNavigation} {...sectionProps} />
         <NavSection label="Allgemein" items={allgemeinNavigation} {...sectionProps} />
         <NavSection label="Vertriebs-Admin" items={vertriebsAdminNavigation} {...sectionProps} />
         <NavSection label="Administration" items={adminNavigation} {...sectionProps} />
