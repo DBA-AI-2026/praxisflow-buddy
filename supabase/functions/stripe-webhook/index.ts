@@ -282,7 +282,7 @@ async function handleDemoBooking(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// CONTRACT ACTIVATION: link subscription to existing contract
+// CONTRACT ACTIVATION: link subscription to existing contract + ensure 3-tier records exist
 // ────────────────────────────────────────────────────────────────────────────
 async function handleContractActivation(
   supabase: ReturnType<typeof createClient>,
@@ -309,10 +309,10 @@ async function handleContractActivation(
       : (session.customer as any).id;
   }
 
-  // Load contract details before update for audit log
-  const { data: contractBefore } = await supabase
+  // Load full contract details for downstream operations
+  const { data: contract } = await supabase
     .from("contracts")
-    .select("customer_name, product_name, hfx_customer_number, email, monthly_price")
+    .select("*")
     .eq("id", contractId)
     .maybeSingle();
 
@@ -328,7 +328,6 @@ async function handleContractActivation(
 
   if (error) {
     console.error("[stripe-webhook] failed to update contract:", error);
-    // Log failed attempt
     await supabase.from("audit_logs").insert({
       action: "CONTRACT_ACTIVATION_FAILED",
       resource_path: `/contracts/${contractId}`,
@@ -339,29 +338,96 @@ async function handleContractActivation(
         flow: "contract_activation",
         error: error.message,
       }),
-      user_email: contractBefore?.email ?? null,
+      user_email: contract?.email ?? null,
     });
-  } else {
-    console.log("[stripe-webhook] contract activated via Stripe:", contractId);
-    // Log successful digital contract activation
-    await supabase.from("audit_logs").insert({
-      action: "CONTRACT_ACTIVATED_DIGITAL",
-      resource_path: `/contracts/${contractId}`,
-      success: true,
-      details: JSON.stringify({
-        contract_id: contractId,
-        stripe_session_id: session.id,
-        stripe_subscription_id: stripeSubscriptionId,
-        stripe_customer_id: stripeCustomerId,
-        flow: "contract_activation",
-        customer_name: contractBefore?.customer_name ?? null,
-        product_name: contractBefore?.product_name ?? null,
-        hfx_customer_number: contractBefore?.hfx_customer_number ?? null,
-        monthly_price: contractBefore?.monthly_price ?? null,
-      }),
-      user_email: contractBefore?.email ?? null,
-    });
+    return;
   }
+
+  console.log("[stripe-webhook] contract activated via Stripe:", contractId);
+
+  // ── 3-Tier Architecture: ensure customers record exists (Ebene 1) ────────
+  // Upsert a customer record keyed on hfx_customer_number so the 3-tier
+  // hierarchy (customer → contract → case) is complete for digital activations.
+  if (contract?.hfx_customer_number) {
+    const { error: custErr } = await supabase
+      .from("customers")
+      .upsert(
+        {
+          hfx_customer_number: contract.hfx_customer_number,
+          praxis_name: contract.praxis || contract.customer_name || null,
+          vorname: contract.vorname || null,
+          nachname: contract.nachname || null,
+          email: contract.email || null,
+          telefon: contract.telefon || null,
+          adresse: contract.adresse || null,
+          plz: contract.plz || null,
+          ort: contract.ort || null,
+          bsnr: contract.bsnr || null,
+          lanr: contract.lanr || null,
+          mp_nr: contract.mp_nr || null,
+        },
+        { onConflict: "hfx_customer_number", ignoreDuplicates: false }
+      );
+    if (custErr) {
+      console.error("[stripe-webhook] customers upsert failed:", custErr.message);
+    } else {
+      console.log("[stripe-webhook] customers record ensured for", contract.hfx_customer_number);
+
+      // Link contract to customer record (customer_id) if not already set
+      if (!contract.customer_id) {
+        const { data: custRecord } = await supabase
+          .from("customers")
+          .select("id")
+          .eq("hfx_customer_number", contract.hfx_customer_number)
+          .maybeSingle();
+        if (custRecord?.id) {
+          await supabase
+            .from("contracts")
+            .update({ customer_id: custRecord.id } as any)
+            .eq("id", contractId);
+        }
+      }
+    }
+  }
+
+  // ── 3-Tier Architecture: create Neuabschluss case (Ebene 3) ─────────────
+  // Insert a contract_case of type 'neuabschluss' so the case history is
+  // populated immediately upon digital activation (mirrors paper flow behaviour).
+  const { error: caseErr } = await supabase
+    .from("contract_cases")
+    .insert({
+      contract_id: contractId,
+      customer_id: contract?.customer_id ?? null,
+      case_type: "neuabschluss",
+      status: "abgeschlossen",
+      title: `Neuabschluss – ${contract?.product_name ?? "Produkt"}`,
+      notes: `Automatisch erstellt bei digitalem Vertragsabschluss via Stripe (Session: ${session.id})`,
+    } as any);
+
+  if (caseErr) {
+    console.error("[stripe-webhook] contract_cases insert failed:", caseErr.message);
+  } else {
+    console.log("[stripe-webhook] contract_case neuabschluss created for", contractId);
+  }
+
+  // ── Audit log: successful digital activation ─────────────────────────────
+  await supabase.from("audit_logs").insert({
+    action: "CONTRACT_ACTIVATED_DIGITAL",
+    resource_path: `/contracts/${contractId}`,
+    success: true,
+    details: JSON.stringify({
+      contract_id: contractId,
+      stripe_session_id: session.id,
+      stripe_subscription_id: stripeSubscriptionId,
+      stripe_customer_id: stripeCustomerId,
+      flow: "contract_activation",
+      customer_name: contract?.customer_name ?? null,
+      product_name: contract?.product_name ?? null,
+      hfx_customer_number: contract?.hfx_customer_number ?? null,
+      monthly_price: contract?.monthly_price ?? null,
+    }),
+    user_email: contract?.email ?? null,
+  });
 }
 
 // ────────────────────────────────────────────────────────────────────────────
