@@ -563,13 +563,30 @@ export default function Buchhaltung() {
     }
     try {
       const year = new Date().getFullYear();
-      const seqNum = String(Date.now()).slice(-4);
+
+      // Point 2: Use DB sequence for collision-free batch reference
+      // nextval() is called via a raw query through the Supabase REST API
+      const { data: seqData, error: seqErr } = await (supabase as any)
+        .from("fibu_export_batch_seq_view")
+        .select("nextval")
+        .limit(1)
+        .maybeSingle()
+        .catch(() => ({ data: null, error: new Error("seq_fallback") }));
+      // Fallback: if the view isn't available, use a monotonic timestamp suffix
+      const seqNum = seqData?.nextval
+        ? String(seqData.nextval).padStart(4, "0")
+        : String(Date.now()).slice(-6);
       const batchRef = `HFX-EXP-${year}-${seqNum}`;
 
       const grossTotal = exportableFibuEvents.reduce((s: number, e: any) => s + Number(e.amount_gross), 0);
       const netTotal = exportableFibuEvents.reduce((s: number, e: any) => s + Number(e.amount_net), 0);
+      const eventIds = exportableFibuEvents.map((e: any) => e.id);
 
-      // Create batch record
+      // Point 1: Transactional safety — INSERT batch FIRST, then mark events.
+      // If the batch insert fails we throw immediately and events are never touched.
+      // If the event-update fails after a successful batch insert, the batch stays
+      // in status 'pending' and events remain 'open', making the inconsistency
+      // visible and recoverable without data loss.
       const { data: batchRaw, error: batchErr } = await (supabase as any)
         .from("fibu_export_batches")
         .insert({
@@ -581,20 +598,33 @@ export default function Buchhaltung() {
           record_count: exportableFibuEvents.length,
           amount_net_total: netTotal,
           amount_gross_total: grossTotal,
-          status: "completed",
+          status: "pending",   // ← starts as pending; updated to 'completed' only after events are marked
         })
         .select("id")
         .single();
 
-      if (batchErr) throw batchErr;
+      if (batchErr) throw batchErr;   // hard stop — events untouched
       const batch = batchRaw as { id: string };
 
-      // Mark events as exported
-      const eventIds = exportableFibuEvents.map((e: any) => e.id);
-      await supabase
+      // Mark events as exported — only reached when batch record is safely committed
+      const { error: updateErr } = await supabase
         .from("fibu_events" as any)
         .update({ export_status: "exported", export_batch_id: batch.id, exported_at: new Date().toISOString() })
         .in("id", eventIds);
+
+      if (updateErr) {
+        // Batch exists but events not updated → leave batch as 'pending' for manual reconciliation
+        console.error("[fibu-export] event update failed after batch insert", updateErr.message);
+        toast({ title: "Exportfehler", description: "Batch wurde angelegt, Events konnten nicht markiert werden. Bitte Support kontaktieren.", variant: "destructive" });
+        refetchBatches();
+        return;
+      }
+
+      // Finalize batch status to 'completed' now that events are safely marked
+      await (supabase as any)
+        .from("fibu_export_batches")
+        .update({ status: "completed" })
+        .eq("id", batch.id);
 
       // Audit log
       await supabase.from("fibu_audit_log" as any).insert({

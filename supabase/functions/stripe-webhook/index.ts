@@ -182,7 +182,11 @@ Deno.serve(async (req) => {
         productName = ctr?.product_name ?? null;
       }
 
-      // 4. Create fibu_event – payment_received_reference is auto-approved (Stripe is authoritative)
+      // 4. Create fibu_event
+      // Point 3: If no HFX invoice was found (amounts would be 0, no verified mapping),
+      // set status = 'draft' so an admin must manually approve it.
+      // When a matched invoice exists, Stripe is authoritative → status = 'approved'.
+      const fibuStatus = inv ? "approved" : "draft";
       const { error: fibuErr } = await supabase.from("fibu_events").insert({
         event_type: "payment_received_reference",
         source_module: "stripe",
@@ -194,14 +198,16 @@ Deno.serve(async (req) => {
         tax_amount: inv ? Number(inv.tax_amount) : 0,
         amount_gross: inv ? Number(inv.gross_amount) : 0,
         occurred_at: new Date().toISOString(),
-        status: "approved",      // Stripe confirmation is authoritative – no manual review needed
+        // approved = Stripe-confirmed, matched HFX invoice; draft = unmatched, requires manual review
+        status: fibuStatus,
         export_status: "open",
-        description: `Zahlungseingang Stripe ${stripeInvoiceId}${inv?.invoice_number ? ` / ${inv.invoice_number}` : ""}`,
+        description: `Zahlungseingang Stripe ${stripeInvoiceId}${inv?.invoice_number ? ` / ${inv.invoice_number}` : " (keine HFX-Rechnung gefunden)"}`,
         metadata: {
           stripe_invoice_id: stripeInvoiceId,
           payment_intent_id: paymentIntentId,
           stripe_customer_id: stripeCustomerId,
           hfx_invoice_number: inv?.invoice_number ?? null,
+          unmatched: !inv,
         },
       } as any);
 
@@ -209,7 +215,7 @@ Deno.serve(async (req) => {
         // 23505 = unique constraint violation (idempotent webhook retry) – silently ignore
         log("fibu_events insert failed for invoice.paid", fibuErr.message);
       }
-      log("invoice.paid processed", { stripeInvoiceId, found: !!inv, customerId, productName });
+      log("invoice.paid processed", { stripeInvoiceId, found: !!inv, fibuStatus, customerId, productName });
     }
 
     return new Response(JSON.stringify({ received: true }), {
