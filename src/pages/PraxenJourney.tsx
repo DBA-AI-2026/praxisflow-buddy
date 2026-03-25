@@ -463,13 +463,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
         />
       )}
       <CreateLeadDialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); }} />
-      {uploadLead && (
-        <UploadPaperContractDialog
-          open={!!uploadLead}
-          onOpenChange={(o) => { if (!o) { setUploadLead(null); queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); } }}
-          lead={uploadLead}
-        />
-      )}
+      {/* UploadPaperContractDialog removed – paper flow decommissioned */}
     </div>
   );
 }

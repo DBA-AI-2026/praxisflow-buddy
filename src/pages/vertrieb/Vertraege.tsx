@@ -3217,7 +3217,7 @@ export default function Vertraege() {
         </DialogContent>
       </Dialog>
 
-      <PaperContractDialog open={paperContractOpen} onOpenChange={setPaperContractOpen} />
+      {/* PaperContractDialog removed – paper flow decommissioned */}
 
       {/* Delete Contract Confirmation */}
       <AlertDialog open={!!deleteContractTarget} onOpenChange={(open) => !open && setDeleteContractTarget(null)}>
