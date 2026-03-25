@@ -1149,6 +1149,93 @@ export default function Rechnungen() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Ungeklaert – Vertrag zuordnen Modal */}
+      {resolveCharge && (
+        <Dialog open={!!resolveCharge} onOpenChange={(o) => { if (!o) { setResolveCharge(null); setResolveContractId(""); } }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-warning" />
+                Ungeklärten Eintrag zuordnen
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-5 py-1">
+
+              {/* Charge summary */}
+              <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-1.5">
+                <div className="font-semibold text-warning flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Dieser Eintrag konnte nicht automatisch zugeordnet werden
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-1 text-muted-foreground">
+                  <div><span className="font-medium text-foreground">HFX-Nr.:</span> {resolveCharge.hfx_customer_number}</div>
+                  <div><span className="font-medium text-foreground">Menge:</span> {resolveCharge.quantity} Vorgänge</div>
+                  <div><span className="font-medium text-foreground">Periode:</span> {new Date(resolveCharge.period_from).toLocaleDateString("de-DE")} – {new Date(resolveCharge.period_to).toLocaleDateString("de-DE")}</div>
+                  <div><span className="font-medium text-foreground">Nettobetrag:</span> {Number(resolveCharge.net_amount).toFixed(2)} €</div>
+                </div>
+                {resolveCharge.notes && (
+                  <div className="pt-1 text-xs text-muted-foreground border-t">{resolveCharge.notes}</div>
+                )}
+              </div>
+
+              {/* Contract selector */}
+              <div className="space-y-2">
+                <Label className="font-medium">
+                  Aktiven Vertrag auswählen
+                  <span className="ml-1 font-normal text-muted-foreground text-xs">(gefiltert nach HFX-Nr. {resolveCharge.hfx_customer_number})</span>
+                </Label>
+                {resolveLoading ? (
+                  <div className="text-sm text-muted-foreground py-2">Lade Verträge…</div>
+                ) : resolveContracts.length === 0 ? (
+                  <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                    Keine aktiven Verträge für diese HFX-Nummer gefunden. Bitte prüfe den Vertragsstatus.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {resolveContracts.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setResolveContractId(c.id)}
+                        className={`w-full text-left rounded-md border p-3 text-sm transition-colors ${
+                          resolveContractId === c.id
+                            ? "border-primary bg-primary/5 ring-1 ring-primary"
+                            : "border-border hover:bg-muted/60"
+                        }`}
+                      >
+                        <div className="font-medium">{c.customer_name}</div>
+                        <div className="text-muted-foreground text-xs mt-0.5 flex flex-wrap gap-x-3">
+                          <span>{c.product_name}</span>
+                          {c.hfx_customer_number && <span className="font-mono">{c.hfx_customer_number}</span>}
+                          <span>ab {new Date(c.start_date).toLocaleDateString("de-DE")}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Nach der Zuordnung wird der Status auf <strong>Ausstehend</strong> gesetzt und der Eintrag kann normal abgerechnet werden.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setResolveCharge(null); setResolveContractId(""); }}>
+                Abbrechen
+              </Button>
+              <Button
+                onClick={handleResolveAssign}
+                disabled={!resolveContractId || resolveSaving || resolveContracts.length === 0}
+              >
+                <UserCheck className="h-4 w-4 mr-2" />
+                {resolveSaving ? "Wird gespeichert…" : "Vertrag zuordnen"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </MainLayout>
   );
 }
+
