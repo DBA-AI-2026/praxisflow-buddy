@@ -132,6 +132,86 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── invoice.paid: update invoice status, customer_revenues, create fibu_event ──
+    if (event.type === "invoice.paid") {
+      const stripeInvoice = event.data.object as Stripe.Invoice;
+      const stripeInvoiceId = stripeInvoice.id;
+      const paymentIntentId = typeof stripeInvoice.payment_intent === "string"
+        ? stripeInvoice.payment_intent
+        : (stripeInvoice.payment_intent as any)?.id ?? null;
+      const stripeCustomerId = typeof stripeInvoice.customer === "string"
+        ? stripeInvoice.customer
+        : (stripeInvoice.customer as any)?.id ?? null;
+
+      // 1. Find invoice by stripe_invoice_id and mark as bezahlt
+      const { data: inv } = await supabase
+        .from("invoices")
+        .update({ status: "bezahlt" })
+        .eq("stripe_invoice_id", stripeInvoiceId)
+        .select("id, invoice_number, contract_id, net_amount, tax_amount, gross_amount, customer_number")
+        .maybeSingle();
+
+      if (!inv) {
+        log("invoice.paid – no matching invoice found for stripe_invoice_id", stripeInvoiceId);
+        // Continue: still create fibu_event as Stripe-sourced reference
+      }
+
+      // 2. Update customer_revenues via invoice_number (robust 1:1 link through invoices table)
+      if (inv?.invoice_number) {
+        const { error: revErr } = await supabase
+          .from("customer_revenues")
+          .update({ payment_status: "paid", paid_at: new Date().toISOString() })
+          .eq("invoice_number", inv.invoice_number);
+        if (revErr) {
+          log("customer_revenues update failed", revErr.message);
+        } else {
+          log("customer_revenues updated to paid for invoice", inv.invoice_number);
+        }
+      }
+
+      // 3. Enrich with contract data: customer_id + product_name for complete FiBu tracing
+      let customerId: string | null = null;
+      let productName: string | null = null;
+      if (inv?.contract_id) {
+        const { data: ctr } = await supabase
+          .from("contracts")
+          .select("customer_id, product_name")
+          .eq("id", inv.contract_id)
+          .maybeSingle();
+        customerId = ctr?.customer_id ?? null;
+        productName = ctr?.product_name ?? null;
+      }
+
+      // 4. Create fibu_event – payment_received_reference is auto-approved (Stripe is authoritative)
+      const { error: fibuErr } = await supabase.from("fibu_events").insert({
+        event_type: "payment_received_reference",
+        source_module: "stripe",
+        source_reference_id: stripeInvoiceId,
+        contract_id: inv?.contract_id ?? null,
+        customer_id: customerId,
+        product_name: productName,
+        amount_net: inv ? Number(inv.net_amount) : 0,
+        tax_amount: inv ? Number(inv.tax_amount) : 0,
+        amount_gross: inv ? Number(inv.gross_amount) : 0,
+        occurred_at: new Date().toISOString(),
+        status: "approved",      // Stripe confirmation is authoritative – no manual review needed
+        export_status: "open",
+        description: `Zahlungseingang Stripe ${stripeInvoiceId}${inv?.invoice_number ? ` / ${inv.invoice_number}` : ""}`,
+        metadata: {
+          stripe_invoice_id: stripeInvoiceId,
+          payment_intent_id: paymentIntentId,
+          stripe_customer_id: stripeCustomerId,
+          hfx_invoice_number: inv?.invoice_number ?? null,
+        },
+      } as any);
+
+      if (fibuErr && (fibuErr as any).code !== "23505") {
+        // 23505 = unique constraint violation (idempotent webhook retry) – silently ignore
+        log("fibu_events insert failed for invoice.paid", fibuErr.message);
+      }
+      log("invoice.paid processed", { stripeInvoiceId, found: !!inv, customerId, productName });
+    }
+
     return new Response(JSON.stringify({ received: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
