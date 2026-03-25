@@ -563,8 +563,7 @@ export default function Buchhaltung() {
     }
     try {
       const year = new Date().getFullYear();
-      const seq = await supabase.rpc("nextval", { seq: "fibu_export_batch_seq" }).then(() => null).catch(() => null);
-      const seqNum = String(Date.now()).slice(-4); // fallback unique suffix
+      const seqNum = String(Date.now()).slice(-4);
       const batchRef = `HFX-EXP-${year}-${seqNum}`;
 
       const grossTotal = exportableFibuEvents.reduce((s: number, e: any) => s + Number(e.amount_gross), 0);
