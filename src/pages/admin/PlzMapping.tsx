@@ -379,7 +379,7 @@ export default function PlzMapping() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/40">
-                  <TableHead className="w-28 font-semibold">PLZ-Präfix</TableHead>
+                  <TableHead className="w-40 font-semibold">PLZ-Bereich</TableHead>
                   <TableHead className="font-semibold">Gebietsleiter</TableHead>
                   <TableHead className="font-semibold">Regionalleiter</TableHead>
                   <TableHead className="w-24 font-semibold">Notizen</TableHead>
@@ -401,12 +401,19 @@ export default function PlzMapping() {
                       ? (rlNameByGlId[entry.gebietsleiter_id] || null)
                       : null;
                     const colorClass = rlName ? getRlColor(rlName, rlColorIndex[rlName] ?? 0) : "";
+                    const isRange = !!(entry.plz_von && entry.plz_bis);
                     return (
                       <TableRow key={entry.id} className={!entry.is_active ? "opacity-50" : ""}>
                         <TableCell>
-                          <span className="font-mono font-bold text-sm bg-muted px-2 py-0.5 rounded">
-                            {entry.plz_prefix}*
-                          </span>
+                          {isRange ? (
+                            <span className="font-mono font-bold text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded">
+                              {entry.plz_von}–{entry.plz_bis}
+                            </span>
+                          ) : (
+                            <span className="font-mono font-bold text-sm bg-muted px-2 py-0.5 rounded">
+                              {entry.plz_prefix}*
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="font-medium text-sm">{entry.gebietsleiter_name}</TableCell>
                         <TableCell>
@@ -466,6 +473,7 @@ export default function PlzMapping() {
               </TableBody>
             </Table>
           )}
+
         </div>
         {filtered.length > 0 && (
           <p className="text-xs text-muted-foreground text-right">
