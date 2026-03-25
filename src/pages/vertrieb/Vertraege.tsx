@@ -2133,57 +2133,7 @@ export default function Vertraege() {
                               <span className="truncate max-w-[80px]">{c.document_name || "Vertrag PDF"}</span>
                             </button>
                           )}
-                          {/* Hochgeladener Papiervertrag + Inline-Ersetzen-Button */}
-                          <div className="flex items-center gap-1">
-                            {(c as any).paper_contract_pdf_path ? (
-                              <button
-                                className="text-warning hover:underline text-xs flex items-center gap-1"
-                                onClick={async () => {
-                                  const { data, error } = await supabase.storage
-                                    .from("contracts")
-                                    .createSignedUrl((c as any).paper_contract_pdf_path, 300);
-                                  if (error || !data?.signedUrl) {
-                                    toast({ title: "Fehler beim Laden des Papiervertrags", variant: "destructive" });
-                                    return;
-                                  }
-                                  window.open(data.signedUrl, "_blank");
-                                }}
-                              >
-                                <FileText className="h-3 w-3" />
-                                <span className="truncate max-w-[80px]">Papiervertrag</span>
-                              </button>
-                            ) : null}
-                            {/* Inline-Upload: Papiervertrag hochladen oder ersetzen */}
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <label className="cursor-pointer inline-flex items-center justify-center h-5 w-5 rounded hover:bg-muted transition-colors">
-                                    {uploadingPaperId === c.id ? (
-                                      <Loader2 className="h-3 w-3 animate-spin text-warning" />
-                                    ) : (
-                                      <Upload className="h-3 w-3 text-muted-foreground" />
-                                    )}
-                                    <input
-                                      type="file"
-                                      accept=".pdf,application/pdf"
-                                      className="hidden"
-                                      disabled={uploadingPaperId === c.id}
-                                      onChange={(e) => {
-                                        const f = e.target.files?.[0];
-                                        if (f) uploadPaperContract(c.id, f);
-                                        e.target.value = "";
-                                      }}
-                                    />
-                                  </label>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {(c as any).paper_contract_pdf_path
-                                    ? "Papiervertrag ersetzen (neues PDF hochladen)"
-                                    : "Papiervertrag hochladen (PDF)"}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
+          {/* Paper contract inline upload removed – paper flow decommissioned */}
                        </div>
                      </td>
                     <td>
