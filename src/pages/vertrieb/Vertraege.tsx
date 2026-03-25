@@ -334,13 +334,11 @@ const emptyForm: ContractFormData = {
 export default function Vertraege() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [paperContractOpen, setPaperContractOpen] = useState(false); // kept for state compat, no-op
   const [editId, setEditId] = useState<string | null>(null);
   const [editingContract, setEditingContract] = useState<any | null>(null);
   const [form, setForm] = useState<ContractFormData>(emptyForm);
   const [file, setFile] = useState<File | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
-  const [uploadingPaperId, setUploadingPaperId] = useState<string | null>(null);
   const [bicLoading, setBicLoading] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [leadHfxNumber, setLeadHfxNumber] = useState<string | null>(null);
