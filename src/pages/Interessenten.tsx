@@ -452,10 +452,8 @@ export default function Interessenten() {
                                             },
                                           },
                                         });
-                                      } else if (step.action === "paper") {
-                                        setUploadContractLead(lead);
                                       }
-                                    }}
+                                     }}
                                   >
                                     {step.icon}
                                     {step.label}
@@ -610,21 +608,7 @@ export default function Interessenten() {
                                   <TooltipContent>Digitalen Vertrag erstellen</TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="text-warning hover:text-warning"
-                                      onClick={() => setUploadContractLead(lead)}
-                                    >
-                                      <Upload className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Papiervertrag einreichen</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                              {/* Papiervertrag-Button removed – paper flow decommissioned */}
                             </>
                           )}
                         </div>
