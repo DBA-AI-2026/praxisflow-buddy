@@ -575,44 +575,44 @@ const Provisionen = () => {
                               >
                                 {STATUS_LABELS[groupStatus]?.label ?? groupStatus}
                               </Badge>
-                              {isAdmin && (
-                                <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-                                  {anyPending && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="text-blue-700 border-blue-300 hover:bg-blue-50 h-7 text-xs"
-                                      disabled={approvingGroup === key}
-                                      onClick={() => approveGroup(group.month, group.partnerId, key)}
-                                    >
-                                      {approvingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
-                                      Freigeben
-                                    </Button>
-                                  )}
-                                  {anyApproved && !anyPending && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="text-green-700 border-green-300 hover:bg-green-50 h-7 text-xs"
-                                      disabled={payingGroup === key}
-                                      onClick={() => markPaid(group.month, group.partnerId, key)}
-                                    >
-                                      {payingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <Banknote className="h-3 w-3 mr-1" />}
-                                      Ausgezahlt
-                                    </Button>
-                                  )}
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 text-xs"
-                                    disabled={generatingPdf === key}
-                                    onClick={() => downloadPdf(group)}
-                                  >
-                                    {generatingPdf === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileDown className="h-3 w-3 mr-1" />}
-                                    PDF
-                                  </Button>
-                                </div>
-                              )}
+                     {isAdmin && (
+                       <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                         {anyPending && (
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             className="text-blue-700 border-blue-300 hover:bg-blue-50 h-7 text-xs"
+                             disabled={approvingGroup === key}
+                             onClick={() => approveGroup(group.month, group.partnerId, key)}
+                           >
+                             {approvingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
+                             Freigeben
+                           </Button>
+                         )}
+                         {anyApproved && !anyPending && (
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             className="text-green-700 border-green-300 hover:bg-green-50 h-7 text-xs"
+                             disabled={payingGroup === key}
+                             onClick={() => markPaid(group.month, group.partnerId, key)}
+                           >
+                             {payingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <Banknote className="h-3 w-3 mr-1" />}
+                             Ausgezahlt
+                           </Button>
+                         )}
+                         <Button
+                           size="sm"
+                           variant="outline"
+                           className="h-7 text-xs"
+                           disabled={generatingPdf === key}
+                           onClick={() => downloadPdf(group)}
+                         >
+                           {generatingPdf === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileDown className="h-3 w-3 mr-1" />}
+                           PDF
+                         </Button>
+                       </div>
+                     )}
                             </div>
                           </div>
 
