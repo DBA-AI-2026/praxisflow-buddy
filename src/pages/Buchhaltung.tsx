@@ -1516,14 +1516,46 @@ function CostDialog({ open, onOpenChange, userId, onSuccess }: { open: boolean; 
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("accounting_costs").insert({
+      const { data: newCost, error } = await supabase.from("accounting_costs").insert({
         cost_date: form.cost_date, supplier: form.supplier, customer_name: form.customer_name,
         hfx_customer_number: form.hfx_customer_number || null, product_name: form.product_name || null,
         category: form.category, description: form.description || null, net_amount: net, tax_rate: rate,
         tax_amount: parseFloat(tax.toFixed(2)), gross_amount: parseFloat(gross.toFixed(2)),
         invoice_reference: form.invoice_reference || null, created_by: userId,
-      } as any);
+      } as any).select("id").single();
       if (error) throw error;
+
+      // ── FiBu: vendor_cost_created event (additive, non-blocking) ──
+      try {
+        const { error: fibuCostErr } = await supabase.from("fibu_events" as any).insert({
+          event_type: "vendor_cost_created",
+          source_module: "accounting_costs",
+          source_reference_id: newCost?.id ?? null,
+          product_name: form.product_name || null,
+          amount_net: net,
+          tax_amount: parseFloat(tax.toFixed(2)),
+          amount_gross: parseFloat(gross.toFixed(2)),
+          currency: "EUR",
+          cost_type: form.category,
+          supplier: form.supplier,
+          status: "draft",
+          export_status: "open",
+          description: `${form.category} – ${form.supplier}${form.invoice_reference ? ` / ${form.invoice_reference}` : ""}${form.customer_name ? ` – ${form.customer_name}` : ""}`,
+          created_by: userId,
+          metadata: {
+            accounting_cost_id: newCost?.id ?? null,
+            invoice_reference: form.invoice_reference || null,
+            hfx_customer_number: form.hfx_customer_number || null,
+            customer_name: form.customer_name,
+            cost_date: form.cost_date,
+          },
+        });
+        if (fibuCostErr && (fibuCostErr as any).code !== "23505") {
+          console.error("[Buchhaltung] fibu_events vendor_cost_created failed:", fibuCostErr.message);
+        }
+      } catch (fibuEx) {
+        console.error("[Buchhaltung] fibu_events vendor_cost_created exception:", String(fibuEx));
+      }
     },
     onSuccess: () => {
       toast({ title: "Kostenposten gespeichert" });
