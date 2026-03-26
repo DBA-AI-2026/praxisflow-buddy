@@ -93,7 +93,8 @@ const finanzenNavigation: NavItem[] = [
 
 // ─── ALLGEMEIN ────────────────────────────────────────────────────────────────
 const allgemeinNavigation: NavItem[] = [
-  { name: "Tickets", href: "/tickets", icon: Ticket, roles: allRoles },
+  // tippgeber hat keinen Zugriff auf Tickets
+  { name: "Tickets", href: "/tickets", icon: Ticket, roles: rolesWithoutTippgeber },
   { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "regional_lead", "admin"] },
   { name: "Sicherheit (2FA)", href: "/sicherheit", icon: ShieldCheck, roles: allRoles },
 ];
