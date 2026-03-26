@@ -272,28 +272,45 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <NavSection label="Administration" items={adminNavigation} {...sectionProps} />
       </nav>
 
-      {/* User */}
+      {/* User / Profil */}
       <div className="border-t border-sidebar-border p-3 lg:p-4">
-        <div className="flex items-center gap-2 lg:gap-3 rounded-lg bg-sidebar-accent p-2 lg:p-3">
-          <div className="flex h-8 w-8 lg:h-9 lg:w-9 items-center justify-center rounded-full bg-sidebar-primary text-xs lg:text-sm font-medium text-sidebar-primary-foreground flex-shrink-0">
-            {initials}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-sidebar-foreground truncate">
-              {displayName}
-            </p>
-            <p className="text-xs text-sidebar-foreground/60 truncate">
-              {user?.email || ""}
-            </p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="p-1.5 rounded-md hover:bg-sidebar-border/50 transition-colors flex-shrink-0"
-            title="Abmelden"
-          >
-            <LogOut className="h-4 w-4 text-sidebar-foreground/60" />
-          </button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex w-full items-center gap-2 lg:gap-3 rounded-lg bg-sidebar-accent p-2 lg:p-3 hover:bg-sidebar-accent/80 transition-colors text-left">
+              <div className="flex h-8 w-8 lg:h-9 lg:w-9 items-center justify-center rounded-full bg-sidebar-primary text-xs lg:text-sm font-medium text-sidebar-primary-foreground flex-shrink-0">
+                {initials}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-sidebar-foreground truncate">
+                  {displayName}
+                </p>
+                <p className="text-xs text-sidebar-foreground/60 truncate">
+                  {user?.email || ""}
+                </p>
+              </div>
+              <ChevronUp className="h-4 w-4 text-sidebar-foreground/40 flex-shrink-0" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start" className="w-56 mb-1">
+            <DropdownMenuItem asChild>
+              <Link to="/sicherheit" onClick={onNavigate} className="flex items-center gap-2 cursor-pointer">
+                <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1 min-w-0">
+                  <span className="block text-sm">Sicherheit & 2FA</span>
+                  <span className="block text-xs text-muted-foreground">Zwei-Faktor-Authentifizierung</span>
+                </div>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="flex items-center gap-2 text-destructive focus:text-destructive cursor-pointer"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Abmelden</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
