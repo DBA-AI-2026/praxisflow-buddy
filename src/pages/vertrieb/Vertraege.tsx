@@ -1175,6 +1175,41 @@ export default function Vertraege() {
       return;
     }
 
+    // ── FiBu: cancellation_created event when contract is cancelled/terminated (additive) ──
+    if (newStatus === "gekuendigt" || newStatus === "beendet") {
+      try {
+        const contract = contracts.find((c: any) => c.id === contractId);
+        if (contract) {
+          await (supabase as any).from("fibu_events").insert({
+            event_type: "cancellation_created",
+            source_module: "contracts",
+            source_reference_id: contractId,
+            contract_id: contractId,
+            customer_id: contract.customer_id ?? null,
+            product_name: contract.product_name ?? null,
+            amount_net: 0,
+            tax_amount: 0,
+            amount_gross: 0,
+            currency: "EUR",
+            status: "draft",
+            export_status: "open",
+            description: `Vertrag ${newStatus === "gekuendigt" ? "gekündigt" : "beendet"} – ${contract.praxis || contract.customer_name} – ${contract.product_name}${contract.contract_number ? ` (${contract.contract_number})` : ""}`,
+            created_by: user?.id ?? null,
+            metadata: {
+              contract_id: contractId,
+              contract_number: contract.contract_number ?? null,
+              product_name: contract.product_name ?? null,
+              hfx_customer_number: contract.hfx_customer_number ?? null,
+              new_status: newStatus,
+              changed_by: user?.id ?? null,
+            },
+          });
+        }
+      } catch (fibuEx) {
+        console.error("[Vertraege] fibu_events cancellation_created exception:", String(fibuEx));
+      }
+    }
+
     // When contract is signed/activated: convert linked lead to "kunde" and add to Kunden
     if (newStatus === "aktiv" || newStatus === "gezeichnet") {
       const contract = contracts.find((c: any) => c.id === contractId);
