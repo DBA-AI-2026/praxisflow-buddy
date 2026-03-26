@@ -170,7 +170,9 @@ async function generateCommissionPdf(
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 const Provisionen = () => {
-  const { isAdmin, isSalesPartner, isTippgeber } = useUserRole();
+  const { isAdmin, isSalesPartner, isTippgeber, isSalesLead } = useUserRole();
+  // Provisionsbearbeitung: nur admin und sales_lead
+  const canEditCommissions = isAdmin || isSalesLead;
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -379,7 +381,7 @@ const Provisionen = () => {
   // ── Payout Actions ──
 
   const approveGroup = async (month: string, partnerId: string, groupKey: string) => {
-    if (!isAdmin) return;
+    if (!canEditCommissions) return;
     setApprovingGroup(groupKey);
     try {
       const ids = payouts
@@ -403,7 +405,7 @@ const Provisionen = () => {
   };
 
   const markPaid = async (month: string, partnerId: string, groupKey: string) => {
-    if (!isAdmin) return;
+    if (!canEditCommissions) return;
     setPayingGroup(groupKey);
     try {
       const ids = payouts
@@ -573,44 +575,44 @@ const Provisionen = () => {
                               >
                                 {STATUS_LABELS[groupStatus]?.label ?? groupStatus}
                               </Badge>
-                              {isAdmin && (
-                                <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-                                  {anyPending && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="text-blue-700 border-blue-300 hover:bg-blue-50 h-7 text-xs"
-                                      disabled={approvingGroup === key}
-                                      onClick={() => approveGroup(group.month, group.partnerId, key)}
-                                    >
-                                      {approvingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
-                                      Freigeben
-                                    </Button>
-                                  )}
-                                  {anyApproved && !anyPending && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="text-green-700 border-green-300 hover:bg-green-50 h-7 text-xs"
-                                      disabled={payingGroup === key}
-                                      onClick={() => markPaid(group.month, group.partnerId, key)}
-                                    >
-                                      {payingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <Banknote className="h-3 w-3 mr-1" />}
-                                      Ausgezahlt
-                                    </Button>
-                                  )}
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 text-xs"
-                                    disabled={generatingPdf === key}
-                                    onClick={() => downloadPdf(group)}
-                                  >
-                                    {generatingPdf === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileDown className="h-3 w-3 mr-1" />}
-                                    PDF
-                                  </Button>
-                                </div>
-                              )}
+                     {isAdmin && (
+                       <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                         {anyPending && (
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             className="text-blue-700 border-blue-300 hover:bg-blue-50 h-7 text-xs"
+                             disabled={approvingGroup === key}
+                             onClick={() => approveGroup(group.month, group.partnerId, key)}
+                           >
+                             {approvingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
+                             Freigeben
+                           </Button>
+                         )}
+                         {anyApproved && !anyPending && (
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             className="text-green-700 border-green-300 hover:bg-green-50 h-7 text-xs"
+                             disabled={payingGroup === key}
+                             onClick={() => markPaid(group.month, group.partnerId, key)}
+                           >
+                             {payingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <Banknote className="h-3 w-3 mr-1" />}
+                             Ausgezahlt
+                           </Button>
+                         )}
+                         <Button
+                           size="sm"
+                           variant="outline"
+                           className="h-7 text-xs"
+                           disabled={generatingPdf === key}
+                           onClick={() => downloadPdf(group)}
+                         >
+                           {generatingPdf === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileDown className="h-3 w-3 mr-1" />}
+                           PDF
+                         </Button>
+                       </div>
+                     )}
                             </div>
                           </div>
 
@@ -674,11 +676,11 @@ const Provisionen = () => {
                     Provisionssätze pro Produkt
                   </CardTitle>
                   <CardDescription>
-                    {isAdmin ? "Legen Sie die Provisionssätze für jedes Produkt fest" : "Übersicht der aktuellen Provisionssätze"}
+                    {canEditCommissions ? "Legen Sie die Provisionssätze für jedes Produkt fest" : "Übersicht der aktuellen Provisionssätze"}
                     <span className="block text-xs text-muted-foreground mt-1">Alle Provisionssätze abzüglich Tippgeber-Provisionen</span>
                   </CardDescription>
                 </div>
-                {isAdmin && (
+                {canEditCommissions && (
                   <Button onClick={openCreateDialog}>
                     <Plus className="mr-2 h-4 w-4" />Neues Produkt
                   </Button>
@@ -698,7 +700,7 @@ const Provisionen = () => {
                         <TableHead>Satz</TableHead>
                         <TableHead>Beschreibung</TableHead>
                         <TableHead>Status</TableHead>
-                        {isAdmin && <TableHead className="text-right">Aktionen</TableHead>}
+                        {canEditCommissions && <TableHead className="text-right">Aktionen</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -718,7 +720,7 @@ const Provisionen = () => {
                               {c.is_active ? "Aktiv" : "Inaktiv"}
                             </Badge>
                           </TableCell>
-                          {isAdmin && (
+                          {canEditCommissions && (
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-1">
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(c)}>
