@@ -97,7 +97,7 @@ const allgemeinNavigation: NavItem[] = [
   // tippgeber hat keinen Zugriff auf Tickets
   { name: "Tickets", href: "/tickets", icon: Ticket, roles: operativeRoles },
   { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "regional_lead", "admin"] },
-  { name: "Sicherheit (2FA)", href: "/sicherheit", icon: ShieldCheck, roles: allRoles },
+  // Sicherheit (2FA) wurde in den Profil-Bereich (Sidebar-Footer) verschoben
 ];
 
 // ─── VERTRIEBS-ADMIN ──────────────────────────────────────────────────────────
