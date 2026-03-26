@@ -471,20 +471,36 @@ Deno.serve(async (req) => {
               today,
             });
           } else {
-            // ── Andere Produkte: klassische product_commissions-Logik ─────────
-            const { data: productCommission } = await supabase
-              .from("product_commissions")
-              .select("*")
-              .eq("product_name", contract.product_name)
-              .eq("is_active", true)
-              .maybeSingle();
+            // ── Andere Produkte: Provisionsberechnung mit Override-Hierarchie ──────────
+            // Sicherheits-Fix: partner_commission_overrides hat Vorrang vor product_commissions.
+            // Beide Quellen werden serverseitig gelesen – kein Frontend-Input beeinflusst die Berechnung.
+            const [{ data: productCommission }, { data: partnerOverride }] = await Promise.all([
+              supabase
+                .from("product_commissions")
+                .select("commission_type, commission_value, is_active")
+                .eq("product_name", contract.product_name)
+                .eq("is_active", true)
+                .maybeSingle(),
+              contract.sales_partner_id
+                ? supabase
+                    .from("partner_commission_overrides")
+                    .select("commission_type, commission_value")
+                    .eq("user_id", contract.sales_partner_id)
+                    .eq("product_name", contract.product_name)
+                    .maybeSingle()
+                : Promise.resolve({ data: null, error: null }),
+            ]);
 
-            if (productCommission) {
+            // Individuelle Override-Regel hat Vorrang; Fallback auf Produkt-Standardregel
+            const effectiveRule = partnerOverride ?? productCommission;
+            const overrideApplied = !!partnerOverride;
+
+            if (effectiveRule) {
               let commissionAmount = 0;
-              if (productCommission.commission_type === "prozent") {
-                commissionAmount = Math.round(baseNetAmount * productCommission.commission_value) / 100;
+              if (effectiveRule.commission_type === "prozent") {
+                commissionAmount = Math.round(baseNetAmount * effectiveRule.commission_value) / 100;
               } else {
-                commissionAmount = Number(productCommission.commission_value);
+                commissionAmount = Number(effectiveRule.commission_value);
               }
 
               if (commissionAmount > 0) {
@@ -495,26 +511,30 @@ Deno.serve(async (req) => {
                   .maybeSingle();
 
                 if (!existingPayout) {
-                  // Point 4: Derive rule version dynamically from commission_type so
-                  // fixed-fee products don't incorrectly receive the percentage rule label.
-                  const ruleVersion = productCommission.commission_type === "prozent"
-                    ? `STD-PARTNER-${productCommission.commission_value}PCT-v1`
-                    : `STD-PARTNER-FIXED-${productCommission.commission_value}EUR-v1`;
+                  // rule_version zeigt an ob Override oder Standardregel angewendet wurde
+                  const ruleVersion = overrideApplied
+                    ? (effectiveRule.commission_type === "prozent"
+                        ? `OVERRIDE-PARTNER-${effectiveRule.commission_value}PCT-v1`
+                        : `OVERRIDE-PARTNER-FIXED-${effectiveRule.commission_value}EUR-v1`)
+                    : (effectiveRule.commission_type === "prozent"
+                        ? `STD-PARTNER-${effectiveRule.commission_value}PCT-v1`
+                        : `STD-PARTNER-FIXED-${effectiveRule.commission_value}EUR-v1`);
+
                   await supabase.from("commission_payouts").insert({
                     sales_partner_id: contract.sales_partner_id,
                     sales_partner_name: contract.sales_partner_name || "Unbekannt",
                     contract_id: contract.id,
                     invoice_id: invoice.id,
                     product_name: contract.product_name,
-                    commission_type: productCommission.commission_type,
-                    commission_rate: productCommission.commission_value,
+                    commission_type: effectiveRule.commission_type,
+                    commission_rate: effectiveRule.commission_value,
                     commission_amount: commissionAmount,
                     commission_base_amount: baseNetAmount,
                     commission_rule_version: ruleVersion,
                     period_month: periodMonthStr,
                     status: "pending",
                   });
-                  console.log(`[auto-invoice] Created commission payout ${commissionAmount} € for partner ${contract.sales_partner_name}`);
+                  console.log(`[auto-invoice] Created commission payout ${commissionAmount} € for partner ${contract.sales_partner_name} (rule: ${ruleVersion})`);
 
                   // ── FiBu: partner_commission_approved event (additive, non-blocking) ──
                   try {
@@ -531,21 +551,22 @@ Deno.serve(async (req) => {
                       tax_amount: 0,
                       amount_gross: commissionAmount,
                       currency: "EUR",
-                      commission_type: productCommission.commission_type,
+                      commission_type: effectiveRule.commission_type,
                       commission_base_amount: baseNetAmount,
-                      commission_rate: productCommission.commission_value,
+                      commission_rate: effectiveRule.commission_value,
                       commission_amount: commissionAmount,
                       commission_rule_version: ruleVersion,
                       beneficiary_type: "sales_partner",
                       beneficiary_id: contract.sales_partner_id,
                       status: "draft",
                       export_status: "open",
-                      description: `Partner-Provision ${contract.sales_partner_name} – ${contract.product_name} – ${periodMonthStr}`,
+                      description: `Partner-Provision ${contract.sales_partner_name} – ${contract.product_name} – ${periodMonthStr}${overrideApplied ? " (individuelle Regel)" : ""}`,
                       created_by: null,
                       metadata: {
                         invoice_id: invoice.id,
                         invoice_number: invoice.invoice_number,
                         commission_rule_version: ruleVersion,
+                        override_applied: overrideApplied,
                         period_month: periodMonthStr,
                         hfx_customer_number: contract.hfx_customer_number ?? null,
                       },
