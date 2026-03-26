@@ -2280,6 +2280,21 @@ export type Database = {
       }
     }
     Functions: {
+      get_public_contract_booking: {
+        Args: { p_contract_id: string }
+        Returns: {
+          customer_name: string
+          fachrichtung: string
+          hfx_customer_number: string
+          id: string
+          modules: string[]
+          monthly_price: number
+          praxis: string
+          product_name: string
+          rechtsform: string
+          status: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
