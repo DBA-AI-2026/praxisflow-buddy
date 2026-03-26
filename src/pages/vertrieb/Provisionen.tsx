@@ -288,6 +288,49 @@ const Provisionen = () => {
         })
         .eq("id", milestone.id);
 
+      // ── FiBu: tipster_commission_released event (additive, non-blocking) ──
+      try {
+        const periodMonth = new Date().toISOString().slice(0, 7);
+        const { error: fibuErr } = await supabase.from("fibu_events" as any).insert({
+          event_type: "tipster_commission_released",
+          source_module: "commission_payouts",
+          source_reference_id: payout.id,
+          contract_id: milestone.contract_id ?? null,
+          beneficiary_id: milestone.tippgeber_id ?? null,
+          beneficiary_type: "tippgeber",
+          product_name: milestone.contracts?.product_name || "HFX GOÄ",
+          commission_type: "festbetrag",
+          commission_amount: 200,
+          commission_rate: null,
+          commission_base_amount: milestone.cumulative_revenue ?? null,
+          commission_rule_version: "TIPPGEBER-MILESTONE-200-v1",
+          amount_net: 200,
+          tax_amount: 0,
+          amount_gross: 200,
+          currency: "EUR",
+          status: "draft",
+          export_status: "open",
+          period_start: `${periodMonth}-01`,
+          period_end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10),
+          occurred_at: new Date().toISOString(),
+          description: `Tippgeber-Einmalprämie (Meilenstein 500 €) – ${milestone.tippgeber_profile?.full_name || "Tippgeber"} – ${milestone.contracts?.product_name || "HFX GOÄ"}${milestone.contracts?.hfx_customer_number ? ` (${milestone.contracts.hfx_customer_number})` : ""}`,
+          created_by: user?.id ?? null,
+          metadata: {
+            payout_id: payout.id,
+            tippgeber_id: milestone.tippgeber_id,
+            contract_id: milestone.contract_id,
+            hfx_customer_number: milestone.contracts?.hfx_customer_number ?? null,
+            cumulative_revenue: milestone.cumulative_revenue,
+            payout_trigger: "tippgeber_milestone",
+          },
+        });
+        if (fibuErr && (fibuErr as any).code !== "23505") {
+          console.error("[Provisionen] fibu_events tipster_commission_released failed:", fibuErr.message);
+        }
+      } catch (fibuEx) {
+        console.error("[Provisionen] fibu_events tipster_commission_released exception:", String(fibuEx));
+      }
+
       queryClient.invalidateQueries({ queryKey: ["commission-payouts"] });
       refetchMilestones();
       toast({ title: "Einmalprämie ausgelöst", description: "200 € Tippgeber-Provision wurde erstellt und freigegeben." });

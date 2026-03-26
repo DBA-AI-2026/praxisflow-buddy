@@ -1527,6 +1527,10 @@ function CostDialog({ open, onOpenChange, userId, onSuccess }: { open: boolean; 
 
       // ── FiBu: vendor_cost_created event (additive, non-blocking) ──
       try {
+        // RP-2: occurred_at auf fachliches cost_date setzen, nicht DB-Default now()
+        const costDateIso = form.cost_date
+          ? new Date(form.cost_date + "T00:00:00").toISOString()
+          : new Date().toISOString();
         const { error: fibuCostErr } = await supabase.from("fibu_events" as any).insert({
           event_type: "vendor_cost_created",
           source_module: "accounting_costs",
@@ -1540,6 +1544,7 @@ function CostDialog({ open, onOpenChange, userId, onSuccess }: { open: boolean; 
           supplier: form.supplier,
           status: "draft",
           export_status: "open",
+          occurred_at: costDateIso,
           description: `${form.category} – ${form.supplier}${form.invoice_reference ? ` / ${form.invoice_reference}` : ""}${form.customer_name ? ` – ${form.customer_name}` : ""}`,
           created_by: userId,
           metadata: {
