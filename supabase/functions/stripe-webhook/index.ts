@@ -195,14 +195,17 @@ Deno.serve(async (req) => {
 
   log("Event received", { type: event.type, id: event.id });
 
-  // ── Idempotenz-Check: Event bereits verarbeitet? ──────────────────────────
-  const isNew = await claimEvent(supabase, event.id, event.type, { event_type: event.type });
-  if (!isNew) {
-    // Duplikat → sofort 200 zurückgeben (Stripe braucht kein Retry)
+  // ── Idempotenz-Check ──────────────────────────────────────────────────────
+  // "new"       → frischer Event, Verarbeitung starten
+  // "retry"     → vorheriger Versuch fehlgeschlagen (status=error gelöscht), erneut verarbeiten
+  // "duplicate" → bereits "processed" oder "processing" → sofort 200 zurückgeben
+  const claimResult = await claimEvent(supabase, event.id, event.type, { event_type: event.type });
+  if (claimResult === "duplicate") {
     return new Response(JSON.stringify({ received: true, duplicate: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+  log("Processing event", { claimResult, type: event.type, id: event.id });
   // ─────────────────────────────────────────────────────────────────────────
 
   try {
@@ -257,17 +260,14 @@ Deno.serve(async (req) => {
         : (stripeInvoice.customer as any)?.id ?? null;
 
       // 1. Rechnung nur auf "bezahlt" setzen wenn noch nicht bezahlt
-      //    (idempotent: update auf bereits-bezahlt ist harmlos, aber
-      //     wir prüfen vorher damit das Log sauber bleibt)
       const { data: inv } = await supabase
         .from("invoices")
         .update({ status: "bezahlt" })
         .eq("stripe_invoice_id", stripeInvoiceId)
-        .neq("status", "bezahlt")          // Guard: nur wenn Status noch nicht bezahlt
+        .neq("status", "bezahlt")
         .select("id, invoice_number, contract_id, net_amount, tax_amount, gross_amount, customer_number")
         .maybeSingle();
 
-      // Prüfe ob Rechnung grundsätzlich existiert (auch wenn schon bezahlt)
       let existingInv = inv;
       if (!inv) {
         const { data: alreadyPaid } = await supabase
@@ -283,13 +283,13 @@ Deno.serve(async (req) => {
         }
       }
 
-      // 2. customer_revenues aktualisieren (idempotent: update auf paid ist harmlos)
+      // 2. customer_revenues aktualisieren
       if (existingInv?.invoice_number) {
         const { error: revErr } = await supabase
           .from("customer_revenues")
           .update({ payment_status: "paid", paid_at: new Date().toISOString() })
           .eq("invoice_number", existingInv.invoice_number)
-          .neq("payment_status", "paid");    // Guard: nur wenn noch nicht paid
+          .neq("payment_status", "paid");
         if (revErr) {
           log("WARN: customer_revenues update failed", revErr.message);
         } else {
@@ -297,7 +297,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      // 3. Vertragsdaten für vollständiges FiBu-Tracing
+      // 3. Vertragsdaten für FiBu-Tracing
       let customerId: string | null = null;
       let productName: string | null = null;
       if (existingInv?.contract_id) {
@@ -311,7 +311,6 @@ Deno.serve(async (req) => {
       }
 
       // 4. fibu_event erstellen
-      // source_reference_id = stripeInvoiceId → idx_fibu_events_source_unique schützt gegen Duplikate
       const fibuStatus = existingInv ? "approved" : "draft";
       const { error: fibuErr } = await supabase.from("fibu_events").insert({
         event_type: "payment_received_reference",
@@ -347,15 +346,21 @@ Deno.serve(async (req) => {
       log("invoice.paid processed", { stripeInvoiceId, found: !!existingInv, fibuStatus, customerId, productName });
     }
 
+    // ── Erfolgreiche Verarbeitung: Status auf "processed" setzen ─────────────
+    // Ab jetzt greift der finale Duplikat-Schutz (Partial-Unique auf status=processed).
+    // Weitere Stripe-Retries werden sauber geblockt.
+    await markEventProcessed(supabase, event.id);
+
     return new Response(JSON.stringify({ received: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
     const errMsg = String(err);
     log("FATAL: uncaught error processing event", errMsg);
-    // Fehler in processed_stripe_events und audit_logs eintragen
+    // markEventFailed setzt status auf "error" → kein Unique-Schutz mehr
+    // → nächster Stripe-Retry (after 500) wird als "retry" behandelt und erneut verarbeitet
     await markEventFailed(supabase, event.id, errMsg);
-    // 500 → Stripe wird den Event erneut zustellen (retry)
+    // 500 → Stripe stellt den Event erneut zu
     return new Response(JSON.stringify({ error: errMsg }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
