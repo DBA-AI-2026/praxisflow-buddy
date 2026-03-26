@@ -331,17 +331,13 @@ export default function RollenUebersicht() {
   const inconsistencies = countInconsistencies();
 
   return (
-    <MainLayout>
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold text-foreground">Rollen &amp; Zugriffe</h1>
-          <p className="text-sm text-muted-foreground">
-            Übersicht aller Navigationsbereiche und Zugriffsrechte pro Rolle. Abgeleitet aus{" "}
-            <code className="bg-muted px-1 rounded text-xs">Sidebar.tsx</code> und{" "}
-            <code className="bg-muted px-1 rounded text-xs">routePermissions.ts</code>.
-          </p>
-        </div>
+    <MainLayout title="Rollen & Zugriffe" subtitle="Zugriffsmatrix aus Sidebar.tsx und routePermissions.ts">
+      <div className="space-y-6">
+        <p className="text-sm text-muted-foreground">
+          Übersicht aller Navigationsbereiche und Zugriffsrechte pro Rolle. Abgeleitet aus{" "}
+          <code className="bg-muted px-1 rounded text-xs">Sidebar.tsx</code> und{" "}
+          <code className="bg-muted px-1 rounded text-xs">routePermissions.ts</code>.
+        </p>
 
         {/* Legende + Inkonsistenz-Banner */}
         <div className="flex flex-wrap items-start gap-4">
