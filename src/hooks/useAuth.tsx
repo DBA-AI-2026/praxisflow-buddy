@@ -116,7 +116,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         isLoading,
         signIn,
-        signUp,
         signOut,
       }}
     >
