@@ -113,6 +113,13 @@ export type Database = {
             referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "agb_acceptances_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts_public_booking"
+            referencedColumns: ["id"]
+          },
         ]
       }
       audit_logs: {
@@ -239,6 +246,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "commission_payouts_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts_public_booking"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "commission_payouts_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
@@ -329,6 +343,13 @@ export type Database = {
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_cases_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts_public_booking"
             referencedColumns: ["id"]
           },
           {
@@ -573,6 +594,13 @@ export type Database = {
             columns: ["parent_contract_id"]
             isOneToOne: false
             referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_parent_contract_id_fkey"
+            columns: ["parent_contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts_public_booking"
             referencedColumns: ["id"]
           },
         ]
@@ -988,6 +1016,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "fibu_events_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts_public_booking"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fibu_events_correction_of_event_id_fkey"
             columns: ["correction_of_event_id"]
             isOneToOne: false
@@ -1236,6 +1271,13 @@ export type Database = {
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts_public_booking"
             referencedColumns: ["id"]
           },
           {
@@ -1905,6 +1947,13 @@ export type Database = {
             referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "signature_audit_logs_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts_public_booking"
+            referencedColumns: ["id"]
+          },
         ]
       }
       tipp_leads: {
@@ -2052,6 +2101,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tippgeber_milestone_tracking_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts_public_booking"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tippgeber_milestone_tracking_payout_id_fkey"
             columns: ["payout_id"]
             isOneToOne: false
@@ -2118,6 +2174,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "usage_charges_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts_public_booking"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "usage_charges_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
@@ -2170,6 +2233,45 @@ export type Database = {
       }
     }
     Views: {
+      contracts_public_booking: {
+        Row: {
+          customer_name: string | null
+          fachrichtung: string | null
+          hfx_customer_number: string | null
+          id: string | null
+          modules: string[] | null
+          monthly_price: number | null
+          praxis: string | null
+          product_name: string | null
+          rechtsform: string | null
+          status: string | null
+        }
+        Insert: {
+          customer_name?: string | null
+          fachrichtung?: string | null
+          hfx_customer_number?: string | null
+          id?: string | null
+          modules?: string[] | null
+          monthly_price?: number | null
+          praxis?: string | null
+          product_name?: string | null
+          rechtsform?: string | null
+          status?: string | null
+        }
+        Update: {
+          customer_name?: string | null
+          fachrichtung?: string | null
+          hfx_customer_number?: string | null
+          id?: string | null
+          modules?: string[] | null
+          monthly_price?: number | null
+          praxis?: string | null
+          product_name?: string | null
+          rechtsform?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       fibu_export_batch_seq_view: {
         Row: {
           nextval: number | null
