@@ -122,7 +122,10 @@ const adminNavigation: NavItem[] = [
   { name: "Audit-Protokoll", href: "/admin/audit-logs", icon: ClipboardList, roles: ["admin"], adminOnly: true },
   { name: "Einstellungen", href: "/admin/settings", icon: Settings, roles: ["admin"], adminOnly: true },
   { name: "Dokumentation", href: "/admin/documentation", icon: FileText, roles: ["admin"], adminOnly: true },
-  // Dev-Tools bleiben erreichbar, aber als letzter Punkt ohne eigene Sektion
+];
+
+// ─── DEV-TOOLS: interne Vorschau- und Hilfsseiten ─────────────────────────────
+const devToolsNavigation: NavItem[] = [
   { name: "E-Mail-Vorschau", href: "/admin/email-preview", icon: Eye, roles: ["admin"], adminOnly: true },
   { name: "Buchungsformular-Vorschau", href: "/buchen?preview=true", icon: Eye, roles: ["admin"], adminOnly: true },
 ];
