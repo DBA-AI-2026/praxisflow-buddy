@@ -1,0 +1,167 @@
+---
+title: HFX Systemübersicht – Technische Sicht (v1.0 · 2026-03-26)
+---
+flowchart TD
+
+    %% ─── LEAD-EINGANG ─────────────────────────────────────────────
+    subgraph LeadEingang["LEAD-EINGANG"]
+        WEB([WordPress CF7 Webhook])
+        MAN([Manuell / Admin UI])
+        TIPP([Tippgeber-Portal])
+    end
+
+    %% ─── EDGE FUNCTIONS: LEAD ─────────────────────────────────────
+    subgraph EF_Lead["Edge Functions: Lead"]
+        EF1[capture-lead\nHFX-I Nummer + Passwort]
+        EF2[submit-tipp-lead\nPLZ-Zuweisung + 30-Tage-Timer]
+        EF3[notify-lead-assignment\nE-Mail an Gebietsleiter]
+        EF4[notify-tipp-status\nStatusänderungs-E-Mail]
+    end
+
+    %% ─── TABELLEN: LEAD ───────────────────────────────────────────
+    subgraph DB_Lead["DB: leads / tipp_leads"]
+        DL1[(leads\nstatus: new → qualified)]
+        DL2[(tipp_leads\nreservation_timer: 30 Tage)]
+    end
+
+    %% ─── EXTERNE INTEGRATION: SALESFORCE ─────────────────────────
+    subgraph SF["Salesforce CRM"]
+        SF1[salesforce-auth\nOAuth 2.0 PKCE]
+        SF2[salesforce-callback\nToken-Speicherung]
+        SF3[salesforce-sync-price\nPreissynchronisation]
+        SF4[(salesforce_connections)]
+    end
+
+    %% ─── VERTRAGSABSCHLUSS ────────────────────────────────────────
+    subgraph VertragsFlow["VERTRAGSABSCHLUSS"]
+        CR[creditreform-check\nBonitätsprüfung]
+        SIG[signature_pad\nDigitale Unterschriften]
+        PDF[generateContractPdf\nPDF-Generierung]
+        AUDIT[(signature_audit_logs\nIP + Hash + Zeitstempel)]
+        CAPPR{Admin-Genehmigung}
+        EF_CE[send-contract-email\nPDF per E-Mail]
+    end
+
+    %% ─── TABELLEN: VERTRÄGE ───────────────────────────────────────
+    subgraph DB_Contract["DB: contracts / customers / praxen"]
+        DC1[(contracts\nstatus: draft → approved)]
+        DC2[(customers\nhfx_customer_number)]
+        DC3[(praxen\nLizenz aktiv)]
+    end
+
+    %% ─── NUTZUNG / QODIA ─────────────────────────────────────────
+    subgraph Qodia["NUTZUNG – Qodia-Integration"]
+        QS[qodia-auto-usage-sync\ntäglich per Cron]
+        QQ[qodia-usage-query\nAbruf Einzelwerte]
+        QR[receive-usage\nWebhook-Empfang]
+        QB[qodia-initiate-booking\nBuchungsauftrag]
+        QU[(usage_charges\nVerbrauchsdaten)]
+    end
+
+    %% ─── ABRECHNUNG ───────────────────────────────────────────────
+    subgraph Abrechnung["ABRECHNUNG"]
+        AI[auto-invoice\nmonatlicher Cron]
+        PDF2[generateInvoicePdf\nPDF mit Logo + Positionen]
+        EF_IE[send-invoice-email\nPDF-Anhang]
+        INVDB[(invoices\nstatus: open → paid)]
+        CRDB[(customer_revenues)]
+    end
+
+    %% ─── STRIPE ──────────────────────────────────────────────────
+    subgraph StripeFlow["STRIPE – Zahlungsverarbeitung"]
+        STR[stripe-webhook\nIdempotenz-gesichert]
+        PSE[(processed_stripe_events\nstatus: processing → processed / error)]
+        CHECKOUT[create-checkout\nSubscription-Start]
+        SUBFLOW[stripe-webhook\ninvoice.paid]
+        MANDATE[initiate-booking\nSEPA-Mandat]
+    end
+
+    %% ─── PROVISIONEN ─────────────────────────────────────────────
+    subgraph ProvisionsFlow["PROVISIONEN"]
+        PCOM[(product_commissions\nRegeln + Sprint-Boni)]
+        POVER[(partner_commission_overrides\nIndividualwerte)]
+        PROLE[(commission_role_defaults\nRollen-Defaults)]
+        POUT[(commission_payouts\nstatus: pending → approved → paid)]
+        PEXPORT[Export\nCSV / PDF-Abrechnung]
+    end
+
+    %% ─── FIBU ────────────────────────────────────────────────────
+    subgraph FiBuFlow["FIBU-VORBEREITUNG"]
+        FE[(fibu_events\nRevisionssichere Buchungssätze)]
+        FB[(fibu_export_batches\nExport-Chargen)]
+        FAL[(fibu_audit_log\nÄnderungshistorie)]
+        LEX[lexware-integration\nlexware-auto-sync]
+        LEXDB[(Lexware\nexternes Buchungssystem)]
+    end
+
+    %% ─── AUTH / ROLLEN ───────────────────────────────────────────
+    subgraph AuthFlow["AUTH & ROLLEN"]
+        AR[Zugangsanfrage\nregistration_requests]
+        AC[create-user\nRolle zuweisen]
+        MFA[MFA Challenge\nTOTP]
+        ROLES[(user_roles\nRLS-gesichert)]
+        ALOG[(audit_logs\nAlle Aktionen)]
+    end
+
+    %% ─── VERBINDUNGEN ─────────────────────────────────────────────
+
+    WEB --> EF1 --> DL1
+    TIPP --> EF2 --> DL2
+    MAN --> DL1
+    EF1 --> EF3
+    EF2 --> EF4
+    DL1 --> SF1 --> SF2 --> SF4
+    SF2 --> SF3
+
+    DL1 -- qualified --> CR --> SIG --> PDF --> AUDIT
+    PDF --> CAPPR
+    CAPPR -- genehmigt --> EF_CE
+    CAPPR -- genehmigt --> DC1
+    DC1 --> DC2 --> DC3
+
+    DC3 --> QS --> QU
+    QR --> QU
+    QQ --> QU
+    QB --> QU
+
+    QU --> AI
+    AI --> PDF2 --> EF_IE
+    AI --> INVDB
+    AI --> CRDB
+    AI --> FE
+
+    INVDB --> STR
+    STR --> PSE
+    STR --> SUBFLOW
+    SUBFLOW -- paid --> INVDB
+    SUBFLOW -- paid --> CRDB
+    SUBFLOW -- paid --> FE
+    CHECKOUT --> MANDATE
+    MANDATE --> DC1
+
+    FE --> POUT
+    PCOM --> POUT
+    POVER --> POUT
+    PROLE --> POUT
+    POUT --> PEXPORT
+    POUT --> FE
+
+    FE --> FB --> FAL
+    FB --> LEX --> LEXDB
+
+    AR --> AC --> ROLES
+    AC --> MFA
+    ROLES --> ALOG
+
+    %% ─── STYLING ──────────────────────────────────────────────────
+    classDef extern fill:#1e3a5f,color:#fff,stroke:#1d3461
+    classDef edgefn fill:#065f46,color:#fff,stroke:#064e3b
+    classDef db fill:#374151,color:#fff,stroke:#1f2937
+    classDef decision fill:#92400e,color:#fff,stroke:#78350f
+    classDef stripe fill:#635bff,color:#fff,stroke:#4f46e5
+
+    class WEB,MAN,TIPP,LEXDB extern
+    class EF1,EF2,EF3,EF4,EF_CE,EF_IE,AI,STR,SUBFLOW,CHECKOUT,MANDATE,QS,QQ,QR,QB,LEX,AC,SF1,SF2,SF3,CR,SIG,PDF,PDF2,PEXPORT edgefn
+    class DL1,DL2,DC1,DC2,DC3,INVDB,CRDB,FE,FB,FAL,QU,PSE,PCOM,POVER,PROLE,POUT,ROLES,ALOG,SF4,AUDIT db
+    class CAPPR decision
+    class STR,PSE stripe
