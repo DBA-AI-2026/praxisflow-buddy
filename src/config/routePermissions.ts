@@ -8,39 +8,40 @@ export interface RoutePermission {
 }
 
 // Define which roles can access each route
+// NOTE: vertragsabteilung ist technisch vorhanden (DB-Enum, hooks), aber aktuell stillgelegt.
+// Für eine spätere Reaktivierung einfach wieder in die jeweiligen allowedRoles aufnehmen.
 export const routePermissions: RoutePermission[] = [
-  // Base routes - accessible by all authenticated users
-  { path: "/", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "tippgeber", "admin"] },
-  { path: "/praxen", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
-  { path: "/kunden", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
+  // Base routes
+  { path: "/", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "tippgeber", "admin"] },
+  { path: "/praxen", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
+  { path: "/kunden", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
   // tippgeber: kein Zugriff auf Tickets, Lizenzen, Umsätze, Interessenten
-  { path: "/tickets", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
-  { path: "/lizenzen", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
-  { path: "/umsaetze", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
-  
+  { path: "/tickets", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
+  { path: "/lizenzen", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
+  { path: "/umsaetze", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
+
   // Reservierungen
   { path: "/reservierungen", allowedRoles: ["user", "sales_partner", "regional_lead", "admin"] },
-  
-  // Interessenten – tippgeber entfernt
+
+  // Interessenten
   { path: "/interessenten", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
 
-  // Journey-Übersicht (Tab-Vorschau)
-  { path: "/praxen-journey", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
-  
+  // Journey-Übersicht
+  { path: "/praxen-journey", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
+
   // Demo-Tracking
   { path: "/demo-tracking", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
-  
+
   // Sales Lead, Regional Lead and Admin routes
   { path: "/kalender", allowedRoles: ["sales_lead", "regional_lead", "admin"] },
   { path: "/export", allowedRoles: ["sales_lead", "admin"] },
-  // P1-Fix: /integrationen zeigt jetzt Integrationen.tsx (Lexware-Integration), nicht Buchhaltung
   { path: "/integrationen", allowedRoles: ["admin"] },
-  
+
   // Vertrieb routes
   { path: "/vertrieb/vertriebler", allowedRoles: ["sales_lead", "regional_lead", "admin"] },
-  { path: "/vertrieb/vertraege", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
+  { path: "/vertrieb/vertraege", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
   { path: "/vertrieb/provisionen", allowedRoles: ["user", "sales_partner", "tippgeber", "sales_lead", "regional_lead", "admin"] },
-  
+
   // Rechnungen - Admin only
   { path: "/rechnungen", allowedRoles: ["admin"] },
 
@@ -51,17 +52,17 @@ export const routePermissions: RoutePermission[] = [
   { path: "/admin/settings", allowedRoles: ["admin"] },
   { path: "/admin/products", allowedRoles: ["admin"] },
   { path: "/admin/agb", allowedRoles: ["admin"] },
-  
+
   // Tools
   { path: "/tools/pdf-coordinates", allowedRoles: ["admin"] },
-  { path: "/tools/email-preview", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
+  { path: "/tools/email-preview", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
   { path: "/admin/email-preview", allowedRoles: ["admin"] },
   { path: "/admin/email-settings", allowedRoles: ["admin"] },
-  
-  // Sicherheit (2FA) - alle eingeloggten Benutzer
-  { path: "/sicherheit", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "tippgeber", "admin"] },
 
-  // Tipp-Leads (unified)
+  // Sicherheit (2FA) - alle aktiven Rollen inkl. tippgeber
+  { path: "/sicherheit", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "tippgeber", "admin"] },
+
+  // Tipp-Leads
   { path: "/tipp-leads", allowedRoles: ["tippgeber", "admin", "sales_lead"] },
 
   // PLZ-Mapping Verwaltung
