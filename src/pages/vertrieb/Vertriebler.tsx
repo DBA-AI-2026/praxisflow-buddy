@@ -58,7 +58,9 @@ const Vertriebler = () => {
   const [roleFilterOpen, setRoleFilterOpen] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState<VertrieblerRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<VertrieblerRow | null>(null);
-  const { isAdmin } = useUserRole();
+  const { isAdmin, isSalesLead } = useUserRole();
+  // Provisionsbearbeitung: nur admin und sales_lead
+  const canEditCommissions = isAdmin || isSalesLead;
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
