@@ -3,11 +3,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole, AppRole } from "@/hooks/useUserRole";
 import { canAccessRoute } from "@/config/routePermissions";
 import { logAuditEvent } from "@/hooks/useAuditLog";
-import { Loader2, ShieldX } from "lucide-react";
+import { Loader2, ShieldX, ShieldOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MfaChallenge } from "@/pages/MfaChallenge";
+import { MfaSetup } from "@/pages/MfaSetup";
 import { useRolePreview } from "@/contexts/RolePreviewContext";
+import { Button } from "@/components/ui/button";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -33,15 +35,24 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
         const { data: assuranceData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
         if (!assuranceData) { setMfaState("not_enrolled"); return; }
 
-        const { currentLevel, nextLevel, currentAuthenticationMethods } = assuranceData;
+        const { currentLevel, nextLevel } = assuranceData;
 
         // Check if user has TOTP enrolled
         const { data: factorsData } = await supabase.auth.mfa.listFactors();
         const totpFactors = factorsData?.totp?.filter(f => f.status === "verified") ?? [];
 
+        // Privileged roles (admin, sales_lead) MUST have MFA enrolled
+        const PRIVILEGED_ROLES: (AppRole | null)[] = ["admin", "sales_lead"];
+        const isPrivileged = PRIVILEGED_ROLES.includes(role);
+
         if (totpFactors.length === 0) {
-          // Not enrolled yet – allow access (they should set up via settings)
-          setMfaState("not_enrolled");
+          if (isPrivileged) {
+            // Force privileged users to /sicherheit to set up MFA
+            setMfaState("required");
+            setMfaFactorId(null); // null = not enrolled yet → show setup prompt
+          } else {
+            setMfaState("not_enrolled");
+          }
           return;
         }
 
@@ -59,7 +70,7 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
     };
 
     checkMfa();
-  }, [session, authLoading]);
+  }, [session, authLoading, role]);
 
   // Check role-based access.
   // During role preview: grant access if EITHER the preview role OR the actual
