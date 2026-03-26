@@ -932,6 +932,48 @@ async function createGoaeCommissions(params: {
           contract_start_date: contract.start_date,
         });
         console.log(`[auto-invoice] GOÄ sales_partner payout ${totalCommission} € for ${contract.sales_partner_name}`);
+
+        // ── FiBu: partner_commission_approved event for GOÄ sales_partner (additive) ──
+        try {
+          const { error: fibuGoePartnerErr } = await supabase.from("fibu_events").insert({
+            event_type: "partner_commission_approved",
+            source_module: "commission_payouts",
+            source_reference_id: `${invoice.id}:goe-partner`,
+            contract_id: contract.id,
+            customer_id: contract.customer_id ?? null,
+            product_name: contract.product_name,
+            period_start: periodStart,
+            period_end: periodEnd,
+            amount_net: totalCommission,
+            tax_amount: 0,
+            amount_gross: totalCommission,
+            currency: "EUR",
+            commission_type: "prozent",
+            commission_base_amount: netAmount,
+            commission_rate: 10,
+            commission_amount: totalCommission,
+            commission_rule_version: "GOÄ-PARTNER-10PCT-v1",
+            beneficiary_type: "sales_partner",
+            beneficiary_id: contract.sales_partner_id,
+            status: "draft",
+            export_status: "open",
+            description: `GOÄ-Partner-Provision ${contract.sales_partner_name} – ${contract.product_name} – ${periodMonthStr} (${totalCommission} €)`,
+            created_by: null,
+            metadata: {
+              invoice_id: invoice.id,
+              invoice_number: invoice.invoice_number,
+              commission_rule_version: "GOÄ-PARTNER-10PCT-v1",
+              period_month: periodMonthStr,
+              payout_trigger: "usage_revenue",
+              hfx_customer_number: contract.hfx_customer_number ?? null,
+            },
+          } as any);
+          if (fibuGoePartnerErr && (fibuGoePartnerErr as any).code !== "23505") {
+            console.error(`[auto-invoice] fibu_events partner_commission_approved (GOÄ) failed:`, fibuGoePartnerErr.message);
+          }
+        } catch (ex) {
+          console.error(`[auto-invoice] fibu_events GOÄ partner exception:`, String(ex));
+        }
       }
     }
   }
