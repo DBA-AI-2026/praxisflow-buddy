@@ -15,38 +15,85 @@ const log = (step: string, details?: unknown) =>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Idempotenz-Hilfsfunktionen
+//
+// Status-Modell:
+//   processing → Event wird gerade verarbeitet (Partial-Unique schützt gegen Race)
+//   processed  → Erfolgreich abgeschlossen (finale Duplikat-Sperre)
+//   error      → Fehlgeschlagen, kein Unique-Schutz → Retry darf erneut verarbeiten
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Versucht einen Stripe-Event als "verarbeitet" zu registrieren.
- * Gibt true zurück wenn der Event neu ist (Verarbeitung soll stattfinden).
- * Gibt false zurück wenn der Event bereits bekannt ist (skip).
+ * Versucht einen Stripe-Event als "processing" zu registrieren.
+ *
+ * Gibt "new"       zurück → Event ist neu, Verarbeitung soll starten.
+ * Gibt "duplicate" zurück → Event ist bereits "processed" oder "processing" → skip.
+ * Gibt "retry"     zurück → Event hatte vorher "error" → wurde gelöscht, neu anlegen.
+ *
+ * Partial-Unique-Index greift nur auf status IN ('processed', 'processing'),
+ * sodass "error"-Einträge beim Retry gelöscht und neu angelegt werden können.
  */
 async function claimEvent(
   supabase: ReturnType<typeof createClient>,
   eventId: string,
   eventType: string,
   meta?: Record<string, unknown>
-): Promise<boolean> {
-  const { error } = await supabase
+): Promise<"new" | "duplicate" | "retry"> {
+  // Prüfe ob der Event bereits existiert und in welchem Status
+  const { data: existing } = await supabase
     .from("processed_stripe_events")
-    .insert({ stripe_event_id: eventId, event_type: eventType, status: "ok", metadata: meta ?? null });
+    .select("id, status")
+    .eq("stripe_event_id", eventId)
+    .maybeSingle();
 
-  if (error) {
-    if ((error as any).code === "23505") {
-      // Unique constraint: Event bereits verarbeitet → Duplikat, ignorieren
-      log("Duplicate event ignored (idempotent)", { eventId, eventType });
-      return false;
+  if (existing) {
+    if (existing.status === "processed" || existing.status === "processing") {
+      // Echtes Duplikat: bereits erfolgreich verarbeitet oder läuft gerade → skip
+      log("Duplicate event ignored (idempotent)", { eventId, eventType, status: existing.status });
+      return "duplicate";
     }
-    // Unerwarteter Fehler beim Registrieren – trotzdem verarbeiten, aber warnen
-    log("WARN: could not register event in processed_stripe_events", { eventId, error: error.message });
+    // status === "error": vorheriger Versuch fehlgeschlagen → für Retry löschen
+    log("Previous error found – deleting for retry", { eventId, eventType });
+    await supabase
+      .from("processed_stripe_events")
+      .delete()
+      .eq("stripe_event_id", eventId)
+      .eq("status", "error");
   }
-  return true;
+
+  // Neu anlegen mit status "processing"
+  const { error: insertErr } = await supabase
+    .from("processed_stripe_events")
+    .insert({ stripe_event_id: eventId, event_type: eventType, status: "processing", metadata: meta ?? null });
+
+  if (insertErr) {
+    if ((insertErr as any).code === "23505") {
+      // Race Condition: anderer Request hat gerade auch processing gesetzt → skip
+      log("Race condition: event claimed by parallel execution, skipping", { eventId });
+      return "duplicate";
+    }
+    // Unerwarteter Fehler → trotzdem verarbeiten, aber warnen
+    log("WARN: could not register event in processed_stripe_events", { eventId, error: insertErr.message });
+  }
+  return existing?.status === "error" ? "retry" : "new";
 }
 
 /**
- * Markiert einen registrierten Event als fehlgeschlagen.
- * Ermöglicht manuelle Nachverfolgung in audit_logs / processed_stripe_events.
+ * Markiert den Event als erfolgreich abgeschlossen.
+ * Erst jetzt greift der finale Duplikat-Schutz (status=processed).
+ */
+async function markEventProcessed(
+  supabase: ReturnType<typeof createClient>,
+  eventId: string
+): Promise<void> {
+  await supabase
+    .from("processed_stripe_events")
+    .update({ status: "processed" })
+    .eq("stripe_event_id", eventId);
+}
+
+/**
+ * Markiert einen Event als fehlgeschlagen.
+ * status=error → kein Unique-Schutz → nächster Stripe-Retry darf erneut verarbeiten.
  */
 async function markEventFailed(
   supabase: ReturnType<typeof createClient>,
