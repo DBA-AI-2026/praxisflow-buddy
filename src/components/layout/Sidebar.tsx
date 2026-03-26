@@ -273,6 +273,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <NavSection label="Allgemein" items={allgemeinNavigation} {...sectionProps} />
         <NavSection label="Vertriebs-Admin" items={vertriebsAdminNavigation} {...sectionProps} />
         <NavSection label="Administration" items={adminNavigation} {...sectionProps} />
+        <NavSection label="Dev-Tools" items={devToolsNavigation} {...sectionProps} />
       </nav>
 
       {/* User / Profil */}
