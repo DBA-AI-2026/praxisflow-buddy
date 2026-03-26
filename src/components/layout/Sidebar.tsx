@@ -43,7 +43,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// Alle Rollen inkl. tippgeber (nur für Bereiche, die fachlich für alle gelten)
 const allRoles: AppRole[] = ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "tippgeber", "admin"];
+// Rollen ohne tippgeber – für Module, auf die Tippgeber keinen Zugriff haben dürfen
+const rolesWithoutTippgeber: AppRole[] = ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"];
 
 interface NavItem {
   name: string;
