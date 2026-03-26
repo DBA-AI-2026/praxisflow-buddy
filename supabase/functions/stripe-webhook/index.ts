@@ -13,6 +13,64 @@ const corsHeaders = {
 const log = (step: string, details?: unknown) =>
   console.log(`[stripe-webhook] ${step}${details ? " – " + JSON.stringify(details) : ""}`);
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Idempotenz-Hilfsfunktionen
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Versucht einen Stripe-Event als "verarbeitet" zu registrieren.
+ * Gibt true zurück wenn der Event neu ist (Verarbeitung soll stattfinden).
+ * Gibt false zurück wenn der Event bereits bekannt ist (skip).
+ */
+async function claimEvent(
+  supabase: ReturnType<typeof createClient>,
+  eventId: string,
+  eventType: string,
+  meta?: Record<string, unknown>
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("processed_stripe_events")
+    .insert({ stripe_event_id: eventId, event_type: eventType, status: "ok", metadata: meta ?? null });
+
+  if (error) {
+    if ((error as any).code === "23505") {
+      // Unique constraint: Event bereits verarbeitet → Duplikat, ignorieren
+      log("Duplicate event ignored (idempotent)", { eventId, eventType });
+      return false;
+    }
+    // Unerwarteter Fehler beim Registrieren – trotzdem verarbeiten, aber warnen
+    log("WARN: could not register event in processed_stripe_events", { eventId, error: error.message });
+  }
+  return true;
+}
+
+/**
+ * Markiert einen registrierten Event als fehlgeschlagen.
+ * Ermöglicht manuelle Nachverfolgung in audit_logs / processed_stripe_events.
+ */
+async function markEventFailed(
+  supabase: ReturnType<typeof createClient>,
+  eventId: string,
+  errorMessage: string
+): Promise<void> {
+  await supabase
+    .from("processed_stripe_events")
+    .update({ status: "error", error_message: errorMessage })
+    .eq("stripe_event_id", eventId);
+
+  // Auch in audit_logs für Admin-Transparenz
+  await supabase.from("audit_logs").insert({
+    action: "STRIPE_WEBHOOK_ERROR",
+    resource_path: `/stripe/events/${eventId}`,
+    success: false,
+    details: JSON.stringify({ stripe_event_id: eventId, error: errorMessage }),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Produkt-Matching Hilfsfunktionen
+// ─────────────────────────────────────────────────────────────────────────────
+
 type ProductWithAgb = {
   name: string;
   agb_pdf_path: string | null;
@@ -51,6 +109,10 @@ function findBestProductMatch(products: ProductWithAgb[], candidates: Array<stri
   }) ?? null;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Haupt-Handler
+// ─────────────────────────────────────────────────────────────────────────────
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -68,7 +130,7 @@ Deno.serve(async (req) => {
 
   let event: Stripe.Event;
 
-  // Validate signature if secret is configured
+  // Signatur-Validierung
   if (webhookSecret && sig) {
     try {
       event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
@@ -80,11 +142,21 @@ Deno.serve(async (req) => {
       });
     }
   } else {
-    // Accept without signature in dev / when secret not yet configured
+    // Ohne Secret (Dev-Modus) – im Prod-Betrieb sollte STRIPE_WEBHOOK_SECRET immer gesetzt sein
     event = JSON.parse(body) as Stripe.Event;
   }
 
   log("Event received", { type: event.type, id: event.id });
+
+  // ── Idempotenz-Check: Event bereits verarbeitet? ──────────────────────────
+  const isNew = await claimEvent(supabase, event.id, event.type, { event_type: event.type });
+  if (!isNew) {
+    // Duplikat → sofort 200 zurückgeben (Stripe braucht kein Retry)
+    return new Response(JSON.stringify({ received: true, duplicate: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   try {
     if (event.type === "checkout.session.completed") {
@@ -92,18 +164,14 @@ Deno.serve(async (req) => {
       const source = session.metadata?.source;
       log("checkout.session.completed", { source, sessionId: session.id });
 
-      // ─── DEMO BOOKING FLOW ──────────────────────────────────────────────
       if (source === "demo_booking") {
         await handleDemoBooking(supabase, stripe, session, RESEND_API_KEY);
       }
 
-      // ─── CONTRACT ACTIVATION FLOW (digital) ─────────────────────────────
       if (source === "contract_activation") {
         await handleContractActivation(supabase, stripe, session);
       }
 
-
-      // ─── SEPA MANDATE SETUP: Zahlungsmethode nach Setup speichern ───────
       if (source === "sepa_mandate_setup") {
         await handleSepaMandateSetup(supabase, stripe, session);
       }
@@ -113,14 +181,20 @@ Deno.serve(async (req) => {
       const sub = event.data.object as Stripe.Subscription;
       const contractId = sub.metadata?.contract_id;
       if (contractId) {
-        await supabase
+        const { error: subErr } = await supabase
           .from("contracts")
           .update({
             stripe_subscription_id: sub.id,
             stripe_customer_id: sub.customer as string,
           })
           .eq("id", contractId);
-        log("Subscription linked to contract", { contractId, subscriptionId: sub.id });
+
+        if (subErr) {
+          log("WARN: subscription update failed", { contractId, error: subErr.message });
+          await markEventFailed(supabase, event.id, `subscription update failed: ${subErr.message}`);
+        } else {
+          log("Subscription linked to contract", { contractId, subscriptionId: sub.id });
+        }
       }
     }
 
@@ -135,96 +209,116 @@ Deno.serve(async (req) => {
         ? stripeInvoice.customer
         : (stripeInvoice.customer as any)?.id ?? null;
 
-      // 1. Find invoice by stripe_invoice_id and mark as bezahlt
+      // 1. Rechnung nur auf "bezahlt" setzen wenn noch nicht bezahlt
+      //    (idempotent: update auf bereits-bezahlt ist harmlos, aber
+      //     wir prüfen vorher damit das Log sauber bleibt)
       const { data: inv } = await supabase
         .from("invoices")
         .update({ status: "bezahlt" })
         .eq("stripe_invoice_id", stripeInvoiceId)
+        .neq("status", "bezahlt")          // Guard: nur wenn Status noch nicht bezahlt
         .select("id, invoice_number, contract_id, net_amount, tax_amount, gross_amount, customer_number")
         .maybeSingle();
 
+      // Prüfe ob Rechnung grundsätzlich existiert (auch wenn schon bezahlt)
+      let existingInv = inv;
       if (!inv) {
-        log("invoice.paid – no matching invoice found for stripe_invoice_id", stripeInvoiceId);
-        // Continue: still create fibu_event as Stripe-sourced reference
-      }
-
-      // 2. Update customer_revenues via invoice_number (robust 1:1 link through invoices table)
-      if (inv?.invoice_number) {
-        const { error: revErr } = await supabase
-          .from("customer_revenues")
-          .update({ payment_status: "paid", paid_at: new Date().toISOString() })
-          .eq("invoice_number", inv.invoice_number);
-        if (revErr) {
-          log("customer_revenues update failed", revErr.message);
+        const { data: alreadyPaid } = await supabase
+          .from("invoices")
+          .select("id, invoice_number, contract_id, net_amount, tax_amount, gross_amount, customer_number")
+          .eq("stripe_invoice_id", stripeInvoiceId)
+          .maybeSingle();
+        existingInv = alreadyPaid;
+        if (alreadyPaid) {
+          log("invoice.paid – invoice already marked bezahlt (idempotent)", stripeInvoiceId);
         } else {
-          log("customer_revenues updated to paid for invoice", inv.invoice_number);
+          log("invoice.paid – no matching HFX invoice found", stripeInvoiceId);
         }
       }
 
-      // 3. Enrich with contract data: customer_id + product_name for complete FiBu tracing
+      // 2. customer_revenues aktualisieren (idempotent: update auf paid ist harmlos)
+      if (existingInv?.invoice_number) {
+        const { error: revErr } = await supabase
+          .from("customer_revenues")
+          .update({ payment_status: "paid", paid_at: new Date().toISOString() })
+          .eq("invoice_number", existingInv.invoice_number)
+          .neq("payment_status", "paid");    // Guard: nur wenn noch nicht paid
+        if (revErr) {
+          log("WARN: customer_revenues update failed", revErr.message);
+        } else {
+          log("customer_revenues updated to paid", existingInv.invoice_number);
+        }
+      }
+
+      // 3. Vertragsdaten für vollständiges FiBu-Tracing
       let customerId: string | null = null;
       let productName: string | null = null;
-      if (inv?.contract_id) {
+      if (existingInv?.contract_id) {
         const { data: ctr } = await supabase
           .from("contracts")
           .select("customer_id, product_name")
-          .eq("id", inv.contract_id)
+          .eq("id", existingInv.contract_id)
           .maybeSingle();
         customerId = ctr?.customer_id ?? null;
         productName = ctr?.product_name ?? null;
       }
 
-      // 4. Create fibu_event
-      // Point 3: If no HFX invoice was found (amounts would be 0, no verified mapping),
-      // set status = 'draft' so an admin must manually approve it.
-      // When a matched invoice exists, Stripe is authoritative → status = 'approved'.
-      const fibuStatus = inv ? "approved" : "draft";
+      // 4. fibu_event erstellen
+      // source_reference_id = stripeInvoiceId → idx_fibu_events_source_unique schützt gegen Duplikate
+      const fibuStatus = existingInv ? "approved" : "draft";
       const { error: fibuErr } = await supabase.from("fibu_events").insert({
         event_type: "payment_received_reference",
         source_module: "stripe",
         source_reference_id: stripeInvoiceId,
-        contract_id: inv?.contract_id ?? null,
+        contract_id: existingInv?.contract_id ?? null,
         customer_id: customerId,
         product_name: productName,
-        amount_net: inv ? Number(inv.net_amount) : 0,
-        tax_amount: inv ? Number(inv.tax_amount) : 0,
-        amount_gross: inv ? Number(inv.gross_amount) : 0,
+        amount_net: existingInv ? Number(existingInv.net_amount) : 0,
+        tax_amount: existingInv ? Number(existingInv.tax_amount) : 0,
+        amount_gross: existingInv ? Number(existingInv.gross_amount) : 0,
         occurred_at: new Date().toISOString(),
-        // approved = Stripe-confirmed, matched HFX invoice; draft = unmatched, requires manual review
         status: fibuStatus,
         export_status: "open",
-        description: `Zahlungseingang Stripe ${stripeInvoiceId}${inv?.invoice_number ? ` / ${inv.invoice_number}` : " (keine HFX-Rechnung gefunden)"}`,
+        description: `Zahlungseingang Stripe ${stripeInvoiceId}${existingInv?.invoice_number ? ` / ${existingInv.invoice_number}` : " (keine HFX-Rechnung gefunden)"}`,
         metadata: {
           stripe_invoice_id: stripeInvoiceId,
           payment_intent_id: paymentIntentId,
           stripe_customer_id: stripeCustomerId,
-          hfx_invoice_number: inv?.invoice_number ?? null,
-          unmatched: !inv,
+          hfx_invoice_number: existingInv?.invoice_number ?? null,
+          unmatched: !existingInv,
         },
       } as any);
 
-      if (fibuErr && (fibuErr as any).code !== "23505") {
-        // 23505 = unique constraint violation (idempotent webhook retry) – silently ignore
-        log("fibu_events insert failed for invoice.paid", fibuErr.message);
+      if (fibuErr) {
+        if ((fibuErr as any).code === "23505") {
+          log("fibu_event payment_received_reference already exists (idempotent)", stripeInvoiceId);
+        } else {
+          log("ERROR: fibu_events insert failed for invoice.paid", fibuErr.message);
+          await markEventFailed(supabase, event.id, `fibu_events insert failed: ${fibuErr.message}`);
+        }
       }
-      log("invoice.paid processed", { stripeInvoiceId, found: !!inv, fibuStatus, customerId, productName });
+      log("invoice.paid processed", { stripeInvoiceId, found: !!existingInv, fibuStatus, customerId, productName });
     }
 
     return new Response(JSON.stringify({ received: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    log("Error processing event", String(err));
-    return new Response(JSON.stringify({ error: String(err) }), {
+    const errMsg = String(err);
+    log("FATAL: uncaught error processing event", errMsg);
+    // Fehler in processed_stripe_events und audit_logs eintragen
+    await markEventFailed(supabase, event.id, errMsg);
+    // 500 → Stripe wird den Event erneut zustellen (retry)
+    return new Response(JSON.stringify({ error: errMsg }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
 
-// ────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // DEMO BOOKING: create contract + praxen entry after successful checkout
-// ────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 async function handleDemoBooking(
   supabase: ReturnType<typeof createClient>,
   stripe: Stripe,
@@ -237,7 +331,6 @@ async function handleDemoBooking(
     return;
   }
 
-  // Load demo download record
   const { data: demo, error: demoErr } = await supabase
     .from("demo_downloads")
     .select("*")
@@ -248,7 +341,7 @@ async function handleDemoBooking(
     return;
   }
 
-  // Prevent duplicate contract creation
+  // Idempotenz: Vertrag bereits erstellt?
   const { data: existingContract } = await supabase
     .from("contracts")
     .select("id")
@@ -256,11 +349,10 @@ async function handleDemoBooking(
     .eq("status", "aktiv")
     .maybeSingle();
   if (existingContract) {
-    console.log("[stripe-webhook] contract already exists, skipping", existingContract.id);
+    log("demo_booking: contract already exists (idempotent skip)", existingContract.id);
     return;
   }
 
-  // Retrieve subscription / customer from Stripe
   let stripeSubscriptionId: string | null = null;
   let stripeCustomerId: string | null = null;
   if (session.subscription) {
@@ -278,7 +370,6 @@ async function handleDemoBooking(
   const endDate = new Date();
   endDate.setFullYear(endDate.getFullYear() + 1);
 
-  // Build contract record
   const { data: contract, error: contractErr } = await supabase
     .from("contracts")
     .insert({
@@ -308,9 +399,9 @@ async function handleDemoBooking(
     console.error("[stripe-webhook] failed to create contract:", contractErr);
     return;
   }
-  console.log("[stripe-webhook] contract created:", contract.id);
+  log("demo_booking: contract created", contract.id);
 
-  // Create Praxen entry
+  // Praxis-Eintrag (idempotent via name-Check)
   const { data: existingPraxis } = await supabase
     .from("praxen")
     .select("id")
@@ -328,15 +419,12 @@ async function handleDemoBooking(
     });
   }
 
-  // Update demo status
   await supabase.from("demo_downloads").update({ status: "kunde" }).eq("id", demoId);
 
-  // Convert linked lead if any
   if (demo.hfx_customer_number) {
     await supabase.from("leads").update({ status: "kunde" }).eq("hfx_customer_number", demo.hfx_customer_number);
   }
 
-  // Send confirmation email
   if (resendKey && demo.email) {
     const productLabel = demo.product_name || "HFX-Produkt";
     const monthlyGross = session.amount_total ? (session.amount_total / 100).toFixed(2) : "–";
@@ -347,9 +435,9 @@ async function handleDemoBooking(
       monthlyGross,
       startDate: today,
       contractId: contract.id,
-      invoiceNumber: contract.invoice_number ?? null,
+      invoiceNumber: (contract as any).invoice_number ?? null,
     });
-    await fetch("https://api.resend.com/emails", {
+    const emailResult = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
       body: JSON.stringify({
@@ -359,13 +447,18 @@ async function handleDemoBooking(
         html,
       }),
     });
-    console.log("[stripe-webhook] confirmation email sent to", demo.email);
+    if (!emailResult.ok) {
+      const errBody = await emailResult.text();
+      log("WARN: confirmation email failed", { status: emailResult.status, body: errBody });
+    } else {
+      log("Confirmation email sent", demo.email);
+    }
   }
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// CONTRACT ACTIVATION: link subscription to existing contract + ensure 3-tier records exist
-// ────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTRACT ACTIVATION
+// ─────────────────────────────────────────────────────────────────────────────
 async function handleContractActivation(
   supabase: ReturnType<typeof createClient>,
   stripe: Stripe,
@@ -391,12 +484,17 @@ async function handleContractActivation(
       : (session.customer as any).id;
   }
 
-  // Load full contract details for downstream operations
   const { data: contract } = await supabase
     .from("contracts")
     .select("*")
     .eq("id", contractId)
     .maybeSingle();
+
+  // Idempotenz: Vertrag bereits aktiv? (z.B. durch schnelle Doppel-Delivery)
+  if (contract?.status === "aktiv" && contract?.stripe_subscription_id === stripeSubscriptionId) {
+    log("contract_activation: already active with same subscription (idempotent skip)", contractId);
+    return;
+  }
 
   const { error } = await supabase
     .from("contracts")
@@ -425,11 +523,9 @@ async function handleContractActivation(
     return;
   }
 
-  console.log("[stripe-webhook] contract activated via Stripe:", contractId);
+  log("Contract activated via Stripe", contractId);
 
-  // ── 3-Tier Architecture: ensure customers record exists (Ebene 1) ────────
-  // Upsert a customer record keyed on hfx_customer_number so the 3-tier
-  // hierarchy (customer → contract → case) is complete for digital activations.
+  // 3-Tier: customers-Eintrag sicherstellen
   if (contract?.hfx_customer_number) {
     const { error: custErr } = await supabase
       .from("customers")
@@ -451,11 +547,10 @@ async function handleContractActivation(
         { onConflict: "hfx_customer_number", ignoreDuplicates: false }
       );
     if (custErr) {
-      console.error("[stripe-webhook] customers upsert failed:", custErr.message);
+      log("WARN: customers upsert failed", custErr.message);
     } else {
-      console.log("[stripe-webhook] customers record ensured for", contract.hfx_customer_number);
+      log("customers record ensured", contract.hfx_customer_number);
 
-      // Link contract to customer record (customer_id) if not already set
       if (!contract.customer_id) {
         const { data: custRecord } = await supabase
           .from("customers")
@@ -472,11 +567,7 @@ async function handleContractActivation(
     }
   }
 
-  // ── 3-Tier Architecture: create Neuabschluss case (Ebene 3) ─────────────
-  // The unique partial index idx_contract_cases_neuabschluss_unique on
-  // (contract_id) WHERE case_type = 'neuabschluss' makes this INSERT
-  // idempotent: Stripe webhook retries will simply conflict and be silently
-  // ignored, preventing duplicate neuabschluss records.
+  // 3-Tier: contract_case (UNIQUE Index auf neuabschluss macht dies idempotent)
   const { error: caseErr } = await supabase
     .from("contract_cases")
     .insert({
@@ -486,21 +577,19 @@ async function handleContractActivation(
       status: "abgeschlossen",
       title: `Neuabschluss – ${contract?.product_name ?? "Produkt"}`,
       notes: `Automatisch erstellt bei digitalem Vertragsabschluss via Stripe (Session: ${session.id})`,
-    } as any)
-    .throwOnError();
+    } as any);
 
   if (caseErr) {
-    // Unique constraint violation (23505) = already exists → idempotent, ignore
     if ((caseErr as any).code === "23505") {
-      console.log("[stripe-webhook] contract_case neuabschluss already exists (idempotent retry), skipping", contractId);
+      log("contract_case neuabschluss already exists (idempotent skip)", contractId);
     } else {
-      console.error("[stripe-webhook] contract_cases insert failed:", caseErr.message);
+      log("WARN: contract_cases insert failed", caseErr.message);
     }
   } else {
-    console.log("[stripe-webhook] contract_case neuabschluss created for", contractId);
+    log("contract_case neuabschluss created", contractId);
   }
 
-  // ── Audit log: successful digital activation ─────────────────────────────
+  // Audit-Log: erfolgreiche Aktivierung
   await supabase.from("audit_logs").insert({
     action: "CONTRACT_ACTIVATED_DIGITAL",
     resource_path: `/contracts/${contractId}`,
@@ -520,10 +609,9 @@ async function handleContractActivation(
   });
 }
 
-
-// ────────────────────────────────────────────────────────────────────────────
-// SEPA MANDATE SETUP: Nach erfolgreichem Setup Zahlungsmethode speichern
-// ────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// SEPA MANDATE SETUP
+// ─────────────────────────────────────────────────────────────────────────────
 async function handleSepaMandateSetup(
   supabase: ReturnType<typeof createClient>,
   stripe: Stripe,
@@ -544,7 +632,18 @@ async function handleSepaMandateSetup(
     return;
   }
 
-  // SetupIntent abrufen und Zahlungsmethode als Standard setzen
+  // Idempotenz: stripe_customer_id bereits gesetzt?
+  const { data: existing } = await supabase
+    .from("contracts")
+    .select("stripe_customer_id")
+    .eq("id", contractId)
+    .maybeSingle();
+
+  if (existing?.stripe_customer_id === stripeCustomerId) {
+    log("sepa_mandate_setup: stripe_customer_id already set (idempotent skip)", contractId);
+    return;
+  }
+
   if (session.setup_intent) {
     const setupIntentId = typeof session.setup_intent === "string"
       ? session.setup_intent
@@ -561,24 +660,25 @@ async function handleSepaMandateSetup(
         log("SEPA payment method set as default", { stripeCustomerId, pmId });
       }
     } catch (err) {
-      console.error("[stripe-webhook] Could not set default payment method:", err);
+      log("WARN: could not set default payment method", String(err));
     }
   }
 
-  // stripe_customer_id am Vertrag sichern
   const { error } = await supabase
     .from("contracts")
     .update({ stripe_customer_id: stripeCustomerId } as any)
     .eq("id", contractId);
 
   if (error) {
-    console.error("[stripe-webhook] failed to save stripe_customer_id after mandate setup:", error);
+    log("ERROR: failed to save stripe_customer_id after mandate setup", error.message);
   } else {
     log("SEPA mandate setup completed", { contractId, stripeCustomerId });
   }
 }
 
-// ────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// E-Mail-Template (Demo-Buchungsbestätigung)
+// ─────────────────────────────────────────────────────────────────────────────
 function buildConfirmationEmail(params: {
   contactName: string;
   companyName: string;
