@@ -83,7 +83,8 @@ const kundenVertraegeNavigation: NavItem[] = [
 
 // ─── FINANZEN: operative Finanzmodule (P2: aus Admin herausgelöst) ────────────
 const finanzenNavigation: NavItem[] = [
-  { name: "Umsätze", href: "/umsaetze", icon: BarChart3, roles: allRoles },
+  // tippgeber hat keinen Zugriff auf Umsätze (nur eigene Provisionen)
+  { name: "Umsätze", href: "/umsaetze", icon: BarChart3, roles: rolesWithoutTippgeber },
   { name: "Rechnungen & Usage", href: "/rechnungen", icon: Receipt, roles: ["admin"] },
   { name: "Buchhaltung / FiBu", href: "/buchhaltung", icon: TrendingUp, roles: ["admin"] },
   { name: "Datenexport", href: "/export", icon: FileDown, roles: ["admin", "sales_lead"] },
