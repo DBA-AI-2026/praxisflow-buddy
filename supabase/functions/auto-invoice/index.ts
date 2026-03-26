@@ -515,6 +515,47 @@ Deno.serve(async (req) => {
                     status: "pending",
                   });
                   console.log(`[auto-invoice] Created commission payout ${commissionAmount} € for partner ${contract.sales_partner_name}`);
+
+                  // ── FiBu: partner_commission_approved event (additive, non-blocking) ──
+                  try {
+                    const { error: fibuCommErr } = await supabase.from("fibu_events").insert({
+                      event_type: "partner_commission_approved",
+                      source_module: "commission_payouts",
+                      source_reference_id: invoice.id,
+                      contract_id: contract.id,
+                      customer_id: contract.customer_id ?? null,
+                      product_name: contract.product_name,
+                      period_start: periodStart,
+                      period_end: periodEnd,
+                      amount_net: commissionAmount,
+                      tax_amount: 0,
+                      amount_gross: commissionAmount,
+                      currency: "EUR",
+                      commission_type: productCommission.commission_type,
+                      commission_base_amount: baseNetAmount,
+                      commission_rate: productCommission.commission_value,
+                      commission_amount: commissionAmount,
+                      commission_rule_version: ruleVersion,
+                      beneficiary_type: "sales_partner",
+                      beneficiary_id: contract.sales_partner_id,
+                      status: "draft",
+                      export_status: "open",
+                      description: `Partner-Provision ${contract.sales_partner_name} – ${contract.product_name} – ${periodMonthStr}`,
+                      created_by: null,
+                      metadata: {
+                        invoice_id: invoice.id,
+                        invoice_number: invoice.invoice_number,
+                        commission_rule_version: ruleVersion,
+                        period_month: periodMonthStr,
+                        hfx_customer_number: contract.hfx_customer_number ?? null,
+                      },
+                    } as any);
+                    if (fibuCommErr && (fibuCommErr as any).code !== "23505") {
+                      console.error(`[auto-invoice] fibu_events partner_commission_approved failed:`, fibuCommErr.message);
+                    }
+                  } catch (fibuCommEx) {
+                    console.error(`[auto-invoice] fibu_events partner_commission_approved exception:`, String(fibuCommEx));
+                  }
                 }
               }
             }
@@ -741,6 +782,48 @@ async function createGoaeCommissions(params: {
           contract_start_date: contract.start_date,
         });
         console.log(`[auto-invoice] GOÄ AD fixed payout ${fixedAmount} € for ${contract.sales_partner_name}`);
+
+        // ── FiBu: internal_sales_bonus_reference event for GOÄ AD signup (additive) ──
+        try {
+          const { error: fibuAdSignupErr } = await supabase.from("fibu_events").insert({
+            event_type: "internal_sales_bonus_reference",
+            source_module: "commission_payouts",
+            source_reference_id: `${invoice.id}:ad-signup`,
+            contract_id: contract.id,
+            customer_id: contract.customer_id ?? null,
+            product_name: contract.product_name,
+            period_start: periodStart,
+            period_end: periodEnd,
+            amount_net: fixedAmount,
+            tax_amount: 0,
+            amount_gross: fixedAmount,
+            currency: "EUR",
+            commission_type: "festbetrag",
+            commission_base_amount: baseNetAmount,
+            commission_rate: fixedAmount,
+            commission_amount: fixedAmount,
+            commission_rule_version: "GOÄ-AD-SIGNUP-2026-v1",
+            beneficiary_type: "ad",
+            beneficiary_id: contract.sales_partner_id,
+            status: "draft",
+            export_status: "open",
+            description: `AD-Signup-Bonus ${contract.sales_partner_name} – ${contract.product_name} – ${periodMonthStr} (${fixedAmount} €)`,
+            created_by: null,
+            metadata: {
+              invoice_id: invoice.id,
+              invoice_number: invoice.invoice_number,
+              commission_rule_version: "GOÄ-AD-SIGNUP-2026-v1",
+              period_month: periodMonthStr,
+              payout_trigger: "contract_signup",
+              hfx_customer_number: contract.hfx_customer_number ?? null,
+            },
+          } as any);
+          if (fibuAdSignupErr && (fibuAdSignupErr as any).code !== "23505") {
+            console.error(`[auto-invoice] fibu_events internal_sales_bonus_reference (AD signup) failed:`, fibuAdSignupErr.message);
+          }
+        } catch (ex) {
+          console.error(`[auto-invoice] fibu_events AD signup exception:`, String(ex));
+        }
       }
     }
 
@@ -769,6 +852,49 @@ async function createGoaeCommissions(params: {
             contract_start_date: contract.start_date,
           });
           console.log(`[auto-invoice] GOÄ AD usage payout ${usageCommission} € for ${contract.sales_partner_name}`);
+
+          // ── FiBu: internal_sales_bonus_reference event for GOÄ AD usage (additive) ──
+          try {
+            const { error: fibuAdUsageErr } = await supabase.from("fibu_events").insert({
+              event_type: "internal_sales_bonus_reference",
+              source_module: "commission_payouts",
+              source_reference_id: `${invoice.id}:ad-usage`,
+              contract_id: contract.id,
+              customer_id: contract.customer_id ?? null,
+              product_name: contract.product_name,
+              period_start: periodStart,
+              period_end: periodEnd,
+              amount_net: usageCommission,
+              tax_amount: 0,
+              amount_gross: usageCommission,
+              currency: "EUR",
+              commission_type: "prozent",
+              commission_base_amount: usageNetAmount,
+              commission_rate: 10,
+              commission_amount: usageCommission,
+              commission_rule_version: "GOÄ-AD-USAGE-10PCT-24M-v1",
+              beneficiary_type: "ad",
+              beneficiary_id: contract.sales_partner_id,
+              status: "draft",
+              export_status: "open",
+              description: `AD-Verbrauchsbonus ${contract.sales_partner_name} – ${contract.product_name} – ${periodMonthStr} (${usageCommission} €)`,
+              created_by: null,
+              metadata: {
+                invoice_id: invoice.id,
+                invoice_number: invoice.invoice_number,
+                commission_rule_version: "GOÄ-AD-USAGE-10PCT-24M-v1",
+                period_month: periodMonthStr,
+                payout_trigger: "usage_revenue",
+                usage_net_amount: usageNetAmount,
+                hfx_customer_number: contract.hfx_customer_number ?? null,
+              },
+            } as any);
+            if (fibuAdUsageErr && (fibuAdUsageErr as any).code !== "23505") {
+              console.error(`[auto-invoice] fibu_events internal_sales_bonus_reference (AD usage) failed:`, fibuAdUsageErr.message);
+            }
+          } catch (ex) {
+            console.error(`[auto-invoice] fibu_events AD usage exception:`, String(ex));
+          }
         }
       } else {
         console.log(`[auto-invoice] GOÄ AD usage provision expired (${monthsElapsed} months) for contract ${contract.id}`);
@@ -806,6 +932,48 @@ async function createGoaeCommissions(params: {
           contract_start_date: contract.start_date,
         });
         console.log(`[auto-invoice] GOÄ sales_partner payout ${totalCommission} € for ${contract.sales_partner_name}`);
+
+        // ── FiBu: partner_commission_approved event for GOÄ sales_partner (additive) ──
+        try {
+          const { error: fibuGoePartnerErr } = await supabase.from("fibu_events").insert({
+            event_type: "partner_commission_approved",
+            source_module: "commission_payouts",
+            source_reference_id: `${invoice.id}:goe-partner`,
+            contract_id: contract.id,
+            customer_id: contract.customer_id ?? null,
+            product_name: contract.product_name,
+            period_start: periodStart,
+            period_end: periodEnd,
+            amount_net: totalCommission,
+            tax_amount: 0,
+            amount_gross: totalCommission,
+            currency: "EUR",
+            commission_type: "prozent",
+            commission_base_amount: netAmount,
+            commission_rate: 10,
+            commission_amount: totalCommission,
+            commission_rule_version: "GOÄ-PARTNER-10PCT-v1",
+            beneficiary_type: "sales_partner",
+            beneficiary_id: contract.sales_partner_id,
+            status: "draft",
+            export_status: "open",
+            description: `GOÄ-Partner-Provision ${contract.sales_partner_name} – ${contract.product_name} – ${periodMonthStr} (${totalCommission} €)`,
+            created_by: null,
+            metadata: {
+              invoice_id: invoice.id,
+              invoice_number: invoice.invoice_number,
+              commission_rule_version: "GOÄ-PARTNER-10PCT-v1",
+              period_month: periodMonthStr,
+              payout_trigger: "usage_revenue",
+              hfx_customer_number: contract.hfx_customer_number ?? null,
+            },
+          } as any);
+          if (fibuGoePartnerErr && (fibuGoePartnerErr as any).code !== "23505") {
+            console.error(`[auto-invoice] fibu_events partner_commission_approved (GOÄ) failed:`, fibuGoePartnerErr.message);
+          }
+        } catch (ex) {
+          console.error(`[auto-invoice] fibu_events GOÄ partner exception:`, String(ex));
+        }
       }
     }
   }
