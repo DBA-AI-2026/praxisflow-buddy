@@ -75,11 +75,11 @@ const vertriebNavigation: NavItem[] = [
 // Kundenstamm = direkte Stammdaten-Suche für Vertragsabteilung/Admin ohne Journey-Kontext
 // /kunden und /kunden/:id bleiben als Routen vollständig erhalten
 const kundenVertraegeNavigation: NavItem[] = [
-  { name: "Kunden-Journey", href: "/praxen-journey", icon: Building2, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
-  { name: "Kundenstamm", href: "/kunden", icon: Building2, roles: ["vertragsabteilung", "sales_lead", "regional_lead", "admin"] },
-  { name: "Verträge", href: "/vertrieb/vertraege", icon: FileSignature, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
+  { name: "Kunden-Journey", href: "/praxen-journey", icon: Building2, roles: operativeRoles },
+  { name: "Kundenstamm", href: "/kunden", icon: Building2, roles: ["sales_lead", "regional_lead", "admin"] },
+  { name: "Verträge", href: "/vertrieb/vertraege", icon: FileSignature, roles: operativeRoles },
   // tippgeber hat keinen Zugriff auf Lizenzen (nur operativer Vertrieb)
-  { name: "HFX EBM Lizenzen", href: "/lizenzen", icon: Key, roles: rolesWithoutTippgeber },
+  { name: "HFX EBM Lizenzen", href: "/lizenzen", icon: Key, roles: operativeRoles },
 ];
 
 // ─── FINANZEN: operative Finanzmodule (P2: aus Admin herausgelöst) ────────────
