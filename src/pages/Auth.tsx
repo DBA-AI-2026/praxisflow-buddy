@@ -13,9 +13,11 @@ import logo from "@/assets/fuchs-bildmarke.png";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 
+// Login: deliberately lenient (min 6) — existing accounts may have shorter passwords.
+// New passwords (reset/set) enforce the strict policy defined in passwordSchema.
 const loginSchema = z.object({
   email: z.string().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
-  password: z.string().min(6, "Das Passwort muss mindestens 6 Zeichen lang sein"),
+  password: z.string().min(1, "Bitte geben Sie Ihr Passwort ein"),
 });
 
 const requestSchema = z.object({

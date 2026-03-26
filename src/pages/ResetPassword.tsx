@@ -10,8 +10,13 @@ import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { z } from "zod";
 
+// Password policy: min 8 chars, at least one letter and one digit
 const passwordSchema = z.object({
-  password: z.string().min(6, "Das Passwort muss mindestens 6 Zeichen lang sein"),
+  password: z
+    .string()
+    .min(8, "Das Passwort muss mindestens 8 Zeichen lang sein")
+    .regex(/[A-Za-z]/, "Das Passwort muss mindestens einen Buchstaben enthalten")
+    .regex(/[0-9]/, "Das Passwort muss mindestens eine Zahl enthalten"),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwörter stimmen nicht überein",
@@ -134,12 +139,14 @@ export default function ResetPassword() {
                 <Input
                   id="new-password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Mindestens 8 Zeichen, Buchstabe + Zahl"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLoading}
+                  minLength={8}
                 />
+                <p className="text-xs text-muted-foreground">Mindestens 8 Zeichen, ein Buchstabe und eine Zahl.</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirm-password">Passwort bestätigen</Label>
