@@ -132,58 +132,50 @@ export default function Auth() {
         return;
       }
 
-      // Check if request already exists
-      const { data: existingRequest } = await supabase
-        .from("registration_requests")
-        .select("id, status")
-        .eq("email", requestEmail)
-        .maybeSingle();
-
-      if (existingRequest) {
-        if (existingRequest.status === "pending") {
-          setError("Eine Anfrage mit dieser E-Mail-Adresse ist bereits eingegangen und wird bearbeitet.");
-        } else if (existingRequest.status === "approved") {
-          setError("Ihre Anfrage wurde bereits genehmigt. Bitte melden Sie sich an.");
-          setActiveTab("login");
-        } else {
-          setError("Ihre vorherige Anfrage wurde abgelehnt. Bitte kontaktieren Sie den Administrator.");
+      // Use rate-limited SECURITY DEFINER RPC — no direct table access from client
+      const { data: result, error: rpcError } = await supabase.rpc(
+        "submit_registration_request",
+        {
+          p_full_name: requestFullName,
+          p_email: requestEmail,
+          p_company: requestCompany || null,
+          p_message: requestMessage || null,
         }
-        setIsLoading(false);
+      );
+
+      if (rpcError) {
+        setError("Fehler beim Senden der Anfrage. Bitte versuchen Sie es erneut.");
         return;
       }
 
-      // Insert new request
-      const { error: insertError } = await supabase
-        .from("registration_requests")
-        .insert({
-          full_name: requestFullName,
+      const response = result as { success: boolean; code?: string; message?: string };
+
+      if (!response.success) {
+        // Generic message regardless of internal code — no account enumeration
+        if (response.code === "RATE_LIMITED") {
+          setError("Zu viele Anfragen. Bitte versuchen Sie es später erneut.");
+        } else {
+          // DUPLICATE, ALREADY_PROCESSED, INVALID_INPUT — all use neutral wording
+          setError("Ihre Anfrage konnte nicht übermittelt werden. Falls Sie bereits eine Anfrage gestellt haben, wenden Sie sich bitte direkt an uns.");
+        }
+        return;
+      }
+
+      // Success — fire notification (fire and forget, no error leak to user)
+      supabase.functions.invoke("notify-new-request", {
+        body: {
+          fullName: requestFullName,
           email: requestEmail,
           company: requestCompany || null,
           message: requestMessage || null,
-        });
+        },
+      }).catch(() => { /* intentionally silent */ });
 
-      if (insertError) {
-        setError("Fehler beim Senden der Anfrage. Bitte versuchen Sie es erneut.");
-        console.error("Insert error:", insertError);
-      } else {
-        // Send notification email to admin (fire and forget - don't block on errors)
-        supabase.functions.invoke("notify-new-request", {
-          body: {
-            fullName: requestFullName,
-            email: requestEmail,
-            company: requestCompany || null,
-            message: requestMessage || null,
-          },
-        }).catch((err) => {
-          console.error("Failed to send notification email:", err);
-        });
-
-        setSuccess("Ihre Zugangsanfrage wurde erfolgreich gesendet. Ein Administrator wird sich mit Ihnen in Verbindung setzen.");
-        setRequestEmail("");
-        setRequestFullName("");
-        setRequestCompany("");
-        setRequestMessage("");
-      }
+      setSuccess("Ihre Zugangsanfrage wurde erfolgreich gesendet. Ein Administrator wird sich mit Ihnen in Verbindung setzen.");
+      setRequestEmail("");
+      setRequestFullName("");
+      setRequestCompany("");
+      setRequestMessage("");
     } catch (err) {
       setError("Ein unerwarteter Fehler ist aufgetreten.");
     } finally {
