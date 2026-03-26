@@ -381,7 +381,7 @@ const Provisionen = () => {
   // ── Payout Actions ──
 
   const approveGroup = async (month: string, partnerId: string, groupKey: string) => {
-    if (!isAdmin) return;
+    if (!canEditCommissions) return;
     setApprovingGroup(groupKey);
     try {
       const ids = payouts
@@ -405,7 +405,7 @@ const Provisionen = () => {
   };
 
   const markPaid = async (month: string, partnerId: string, groupKey: string) => {
-    if (!isAdmin) return;
+    if (!canEditCommissions) return;
     setPayingGroup(groupKey);
     try {
       const ids = payouts
