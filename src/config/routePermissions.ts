@@ -13,6 +13,7 @@ export const routePermissions: RoutePermission[] = [
   { path: "/", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "tippgeber", "admin"] },
   { path: "/praxen", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
   { path: "/kunden", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
+  // tippgeber: kein Zugriff auf Tickets, Lizenzen, Umsätze, Interessenten
   { path: "/tickets", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
   { path: "/lizenzen", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
   { path: "/umsaetze", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
@@ -20,8 +21,8 @@ export const routePermissions: RoutePermission[] = [
   // Reservierungen
   { path: "/reservierungen", allowedRoles: ["user", "sales_partner", "regional_lead", "admin"] },
   
-  // Interessenten
-  { path: "/interessenten", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "tippgeber", "admin"] },
+  // Interessenten – tippgeber entfernt
+  { path: "/interessenten", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
 
   // Journey-Übersicht (Tab-Vorschau)
   { path: "/praxen-journey", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },

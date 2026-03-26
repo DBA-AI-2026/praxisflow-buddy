@@ -43,7 +43,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// Alle Rollen inkl. tippgeber (nur für Bereiche, die fachlich für alle gelten)
 const allRoles: AppRole[] = ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "tippgeber", "admin"];
+// Rollen ohne tippgeber – für Module, auf die Tippgeber keinen Zugriff haben dürfen
+const rolesWithoutTippgeber: AppRole[] = ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"];
 
 interface NavItem {
   name: string;
@@ -60,7 +63,7 @@ const dashboardNav: NavItem[] = [
 // ─── VERTRIEB: Akquise & Pipeline ────────────────────────────────────────────
 // P3: Nur Akquise-relevante Punkte; Kunden/Verträge in eigene Sektion ausgelagert
 const vertriebNavigation: NavItem[] = [
-  { name: "Interessenten", href: "/interessenten", icon: UserPlus, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "tippgeber", "admin"] },
+  { name: "Interessenten", href: "/interessenten", icon: UserPlus, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
   { name: "Reservierungen", href: "/reservierungen", icon: BookMarked, roles: ["user", "sales_partner", "regional_lead", "admin"] },
   { name: "Demo-Tracking", href: "/demo-tracking", icon: FlaskConical, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
   { name: "Tipp-Leads", href: "/tipp-leads", icon: Lightbulb, roles: ["tippgeber", "admin", "sales_lead"] },
@@ -74,12 +77,14 @@ const kundenVertraegeNavigation: NavItem[] = [
   { name: "Kunden-Journey", href: "/praxen-journey", icon: Building2, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
   { name: "Kundenstamm", href: "/kunden", icon: Building2, roles: ["vertragsabteilung", "sales_lead", "regional_lead", "admin"] },
   { name: "Verträge", href: "/vertrieb/vertraege", icon: FileSignature, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "vertragsabteilung", "admin"] },
-  { name: "HFX EBM Lizenzen", href: "/lizenzen", icon: Key, roles: allRoles },
+  // tippgeber hat keinen Zugriff auf Lizenzen (nur operativer Vertrieb)
+  { name: "HFX EBM Lizenzen", href: "/lizenzen", icon: Key, roles: rolesWithoutTippgeber },
 ];
 
 // ─── FINANZEN: operative Finanzmodule (P2: aus Admin herausgelöst) ────────────
 const finanzenNavigation: NavItem[] = [
-  { name: "Umsätze", href: "/umsaetze", icon: BarChart3, roles: allRoles },
+  // tippgeber hat keinen Zugriff auf Umsätze (nur eigene Provisionen)
+  { name: "Umsätze", href: "/umsaetze", icon: BarChart3, roles: rolesWithoutTippgeber },
   { name: "Rechnungen & Usage", href: "/rechnungen", icon: Receipt, roles: ["admin"] },
   { name: "Buchhaltung / FiBu", href: "/buchhaltung", icon: TrendingUp, roles: ["admin"] },
   { name: "Datenexport", href: "/export", icon: FileDown, roles: ["admin", "sales_lead"] },
@@ -88,7 +93,8 @@ const finanzenNavigation: NavItem[] = [
 
 // ─── ALLGEMEIN ────────────────────────────────────────────────────────────────
 const allgemeinNavigation: NavItem[] = [
-  { name: "Tickets", href: "/tickets", icon: Ticket, roles: allRoles },
+  // tippgeber hat keinen Zugriff auf Tickets
+  { name: "Tickets", href: "/tickets", icon: Ticket, roles: rolesWithoutTippgeber },
   { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "regional_lead", "admin"] },
   { name: "Sicherheit (2FA)", href: "/sicherheit", icon: ShieldCheck, roles: allRoles },
 ];
