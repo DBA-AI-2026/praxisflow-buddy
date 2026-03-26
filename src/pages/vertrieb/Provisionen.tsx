@@ -680,7 +680,7 @@ const Provisionen = () => {
                     <span className="block text-xs text-muted-foreground mt-1">Alle Provisionssätze abzüglich Tippgeber-Provisionen</span>
                   </CardDescription>
                 </div>
-                {isAdmin && (
+                {canEditCommissions && (
                   <Button onClick={openCreateDialog}>
                     <Plus className="mr-2 h-4 w-4" />Neues Produkt
                   </Button>
@@ -700,7 +700,7 @@ const Provisionen = () => {
                         <TableHead>Satz</TableHead>
                         <TableHead>Beschreibung</TableHead>
                         <TableHead>Status</TableHead>
-                        {isAdmin && <TableHead className="text-right">Aktionen</TableHead>}
+                        {canEditCommissions && <TableHead className="text-right">Aktionen</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -720,7 +720,7 @@ const Provisionen = () => {
                               {c.is_active ? "Aktiv" : "Inaktiv"}
                             </Badge>
                           </TableCell>
-                          {isAdmin && (
+                          {canEditCommissions && (
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-1">
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(c)}>
