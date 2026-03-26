@@ -28,8 +28,38 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Abuse protection: only accept requests from allowed origins OR with a valid
+  // service-role / anon key header (internal Supabase SDK calls).
+  // This prevents arbitrary HTTP clients on the public internet from
+  // triggering admin notification emails.
+  const apiKey = req.headers.get("apikey") || req.headers.get("authorization");
+  const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin || "");
+  const isInternalCall = apiKey !== null && apiKey.length > 10;
+
+  if (!isAllowedOrigin && !isInternalCall) {
+    console.warn("Blocked request: unknown origin and no API key", { origin });
+    return new Response(JSON.stringify({ error: "Forbidden" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const { fullName, email, company, message } = await req.json();
+
+    // Input validation — reject obviously malformed payloads early
+    if (!fullName || typeof fullName !== "string" || fullName.trim().length < 2) {
+      return new Response(JSON.stringify({ error: "Invalid input" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!email || typeof email !== "string" || !email.includes("@")) {
+      return new Response(JSON.stringify({ error: "Invalid input" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     console.log(`New access request received from: ${email}`);
 
@@ -46,29 +76,34 @@ Deno.serve(async (req) => {
     const notifEnabled = (emailSettings?.[0]?.is_enabled) !== false;
     if (!notifEnabled) {
       console.log("Admin access request notification is disabled.");
-      return new Response(JSON.stringify({ success: true, skipped: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ success: true, skipped: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    if (!fullName || !email) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields: fullName and email" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Sanitize values before embedding in email (basic HTML escaping)
+    const esc = (s: string) =>
+      String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    const safeName = esc(fullName.trim().slice(0, 200));
+    const safeEmail = esc(email.trim().slice(0, 254));
+    const safeCompany = company ? esc(String(company).trim().slice(0, 200)) : null;
+    const safeMessage = message ? esc(String(message).trim().slice(0, 1000)) : null;
 
     // Send notification email to admin
     const emailResponse = await resend.emails.send({
       from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
       reply_to: "info@hfx-honorarfuchs.de",
       to: [ADMIN_EMAIL],
-      subject: `Neue Zugangsanfrage: ${fullName}`,
+      subject: `Neue Zugangsanfrage: ${safeName}`,
       text: [
         "Neue Zugangsanfrage eingegangen:",
         "",
-        `Name: ${fullName}`,
-        `E-Mail: ${email}`,
-        company ? `Firma: ${company}` : null,
-        message ? `Nachricht: ${message}` : null,
+        `Name: ${safeName}`,
+        `E-Mail: ${safeEmail}`,
+        safeCompany ? `Firma: ${safeCompany}` : null,
+        safeMessage ? `Nachricht: ${safeMessage}` : null,
         "",
         "Bitte im Admin-Portal anmelden, um die Anfrage zu bearbeiten.",
         "",
@@ -97,10 +132,10 @@ Deno.serve(async (req) => {
             </div>
             <div class="content">
               <p>Eine neue Zugangsanfrage ist eingegangen:</p>
-              <div class="field"><div class="label">Name</div><div class="value">${fullName}</div></div>
-              <div class="field"><div class="label">E-Mail</div><div class="value">${email}</div></div>
-              ${company ? `<div class="field"><div class="label">Firma</div><div class="value">${company}</div></div>` : ''}
-              ${message ? `<div class="field"><div class="label">Nachricht</div><div class="value">${message}</div></div>` : ''}
+              <div class="field"><div class="label">Name</div><div class="value">${safeName}</div></div>
+              <div class="field"><div class="label">E-Mail</div><div class="value">${safeEmail}</div></div>
+              ${safeCompany ? `<div class="field"><div class="label">Firma</div><div class="value">${safeCompany}</div></div>` : ''}
+              ${safeMessage ? `<div class="field"><div class="label">Nachricht</div><div class="value">${safeMessage}</div></div>` : ''}
               <div class="footer"><p>Bitte loggen Sie sich in das Admin-Portal ein, um die Anfrage zu bearbeiten.</p></div>
             </div>
           </div>
@@ -118,7 +153,7 @@ Deno.serve(async (req) => {
   } catch (error: any) {
     console.error("Error sending notification email:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

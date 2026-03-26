@@ -1823,33 +1823,39 @@ export type Database = {
       }
       registration_requests: {
         Row: {
+          attempt_count: number
           company: string | null
           created_at: string
           email: string
           full_name: string
           id: string
+          last_attempt_at: string | null
           message: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
         }
         Insert: {
+          attempt_count?: number
           company?: string | null
           created_at?: string
           email: string
           full_name: string
           id?: string
+          last_attempt_at?: string | null
           message?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
         }
         Update: {
+          attempt_count?: number
           company?: string | null
           created_at?: string
           email?: string
           full_name?: string
           id?: string
+          last_attempt_at?: string | null
           message?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -2313,6 +2319,15 @@ export type Database = {
           gebietsleiter_name: string
           matched_rule: string
         }[]
+      }
+      submit_registration_request: {
+        Args: {
+          p_company?: string
+          p_email: string
+          p_full_name: string
+          p_message?: string
+        }
+        Returns: Json
       }
     }
     Enums: {
