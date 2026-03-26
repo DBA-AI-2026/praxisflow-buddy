@@ -214,9 +214,7 @@ export default function Buchen() {
     }
 
     supabase
-      .from("contracts_public_booking")
-      .select("praxis, customer_name, product_name, modules, monthly_price, hfx_customer_number, fachrichtung, rechtsform")
-      .eq("id", contractId)
+      .rpc("get_public_contract_booking", { p_contract_id: contractId })
       .maybeSingle()
       .then(async ({ data, error: err }) => {
         if (err || !data) {
