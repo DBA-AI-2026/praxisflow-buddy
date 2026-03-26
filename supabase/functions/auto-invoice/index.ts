@@ -515,6 +515,47 @@ Deno.serve(async (req) => {
                     status: "pending",
                   });
                   console.log(`[auto-invoice] Created commission payout ${commissionAmount} € for partner ${contract.sales_partner_name}`);
+
+                  // ── FiBu: partner_commission_approved event (additive, non-blocking) ──
+                  try {
+                    const { error: fibuCommErr } = await supabase.from("fibu_events").insert({
+                      event_type: "partner_commission_approved",
+                      source_module: "commission_payouts",
+                      source_reference_id: invoice.id,
+                      contract_id: contract.id,
+                      customer_id: contract.customer_id ?? null,
+                      product_name: contract.product_name,
+                      period_start: periodStart,
+                      period_end: periodEnd,
+                      amount_net: commissionAmount,
+                      tax_amount: 0,
+                      amount_gross: commissionAmount,
+                      currency: "EUR",
+                      commission_type: productCommission.commission_type,
+                      commission_base_amount: baseNetAmount,
+                      commission_rate: productCommission.commission_value,
+                      commission_amount: commissionAmount,
+                      commission_rule_version: ruleVersion,
+                      beneficiary_type: "sales_partner",
+                      beneficiary_id: contract.sales_partner_id,
+                      status: "draft",
+                      export_status: "open",
+                      description: `Partner-Provision ${contract.sales_partner_name} – ${contract.product_name} – ${periodMonthStr}`,
+                      created_by: null,
+                      metadata: {
+                        invoice_id: invoice.id,
+                        invoice_number: invoice.invoice_number,
+                        commission_rule_version: ruleVersion,
+                        period_month: periodMonthStr,
+                        hfx_customer_number: contract.hfx_customer_number ?? null,
+                      },
+                    } as any);
+                    if (fibuCommErr && (fibuCommErr as any).code !== "23505") {
+                      console.error(`[auto-invoice] fibu_events partner_commission_approved failed:`, fibuCommErr.message);
+                    }
+                  } catch (fibuCommEx) {
+                    console.error(`[auto-invoice] fibu_events partner_commission_approved exception:`, String(fibuCommEx));
+                  }
                 }
               }
             }
