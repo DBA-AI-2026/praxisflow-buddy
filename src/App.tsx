@@ -47,6 +47,7 @@ import Buchen from "./pages/Buchen";
 import QodiaVerbrauch from "./pages/QodiaVerbrauch";
 import AgbManagement from "./pages/admin/AgbManagement";
 import Kunden from "./pages/Kunden";
+import RollenUebersicht from "./pages/admin/RollenUebersicht";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +108,7 @@ const App = () => (
             <Route path="/buchhaltung" element={<ProtectedRoute><Buchhaltung /></ProtectedRoute>} />
             <Route path="/praxen-journey" element={<ProtectedRoute><PraxenJourney /></ProtectedRoute>} />
             <Route path="/qodia-verbrauch" element={<ProtectedRoute><QodiaVerbrauch /></ProtectedRoute>} />
+            <Route path="/admin/rollen-uebersicht" element={<ProtectedRoute><RollenUebersicht /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -122,6 +122,7 @@ const adminNavigation: NavItem[] = [
   { name: "Audit-Protokoll", href: "/admin/audit-logs", icon: ClipboardList, roles: ["admin"], adminOnly: true },
   { name: "Einstellungen", href: "/admin/settings", icon: Settings, roles: ["admin"], adminOnly: true },
   { name: "Dokumentation", href: "/admin/documentation", icon: FileText, roles: ["admin"], adminOnly: true },
+  { name: "Rollen & Zugriffe", href: "/admin/rollen-uebersicht", icon: ShieldCheck, roles: ["admin"], adminOnly: true },
 ];
 
 // ─── DEV-TOOLS: interne Vorschau- und Hilfsseiten ─────────────────────────────
