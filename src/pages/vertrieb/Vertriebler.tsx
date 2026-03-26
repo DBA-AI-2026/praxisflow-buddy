@@ -287,7 +287,7 @@ const Vertriebler = () => {
                     <TableHead>Rolle</TableHead>
                     <TableHead>E-Mail</TableHead>
                     <TableHead className="text-center">Verträge</TableHead>
-                    {isAdmin && <TableHead className="text-right">Aktionen</TableHead>}
+                     {(isAdmin || isSalesLead) && <TableHead className="text-right">Aktionen</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -304,9 +304,10 @@ const Vertriebler = () => {
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{v.email || "–"}</TableCell>
                         <TableCell className="text-center font-medium">{v.contract_count}</TableCell>
-                        {isAdmin && (
+                        {(isAdmin || isSalesLead) && (
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
+                              {/* Provisionen: admin + sales_lead */}
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -316,14 +317,17 @@ const Vertriebler = () => {
                                 <Percent className="h-3.5 w-3.5" />
                                 Provisionen
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => setDeleteTarget(v)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
+                              {/* Löschen: nur admin */}
+                              {isAdmin && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => setDeleteTarget(v)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                         )}
