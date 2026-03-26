@@ -1618,6 +1618,36 @@ export type Database = {
         }
         Relationships: []
       }
+      processed_stripe_events: {
+        Row: {
+          error_message: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          processed_at: string
+          status: string
+          stripe_event_id: string
+        }
+        Insert: {
+          error_message?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          processed_at?: string
+          status?: string
+          stripe_event_id: string
+        }
+        Update: {
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          processed_at?: string
+          status?: string
+          stripe_event_id?: string
+        }
+        Relationships: []
+      }
       product_commissions: {
         Row: {
           commission_type: string
