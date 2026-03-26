@@ -27,6 +27,8 @@ import {
   EyeOff,
   Plug,
   FileSignature,
+  ChevronUp,
+  User,
 } from "lucide-react";
 import logo from "@/assets/fuchs-bildmarke.png";
 import { useState } from "react";
