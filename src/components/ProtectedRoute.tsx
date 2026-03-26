@@ -116,7 +116,7 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
     return <Navigate to="/auth" replace />;
   }
 
-  // MFA challenge required
+  // MFA challenge required (TOTP enrolled but not yet verified this session)
   if (mfaState === "required" && mfaFactorId) {
     return (
       <MfaChallenge
@@ -124,6 +124,36 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
         onSuccess={() => setMfaState("verified")}
         onCancel={async () => { await supabase.auth.signOut(); }}
       />
+    );
+  }
+
+  // MFA not enrolled but REQUIRED for this privileged role
+  // factorId is null = not enrolled yet → force setup before access is granted
+  const PRIVILEGED_ROLES: (AppRole | null)[] = ["admin", "sales_lead"];
+  if (mfaState === "required" && !mfaFactorId && PRIVILEGED_ROLES.includes(role)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-center">
+            <div className="mx-auto w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
+              <ShieldOff className="h-8 w-8 text-destructive" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">2FA Pflicht</h1>
+            <p className="text-sm text-muted-foreground mt-2">
+              Ihr Konto benötigt eine aktive Zwei-Faktor-Authentifizierung, um auf das Portal zugreifen zu können.
+              Bitte richten Sie 2FA jetzt ein.
+            </p>
+          </div>
+          <div className="card-elevated p-6">
+            <MfaSetup onComplete={() => setMfaState("checking")} />
+          </div>
+          <div className="text-center">
+            <Button variant="ghost" size="sm" onClick={async () => { await supabase.auth.signOut(); }}>
+              Abmelden
+            </Button>
+          </div>
+        </div>
+      </div>
     );
   }
 

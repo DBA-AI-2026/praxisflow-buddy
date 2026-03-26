@@ -78,7 +78,32 @@ Deno.serve(async (req) => {
     }
 
     // Get request body
-    const { requestId, action, role = "sales_partner" } = await req.json();
+    const body = await req.json();
+    const { requestId, action } = body;
+    const rawRole = body.role;
+
+    // ──────────────────────────────────────────────────────────────
+    // SECURITY: Explicit role whitelist — never pass unvalidated role to DB
+    // vertragsabteilung is decommissioned and excluded from this list
+    // ──────────────────────────────────────────────────────────────
+    const ALLOWED_ROLES = [
+      "sales_partner",
+      "user",
+      "sales_lead",
+      "regional_lead",
+      "tippgeber",
+      "admin",
+    ] as const;
+    type AllowedRole = typeof ALLOWED_ROLES[number];
+
+    const role: AllowedRole = ALLOWED_ROLES.includes(rawRole as AllowedRole)
+      ? (rawRole as AllowedRole)
+      : "sales_partner"; // safe default
+
+    if (rawRole && !ALLOWED_ROLES.includes(rawRole as AllowedRole)) {
+      console.warn(`Rejected invalid role parameter: "${rawRole}", defaulting to sales_partner`);
+    }
+
     console.log(`Processing ${action} for request ${requestId} with role ${role}`);
 
     if (!requestId || !action) {
