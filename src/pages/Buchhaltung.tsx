@@ -647,8 +647,21 @@ export default function Buchhaltung() {
         changed_by: user?.id,
       });
 
+      // Fetch invoice metadata for enrichment (source_reference_id = invoice.id)
+      const invoiceIds = exportableFibuEvents
+        .map((e: any) => e.source_reference_id)
+        .filter(Boolean);
+      const invoiceLookup: Record<string, any> = {};
+      if (invoiceIds.length > 0) {
+        const { data: invData } = await supabase
+          .from("invoices")
+          .select("id, invoice_number, invoice_date, customer_number, customer_name")
+          .in("id", invoiceIds);
+        (invData || []).forEach((inv: any) => { invoiceLookup[inv.id] = inv; });
+      }
+
       // Generate and download CSV
-      downloadFibuCsv(exportableFibuEvents, batchRef, batch.id);
+      downloadFibuCsv(exportableFibuEvents, batchRef, batch.id, invoiceLookup);
 
       toast({ title: "FiBu-Export erfolgreich", description: `${eventIds.length} Vorfälle exportiert – Batch: ${batchRef}` });
       refetchFibu();
