@@ -296,7 +296,7 @@ export default function Buchhaltung() {
       if (exportDateTo) query = query.lte("invoice_date", exportDateTo);
       const { data, error } = await query;
       if (error) throw error;
-      setPreviewData((data as PreviewRevenue[]) || []);
+      setPreviewData((data as unknown as PreviewRevenue[]) || []);
     } catch (error) {
       console.error(error);
       setPreviewData([]);
