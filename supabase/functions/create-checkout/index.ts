@@ -79,7 +79,7 @@ serve(async (req) => {
     if (!line_items || line_items.length === 0) throw new Error("line_items is required");
     log("Request parsed", { customer_email, contract_id, itemCount: line_items.length });
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
       apiVersion: "2025-08-27.basil",
     });
     log("Stripe client initialized");

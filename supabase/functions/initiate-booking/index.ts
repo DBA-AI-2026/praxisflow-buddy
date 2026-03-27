@@ -75,9 +75,9 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
-  const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+  const stripeKey = Deno.env.get("STRIPE_SECRET_KEY_V2");
   if (!stripeKey) {
-    log("ERROR: STRIPE_SECRET_KEY not configured");
+    log("ERROR: STRIPE_SECRET_KEY_V2 not configured");
     return new Response(JSON.stringify({ error: "Stripe not configured" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
