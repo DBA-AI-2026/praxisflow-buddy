@@ -658,24 +658,39 @@ export default function Buchhaltung() {
     }
   };
 
-  const downloadFibuCsv = (events: any[], batchRef: string, batchId: string) => {
+  const downloadFibuCsv = (events: any[], batchRef: string, _batchId: string, invoiceLookup: Record<string, any> = {}) => {
     const rows = [
       FIBU_CSV_HEADERS,
-      ...events.map((e) => [
-        batchId, e.id, e.event_type,
-        e.occurred_at ? fmtDateTime(e.occurred_at) : "",
-        e.customer_id ?? "", e.contract_id ?? "", e.product_name ?? "",
-        e.period_start ?? "", e.period_end ?? "",
-        Number(e.amount_net).toFixed(2),
-        Number(e.tax_amount).toFixed(2),
-        Number(e.amount_gross).toFixed(2),
-        e.currency ?? "EUR",
-        e.commission_type ?? "", e.beneficiary_type ?? "", e.beneficiary_id ?? "",
-        e.cost_type ?? "", e.source_module ?? "", e.source_reference_id ?? "",
-        e.status, e.export_status,
-        e.correction_of_event_id ?? "",
-        e.description ?? "", e.created_at ? fmtDateTime(e.created_at) : "",
-      ]),
+      ...events.map((e) => {
+        const accounts = SKR03_ACCOUNT_MAP[e.event_type] || DEFAULT_ACCOUNTS;
+        // Try to resolve invoice metadata via source_reference_id
+        const inv = e.source_reference_id ? invoiceLookup[e.source_reference_id] : null;
+        const taxRate = Number(e.tax_amount) > 0 && Number(e.amount_net) > 0
+          ? Math.round((Number(e.tax_amount) / Number(e.amount_net)) * 100)
+          : 0;
+        const isCorrection = Number(e.amount_gross) < 0;
+
+        return [
+          e.occurred_at ? fmtDate(e.occurred_at.slice(0, 10)) : "",                  // Buchungsdatum
+          inv?.invoice_date ? fmtDate(inv.invoice_date) : "",                         // Belegdatum
+          inv?.invoice_number ?? e.source_reference_id ?? e.id.slice(0, 8).toUpperCase(), // Belegnummer
+          e.description || accounts.label + (isCorrection ? " (Storno)" : ""),       // Buchungstext
+          inv?.customer_number ?? "",                                                  // Kundennummer
+          inv?.invoice_number ?? "",                                                   // Rechnungsnummer
+          e.product_name ?? "",                                                        // Produkt
+          isCorrection ? accounts.credit : accounts.debit,                            // Konto (Soll)
+          isCorrection ? accounts.debit : accounts.credit,                            // Gegenkonto (Haben)
+          Number(e.amount_net).toFixed(2),                                             // Nettobetrag
+          taxRate > 0 ? String(taxRate) : "",                                          // USt-Satz %
+          Number(e.tax_amount).toFixed(2),                                             // USt-Betrag
+          Number(e.amount_gross).toFixed(2),                                           // Bruttobetrag
+          e.currency ?? "EUR",                                                         // Währung
+          e.event_type,                                                                // Vorgangstyp
+          e.product_name ?? "",                                                        // Kostenstelle
+          batchRef,                                                                    // Batch-Referenz
+          e.id,                                                                        // Event-ID
+        ];
+      }),
     ];
     const label = periodMode === "month" ? selectedMonth : `${effectiveFrom}_${effectiveTo}`;
     downloadCsv(rows, `${batchRef}_FiBu_${label}.csv`);
