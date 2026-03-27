@@ -1,7 +1,7 @@
 import Stripe from "npm:stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
   apiVersion: "2025-08-27.basil",
 });
 
