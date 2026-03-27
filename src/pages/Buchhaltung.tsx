@@ -716,7 +716,17 @@ export default function Buchhaltung() {
       .eq("export_batch_id", batch.id)
       .order("occurred_at");
     if (batchEvents && batchEvents.length > 0) {
-      downloadFibuCsv(batchEvents, batch.batch_reference, batch.id);
+      // Enrich with invoice metadata
+      const invoiceIds = batchEvents.map((e: any) => e.source_reference_id).filter(Boolean);
+      const invoiceLookup: Record<string, any> = {};
+      if (invoiceIds.length > 0) {
+        const { data: invData } = await supabase
+          .from("invoices")
+          .select("id, invoice_number, invoice_date, customer_number, customer_name")
+          .in("id", invoiceIds);
+        (invData || []).forEach((inv: any) => { invoiceLookup[inv.id] = inv; });
+      }
+      downloadFibuCsv(batchEvents, batch.batch_reference, batch.id, invoiceLookup);
       toast({ title: "Download gestartet", description: `${batchEvents.length} Vorfälle aus Batch ${batch.batch_reference}` });
     }
   };
