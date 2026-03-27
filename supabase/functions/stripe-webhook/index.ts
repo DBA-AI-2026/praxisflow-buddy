@@ -283,19 +283,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      // 2. customer_revenues aktualisieren
-      if (existingInv?.invoice_number) {
-        const { error: revErr } = await supabase
-          .from("customer_revenues")
-          .update({ payment_status: "paid", paid_at: new Date().toISOString() })
-          .eq("invoice_number", existingInv.invoice_number)
-          .neq("payment_status", "paid");
-        if (revErr) {
-          log("WARN: customer_revenues update failed", revErr.message);
-        } else {
-          log("customer_revenues updated to paid", existingInv.invoice_number);
-        }
-      }
+      // Phase 2: customer_revenues UPDATE entfernt – Zahlungsstatus wird über invoices.status = 'bezahlt' abgebildet.
 
       // 3. Vertragsdaten für FiBu-Tracing
       let customerId: string | null = null;
