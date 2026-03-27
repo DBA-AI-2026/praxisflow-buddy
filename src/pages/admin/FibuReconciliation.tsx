@@ -73,13 +73,7 @@ export default function FibuReconciliation() {
   return (
     <MainLayout title="FiBu Reconciliation" subtitle="Abgleich zwischen Rechnungen und Buchhaltungsereignissen (Phase 1)">
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">FiBu Reconciliation</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Abgleich zwischen Rechnungen und Buchhaltungsereignissen (Phase 1 – nur Monitoring)
-            </p>
-          </div>
+        <div className="flex items-center justify-end">
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Aktualisieren

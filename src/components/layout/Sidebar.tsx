@@ -90,6 +90,7 @@ const finanzenNavigation: NavItem[] = [
   { name: "Umsätze", href: "/umsaetze", icon: BarChart3, roles: operativeRoles },
   { name: "Rechnungen & Usage", href: "/rechnungen", icon: Receipt, roles: ["admin"] },
   { name: "Buchhaltung / FiBu", href: "/buchhaltung", icon: TrendingUp, roles: ["admin"] },
+  { name: "FiBu Reconciliation", href: "/admin/fibu-reconciliation", icon: ClipboardList, roles: ["admin"] },
   { name: "Datenexport", href: "/export", icon: FileDown, roles: ["admin", "sales_lead"] },
   { name: "Qodia-Verbrauch", href: "/qodia-verbrauch", icon: BarChart3, roles: ["admin", "sales_lead"] },
 ];
