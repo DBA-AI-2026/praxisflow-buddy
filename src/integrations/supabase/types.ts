@@ -2354,6 +2354,37 @@ export type Database = {
         }
         Relationships: []
       }
+      v_customer_revenues_compat: {
+        Row: {
+          created_at: string | null
+          customer_name: string | null
+          customer_number: string | null
+          data_source: string | null
+          due_date: string | null
+          exported_to_lexware: boolean | null
+          gross_amount: number | null
+          id: string | null
+          invoice_date: string | null
+          invoice_number: string | null
+          is_legacy: boolean | null
+          lexware_export_date: string | null
+          lexware_voucher_id: string | null
+          net_amount: number | null
+          notes: string | null
+          paid_at: string | null
+          payment_status: string | null
+          praxis_id: string | null
+          product_category: string | null
+          product_name: string | null
+          quantity: number | null
+          tax_amount: number | null
+          tax_rate: number | null
+          unit_price: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       v_invoice_fibu_reconciliation: {
         Row: {
           contract_id: string | null
