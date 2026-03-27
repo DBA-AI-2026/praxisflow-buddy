@@ -134,7 +134,7 @@ export default function Integrationen() {
       const { data, error } = await query;
 
       if (error) throw error;
-      setPreviewData((data as PreviewRevenue[]) || []);
+      setPreviewData((data as unknown as PreviewRevenue[]) || []);
     } catch (error) {
       console.error("Error loading preview:", error);
       setPreviewData([]);
