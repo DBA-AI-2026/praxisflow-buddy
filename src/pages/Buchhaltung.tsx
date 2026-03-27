@@ -1023,6 +1023,13 @@ export default function Buchhaltung() {
         </div>
       )}
 
+      {/* Action bar */}
+      <div className="flex justify-end mb-4">
+        <Button variant="outline" size="sm" onClick={() => setBillingDialogOpen(true)}>
+          <Receipt className="h-4 w-4 mr-2" />Abrechnung auslösen
+        </Button>
+      </div>
+
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="flex-wrap h-auto gap-1">
