@@ -71,7 +71,7 @@ export default function FibuReconciliation() {
   const fmt = (n: number | null) => n != null ? new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n) : "–";
 
   return (
-    <MainLayout>
+    <MainLayout title="FiBu Reconciliation" subtitle="Abgleich zwischen Rechnungen und Buchhaltungsereignissen (Phase 1)">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
