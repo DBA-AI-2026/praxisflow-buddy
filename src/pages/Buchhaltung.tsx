@@ -95,18 +95,30 @@ function downloadCsv(rows: string[][], filename: string) {
 const REVENUE_HEADERS = ["Datum", "Belegnummer", "Buchungstext", "Konto", "Gegenkonto", "Nettobetrag", "USt-Satz %", "USt-Betrag", "Bruttobetrag", "Kostenstelle", "Zahlungsart"];
 const COST_HEADERS = ["Datum", "Belegnummer", "Buchungstext", "Lieferant", "Kostenkategorie", "Kunde", "HFX-Nr", "Produkt", "Konto", "Gegenkonto", "Nettobetrag", "USt-Satz %", "USt-Betrag", "Bruttobetrag"];
 
-// FiBu standardized CSV headers (all 24 mandatory fields)
+// FiBu booking-format CSV headers (clean, auditable booking records)
 const FIBU_CSV_HEADERS = [
-  "export_batch_id", "event_id", "event_type", "occurred_at",
-  "customer_id", "contract_id", "product_name", "period_start", "period_end",
-  "amount_net", "tax_amount", "amount_gross", "currency",
-  "commission_type", "beneficiary_type", "beneficiary_id",
-  "cost_type", "source_module", "source_reference_id",
-  "status", "export_status", "correction_of_event_id",
-  "description", "created_at",
+  "Buchungsdatum", "Belegdatum", "Belegnummer", "Buchungstext",
+  "Kundennummer", "Rechnungsnummer", "Produkt",
+  "Konto (Soll)", "Gegenkonto (Haben)",
+  "Nettobetrag", "USt-Satz %", "USt-Betrag", "Bruttobetrag", "Währung",
+  "Vorgangstyp", "Kostenstelle", "Batch-Referenz", "Event-ID",
 ];
 
-// Lexware Kontenrahmen (SKR03)
+// SKR03 Kontenrahmen – Mapping event_type → debit_account / credit_account
+const SKR03_ACCOUNT_MAP: Record<string, { debit: string; credit: string; label: string }> = {
+  invoice_base_fee_created:   { debit: "1200", credit: "8400", label: "Erlös Grundgebühr" },
+  invoice_usage_created:      { debit: "1200", credit: "8400", label: "Erlös Verbrauch" },
+  invoice_created:            { debit: "1200", credit: "8400", label: "Erlös Rechnung" },
+  vendor_cost_created:        { debit: "3300", credit: "1600", label: "Fremdleistung/Kosten" },
+  commission_created:         { debit: "4780", credit: "1600", label: "Provision Vertrieb" },
+  cancellation_created:       { debit: "8400", credit: "1200", label: "Storno/Gutschrift" },
+  correction_created:         { debit: "8400", credit: "1200", label: "Korrektur" },
+  payment_received:           { debit: "1800", credit: "1200", label: "Zahlungseingang" },
+  refund_created:             { debit: "1200", credit: "1800", label: "Erstattung" },
+};
+const DEFAULT_ACCOUNTS = { debit: "9999", credit: "9999", label: "Sonstiger Vorfall" };
+
+// Legacy Lexware Kontenrahmen (for legacy direct exports)
 const REVENUE_ACCOUNT = "8400";
 const REVENUE_CONTRA = "1400";
 const COST_ACCOUNT = "3300";
@@ -635,8 +647,21 @@ export default function Buchhaltung() {
         changed_by: user?.id,
       });
 
+      // Fetch invoice metadata for enrichment (source_reference_id = invoice.id)
+      const invoiceIds = exportableFibuEvents
+        .map((e: any) => e.source_reference_id)
+        .filter(Boolean);
+      const invoiceLookup: Record<string, any> = {};
+      if (invoiceIds.length > 0) {
+        const { data: invData } = await supabase
+          .from("invoices")
+          .select("id, invoice_number, invoice_date, customer_number, customer_name")
+          .in("id", invoiceIds);
+        (invData || []).forEach((inv: any) => { invoiceLookup[inv.id] = inv; });
+      }
+
       // Generate and download CSV
-      downloadFibuCsv(exportableFibuEvents, batchRef, batch.id);
+      downloadFibuCsv(exportableFibuEvents, batchRef, batch.id, invoiceLookup);
 
       toast({ title: "FiBu-Export erfolgreich", description: `${eventIds.length} Vorfälle exportiert – Batch: ${batchRef}` });
       refetchFibu();
@@ -646,24 +671,39 @@ export default function Buchhaltung() {
     }
   };
 
-  const downloadFibuCsv = (events: any[], batchRef: string, batchId: string) => {
+  const downloadFibuCsv = (events: any[], batchRef: string, _batchId: string, invoiceLookup: Record<string, any> = {}) => {
     const rows = [
       FIBU_CSV_HEADERS,
-      ...events.map((e) => [
-        batchId, e.id, e.event_type,
-        e.occurred_at ? fmtDateTime(e.occurred_at) : "",
-        e.customer_id ?? "", e.contract_id ?? "", e.product_name ?? "",
-        e.period_start ?? "", e.period_end ?? "",
-        Number(e.amount_net).toFixed(2),
-        Number(e.tax_amount).toFixed(2),
-        Number(e.amount_gross).toFixed(2),
-        e.currency ?? "EUR",
-        e.commission_type ?? "", e.beneficiary_type ?? "", e.beneficiary_id ?? "",
-        e.cost_type ?? "", e.source_module ?? "", e.source_reference_id ?? "",
-        e.status, e.export_status,
-        e.correction_of_event_id ?? "",
-        e.description ?? "", e.created_at ? fmtDateTime(e.created_at) : "",
-      ]),
+      ...events.map((e) => {
+        const accounts = SKR03_ACCOUNT_MAP[e.event_type] || DEFAULT_ACCOUNTS;
+        // Try to resolve invoice metadata via source_reference_id
+        const inv = e.source_reference_id ? invoiceLookup[e.source_reference_id] : null;
+        const taxRate = Number(e.tax_amount) > 0 && Number(e.amount_net) > 0
+          ? Math.round((Number(e.tax_amount) / Number(e.amount_net)) * 100)
+          : 0;
+        const isCorrection = Number(e.amount_gross) < 0;
+
+        return [
+          e.occurred_at ? fmtDate(e.occurred_at.slice(0, 10)) : "",                  // Buchungsdatum
+          inv?.invoice_date ? fmtDate(inv.invoice_date) : "",                         // Belegdatum
+          inv?.invoice_number ?? e.source_reference_id ?? e.id.slice(0, 8).toUpperCase(), // Belegnummer
+          e.description || accounts.label + (isCorrection ? " (Storno)" : ""),       // Buchungstext
+          inv?.customer_number ?? "",                                                  // Kundennummer
+          inv?.invoice_number ?? "",                                                   // Rechnungsnummer
+          e.product_name ?? "",                                                        // Produkt
+          isCorrection ? accounts.credit : accounts.debit,                            // Konto (Soll)
+          isCorrection ? accounts.debit : accounts.credit,                            // Gegenkonto (Haben)
+          Number(e.amount_net).toFixed(2),                                             // Nettobetrag
+          taxRate > 0 ? String(taxRate) : "",                                          // USt-Satz %
+          Number(e.tax_amount).toFixed(2),                                             // USt-Betrag
+          Number(e.amount_gross).toFixed(2),                                           // Bruttobetrag
+          e.currency ?? "EUR",                                                         // Währung
+          e.event_type,                                                                // Vorgangstyp
+          e.product_name ?? "",                                                        // Kostenstelle
+          batchRef,                                                                    // Batch-Referenz
+          e.id,                                                                        // Event-ID
+        ];
+      }),
     ];
     const label = periodMode === "month" ? selectedMonth : `${effectiveFrom}_${effectiveTo}`;
     downloadCsv(rows, `${batchRef}_FiBu_${label}.csv`);
@@ -676,7 +716,17 @@ export default function Buchhaltung() {
       .eq("export_batch_id", batch.id)
       .order("occurred_at");
     if (batchEvents && batchEvents.length > 0) {
-      downloadFibuCsv(batchEvents, batch.batch_reference, batch.id);
+      // Enrich with invoice metadata
+      const invoiceIds = batchEvents.map((e: any) => e.source_reference_id).filter(Boolean);
+      const invoiceLookup: Record<string, any> = {};
+      if (invoiceIds.length > 0) {
+        const { data: invData } = await supabase
+          .from("invoices")
+          .select("id, invoice_number, invoice_date, customer_number, customer_name")
+          .in("id", invoiceIds);
+        (invData || []).forEach((inv: any) => { invoiceLookup[inv.id] = inv; });
+      }
+      downloadFibuCsv(batchEvents, batch.batch_reference, batch.id, invoiceLookup);
       toast({ title: "Download gestartet", description: `${batchEvents.length} Vorfälle aus Batch ${batch.batch_reference}` });
     }
   };
