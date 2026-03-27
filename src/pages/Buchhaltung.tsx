@@ -250,6 +250,52 @@ export default function Buchhaltung() {
   const [correctionReason, setCorrectionReason] = useState("");
   const [exportConfirmOpen, setExportConfirmOpen] = useState(false);
 
+  // Manual billing trigger state
+  const [billingDialogOpen, setBillingDialogOpen] = useState(false);
+  const [billingContractId, setBillingContractId] = useState("");
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [activeContracts, setActiveContracts] = useState<any[]>([]);
+  const [contractsLoaded, setContractsLoaded] = useState(false);
+
+  // Load active contracts for billing dropdown
+  const loadActiveContracts = useCallback(async () => {
+    if (contractsLoaded) return;
+    const { data } = await supabase
+      .from("contracts")
+      .select("id, customer_name, hfx_customer_number, product_name, monthly_price")
+      .eq("status", "aktiv")
+      .order("customer_name");
+    setActiveContracts(data || []);
+    setContractsLoaded(true);
+  }, [contractsLoaded]);
+
+  const handleManualBilling = async () => {
+    if (!billingContractId) return;
+    setBillingLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("auto-invoice", {
+        body: { contract_id: billingContractId },
+      });
+      if (error) throw error;
+      if (data?.success === false) {
+        toast({ title: "Abrechnung nicht möglich", description: data.error || "Unbekannter Fehler", variant: "destructive" });
+      } else {
+        toast({
+          title: "Abrechnung erstellt",
+          description: `${data?.processed ?? 0} Rechnung(en) erzeugt, ${data?.skipped ?? 0} übersprungen.`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["accounting"] });
+        queryClient.invalidateQueries({ queryKey: ["fibu-events"] });
+      }
+      setBillingDialogOpen(false);
+      setBillingContractId("");
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
   const effectiveFrom = periodMode === "month" ? `${selectedMonth}-01` : dateFrom;
   const effectiveTo = periodMode === "month"
     ? format(endOfMonth(new Date(selectedMonth + "-01")), "yyyy-MM-dd")
@@ -873,6 +919,38 @@ export default function Buchhaltung() {
         </DialogContent>
       </Dialog>
 
+      {/* Manual Billing Dialog */}
+      <Dialog open={billingDialogOpen} onOpenChange={(open) => {
+        setBillingDialogOpen(open);
+        if (open) loadActiveContracts();
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Receipt className="h-5 w-5" />Monatsabrechnung auslösen</DialogTitle>
+            <DialogDescription>Erzeugt die Monatsabrechnung (Grundgebühr + offene Verbrauchsdaten) für den ausgewählten Vertrag im aktuellen Monat. Bereits existierende Rechnungen werden übersprungen.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Vertrag auswählen</Label>
+            <Select value={billingContractId} onValueChange={setBillingContractId}>
+              <SelectTrigger><SelectValue placeholder="Vertrag wählen..." /></SelectTrigger>
+              <SelectContent>
+                {activeContracts.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.customer_name} ({c.hfx_customer_number}) – {c.product_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setBillingDialogOpen(false)}>Abbrechen</Button>
+            <Button onClick={handleManualBilling} disabled={!billingContractId || billingLoading}>
+              {billingLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Wird erstellt...</> : <><Receipt className="h-4 w-4 mr-2" />Abrechnung erstellen</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Period selector */}
       {tab !== "integrationen" && (
         <div className="card-elevated p-4 mb-6 flex flex-wrap gap-4 items-end">
@@ -944,6 +1022,13 @@ export default function Buchhaltung() {
           </div>
         </div>
       )}
+
+      {/* Action bar */}
+      <div className="flex justify-end mb-4">
+        <Button variant="outline" size="sm" onClick={() => setBillingDialogOpen(true)}>
+          <Receipt className="h-4 w-4 mr-2" />Abrechnung auslösen
+        </Button>
+      </div>
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>

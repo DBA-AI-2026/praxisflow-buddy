@@ -68,6 +68,18 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, serviceKey);
 
+  // Parse optional body for single-contract manual trigger
+  let targetContractId: string | null = null;
+  if (req.method === "POST") {
+    try {
+      const body = await req.json();
+      if (body?.contract_id) {
+        targetContractId = body.contract_id;
+        console.log(`[auto-invoice] Manual trigger for contract: ${targetContractId}`);
+      }
+    } catch { /* no body = cron mode */ }
+  }
+
   try {
     const today = new Date();
     const currentYear = today.getFullYear();
@@ -76,16 +88,25 @@ Deno.serve(async (req) => {
 
     console.log(`[auto-invoice] Running for ${today.toISOString()} – billing period: ${periodMonthStr}`);
 
-    // Load all active contracts
-    const { data: contracts, error: contractsError } = await supabase
+    // Load contracts – either single (manual) or all active (cron)
+    let contractQuery = supabase
       .from("contracts")
       .select("*")
       .eq("status", "aktiv");
 
+    if (targetContractId) {
+      contractQuery = contractQuery.eq("id", targetContractId);
+    }
+
+    const { data: contracts, error: contractsError } = await contractQuery;
+
     if (contractsError) throw contractsError;
     if (!contracts || contracts.length === 0) {
-      console.log("[auto-invoice] No active contracts found.");
-      return new Response(JSON.stringify({ success: true, processed: 0 }), {
+      const msg = targetContractId
+        ? `No active contract found for ID ${targetContractId}`
+        : "No active contracts found.";
+      console.log(`[auto-invoice] ${msg}`);
+      return new Response(JSON.stringify({ success: false, error: msg, processed: 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
