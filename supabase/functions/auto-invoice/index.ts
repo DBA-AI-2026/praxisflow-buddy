@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14.21.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
   apiVersion: "2024-06-20",
 });
 

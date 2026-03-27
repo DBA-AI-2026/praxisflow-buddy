@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
 
       // ── Build Stripe Checkout URL for this demo ─────────────────────────
       let stripeCheckoutUrl: string | null = null;
-      const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+      const stripeKey = Deno.env.get("STRIPE_SECRET_KEY_V2");
       if (stripeKey && demo.product_name && STRIPE_PRODUCT_MAP[demo.product_name]) {
         try {
           const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
