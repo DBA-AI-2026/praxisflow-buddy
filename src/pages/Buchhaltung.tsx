@@ -647,10 +647,13 @@ export default function Buchhaltung() {
         changed_by: user?.id,
       });
 
-      // Fetch invoice metadata for enrichment (source_reference_id = invoice.id)
-      const invoiceIds = exportableFibuEvents
-        .map((e: any) => e.source_reference_id)
-        .filter(Boolean);
+      // Fetch invoice metadata for enrichment
+      // source_reference_id can be "uuid" or "uuid:suffix" — extract base UUID
+      const invoiceIds = [...new Set(
+        exportableFibuEvents
+          .map((e: any) => e.source_reference_id?.split(":")[0])
+          .filter((id: string | undefined) => id && id.length >= 32)
+      )];
       const invoiceLookup: Record<string, any> = {};
       if (invoiceIds.length > 0) {
         const { data: invData } = await supabase
