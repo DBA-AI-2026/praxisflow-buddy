@@ -729,8 +729,11 @@ export default function Buchhaltung() {
       .eq("export_batch_id", batch.id)
       .order("occurred_at");
     if (batchEvents && batchEvents.length > 0) {
-      // Enrich with invoice metadata
-      const invoiceIds = batchEvents.map((e: any) => e.source_reference_id).filter(Boolean);
+      // Enrich with invoice metadata (handle uuid:suffix pattern)
+      const invoiceIds = [...new Set(
+        batchEvents.map((e: any) => e.source_reference_id?.split(":")[0])
+          .filter((id: string | undefined) => id && id.length >= 32)
+      )];
       const invoiceLookup: Record<string, any> = {};
       if (invoiceIds.length > 0) {
         const { data: invData } = await supabase
