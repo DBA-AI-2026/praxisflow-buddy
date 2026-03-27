@@ -259,6 +259,13 @@ export type Database = {
             referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "commission_payouts_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "v_invoice_fibu_reconciliation"
+            referencedColumns: ["invoice_id"]
+          },
         ]
       }
       commission_role_defaults: {
@@ -2223,6 +2230,13 @@ export type Database = {
             referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "usage_charges_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "v_invoice_fibu_reconciliation"
+            referencedColumns: ["invoice_id"]
+          },
         ]
       }
       user_regional_assignments: {
@@ -2313,6 +2327,45 @@ export type Database = {
           nextval: number | null
         }
         Relationships: []
+      }
+      v_invoice_fibu_reconciliation: {
+        Row: {
+          contract_id: string | null
+          customer_name: string | null
+          customer_number: string | null
+          delta_gross: number | null
+          delta_net: number | null
+          fibu_event_count: number | null
+          fibu_event_types: string[] | null
+          fibu_gross_total: number | null
+          fibu_net_total: number | null
+          fibu_tax_total: number | null
+          invoice_created_at: string | null
+          invoice_date: string | null
+          invoice_gross: number | null
+          invoice_id: string | null
+          invoice_net: number | null
+          invoice_number: string | null
+          invoice_status: string | null
+          invoice_tax: number | null
+          reconciliation_status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts_public_booking"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
