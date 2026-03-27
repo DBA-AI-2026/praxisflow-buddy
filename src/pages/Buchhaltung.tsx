@@ -250,6 +250,52 @@ export default function Buchhaltung() {
   const [correctionReason, setCorrectionReason] = useState("");
   const [exportConfirmOpen, setExportConfirmOpen] = useState(false);
 
+  // Manual billing trigger state
+  const [billingDialogOpen, setBillingDialogOpen] = useState(false);
+  const [billingContractId, setBillingContractId] = useState("");
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [activeContracts, setActiveContracts] = useState<any[]>([]);
+  const [contractsLoaded, setContractsLoaded] = useState(false);
+
+  // Load active contracts for billing dropdown
+  const loadActiveContracts = useCallback(async () => {
+    if (contractsLoaded) return;
+    const { data } = await supabase
+      .from("contracts")
+      .select("id, customer_name, hfx_customer_number, product_name, monthly_price")
+      .eq("status", "aktiv")
+      .order("customer_name");
+    setActiveContracts(data || []);
+    setContractsLoaded(true);
+  }, [contractsLoaded]);
+
+  const handleManualBilling = async () => {
+    if (!billingContractId) return;
+    setBillingLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("auto-invoice", {
+        body: { contract_id: billingContractId },
+      });
+      if (error) throw error;
+      if (data?.success === false) {
+        toast({ title: "Abrechnung nicht möglich", description: data.error || "Unbekannter Fehler", variant: "destructive" });
+      } else {
+        toast({
+          title: "Abrechnung erstellt",
+          description: `${data?.processed ?? 0} Rechnung(en) erzeugt, ${data?.skipped ?? 0} übersprungen.`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["accounting"] });
+        queryClient.invalidateQueries({ queryKey: ["fibu-events"] });
+      }
+      setBillingDialogOpen(false);
+      setBillingContractId("");
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
   const effectiveFrom = periodMode === "month" ? `${selectedMonth}-01` : dateFrom;
   const effectiveTo = periodMode === "month"
     ? format(endOfMonth(new Date(selectedMonth + "-01")), "yyyy-MM-dd")
