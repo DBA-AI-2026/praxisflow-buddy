@@ -288,7 +288,7 @@ export default function Buchhaltung() {
     setPreviewOpen(true);
     try {
       let query = supabase
-        .from("customer_revenues")
+        .from("v_customer_revenues_compat" as any)
         .select("id, customer_name, invoice_number, invoice_date, product_name, quantity, net_amount, tax_amount, gross_amount")
         .eq("exported_to_lexware", false)
         .order("invoice_date", { ascending: true });
@@ -296,7 +296,7 @@ export default function Buchhaltung() {
       if (exportDateTo) query = query.lte("invoice_date", exportDateTo);
       const { data, error } = await query;
       if (error) throw error;
-      setPreviewData((data as PreviewRevenue[]) || []);
+      setPreviewData((data as unknown as PreviewRevenue[]) || []);
     } catch (error) {
       console.error(error);
       setPreviewData([]);

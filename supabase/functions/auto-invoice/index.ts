@@ -425,33 +425,11 @@ Deno.serve(async (req) => {
 
         const now = new Date().toISOString();
 
-        // Insert into customer_revenues
-        const { data: revenueRow } = await supabase
-          .from("customer_revenues")
-          .insert({
-            user_id: "00000000-0000-0000-0000-000000000000",
-            invoice_number: invoice.invoice_number,
-            invoice_date: todayStr,
-            due_date: dueDateStr,
-            customer_name: contract.customer_name,
-            customer_number: contract.hfx_customer_number,
-            product_name: positions[0].description,
-            quantity: positions[0].quantity,
-            unit_price: positions[0].unit_price,
-            net_amount: netAmount,
-            tax_amount: taxAmount,
-            tax_rate: taxRate,
-            gross_amount: grossAmount,
-            payment_status: grossAmount === 0 ? "paid" : "pending",
-            notes: `Auto-Rechnung ${billingPeriod}${isInWaiverPeriod ? " | Grundgebühr-Waiver" : ""}${usageChargeIds.length > 0 ? ` + ${usageChargeIds.length} Nutzungsposten` : ""}${stripeInvoiceId ? ` | Stripe: ${stripeInvoiceId}` : ""}`,
-          })
-          .select("id")
-          .single();
-
+        // Phase 2: customer_revenues INSERT entfernt – invoices ist die führende Quelle.
         // Update invoice status to 'versendet'
         await supabase
           .from("invoices")
-          .update({ status: "versendet", email_sent_at: now, revenue_id: revenueRow?.id ?? null })
+          .update({ status: "versendet", email_sent_at: now })
           .eq("id", invoice.id);
 
         // Auto-generate commission payout

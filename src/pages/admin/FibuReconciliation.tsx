@@ -90,8 +90,8 @@ export default function FibuReconciliation() {
         <TooltipContent>
           <p className="text-xs">
             {row.is_legacy
-              ? "Quelle: customer_revenues (Übergangspfad – wird in Phase 2 abgelöst)"
-              : "Quelle: invoices (Zielarchitektur)"
+              ? "Quelle: customer_revenues (Legacy – keine neuen Einträge seit Phase 2)"
+              : "Quelle: invoices (Zielarchitektur – aktiver Pfad)"
             }
           </p>
         </TooltipContent>

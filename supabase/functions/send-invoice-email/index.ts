@@ -240,31 +240,8 @@ Deno.serve(async (req) => {
       ].filter(Boolean).join("\n"),
     });
 
-    // Mark as sent + sync to customer_revenues
+    // Phase 2: customer_revenues INSERT entfernt – invoices ist die führende Quelle.
     const now = new Date().toISOString();
-
-    // Insert into customer_revenues
-    const { data: revenueRow } = await supabaseAdmin
-      .from("customer_revenues")
-      .insert({
-        user_id: user.id,
-        invoice_number: invoice.invoice_number,
-        invoice_date: invoice.invoice_date,
-        due_date: invoice.due_date,
-        customer_name: invoice.customer_name,
-        customer_number: invoice.customer_number,
-        product_name: positions.length > 0 ? positions[0].description : "Rechnung",
-        quantity: 1,
-        unit_price: invoice.net_amount,
-        net_amount: invoice.net_amount,
-        tax_amount: invoice.tax_amount,
-        tax_rate: invoice.tax_rate,
-        gross_amount: invoice.gross_amount,
-        payment_status: "pending",
-        notes: invoice.notes,
-      })
-      .select("id")
-      .single();
 
     await supabaseAdmin
       .from("invoices")
@@ -272,7 +249,6 @@ Deno.serve(async (req) => {
         status: "versendet",
         email_sent_at: now,
         email_sent_by: user.id,
-        revenue_id: revenueRow?.id ?? null,
       })
       .eq("id", invoiceId);
 

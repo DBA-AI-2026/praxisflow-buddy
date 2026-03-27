@@ -217,7 +217,7 @@ export default function Dashboard() {
             })()
           : Promise.resolve({ count: null }),
         kpiKeys.includes("revenue")
-          ? supabase.from("customer_revenues").select("gross_amount").eq("payment_status", "bezahlt")
+          ? supabase.from("invoices").select("gross_amount").eq("status", "bezahlt")
           : Promise.resolve({ data: null }),
         kpiKeys.includes("tippLeads")
           ? supabase.from("tipp_leads").select("id", { count: "exact", head: true })
