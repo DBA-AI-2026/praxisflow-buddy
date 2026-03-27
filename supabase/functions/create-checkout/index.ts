@@ -8,9 +8,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const logStep = (step: string, details?: unknown) => {
-  const d = details ? ` - ${JSON.stringify(details)}` : "";
-  console.log(`[CREATE-CHECKOUT] ${step}${d}`);
+const log = (step: string, details?: unknown) => {
+  const ts = new Date().toISOString();
+  const d = details ? ` – ${JSON.stringify(details)}` : "";
+  console.log(`[CREATE-CHECKOUT][${ts}] ${step}${d}`);
 };
 
 // Stripe Coupon ID for HFX GOÄ promo: 100% off for 18 months (covers until 31.12.2026)
@@ -18,6 +19,35 @@ const logStep = (step: string, details?: unknown) => {
 const GOA_PROMO_COUPON_ID = "Z6xkvF0U";
 const GOA_PROMO_PRICE_ID = "price_1TERR350U5wLsXk2G6CMcuGV";
 const GOA_PROMO_DEADLINE = new Date("2026-06-30T23:59:59Z");
+
+/**
+ * Check for an existing open Stripe Checkout Session for this contract.
+ */
+async function findExistingSession(
+  stripe: Stripe,
+  contractId: string
+): Promise<{ url: string; sessionId: string } | null> {
+  if (!contractId) return null;
+  try {
+    const sessions = await stripe.checkout.sessions.list({ limit: 20 });
+    const existing = sessions.data.find(
+      (s) =>
+        s.metadata?.contract_id === contractId &&
+        s.status === "open" &&
+        s.url
+    );
+    if (existing) {
+      log("Found existing open checkout session (idempotent)", {
+        sessionId: existing.id,
+        contractId,
+      });
+      return { url: existing.url!, sessionId: existing.id };
+    }
+  } catch (err) {
+    log("Warning: existing session check failed", { error: String(err) });
+  }
+  return null;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -30,7 +60,7 @@ serve(async (req) => {
   );
 
   try {
-    logStep("Function started");
+    log("Function invoked");
 
     // Authenticate calling user (sales partner)
     const authHeader = req.headers.get("Authorization");
@@ -40,37 +70,55 @@ serve(async (req) => {
     if (userError) throw new Error(`Auth error: ${userError.message}`);
     const user = userData.user;
     if (!user) throw new Error("User not authenticated");
-    logStep("Sales partner authenticated", { userId: user.id });
+    log("Sales partner authenticated", { userId: user.id });
 
     const body = await req.json();
     const { customer_email, customer_name, contract_id, line_items, success_path, cancel_path } = body;
 
     if (!customer_email) throw new Error("customer_email is required");
     if (!line_items || line_items.length === 0) throw new Error("line_items is required");
-    logStep("Request parsed", { customer_email, contract_id, itemCount: line_items.length });
+    log("Request parsed", { customer_email, contract_id, itemCount: line_items.length });
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
     });
+    log("Stripe client initialized");
+
+    // ── Idempotency: check for existing open session for this contract ──
+    if (contract_id) {
+      const existing = await findExistingSession(stripe, contract_id);
+      if (existing) {
+        return new Response(
+          JSON.stringify({
+            url: existing.url,
+            session_id: existing.sessionId,
+            promo_applied: false,
+            reused: true,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+    }
 
     // Find or reference Stripe customer by email
     const customers = await stripe.customers.list({ email: customer_email, limit: 1 });
     let customerId: string | undefined;
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
-      logStep("Existing Stripe customer found", { customerId });
+      log("Existing Stripe customer found", { customerId });
     } else {
-      logStep("No existing Stripe customer, will create via checkout");
+      log("No existing Stripe customer, will create via checkout");
     }
 
     // Determine mode: if any item is recurring → subscription, else payment
     const hasRecurring = line_items.some((item: { recurring: boolean }) => item.recurring);
     const mode = hasRecurring ? "subscription" : "payment";
-    logStep("Checkout mode", { mode });
+    log("Checkout mode determined", { mode, hasRecurring });
 
-    // Check if HFX GOÄ promo applies:
-    // - Contract contains the GOÄ product
-    // - Current date is on or before 30.06.2026
+    // Check if HFX GOÄ promo applies
     const now = new Date();
     const isGoaProduct = line_items.some(
       (item: { price_id: string }) => item.price_id === GOA_PROMO_PRICE_ID
@@ -79,7 +127,7 @@ serve(async (req) => {
     const applyPromoCoupon = isGoaProduct && isWithinPromoDeadline && mode === "subscription";
 
     if (applyPromoCoupon) {
-      logStep("Applying HFX GOÄ promo coupon (100% off until 31.12.2026)", {
+      log("Applying HFX GOÄ promo coupon (100% off until 31.12.2026)", {
         couponId: GOA_PROMO_COUPON_ID,
       });
     }
@@ -104,6 +152,7 @@ serve(async (req) => {
         promo_applied: applyPromoCoupon ? "GOA_PROMO_2026" : "",
       },
       payment_method_types: ["card", "sepa_debit"],
+      expires_at: contract_id ? Math.floor(Date.now() / 1000) + 30 * 60 : undefined, // 30 min expiry for contract-based sessions
     };
 
     // Apply promo coupon for GOÄ subscriptions within the deadline
@@ -113,10 +162,11 @@ serve(async (req) => {
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 
-    logStep("Checkout session created", {
+    log("Checkout session created", {
       sessionId: session.id,
-      url: session.url,
+      mode,
       promoCouponApplied: applyPromoCoupon,
+      expiresAt: sessionParams.expires_at,
     });
 
     return new Response(
@@ -124,6 +174,7 @@ serve(async (req) => {
         url: session.url,
         session_id: session.id,
         promo_applied: applyPromoCoupon,
+        reused: false,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -132,7 +183,7 @@ serve(async (req) => {
     );
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    logStep("ERROR", { message: msg });
+    log("ERROR", { message: msg, stack: error instanceof Error ? error.stack : undefined });
     return new Response(JSON.stringify({ error: msg }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
