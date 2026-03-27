@@ -95,18 +95,30 @@ function downloadCsv(rows: string[][], filename: string) {
 const REVENUE_HEADERS = ["Datum", "Belegnummer", "Buchungstext", "Konto", "Gegenkonto", "Nettobetrag", "USt-Satz %", "USt-Betrag", "Bruttobetrag", "Kostenstelle", "Zahlungsart"];
 const COST_HEADERS = ["Datum", "Belegnummer", "Buchungstext", "Lieferant", "Kostenkategorie", "Kunde", "HFX-Nr", "Produkt", "Konto", "Gegenkonto", "Nettobetrag", "USt-Satz %", "USt-Betrag", "Bruttobetrag"];
 
-// FiBu standardized CSV headers (all 24 mandatory fields)
+// FiBu booking-format CSV headers (clean, auditable booking records)
 const FIBU_CSV_HEADERS = [
-  "export_batch_id", "event_id", "event_type", "occurred_at",
-  "customer_id", "contract_id", "product_name", "period_start", "period_end",
-  "amount_net", "tax_amount", "amount_gross", "currency",
-  "commission_type", "beneficiary_type", "beneficiary_id",
-  "cost_type", "source_module", "source_reference_id",
-  "status", "export_status", "correction_of_event_id",
-  "description", "created_at",
+  "Buchungsdatum", "Belegdatum", "Belegnummer", "Buchungstext",
+  "Kundennummer", "Rechnungsnummer", "Produkt",
+  "Konto (Soll)", "Gegenkonto (Haben)",
+  "Nettobetrag", "USt-Satz %", "USt-Betrag", "Bruttobetrag", "Währung",
+  "Vorgangstyp", "Kostenstelle", "Batch-Referenz", "Event-ID",
 ];
 
-// Lexware Kontenrahmen (SKR03)
+// SKR03 Kontenrahmen – Mapping event_type → debit_account / credit_account
+const SKR03_ACCOUNT_MAP: Record<string, { debit: string; credit: string; label: string }> = {
+  invoice_base_fee_created:   { debit: "1200", credit: "8400", label: "Erlös Grundgebühr" },
+  invoice_usage_created:      { debit: "1200", credit: "8400", label: "Erlös Verbrauch" },
+  invoice_created:            { debit: "1200", credit: "8400", label: "Erlös Rechnung" },
+  vendor_cost_created:        { debit: "3300", credit: "1600", label: "Fremdleistung/Kosten" },
+  commission_created:         { debit: "4780", credit: "1600", label: "Provision Vertrieb" },
+  cancellation_created:       { debit: "8400", credit: "1200", label: "Storno/Gutschrift" },
+  correction_created:         { debit: "8400", credit: "1200", label: "Korrektur" },
+  payment_received:           { debit: "1800", credit: "1200", label: "Zahlungseingang" },
+  refund_created:             { debit: "1200", credit: "1800", label: "Erstattung" },
+};
+const DEFAULT_ACCOUNTS = { debit: "9999", credit: "9999", label: "Sonstiger Vorfall" };
+
+// Legacy Lexware Kontenrahmen (for legacy direct exports)
 const REVENUE_ACCOUNT = "8400";
 const REVENUE_CONTRA = "1400";
 const COST_ACCOUNT = "3300";
