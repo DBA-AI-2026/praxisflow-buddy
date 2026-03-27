@@ -919,6 +919,38 @@ export default function Buchhaltung() {
         </DialogContent>
       </Dialog>
 
+      {/* Manual Billing Dialog */}
+      <Dialog open={billingDialogOpen} onOpenChange={(open) => {
+        setBillingDialogOpen(open);
+        if (open) loadActiveContracts();
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Receipt className="h-5 w-5" />Monatsabrechnung auslösen</DialogTitle>
+            <DialogDescription>Erzeugt die Monatsabrechnung (Grundgebühr + offene Verbrauchsdaten) für den ausgewählten Vertrag im aktuellen Monat. Bereits existierende Rechnungen werden übersprungen.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Vertrag auswählen</Label>
+            <Select value={billingContractId} onValueChange={setBillingContractId}>
+              <SelectTrigger><SelectValue placeholder="Vertrag wählen..." /></SelectTrigger>
+              <SelectContent>
+                {activeContracts.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.customer_name} ({c.hfx_customer_number}) – {c.product_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setBillingDialogOpen(false)}>Abbrechen</Button>
+            <Button onClick={handleManualBilling} disabled={!billingContractId || billingLoading}>
+              {billingLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Wird erstellt...</> : <><Receipt className="h-4 w-4 mr-2" />Abrechnung erstellen</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Period selector */}
       {tab !== "integrationen" && (
         <div className="card-elevated p-4 mb-6 flex flex-wrap gap-4 items-end">
