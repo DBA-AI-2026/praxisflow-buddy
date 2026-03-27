@@ -110,7 +110,7 @@ serve(async (req) => {
     }
     log("Line items built", { count: lineItems.length, items: lineItems });
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
       apiVersion: "2025-08-27.basil",
     });
     log("Stripe client initialized");
