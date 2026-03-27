@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
 
     // ── Optional: send immediate reminder email via Resend ──────────────
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
+    const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY_V2");
 
     // Load email notification settings
     const { data: emailSettings } = await supabase
