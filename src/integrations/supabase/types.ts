@@ -2328,6 +2328,32 @@ export type Database = {
         }
         Relationships: []
       }
+      v_combined_fibu_reconciliation: {
+        Row: {
+          contract_id: string | null
+          customer_name: string | null
+          customer_number: string | null
+          data_source: string | null
+          delta_gross: number | null
+          delta_net: number | null
+          fibu_event_count: number | null
+          fibu_event_types: string[] | null
+          fibu_gross_total: number | null
+          fibu_net_total: number | null
+          fibu_tax_total: number | null
+          is_legacy: boolean | null
+          reconciliation_status: string | null
+          record_date: string | null
+          record_id: string | null
+          record_number: string | null
+          source_created_at: string | null
+          source_gross: number | null
+          source_net: number | null
+          source_status: string | null
+          source_tax: number | null
+        }
+        Relationships: []
+      }
       v_invoice_fibu_reconciliation: {
         Row: {
           contract_id: string | null
