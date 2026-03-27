@@ -101,7 +101,7 @@ const FIBU_CSV_HEADERS = [
   "Kundennummer", "Rechnungsnummer", "Produkt",
   "Konto (Soll)", "Gegenkonto (Haben)",
   "Nettobetrag", "USt-Satz %", "USt-Betrag", "Bruttobetrag", "Währung",
-  "Vorgangstyp", "Kostenstelle", "Batch-Referenz", "Event-ID",
+  "Vorgangstyp", "Batch-Referenz", "Event-ID",
 ];
 
 // SKR03 Kontenrahmen – Mapping event_type → debit_account / credit_account
@@ -676,30 +676,40 @@ export default function Buchhaltung() {
       FIBU_CSV_HEADERS,
       ...events.map((e) => {
         const accounts = SKR03_ACCOUNT_MAP[e.event_type] || DEFAULT_ACCOUNTS;
-        // Try to resolve invoice metadata via source_reference_id
-        const inv = e.source_reference_id ? invoiceLookup[e.source_reference_id] : null;
+
+        // Resolve invoice metadata: source_reference_id may be "uuid" or "uuid:suffix"
+        // Extract base UUID for lookup
+        const baseRefId = e.source_reference_id?.split(":")[0] ?? null;
+        const inv = baseRefId ? invoiceLookup[baseRefId] : null;
+
         const taxRate = Number(e.tax_amount) > 0 && Number(e.amount_net) > 0
           ? Math.round((Number(e.tax_amount) / Number(e.amount_net)) * 100)
           : 0;
-        const isCorrection = Number(e.amount_gross) < 0;
+
+        // Soll/Haben: The SKR03_ACCOUNT_MAP already defines correct accounts per event_type.
+        // cancellation_created / correction_created already have inverted accounts (8400/1200).
+        // Do NOT additionally flip based on negative amounts — that would cause double inversion.
+        // Only flip for event types that are normally positive but appear with negative amounts
+        // (e.g. a refund on an invoice_created event — unlikely but defensive).
+        const isNormallyPositiveType = ["invoice_base_fee_created", "invoice_usage_created", "invoice_created", "vendor_cost_created", "commission_created", "payment_received"].includes(e.event_type);
+        const shouldFlip = isNormallyPositiveType && Number(e.amount_gross) < 0;
 
         return [
           e.occurred_at ? fmtDate(e.occurred_at.slice(0, 10)) : "",                  // Buchungsdatum
           inv?.invoice_date ? fmtDate(inv.invoice_date) : "",                         // Belegdatum
           inv?.invoice_number ?? e.source_reference_id ?? e.id.slice(0, 8).toUpperCase(), // Belegnummer
-          e.description || accounts.label + (isCorrection ? " (Storno)" : ""),       // Buchungstext
+          e.description || accounts.label,                                            // Buchungstext
           inv?.customer_number ?? "",                                                  // Kundennummer
           inv?.invoice_number ?? "",                                                   // Rechnungsnummer
           e.product_name ?? "",                                                        // Produkt
-          isCorrection ? accounts.credit : accounts.debit,                            // Konto (Soll)
-          isCorrection ? accounts.debit : accounts.credit,                            // Gegenkonto (Haben)
+          shouldFlip ? accounts.credit : accounts.debit,                              // Konto (Soll)
+          shouldFlip ? accounts.debit : accounts.credit,                              // Gegenkonto (Haben)
           Number(e.amount_net).toFixed(2),                                             // Nettobetrag
           taxRate > 0 ? String(taxRate) : "",                                          // USt-Satz %
           Number(e.tax_amount).toFixed(2),                                             // USt-Betrag
           Number(e.amount_gross).toFixed(2),                                           // Bruttobetrag
           e.currency ?? "EUR",                                                         // Währung
           e.event_type,                                                                // Vorgangstyp
-          e.product_name ?? "",                                                        // Kostenstelle
           batchRef,                                                                    // Batch-Referenz
           e.id,                                                                        // Event-ID
         ];
