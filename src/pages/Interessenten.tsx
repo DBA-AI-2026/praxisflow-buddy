@@ -322,6 +322,7 @@ export default function Interessenten() {
                 <TableHead>Quelle</TableHead>
                 <TableHead>Anfrageeingang</TableHead>
                 <TableHead>Statusänderung</TableHead>
+                <TableHead className="text-center">&lt;10T</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Nächster Schritt</TableHead>
                 {canAssign && <TableHead>AD-Zuteilung</TableHead>}
@@ -390,6 +391,24 @@ export default function Interessenten() {
                       </TableCell>
                       <TableCell className="text-muted-foreground whitespace-nowrap">
                         {format(new Date(lead.updated_at), "dd.MM.yy HH:mm", { locale: de })}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {(() => {
+                          const daysSinceUpdate = Math.floor((Date.now() - new Date(lead.updated_at).getTime()) / (1000 * 60 * 60 * 24));
+                          const isStale = daysSinceUpdate >= 10 && !["kunde", "kein_abschluss", "abgelehnt"].includes(lead.status);
+                          return isStale ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Seit {daysSinceUpdate} Tagen keine Statusänderung</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : null;
+                        })()}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         {canOnlyViewOwn ? (
