@@ -310,7 +310,7 @@ export default function Interessenten() {
         </div>
 
         {/* Table */}
-        <div className="card-elevated overflow-hidden overflow-x-auto">
+        <div className="card-elevated overflow-hidden overflow-x-auto text-xs">
           <Table>
             <TableHeader>
               <TableRow>
@@ -320,12 +320,13 @@ export default function Interessenten() {
                 <TableHead>PLZ</TableHead>
                 <TableHead>Abr.-Zentrum</TableHead>
                 <TableHead>Quelle</TableHead>
+                <TableHead>Anfrageeingang</TableHead>
+                <TableHead>Statusänderung</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Nächster Schritt</TableHead>
                 {canAssign && <TableHead>AD-Zuteilung</TableHead>}
                 <TableHead className="text-center">SF</TableHead>
                 <TableHead className="text-center">Qodia</TableHead>
-                <TableHead>Datum</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
@@ -373,9 +374,9 @@ export default function Interessenten() {
                       </TableCell>
                       <TableCell className="text-sm">{lead.email}</TableCell>
                       <TableCell>{lead.plz}</TableCell>
-                      <TableCell className="text-sm">{(lead.abrechnungszentrum === "nein" || lead.abrechnungszentrum === "keins") ? "–" : lead.abrechnungszentrum}</TableCell>
+                      <TableCell>{(lead.abrechnungszentrum === "nein" || lead.abrechnungszentrum === "keins") ? "–" : lead.abrechnungszentrum}</TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${
+                        <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${
                           lead.source === "manual"
                             ? "bg-accent/10 text-accent border-accent/30"
                             : "bg-primary/10 text-primary border-primary/30"
@@ -383,6 +384,12 @@ export default function Interessenten() {
                           {lead.source === "manual" ? <UserPlus className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
                           {lead.source === "manual" ? "Manuell" : "Homepage"}
                         </span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground whitespace-nowrap">
+                        {format(new Date(lead.created_at), "dd.MM.yy HH:mm", { locale: de })}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground whitespace-nowrap">
+                        {format(new Date(lead.updated_at), "dd.MM.yy HH:mm", { locale: de })}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         {canOnlyViewOwn ? (
@@ -549,9 +556,6 @@ export default function Interessenten() {
                             </TooltipProvider>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {format(new Date(lead.created_at), "dd.MM.yy HH:mm", { locale: de })}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
