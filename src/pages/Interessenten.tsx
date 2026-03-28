@@ -395,7 +395,7 @@ export default function Interessenten() {
                       <TableCell className="text-center">
                         {(() => {
                           const daysSinceUpdate = Math.floor((Date.now() - new Date(lead.updated_at).getTime()) / (1000 * 60 * 60 * 24));
-                          const isStale = daysSinceUpdate >= 2 && !["kunde", "kein_abschluss", "abgelehnt"].includes(lead.status);
+                          const isStale = daysSinceUpdate >= 10 && !["kunde", "kein_abschluss", "abgelehnt"].includes(lead.status);
                           return isStale ? (
                             <TooltipProvider>
                               <Tooltip>
