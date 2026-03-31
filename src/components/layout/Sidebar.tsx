@@ -299,6 +299,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="start" className="w-56 mb-1">
             <DropdownMenuItem asChild>
+              <Link to="/mein-konto" onClick={onNavigate} className="flex items-center gap-2 cursor-pointer">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1 min-w-0">
+                  <span className="block text-sm">Mein Konto</span>
+                  <span className="block text-xs text-muted-foreground">Passwort & Profil</span>
+                </div>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
               <Link to="/sicherheit" onClick={onNavigate} className="flex items-center gap-2 cursor-pointer">
                 <ShieldCheck className="h-4 w-4 text-muted-foreground" />
                 <div className="flex-1 min-w-0">

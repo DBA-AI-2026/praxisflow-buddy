@@ -31,6 +31,7 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import Sicherheit from "./pages/Sicherheit";
+import MeinKonto from "./pages/MeinKonto";
 import PdfCoordinateFinder from "./pages/tools/PdfCoordinateFinder";
 import EmailPreview from "./pages/tools/EmailPreview";
 import EmailSettings from "./pages/admin/EmailSettings";
@@ -103,6 +104,7 @@ const App = () => (
             <Route path="/admin/email-preview" element={<ProtectedRoute><EmailPreview /></ProtectedRoute>} />
             <Route path="/admin/email-settings" element={<ProtectedRoute><EmailSettings /></ProtectedRoute>} />
             <Route path="/sicherheit" element={<ProtectedRoute><Sicherheit /></ProtectedRoute>} />
+            <Route path="/mein-konto" element={<ProtectedRoute><MeinKonto /></ProtectedRoute>} />
             <Route path="/admin/documentation" element={<ProtectedRoute><Documentation /></ProtectedRoute>} />
             <Route path="/admin/plz-mapping" element={<ProtectedRoute><PlzMapping /></ProtectedRoute>} />
             {/* P1-Fix: /buchhaltung ist die kanonische Route für FiBu/Rechnungen */}
