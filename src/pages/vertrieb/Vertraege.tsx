@@ -990,6 +990,7 @@ export default function Vertraege() {
     setEditingContract(contract);
     setForm({
       customer_name: contract.customer_name,
+      sales_partner_id: contract.sales_partner_id || "",
       sales_partner_name: contract.sales_partner_name || "",
       mp_nr: contract.mp_nr || "",
       praxis: contract.praxis || "",
