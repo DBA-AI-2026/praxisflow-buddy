@@ -113,7 +113,7 @@ const Vertriebler = () => {
       // Get all user roles for sales-relevant roles
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
-        .select("user_id, role")
+        .select("user_id, role, is_active")
         .in("role", SALES_ROLES);
 
       if (rolesError) throw rolesError;
