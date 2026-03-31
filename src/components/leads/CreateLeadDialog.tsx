@@ -64,6 +64,12 @@ interface CreateLeadDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const leadRoleLabels: Record<string, string> = {
+  sales_partner: "Vertriebspartner",
+  user: "Gebietsleiter",
+  tippgeber: "Tippgeber",
+};
+
 function UserSearchSelect({
   value,
   onChange,
@@ -72,7 +78,7 @@ function UserSearchSelect({
 }: {
   value: string | null;
   onChange: (val: string | null) => void;
-  users: { user_id: string; full_name: string; email: string | null }[];
+  users: { user_id: string; full_name: string; email: string | null; role?: string; extra?: string }[];
   placeholder: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -98,7 +104,15 @@ function UserSearchSelect({
           className="w-full justify-between font-normal"
         >
           {selected ? (
-            <span className="truncate">{selected.full_name}</span>
+            <span className="truncate">
+              {selected.full_name}
+              {selected.role && (
+                <span className="text-muted-foreground text-xs ml-1">— {leadRoleLabels[selected.role] || selected.role}</span>
+              )}
+              {selected.extra && (
+                <span className="text-muted-foreground text-xs ml-1">{selected.extra}</span>
+              )}
+            </span>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
           )}
@@ -146,10 +160,12 @@ function UserSearchSelect({
               >
                 <Check className={cn("h-4 w-4 shrink-0", value === u.user_id ? "opacity-100" : "opacity-0")} />
                 <div className="text-left truncate">
-                  <span>{u.full_name}</span>
-                  {u.email && (
-                    <span className="text-muted-foreground ml-1 text-xs">({u.email})</span>
-                  )}
+                  <span className="font-medium">{u.full_name}</span>
+                  <span className="text-muted-foreground ml-1 text-xs">
+                    {u.role ? `— ${leadRoleLabels[u.role] || u.role}` : ""}
+                    {u.extra ? ` ${u.extra}` : ""}
+                    {u.email ? ` (${u.email})` : ""}
+                  </span>
                 </div>
               </button>
             ))
@@ -180,34 +196,38 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
     },
   });
 
-  // Fetch sales partners (users with sales_partner or user role)
+  // Fetch sales partners (users with sales_partner or user role) — only active
   const { data: salesPartners = [] } = useQuery({
     queryKey: ["sales-partners-for-lead"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_roles")
-        .select("user_id, role")
-        .in("role", ["sales_partner", "user"]);
+        .select("user_id, role, is_active")
+        .in("role", ["sales_partner", "user"])
+        .eq("is_active", true);
       if (error) throw error;
       if (!data?.length) return [];
+      const roleMap: Record<string, string> = {};
+      for (const r of data) roleMap[r.user_id] = r.role;
       const userIds = data.map((r) => r.user_id);
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, full_name, email")
         .in("user_id", userIds);
-      return profiles || [];
+      return (profiles || []).map((p) => ({ ...p, role: roleMap[p.user_id] || undefined }));
     },
     enabled: canAssign,
   });
 
-  // Fetch tippgeber
+  // Fetch tippgeber with partner assignment info — only active
   const { data: tippgeberList = [] } = useQuery({
     queryKey: ["tippgeber-for-lead"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_roles")
         .select("user_id")
-        .eq("role", "tippgeber");
+        .eq("role", "tippgeber")
+        .eq("is_active", true);
       if (error) throw error;
       if (!data?.length) return [];
       const userIds = data.map((r) => r.user_id);
@@ -215,7 +235,28 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
         .from("profiles")
         .select("user_id, full_name, email")
         .in("user_id", userIds);
-      return profiles || [];
+      // Get partner assignments
+      const { data: assignments } = await supabase
+        .from("tippgeber_partner_assignments")
+        .select("tippgeber_user_id, partner_user_id")
+        .in("tippgeber_user_id", userIds);
+      const assignMap: Record<string, string> = {};
+      (assignments || []).forEach((a: any) => { assignMap[a.tippgeber_user_id] = a.partner_user_id; });
+      // Resolve partner names
+      const partnerIds = [...new Set(Object.values(assignMap))];
+      let partnerNames: Record<string, string> = {};
+      if (partnerIds.length > 0) {
+        const { data: partnerProfiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", partnerIds);
+        for (const pp of partnerProfiles || []) partnerNames[pp.user_id] = pp.full_name;
+      }
+      return (profiles || []).map((p) => ({
+        ...p,
+        role: "tippgeber" as string,
+        extra: assignMap[p.user_id] ? `von ${partnerNames[assignMap[p.user_id]] || "–"}` : undefined,
+      }));
     },
     enabled: canAssign,
   });

@@ -136,18 +136,22 @@ const roleLabels: Record<string, string> = {
 };
 
 // Searchable combobox for sales partner selection (excludes Tippgeber — they cannot be contract-responsible)
+// Returns both user_id and full_name so contracts store the correct sales_partner_id.
 function SalesPartnerCombobox({
   value,
+  selectedId,
   onChange,
   profiles,
 }: {
   value: string;
-  onChange: (v: string) => void;
-  profiles: { user_id: string; full_name: string; email: string | null; role?: string | null }[];
+  selectedId: string;
+  onChange: (id: string, name: string) => void;
+  profiles: { user_id: string; full_name: string; email: string | null; role?: string | null; is_active?: boolean }[];
 }) {
-  const filteredProfiles = profiles.filter((p) => p.role !== "tippgeber");
+  // Exclude Tippgeber and inactive roles from selection
+  const filteredProfiles = profiles.filter((p) => p.role !== "tippgeber" && p.is_active !== false);
   const [open, setOpen] = useState(false);
-  const selected = filteredProfiles.find((p) => p.full_name === value);
+  const selected = filteredProfiles.find((p) => p.user_id === selectedId) || filteredProfiles.find((p) => p.full_name === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -183,13 +187,17 @@ function SalesPartnerCombobox({
                 <CommandItem
                   key={p.user_id}
                   value={p.full_name}
-                  onSelect={(currentValue) => {
-                    onChange(currentValue === value ? "" : currentValue);
+                  onSelect={() => {
+                    if (selectedId === p.user_id) {
+                      onChange("", "");
+                    } else {
+                      onChange(p.user_id, p.full_name);
+                    }
                     setOpen(false);
                   }}
                 >
                   <Check
-                    className={`mr-2 h-4 w-4 shrink-0 ${value === p.full_name ? "opacity-100" : "opacity-0"}`}
+                    className={`mr-2 h-4 w-4 shrink-0 ${selectedId === p.user_id ? "opacity-100" : "opacity-0"}`}
                   />
                   <div className="flex flex-col min-w-0">
                     <span className="font-medium truncate">{p.full_name}</span>
@@ -228,6 +236,7 @@ type PaymentMethod = "stripe";
 
 interface ContractFormData {
   customer_name: string;
+  sales_partner_id: string;
   sales_partner_name: string;
   mp_nr: string;
   praxis: string;
@@ -281,6 +290,7 @@ interface ContractFormData {
 
 const emptyForm: ContractFormData = {
   customer_name: "",
+  sales_partner_id: "",
   sales_partner_name: "",
   mp_nr: "",
   praxis: "",
@@ -472,6 +482,7 @@ export default function Vertraege() {
           adresse: lead.adresse || "",
           praxisanschrift: lead.adresse || "",
           telefon: lead.mobilnummer || "",
+          sales_partner_id: lead.assigned_to || "",
           sales_partner_name: partnerName,
         });
         setDialogOpen(true);
@@ -525,15 +536,17 @@ export default function Vertraege() {
   const { data: allProfiles = [] } = useQuery({
     queryKey: ["sales-profiles-with-roles"],
     queryFn: async () => {
-      // First get user_ids with sales-relevant roles
+      // First get user_ids with sales-relevant roles (including is_active)
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
-        .select("user_id, role")
+        .select("user_id, role, is_active")
         .in("role", ["sales_partner", "user", "sales_lead", "regional_lead", "admin", "tippgeber"]);
       if (roleError) throw roleError;
       const roleMap: Record<string, string> = {};
+      const activeMap: Record<string, boolean> = {};
       for (const r of roleData || []) {
         roleMap[r.user_id] = r.role;
+        activeMap[r.user_id] = r.is_active ?? true;
       }
       const salesUserIds = Object.keys(roleMap);
       if (salesUserIds.length === 0) return [];
@@ -543,7 +556,7 @@ export default function Vertraege() {
         .in("user_id", salesUserIds)
         .order("full_name");
       if (error) throw error;
-      return (data || []).map((p) => ({ ...p, role: roleMap[p.user_id] || null }));
+      return (data || []).map((p) => ({ ...p, role: roleMap[p.user_id] || null, is_active: activeMap[p.user_id] ?? true }));
     },
   });
 
@@ -629,7 +642,7 @@ export default function Vertraege() {
 
       const record = {
         customer_name: `${data.vorname} ${data.nachname}`.trim() || data.praxis || "Entwurf",
-        sales_partner_id: user?.id,
+        sales_partner_id: data.sales_partner_id || user?.id,
         sales_partner_name: data.sales_partner_name || profile?.full_name || "",
         mp_nr: data.mp_nr || null,
         praxis: data.praxis || null,
@@ -977,6 +990,7 @@ export default function Vertraege() {
     setEditingContract(contract);
     setForm({
       customer_name: contract.customer_name,
+      sales_partner_id: contract.sales_partner_id || "",
       sales_partner_name: contract.sales_partner_name || "",
       mp_nr: contract.mp_nr || "",
       praxis: contract.praxis || "",
@@ -1348,6 +1362,7 @@ export default function Vertraege() {
           telefon: form.telefon || null,
           notes: form.notes || null,
           start_date: form.start_date,
+          sales_partner_id: form.sales_partner_id || null,
           sales_partner_name: form.sales_partner_name || profile?.full_name || null,
         } as any).eq("id", editId);
         if (error) throw error;
@@ -1355,7 +1370,7 @@ export default function Vertraege() {
         // Insert new contract as eingegangen
         const record: any = {
           customer_name: `${form.vorname} ${form.nachname}`.trim() || form.praxis || "Entwurf",
-          sales_partner_id: user?.id,
+          sales_partner_id: form.sales_partner_id || user?.id,
           sales_partner_name: form.sales_partner_name || profile?.full_name || "",
           mp_nr: form.mp_nr || null,
           praxis: form.praxis || null,
@@ -2337,7 +2352,11 @@ export default function Vertraege() {
                    <Label>Vertriebspartner</Label>
                    <SalesPartnerCombobox
                      value={form.sales_partner_name}
-                     onChange={(v) => set("sales_partner_name", v)}
+                     selectedId={form.sales_partner_id}
+                     onChange={(id, name) => {
+                       set("sales_partner_id", id);
+                       set("sales_partner_name", name);
+                     }}
                      profiles={allProfiles}
                    />
                  </div>

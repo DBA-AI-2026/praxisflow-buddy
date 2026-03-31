@@ -50,6 +50,7 @@ interface VertrieblerRow {
   full_name: string;
   email: string | null;
   role: string;
+  is_active: boolean;
   contract_count: number;
   assigned_partner_name?: string | null;
 }
@@ -67,19 +68,38 @@ const Vertriebler = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const deleteMutation = useMutation({
+  const deactivateMutation = useMutation({
     mutationFn: async (userId: string) => {
       const { error } = await supabase
         .from("user_roles")
-        .delete()
+        .update({ is_active: false })
         .eq("user_id", userId);
       if (error) throw error;
     },
-    onSuccess: (_, userId) => {
+    onSuccess: () => {
       const name = deleteTarget?.full_name || "Vertriebler";
       queryClient.invalidateQueries({ queryKey: ["vertriebler-list"] });
-      toast({ title: "Vertriebler entfernt", description: `${name} wurde aus der Vertriebsliste entfernt.` });
+      queryClient.invalidateQueries({ queryKey: ["sales-profiles-with-roles"] });
+      toast({ title: "Vertriebler deaktiviert", description: `${name} wurde deaktiviert. Historische Zuordnungen bleiben erhalten.` });
       setDeleteTarget(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "Fehler", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const reactivateMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from("user_roles")
+        .update({ is_active: true })
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vertriebler-list"] });
+      queryClient.invalidateQueries({ queryKey: ["sales-profiles-with-roles"] });
+      toast({ title: "Vertriebler reaktiviert" });
     },
     onError: (err: any) => {
       toast({ title: "Fehler", description: err.message, variant: "destructive" });
@@ -93,7 +113,7 @@ const Vertriebler = () => {
       // Get all user roles for sales-relevant roles
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
-        .select("user_id, role")
+        .select("user_id, role, is_active")
         .in("role", SALES_ROLES);
 
       if (rolesError) throw rolesError;
@@ -124,7 +144,7 @@ const Vertriebler = () => {
 
       // Get Tippgeber → Vertriebspartner assignments
       const { data: assignments } = await supabase
-        .from("tippgeber_partner_assignments" as any)
+        .from("tippgeber_partner_assignments")
         .select("tippgeber_user_id, partner_user_id");
 
       const assignmentMap: Record<string, string> = {};
@@ -154,6 +174,7 @@ const Vertriebler = () => {
           full_name: profile.full_name,
           email: profile.email,
           role: role.role,
+          is_active: (role as any).is_active ?? true,
           contract_count: contractCounts[role.user_id] || 0,
           assigned_partner_name: assignedPartnerName,
         });
@@ -311,6 +332,7 @@ const Vertriebler = () => {
                    <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Rolle</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Zuordnung</TableHead>
                     <TableHead>E-Mail</TableHead>
                     <TableHead className="text-center">Verträge</TableHead>
@@ -321,12 +343,17 @@ const Vertriebler = () => {
                   {filtered.map((v) => {
                     const style = roleBadgeStyles[v.role] || roleBadgeStyles["sales_partner"];
                     return (
-                      <TableRow key={v.user_id}>
+                      <TableRow key={v.user_id} className={!v.is_active ? "opacity-50" : undefined}>
                         <TableCell className="font-medium">{v.full_name}</TableCell>
                         <TableCell>
                           <Badge className={cn("gap-1", style.bg)}>
                             {style.icon}
                             {roleLabels[v.role] || v.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={v.is_active ? "default" : "secondary"} className={v.is_active ? "bg-success/10 text-success border-success/20" : "bg-muted text-muted-foreground"}>
+                            {v.is_active ? "Aktiv" : "Inaktiv"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
@@ -351,8 +378,8 @@ const Vertriebler = () => {
                                 <Percent className="h-3.5 w-3.5" />
                                 Provisionen
                               </Button>
-                              {/* Löschen: nur admin */}
-                              {isAdmin && (
+                              {/* Deaktivieren / Reaktivieren: nur admin */}
+                              {isAdmin && v.is_active && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -360,6 +387,17 @@ const Vertriebler = () => {
                                   onClick={() => setDeleteTarget(v)}
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                              {isAdmin && !v.is_active && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-success hover:text-success hover:bg-success/10"
+                                  onClick={() => reactivateMutation.mutate(v.user_id)}
+                                  disabled={reactivateMutation.isPending}
+                                >
+                                  <Check className="h-3.5 w-3.5" />
                                 </Button>
                               )}
                             </div>
@@ -389,21 +427,21 @@ const Vertriebler = () => {
         <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Vertriebler entfernen?</AlertDialogTitle>
+              <AlertDialogTitle>Vertriebler deaktivieren?</AlertDialogTitle>
               <AlertDialogDescription>
-                <strong>{deleteTarget?.full_name}</strong> ({deleteTarget?.email || "–"}) wird aus der Vertriebsliste entfernt.
-                Alle Vertriebsrollen dieses Benutzers werden gelöscht. Bestehende Verträge bleiben erhalten.
+                <strong>{deleteTarget?.full_name}</strong> ({deleteTarget?.email || "–"}) wird deaktiviert und ist in neuen Formularen nicht mehr auswählbar.
+                Bestehende Verträge und historische Zuordnungen bleiben erhalten.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleteMutation.isPending}>Abbrechen</AlertDialogCancel>
+              <AlertDialogCancel disabled={deactivateMutation.isPending}>Abbrechen</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                disabled={deleteMutation.isPending}
-                onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.user_id)}
+                disabled={deactivateMutation.isPending}
+                onClick={() => deleteTarget && deactivateMutation.mutate(deleteTarget.user_id)}
               >
-                {deleteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Entfernen
+                {deactivateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Deaktivieren
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
