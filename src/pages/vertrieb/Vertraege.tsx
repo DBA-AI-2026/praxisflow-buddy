@@ -135,7 +135,7 @@ const roleLabels: Record<string, string> = {
   tippgeber: "Tippgeber",
 };
 
-// Searchable combobox for sales partner selection
+// Searchable combobox for sales partner selection (excludes Tippgeber — they cannot be contract-responsible)
 function SalesPartnerCombobox({
   value,
   onChange,
@@ -145,6 +145,7 @@ function SalesPartnerCombobox({
   onChange: (v: string) => void;
   profiles: { user_id: string; full_name: string; email: string | null; role?: string | null }[];
 }) {
+  const filteredProfiles = profiles.filter((p) => p.role !== "tippgeber");
   const [open, setOpen] = useState(false);
   const selected = profiles.find((p) => p.full_name === value);
 
