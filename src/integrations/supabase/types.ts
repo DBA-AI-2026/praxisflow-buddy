@@ -2159,6 +2159,36 @@ export type Database = {
           },
         ]
       }
+      tippgeber_partner_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          partner_user_id: string
+          tippgeber_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          partner_user_id: string
+          tippgeber_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          partner_user_id?: string
+          tippgeber_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       usage_charges: {
         Row: {
           contract_id: string | null
