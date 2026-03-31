@@ -174,6 +174,7 @@ const Vertriebler = () => {
           full_name: profile.full_name,
           email: profile.email,
           role: role.role,
+          is_active: (role as any).is_active ?? true,
           contract_count: contractCounts[role.user_id] || 0,
           assigned_partner_name: assignedPartnerName,
         });
