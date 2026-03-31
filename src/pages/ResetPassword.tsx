@@ -114,6 +114,19 @@ export default function ResetPassword() {
     );
   }
 
+  if (needsMfa && mfaFactorId) {
+    return (
+      <MfaChallenge
+        factorId={mfaFactorId}
+        onSuccess={() => setNeedsMfa(false)}
+        onCancel={() => {
+          supabase.auth.signOut();
+          navigate("/auth");
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
       <Card className="w-full max-w-md">
