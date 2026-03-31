@@ -290,6 +290,7 @@ interface ContractFormData {
 
 const emptyForm: ContractFormData = {
   customer_name: "",
+  sales_partner_id: "",
   sales_partner_name: "",
   mp_nr: "",
   praxis: "",
