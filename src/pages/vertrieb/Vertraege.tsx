@@ -482,6 +482,7 @@ export default function Vertraege() {
           adresse: lead.adresse || "",
           praxisanschrift: lead.adresse || "",
           telefon: lead.mobilnummer || "",
+          sales_partner_id: lead.assigned_to || "",
           sales_partner_name: partnerName,
         });
         setDialogOpen(true);
