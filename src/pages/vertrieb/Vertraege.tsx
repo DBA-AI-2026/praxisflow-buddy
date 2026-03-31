@@ -1362,6 +1362,7 @@ export default function Vertraege() {
           telefon: form.telefon || null,
           notes: form.notes || null,
           start_date: form.start_date,
+          sales_partner_id: form.sales_partner_id || null,
           sales_partner_name: form.sales_partner_name || profile?.full_name || null,
         } as any).eq("id", editId);
         if (error) throw error;
@@ -1369,7 +1370,7 @@ export default function Vertraege() {
         // Insert new contract as eingegangen
         const record: any = {
           customer_name: `${form.vorname} ${form.nachname}`.trim() || form.praxis || "Entwurf",
-          sales_partner_id: user?.id,
+          sales_partner_id: form.sales_partner_id || user?.id,
           sales_partner_name: form.sales_partner_name || profile?.full_name || "",
           mp_nr: form.mp_nr || null,
           praxis: form.praxis || null,
