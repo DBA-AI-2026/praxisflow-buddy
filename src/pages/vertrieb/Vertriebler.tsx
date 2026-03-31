@@ -308,9 +308,10 @@ const Vertriebler = () => {
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow>
+                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Rolle</TableHead>
+                    <TableHead>Zuordnung</TableHead>
                     <TableHead>E-Mail</TableHead>
                     <TableHead className="text-center">Verträge</TableHead>
                      {(isAdmin || isSalesLead) && <TableHead className="text-right">Aktionen</TableHead>}
@@ -327,6 +328,13 @@ const Vertriebler = () => {
                             {style.icon}
                             {roleLabels[v.role] || v.role}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {v.role === "tippgeber" && v.assigned_partner_name
+                            ? `von ${v.assigned_partner_name}`
+                            : v.role === "tippgeber"
+                              ? <span className="text-xs text-destructive">Nicht zugeordnet</span>
+                              : "–"}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{v.email || "–"}</TableCell>
                         <TableCell className="text-center font-medium">{v.contract_count}</TableCell>
