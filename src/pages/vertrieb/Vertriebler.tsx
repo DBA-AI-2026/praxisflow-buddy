@@ -53,7 +53,7 @@ interface VertrieblerRow {
   contract_count: number;
 }
 
-const Vertriebler = () => {
+const [createPartnerOpen, setCreatePartnerOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("alle");
   const [roleFilterOpen, setRoleFilterOpen] = useState(false);
