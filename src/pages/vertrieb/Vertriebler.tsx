@@ -332,6 +332,7 @@ const Vertriebler = () => {
                    <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Rolle</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Zuordnung</TableHead>
                     <TableHead>E-Mail</TableHead>
                     <TableHead className="text-center">Verträge</TableHead>
@@ -342,12 +343,17 @@ const Vertriebler = () => {
                   {filtered.map((v) => {
                     const style = roleBadgeStyles[v.role] || roleBadgeStyles["sales_partner"];
                     return (
-                      <TableRow key={v.user_id}>
+                      <TableRow key={v.user_id} className={!v.is_active ? "opacity-50" : undefined}>
                         <TableCell className="font-medium">{v.full_name}</TableCell>
                         <TableCell>
                           <Badge className={cn("gap-1", style.bg)}>
                             {style.icon}
                             {roleLabels[v.role] || v.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={v.is_active ? "default" : "secondary"} className={v.is_active ? "bg-success/10 text-success border-success/20" : "bg-muted text-muted-foreground"}>
+                            {v.is_active ? "Aktiv" : "Inaktiv"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
@@ -372,8 +378,8 @@ const Vertriebler = () => {
                                 <Percent className="h-3.5 w-3.5" />
                                 Provisionen
                               </Button>
-                              {/* Löschen: nur admin */}
-                              {isAdmin && (
+                              {/* Deaktivieren / Reaktivieren: nur admin */}
+                              {isAdmin && v.is_active && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -381,6 +387,17 @@ const Vertriebler = () => {
                                   onClick={() => setDeleteTarget(v)}
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                              {isAdmin && !v.is_active && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-success hover:text-success hover:bg-success/10"
+                                  onClick={() => reactivateMutation.mutate(v.user_id)}
+                                  disabled={reactivateMutation.isPending}
+                                >
+                                  <Check className="h-3.5 w-3.5" />
                                 </Button>
                               )}
                             </div>
