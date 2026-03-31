@@ -382,6 +382,12 @@ const Vertriebler = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Create Partner Dialog */}
+        <CreatePartnerDialog
+          open={createPartnerOpen}
+          onOpenChange={setCreatePartnerOpen}
+        />
       </div>
     </MainLayout>
   );
