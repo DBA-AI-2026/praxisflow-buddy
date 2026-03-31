@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { PartnerCommissionDialog } from "@/components/vertrieb/PartnerCommissionDialog";
+import { CreatePartnerDialog } from "@/components/vertrieb/CreatePartnerDialog";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
 import {
