@@ -33,20 +33,31 @@ export default function ResetPassword() {
   const [success, setSuccess] = useState(false);
   const [isValidSession, setIsValidSession] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [needsMfa, setNeedsMfa] = useState(false);
+
+  const checkMfaRequirement = async () => {
+    const { data: { totp } } = await supabase.auth.mfa.listFactors();
+    const verifiedFactor = totp?.find(f => f.status === "verified");
+    if (verifiedFactor) {
+      setMfaFactorId(verifiedFactor.id);
+      setNeedsMfa(true);
+    }
+  };
 
   useEffect(() => {
-    // Check if user arrived via a password reset link (they'll have a session with type=recovery)
     supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsValidSession(true);
+        checkMfaRequirement();
       }
       setChecking(false);
     });
 
-    // Also check existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setIsValidSession(true);
+        checkMfaRequirement();
       }
       setChecking(false);
     });
