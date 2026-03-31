@@ -1363,7 +1363,7 @@ export default function Vertraege() {
           notes: form.notes || null,
           start_date: form.start_date,
           sales_partner_id: form.sales_partner_id || null,
-          sales_partner_name: form.sales_partner_name || profile?.full_name || null,
+          sales_partner_name: form.sales_partner_name || null,
         } as any).eq("id", editId);
         if (error) throw error;
       } else {
