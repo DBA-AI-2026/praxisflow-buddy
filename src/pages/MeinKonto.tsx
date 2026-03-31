@@ -40,12 +40,12 @@ export default function MeinKonto() {
   const [mfaEnabled, setMfaEnabled] = useState<boolean | null>(null);
 
   // Check MFA status on mount
-  useState(() => {
+  useEffect(() => {
     supabase.auth.mfa.listFactors().then(({ data }) => {
       const verified = data?.totp?.filter(f => f.status === "verified") ?? [];
       setMfaEnabled(verified.length > 0);
     });
-  });
+  }, []);
 
   const roleLabels: Record<string, string> = {
     admin: "Administrator",
