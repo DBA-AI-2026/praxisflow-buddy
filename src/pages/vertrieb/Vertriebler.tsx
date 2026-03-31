@@ -410,21 +410,21 @@ const Vertriebler = () => {
         <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Vertriebler entfernen?</AlertDialogTitle>
+              <AlertDialogTitle>Vertriebler deaktivieren?</AlertDialogTitle>
               <AlertDialogDescription>
-                <strong>{deleteTarget?.full_name}</strong> ({deleteTarget?.email || "–"}) wird aus der Vertriebsliste entfernt.
-                Alle Vertriebsrollen dieses Benutzers werden gelöscht. Bestehende Verträge bleiben erhalten.
+                <strong>{deleteTarget?.full_name}</strong> ({deleteTarget?.email || "–"}) wird deaktiviert und ist in neuen Formularen nicht mehr auswählbar.
+                Bestehende Verträge und historische Zuordnungen bleiben erhalten.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleteMutation.isPending}>Abbrechen</AlertDialogCancel>
+              <AlertDialogCancel disabled={deactivateMutation.isPending}>Abbrechen</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                disabled={deleteMutation.isPending}
-                onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.user_id)}
+                disabled={deactivateMutation.isPending}
+                onClick={() => deleteTarget && deactivateMutation.mutate(deleteTarget.user_id)}
               >
-                {deleteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Entfernen
+                {deactivateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Deaktivieren
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
