@@ -2351,7 +2351,11 @@ export default function Vertraege() {
                    <Label>Vertriebspartner</Label>
                    <SalesPartnerCombobox
                      value={form.sales_partner_name}
-                     onChange={(v) => set("sales_partner_name", v)}
+                     selectedId={form.sales_partner_id}
+                     onChange={(id, name) => {
+                       set("sales_partner_id", id);
+                       set("sales_partner_name", name);
+                     }}
                      profiles={allProfiles}
                    />
                  </div>
