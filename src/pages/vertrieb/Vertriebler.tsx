@@ -51,6 +51,7 @@ interface VertrieblerRow {
   email: string | null;
   role: string;
   contract_count: number;
+  assigned_partner_name?: string | null;
 }
 
 const Vertriebler = () => {
