@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -10,10 +10,13 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Copy, Check, AlertTriangle, Mail } from "lucide-react";
+import { Loader2, Copy, Check, AlertTriangle, Mail, ChevronsUpDown } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 
 type PartnerRole = "sales_partner" | "tippgeber";
 
@@ -35,6 +38,8 @@ export function CreatePartnerDialog({ open, onOpenChange }: CreatePartnerDialogP
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<PartnerRole>("sales_partner");
   const [notes, setNotes] = useState("");
+  const [assignedPartnerId, setAssignedPartnerId] = useState<string>("");
+  const [partnerSelectOpen, setPartnerSelectOpen] = useState(false);
   const [credentials, setCredentials] = useState<CreatedCredentials | null>(null);
   const [copied, setCopied] = useState(false);
   const [step, setStep] = useState<DialogStep>("form");
@@ -42,10 +47,40 @@ export function CreatePartnerDialog({ open, onOpenChange }: CreatePartnerDialogP
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch available sales partners for Tippgeber assignment
+  const { data: salesPartners = [] } = useQuery({
+    queryKey: ["sales-partners-for-assignment"],
+    enabled: open && role === "tippgeber",
+    queryFn: async () => {
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .eq("role", "sales_partner");
+      if (rolesError) throw rolesError;
+      if (!roles || roles.length === 0) return [];
+
+      const userIds = roles.map((r) => r.user_id);
+      const { data: profiles, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .in("user_id", userIds)
+        .order("full_name");
+      if (error) throw error;
+      return profiles || [];
+    },
+  });
+
+  const selectedPartner = salesPartners.find((p) => p.user_id === assignedPartnerId);
+
   const createMutation = useMutation({
     mutationFn: async ({ confirmReset = false }: { confirmReset?: boolean } = {}) => {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) throw new Error("Nicht authentifiziert");
+
+      // Validate: Tippgeber needs assigned partner
+      if (role === "tippgeber" && !assignedPartnerId) {
+        throw new Error("Bitte wählen Sie einen zugehörigen Vertriebspartner aus.");
+      }
 
       const response = await supabase.functions.invoke("create-user", {
         body: {
@@ -66,6 +101,24 @@ export function CreatePartnerDialog({ open, onOpenChange }: CreatePartnerDialogP
         throw new Error(response.data.error);
       }
       if (!response.data?.success) throw new Error("Unerwarteter Fehler");
+
+      // If Tippgeber, create the partner assignment
+      if (role === "tippgeber" && assignedPartnerId && response.data.user?.id) {
+        const { error: assignError } = await supabase
+          .from("tippgeber_partner_assignments" as any)
+          .upsert({
+            tippgeber_user_id: response.data.user.id,
+            partner_user_id: assignedPartnerId,
+            is_active: true,
+            notes: notes || null,
+          }, { onConflict: "tippgeber_user_id" });
+
+        if (assignError) {
+          console.error("Assignment error:", assignError);
+          // Don't fail the whole operation, user was already created
+        }
+      }
+
       return response.data;
     },
     onSuccess: (data) => {
@@ -75,6 +128,7 @@ export function CreatePartnerDialog({ open, onOpenChange }: CreatePartnerDialogP
       }
       queryClient.invalidateQueries({ queryKey: ["vertriebler-list"] });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["tippgeber-assignments"] });
       setCredentials({
         email: data.credentials.email,
         password: data.credentials.password,
@@ -96,6 +150,10 @@ export function CreatePartnerDialog({ open, onOpenChange }: CreatePartnerDialogP
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !fullName) return;
+    if (role === "tippgeber" && !assignedPartnerId) {
+      toast({ title: "Pflichtfeld", description: "Bitte wählen Sie einen zugehörigen Vertriebspartner.", variant: "destructive" });
+      return;
+    }
     createMutation.mutate({});
   };
 
@@ -108,6 +166,7 @@ export function CreatePartnerDialog({ open, onOpenChange }: CreatePartnerDialogP
     setFullName("");
     setRole("sales_partner");
     setNotes("");
+    setAssignedPartnerId("");
     setCredentials(null);
     setCopied(false);
     setStep("form");
@@ -162,7 +221,10 @@ export function CreatePartnerDialog({ open, onOpenChange }: CreatePartnerDialogP
 
               <div className="space-y-2">
                 <Label>Rolle *</Label>
-                <Select value={role} onValueChange={(v) => setRole(v as PartnerRole)}>
+                <Select value={role} onValueChange={(v) => {
+                  setRole(v as PartnerRole);
+                  if (v === "sales_partner") setAssignedPartnerId("");
+                }}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -172,6 +234,67 @@ export function CreatePartnerDialog({ open, onOpenChange }: CreatePartnerDialogP
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Pflichtfeld: Zugehöriger Vertriebspartner (nur bei Tippgeber) */}
+              {role === "tippgeber" && (
+                <div className="space-y-2">
+                  <Label>Zugehöriger Vertriebspartner *</Label>
+                  <Popover open={partnerSelectOpen} onOpenChange={setPartnerSelectOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={partnerSelectOpen}
+                        className={cn(
+                          "w-full justify-between font-normal",
+                          !assignedPartnerId && "text-muted-foreground"
+                        )}
+                      >
+                        {selectedPartner
+                          ? `${selectedPartner.full_name} — Vertriebspartner`
+                          : "Vertriebspartner auswählen..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Name suchen..." />
+                        <CommandList>
+                          <CommandEmpty>Keine Vertriebspartner gefunden.</CommandEmpty>
+                          <CommandGroup>
+                            {salesPartners.map((p) => (
+                              <CommandItem
+                                key={p.user_id}
+                                value={p.full_name}
+                                onSelect={() => {
+                                  setAssignedPartnerId(p.user_id === assignedPartnerId ? "" : p.user_id);
+                                  setPartnerSelectOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4 shrink-0",
+                                    assignedPartnerId === p.user_id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col min-w-0">
+                                  <span className="font-medium truncate">{p.full_name}</span>
+                                  <span className="text-xs text-muted-foreground truncate">
+                                    {p.email || "–"} · Vertriebspartner
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <p className="text-xs text-muted-foreground">
+                    Tippgeber müssen einem Vertriebspartner zugeordnet sein.
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="partner-notes">Notiz (optional)</Label>
