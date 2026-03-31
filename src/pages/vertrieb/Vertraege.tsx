@@ -147,7 +147,7 @@ function SalesPartnerCombobox({
 }) {
   const filteredProfiles = profiles.filter((p) => p.role !== "tippgeber");
   const [open, setOpen] = useState(false);
-  const selected = profiles.find((p) => p.full_name === value);
+  const selected = filteredProfiles.find((p) => p.full_name === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
