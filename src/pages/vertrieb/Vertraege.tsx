@@ -135,7 +135,7 @@ const roleLabels: Record<string, string> = {
   tippgeber: "Tippgeber",
 };
 
-// Searchable combobox for sales partner selection
+// Searchable combobox for sales partner selection (excludes Tippgeber — they cannot be contract-responsible)
 function SalesPartnerCombobox({
   value,
   onChange,
@@ -145,8 +145,9 @@ function SalesPartnerCombobox({
   onChange: (v: string) => void;
   profiles: { user_id: string; full_name: string; email: string | null; role?: string | null }[];
 }) {
+  const filteredProfiles = profiles.filter((p) => p.role !== "tippgeber");
   const [open, setOpen] = useState(false);
-  const selected = profiles.find((p) => p.full_name === value);
+  const selected = filteredProfiles.find((p) => p.full_name === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -178,7 +179,7 @@ function SalesPartnerCombobox({
           <CommandList>
             <CommandEmpty>Kein Eintrag gefunden.</CommandEmpty>
             <CommandGroup>
-              {[...profiles].sort((a, b) => a.full_name.localeCompare(b.full_name, "de")).map((p) => (
+              {[...filteredProfiles].sort((a, b) => a.full_name.localeCompare(b.full_name, "de")).map((p) => (
                 <CommandItem
                   key={p.user_id}
                   value={p.full_name}
