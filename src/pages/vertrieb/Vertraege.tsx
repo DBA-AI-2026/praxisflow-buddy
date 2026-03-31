@@ -1370,8 +1370,8 @@ export default function Vertraege() {
         // Insert new contract as eingegangen
         const record: any = {
           customer_name: `${form.vorname} ${form.nachname}`.trim() || form.praxis || "Entwurf",
-          sales_partner_id: form.sales_partner_id || user?.id,
-          sales_partner_name: form.sales_partner_name || profile?.full_name || "",
+          sales_partner_id: form.sales_partner_id || null,
+          sales_partner_name: form.sales_partner_name || null,
           mp_nr: form.mp_nr || null,
           praxis: form.praxis || null,
           fachrichtung: form.fachrichtung || null,
