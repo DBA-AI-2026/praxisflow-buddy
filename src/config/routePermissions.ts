@@ -14,7 +14,7 @@ export const routePermissions: RoutePermission[] = [
   // Base routes
   { path: "/", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "tippgeber", "admin"] },
   { path: "/praxen", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
-  { path: "/kunden", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
+  { path: "/kunden", allowedRoles: ["user", "sales_lead", "regional_lead", "admin"] },
   // tippgeber: kein Zugriff auf Tickets, Lizenzen, Umsätze, Interessenten
   { path: "/tickets", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
   { path: "/lizenzen", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
