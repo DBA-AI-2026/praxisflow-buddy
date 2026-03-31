@@ -642,8 +642,8 @@ export default function Vertraege() {
 
       const record = {
         customer_name: `${data.vorname} ${data.nachname}`.trim() || data.praxis || "Entwurf",
-        sales_partner_id: data.sales_partner_id || user?.id,
-        sales_partner_name: data.sales_partner_name || profile?.full_name || "",
+        sales_partner_id: data.sales_partner_id || null,
+        sales_partner_name: data.sales_partner_name || null,
         mp_nr: data.mp_nr || null,
         praxis: data.praxis || null,
         fachrichtung: data.fachrichtung || null,
