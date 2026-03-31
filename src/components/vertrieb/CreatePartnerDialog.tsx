@@ -105,7 +105,7 @@ export function CreatePartnerDialog({ open, onOpenChange }: CreatePartnerDialogP
       // If Tippgeber, create the partner assignment
       if (role === "tippgeber" && assignedPartnerId && response.data.user?.id) {
         const { error: assignError } = await supabase
-          .from("tippgeber_partner_assignments" as any)
+          .from("tippgeber_partner_assignments")
           .upsert({
             tippgeber_user_id: response.data.user.id,
             partner_user_id: assignedPartnerId,

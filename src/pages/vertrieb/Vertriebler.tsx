@@ -144,7 +144,7 @@ const Vertriebler = () => {
 
       // Get Tippgeber → Vertriebspartner assignments
       const { data: assignments } = await supabase
-        .from("tippgeber_partner_assignments" as any)
+        .from("tippgeber_partner_assignments")
         .select("tippgeber_user_id, partner_user_id");
 
       const assignmentMap: Record<string, string> = {};
