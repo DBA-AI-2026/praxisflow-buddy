@@ -64,6 +64,12 @@ interface CreateLeadDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const leadRoleLabels: Record<string, string> = {
+  sales_partner: "Vertriebspartner",
+  user: "Gebietsleiter",
+  tippgeber: "Tippgeber",
+};
+
 function UserSearchSelect({
   value,
   onChange,
@@ -72,7 +78,7 @@ function UserSearchSelect({
 }: {
   value: string | null;
   onChange: (val: string | null) => void;
-  users: { user_id: string; full_name: string; email: string | null }[];
+  users: { user_id: string; full_name: string; email: string | null; role?: string; extra?: string }[];
   placeholder: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -98,7 +104,15 @@ function UserSearchSelect({
           className="w-full justify-between font-normal"
         >
           {selected ? (
-            <span className="truncate">{selected.full_name}</span>
+            <span className="truncate">
+              {selected.full_name}
+              {selected.role && (
+                <span className="text-muted-foreground text-xs ml-1">— {leadRoleLabels[selected.role] || selected.role}</span>
+              )}
+              {selected.extra && (
+                <span className="text-muted-foreground text-xs ml-1">{selected.extra}</span>
+              )}
+            </span>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
           )}
@@ -146,10 +160,12 @@ function UserSearchSelect({
               >
                 <Check className={cn("h-4 w-4 shrink-0", value === u.user_id ? "opacity-100" : "opacity-0")} />
                 <div className="text-left truncate">
-                  <span>{u.full_name}</span>
-                  {u.email && (
-                    <span className="text-muted-foreground ml-1 text-xs">({u.email})</span>
-                  )}
+                  <span className="font-medium">{u.full_name}</span>
+                  <span className="text-muted-foreground ml-1 text-xs">
+                    {u.role ? `— ${leadRoleLabels[u.role] || u.role}` : ""}
+                    {u.extra ? ` ${u.extra}` : ""}
+                    {u.email ? ` (${u.email})` : ""}
+                  </span>
                 </div>
               </button>
             ))
