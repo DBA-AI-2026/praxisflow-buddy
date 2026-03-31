@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { MfaChallenge } from "@/pages/MfaChallenge";
 import logo from "@/assets/logo.png";
 import { z } from "zod";
 
@@ -32,20 +33,31 @@ export default function ResetPassword() {
   const [success, setSuccess] = useState(false);
   const [isValidSession, setIsValidSession] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [needsMfa, setNeedsMfa] = useState(false);
+
+  const checkMfaRequirement = async () => {
+    const { data: { totp } } = await supabase.auth.mfa.listFactors();
+    const verifiedFactor = totp?.find(f => f.status === "verified");
+    if (verifiedFactor) {
+      setMfaFactorId(verifiedFactor.id);
+      setNeedsMfa(true);
+    }
+  };
 
   useEffect(() => {
-    // Check if user arrived via a password reset link (they'll have a session with type=recovery)
     supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsValidSession(true);
+        checkMfaRequirement();
       }
       setChecking(false);
     });
 
-    // Also check existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setIsValidSession(true);
+        checkMfaRequirement();
       }
       setChecking(false);
     });
@@ -99,6 +111,19 @@ export default function ResetPassword() {
           </CardContent>
         </Card>
       </div>
+    );
+  }
+
+  if (needsMfa && mfaFactorId) {
+    return (
+      <MfaChallenge
+        factorId={mfaFactorId}
+        onSuccess={() => setNeedsMfa(false)}
+        onCancel={() => {
+          supabase.auth.signOut();
+          navigate("/auth");
+        }}
+      />
     );
   }
 
