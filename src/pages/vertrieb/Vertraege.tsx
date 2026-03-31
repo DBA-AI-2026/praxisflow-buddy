@@ -179,7 +179,7 @@ function SalesPartnerCombobox({
           <CommandList>
             <CommandEmpty>Kein Eintrag gefunden.</CommandEmpty>
             <CommandGroup>
-              {[...profiles].sort((a, b) => a.full_name.localeCompare(b.full_name, "de")).map((p) => (
+              {[...filteredProfiles].sort((a, b) => a.full_name.localeCompare(b.full_name, "de")).map((p) => (
                 <CommandItem
                   key={p.user_id}
                   value={p.full_name}
