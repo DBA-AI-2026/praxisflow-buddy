@@ -236,6 +236,7 @@ type PaymentMethod = "stripe";
 
 interface ContractFormData {
   customer_name: string;
+  sales_partner_id: string;
   sales_partner_name: string;
   mp_nr: string;
   praxis: string;
