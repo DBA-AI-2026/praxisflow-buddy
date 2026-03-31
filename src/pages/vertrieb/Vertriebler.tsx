@@ -109,7 +109,7 @@ const Vertriebler = () => {
 
       if (profilesError) throw profilesError;
 
-      // Get contract counts per sales_partner_id / created_by
+      // Get contract counts per sales_partner_id
       const { data: contracts } = await supabase
         .from("contracts")
         .select("sales_partner_id, created_by")
@@ -122,16 +122,32 @@ const Vertriebler = () => {
         }
       });
 
-      // Merge data – use a Map keyed by user_id to guarantee deduplication
+      // Get Tippgeber → Vertriebspartner assignments
+      const { data: assignments } = await supabase
+        .from("tippgeber_partner_assignments" as any)
+        .select("tippgeber_user_id, partner_user_id");
+
+      const assignmentMap: Record<string, string> = {};
+      (assignments || []).forEach((a: any) => {
+        assignmentMap[a.tippgeber_user_id] = a.partner_user_id;
+      });
+
+      // Merge data
       const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
       const resultMap = new Map<string, VertrieblerRow>();
 
       for (const role of roles) {
-        // Skip if we already have this user (keep the first/highest-priority role)
         if (resultMap.has(role.user_id)) continue;
 
         const profile = profileMap.get(role.user_id);
         if (!profile) continue;
+
+        // Resolve assigned partner name for Tippgeber
+        let assignedPartnerName: string | null = null;
+        if (role.role === "tippgeber" && assignmentMap[role.user_id]) {
+          const partnerProfile = profileMap.get(assignmentMap[role.user_id]);
+          assignedPartnerName = partnerProfile?.full_name || null;
+        }
 
         resultMap.set(role.user_id, {
           user_id: role.user_id,
@@ -139,6 +155,7 @@ const Vertriebler = () => {
           email: profile.email,
           role: role.role,
           contract_count: contractCounts[role.user_id] || 0,
+          assigned_partner_name: assignedPartnerName,
         });
       }
 
