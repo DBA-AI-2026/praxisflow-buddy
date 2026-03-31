@@ -61,6 +61,7 @@ export const routePermissions: RoutePermission[] = [
 
   // Sicherheit (2FA) - alle aktiven Rollen inkl. tippgeber
   { path: "/sicherheit", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "tippgeber", "admin"] },
+  { path: "/mein-konto", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "tippgeber", "admin"] },
 
   // Tipp-Leads
   { path: "/tipp-leads", allowedRoles: ["tippgeber", "admin", "sales_lead"] },
