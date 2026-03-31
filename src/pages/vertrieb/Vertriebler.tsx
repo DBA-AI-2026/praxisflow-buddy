@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { PartnerCommissionDialog } from "@/components/vertrieb/PartnerCommissionDialog";
+import { CreatePartnerDialog } from "@/components/vertrieb/CreatePartnerDialog";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -53,6 +54,7 @@ interface VertrieblerRow {
 }
 
 const Vertriebler = () => {
+  const [createPartnerOpen, setCreatePartnerOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("alle");
   const [roleFilterOpen, setRoleFilterOpen] = useState(false);
@@ -217,6 +219,12 @@ const Vertriebler = () => {
                 <CardDescription>Alle Vertriebsmitglieder im Überblick</CardDescription>
               </div>
               <div className="flex gap-2">
+                {isAdmin && (
+                  <Button onClick={() => setCreatePartnerOpen(true)} className="gap-1.5">
+                    <UserPlus className="h-4 w-4" />
+                    Partner anlegen
+                  </Button>
+                )}
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -374,6 +382,12 @@ const Vertriebler = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Create Partner Dialog */}
+        <CreatePartnerDialog
+          open={createPartnerOpen}
+          onOpenChange={setCreatePartnerOpen}
+        />
       </div>
     </MainLayout>
   );
