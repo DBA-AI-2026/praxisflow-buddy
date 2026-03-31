@@ -136,18 +136,22 @@ const roleLabels: Record<string, string> = {
 };
 
 // Searchable combobox for sales partner selection (excludes Tippgeber — they cannot be contract-responsible)
+// Returns both user_id and full_name so contracts store the correct sales_partner_id.
 function SalesPartnerCombobox({
   value,
+  selectedId,
   onChange,
   profiles,
 }: {
   value: string;
-  onChange: (v: string) => void;
-  profiles: { user_id: string; full_name: string; email: string | null; role?: string | null }[];
+  selectedId: string;
+  onChange: (id: string, name: string) => void;
+  profiles: { user_id: string; full_name: string; email: string | null; role?: string | null; is_active?: boolean }[];
 }) {
-  const filteredProfiles = profiles.filter((p) => p.role !== "tippgeber");
+  // Exclude Tippgeber and inactive roles from selection
+  const filteredProfiles = profiles.filter((p) => p.role !== "tippgeber" && p.is_active !== false);
   const [open, setOpen] = useState(false);
-  const selected = filteredProfiles.find((p) => p.full_name === value);
+  const selected = filteredProfiles.find((p) => p.user_id === selectedId) || filteredProfiles.find((p) => p.full_name === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -183,13 +187,17 @@ function SalesPartnerCombobox({
                 <CommandItem
                   key={p.user_id}
                   value={p.full_name}
-                  onSelect={(currentValue) => {
-                    onChange(currentValue === value ? "" : currentValue);
+                  onSelect={() => {
+                    if (selectedId === p.user_id) {
+                      onChange("", "");
+                    } else {
+                      onChange(p.user_id, p.full_name);
+                    }
                     setOpen(false);
                   }}
                 >
                   <Check
-                    className={`mr-2 h-4 w-4 shrink-0 ${value === p.full_name ? "opacity-100" : "opacity-0"}`}
+                    className={`mr-2 h-4 w-4 shrink-0 ${selectedId === p.user_id ? "opacity-100" : "opacity-0"}`}
                   />
                   <div className="flex flex-col min-w-0">
                     <span className="font-medium truncate">{p.full_name}</span>
