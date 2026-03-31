@@ -78,7 +78,7 @@ const vertriebNavigation: NavItem[] = [
 // /kunden und /kunden/:id bleiben als Routen vollständig erhalten
 const kundenVertraegeNavigation: NavItem[] = [
   { name: "Kunden-Journey", href: "/praxen-journey", icon: Building2, roles: operativeRoles },
-  { name: "Kundenstamm", href: "/kunden", icon: Building2, roles: ["sales_lead", "regional_lead", "admin"] },
+  { name: "Kundenstamm", href: "/kunden", icon: Building2, roles: ["user", "sales_lead", "regional_lead", "admin"] },
   { name: "Verträge", href: "/vertrieb/vertraege", icon: FileSignature, roles: operativeRoles },
   // tippgeber hat keinen Zugriff auf Lizenzen (nur operativer Vertrieb)
   { name: "HFX EBM Lizenzen", href: "/lizenzen", icon: Key, roles: operativeRoles },
