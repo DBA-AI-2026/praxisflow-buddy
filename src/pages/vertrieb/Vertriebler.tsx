@@ -219,6 +219,12 @@ const Vertriebler = () => {
                 <CardDescription>Alle Vertriebsmitglieder im Überblick</CardDescription>
               </div>
               <div className="flex gap-2">
+                {isAdmin && (
+                  <Button onClick={() => setCreatePartnerOpen(true)} className="gap-1.5">
+                    <UserPlus className="h-4 w-4" />
+                    Partner anlegen
+                  </Button>
+                )}
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
