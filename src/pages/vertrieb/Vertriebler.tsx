@@ -50,6 +50,7 @@ interface VertrieblerRow {
   full_name: string;
   email: string | null;
   role: string;
+  is_active: boolean;
   contract_count: number;
   assigned_partner_name?: string | null;
 }
