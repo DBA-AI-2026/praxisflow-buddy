@@ -68,19 +68,38 @@ const Vertriebler = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const deleteMutation = useMutation({
+  const deactivateMutation = useMutation({
     mutationFn: async (userId: string) => {
       const { error } = await supabase
         .from("user_roles")
-        .delete()
+        .update({ is_active: false })
         .eq("user_id", userId);
       if (error) throw error;
     },
-    onSuccess: (_, userId) => {
+    onSuccess: () => {
       const name = deleteTarget?.full_name || "Vertriebler";
       queryClient.invalidateQueries({ queryKey: ["vertriebler-list"] });
-      toast({ title: "Vertriebler entfernt", description: `${name} wurde aus der Vertriebsliste entfernt.` });
+      queryClient.invalidateQueries({ queryKey: ["sales-profiles-with-roles"] });
+      toast({ title: "Vertriebler deaktiviert", description: `${name} wurde deaktiviert. Historische Zuordnungen bleiben erhalten.` });
       setDeleteTarget(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "Fehler", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const reactivateMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from("user_roles")
+        .update({ is_active: true })
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vertriebler-list"] });
+      queryClient.invalidateQueries({ queryKey: ["sales-profiles-with-roles"] });
+      toast({ title: "Vertriebler reaktiviert" });
     },
     onError: (err: any) => {
       toast({ title: "Fehler", description: err.message, variant: "destructive" });
