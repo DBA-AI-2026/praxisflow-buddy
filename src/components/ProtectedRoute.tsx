@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole, AppRole } from "@/hooks/useUserRole";
 import { canAccessRoute } from "@/config/routePermissions";
 import { logAuditEvent } from "@/hooks/useAuditLog";
-import { Loader2, ShieldX, ShieldOff } from "lucide-react";
+import { Loader2, ShieldX, ShieldOff, RefreshCw, AlertTriangle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MfaChallenge } from "@/pages/MfaChallenge";
@@ -18,7 +18,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps) {
   const { user, session, isLoading: authLoading } = useAuth();
-  const { role, actualRole, isLoading: roleLoading } = useUserRole();
+  const { role, actualRole, isLoading: roleLoading, roleError, retryRoleFetch } = useUserRole();
   const { isPreviewActive } = useRolePreview();
   const location = useLocation();
   const hasLoggedRef = useRef(false);
@@ -47,9 +47,8 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
 
         if (totpFactors.length === 0) {
           if (isPrivileged) {
-            // Force privileged users to /sicherheit to set up MFA
             setMfaState("required");
-            setMfaFactorId(null); // null = not enrolled yet → show setup prompt
+            setMfaFactorId(null);
           } else {
             setMfaState("not_enrolled");
           }
@@ -73,9 +72,6 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
   }, [session, authLoading, role]);
 
   // Check role-based access.
-  // During role preview: grant access if EITHER the preview role OR the actual
-  // admin role has permission. This lets admins navigate role-specific pages
-  // without losing access to their own admin-only routes.
   const roleHasAccess = (r: AppRole | null) =>
     requiredRoles ? !!(r && requiredRoles.includes(r)) : canAccessRoute(location.pathname, r);
 
@@ -83,9 +79,9 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
     ? roleHasAccess(role) || roleHasAccess(actualRole)
     : roleHasAccess(role);
 
-  // Log failed access attempts (skip during admin role preview – not a real denial)
+  // Log failed access attempts (skip during admin role preview)
   useEffect(() => {
-    if (!authLoading && !roleLoading && session && user && !hasAccess && !hasLoggedRef.current && !isPreviewActive) {
+    if (!authLoading && !roleLoading && !roleError && session && user && !hasAccess && !hasLoggedRef.current && !isPreviewActive) {
       hasLoggedRef.current = true;
       logAuditEvent({
         action: "ACCESS_DENIED",
@@ -94,7 +90,7 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
         details: `User with role '${role || "none"}' attempted to access ${location.pathname}`,
       });
     }
-  }, [authLoading, roleLoading, session, user, hasAccess, role, location.pathname, isPreviewActive]);
+  }, [authLoading, roleLoading, roleError, session, user, hasAccess, role, location.pathname, isPreviewActive]);
 
   // Reset the log flag when path changes
   useEffect(() => {
@@ -105,7 +101,10 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
   if (authLoading || roleLoading || mfaState === "checking") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="text-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">Anmeldung wird geprüft…</p>
+        </div>
       </div>
     );
   }
@@ -116,7 +115,37 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
     return <Navigate to="/auth" replace />;
   }
 
-  // MFA challenge required (TOTP enrolled but not yet verified this session)
+  // Role fetch failed after retries – show recoverable error, NOT "Access Denied"
+  if (roleError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center max-w-md px-4 space-y-4">
+          <div className="mx-auto w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
+            <AlertTriangle className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+          </div>
+          <h1 className="text-xl font-bold text-foreground">Berechtigungen konnten nicht geladen werden</h1>
+          <p className="text-sm text-muted-foreground">
+            Ihre Anmeldung war erfolgreich, aber Ihre Rollenzuordnung konnte nicht abgerufen werden.
+            Dies kann an einer vorübergehenden Verbindungsstörung liegen.
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button onClick={retryRoleFetch} variant="default" className="gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Erneut versuchen
+            </Button>
+            <Button variant="ghost" size="sm" onClick={async () => { await supabase.auth.signOut(); }}>
+              Abmelden
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Falls das Problem bestehen bleibt, wenden Sie sich bitte an den Administrator.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // MFA challenge required
   if (mfaState === "required" && mfaFactorId) {
     return (
       <MfaChallenge
@@ -128,7 +157,6 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
   }
 
   // MFA not enrolled but REQUIRED for this privileged role
-  // factorId is null = not enrolled yet → force setup before access is granted
   const PRIVILEGED_ROLES: (AppRole | null)[] = ["admin", "sales_lead"];
   if (mfaState === "required" && !mfaFactorId && PRIVILEGED_ROLES.includes(role)) {
     return (
