@@ -761,6 +761,49 @@ export default function AdminUsers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* MFA Reset Confirmation Dialog */}
+      <Dialog open={mfaResetDialogOpen} onOpenChange={setMfaResetDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldOff className="h-5 w-5 text-destructive" />
+              2FA zurücksetzen
+            </DialogTitle>
+            <DialogDescription>
+              Die Zwei-Faktor-Authentifizierung für diesen Benutzer wird vollständig entfernt. 
+              Bei der nächsten Anmeldung muss der Benutzer 2FA neu einrichten (sofern für seine Rolle Pflicht).
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedUser && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="font-medium">{selectedUser.full_name}</p>
+                <p className="text-sm text-muted-foreground">{selectedUser.email} · {roleConfig[selectedUser.role]?.label}</p>
+              </div>
+
+              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                <span className="text-base leading-none mt-0.5">⚠️</span>
+                <span>Diese Aktion wird im Audit-Log protokolliert. Der Benutzer wird beim nächsten Login durch das 2FA-Setup geführt.</span>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setMfaResetDialogOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button variant="destructive" onClick={handleMfaResetConfirm} disabled={resettingMfa}>
+              {resettingMfa ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Wird zurückgesetzt…</>
+              ) : (
+                <><ShieldOff className="h-4 w-4 mr-2" />2FA jetzt zurücksetzen</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
