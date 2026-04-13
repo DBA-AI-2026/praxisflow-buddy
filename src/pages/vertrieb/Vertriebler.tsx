@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Euro, Check, ChevronsUpDown, Star, UserPlus, Search, Percent, Trash2, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { PartnerCommissionDialog } from "@/components/vertrieb/PartnerCommissionDialog";
 import { CreatePartnerDialog } from "@/components/vertrieb/CreatePartnerDialog";
 import { useUserRole } from "@/hooks/useUserRole";

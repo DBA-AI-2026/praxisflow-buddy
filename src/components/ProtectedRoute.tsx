@@ -5,7 +5,7 @@ import { canAccessRoute } from "@/config/routePermissions";
 import { logAuditEvent } from "@/hooks/useAuditLog";
 import { Loader2, ShieldX, ShieldOff, RefreshCw, AlertTriangle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { MfaChallenge } from "@/pages/MfaChallenge";
 import { MfaSetup } from "@/pages/MfaSetup";
 import { useRolePreview } from "@/contexts/RolePreviewContext";

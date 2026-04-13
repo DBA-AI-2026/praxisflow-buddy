@@ -39,7 +39,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { Plus, Pencil, Trash2, Loader2, MapPin, Search, Users, CheckCircle2, Map } from "lucide-react";
 
 interface PlzMapping {

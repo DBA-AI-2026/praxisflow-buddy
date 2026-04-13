@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSalesforceConnection } from "@/hooks/useSalesforceConnection";
 import { Save, Bell, Database, CheckCircle2, XCircle, Loader2, ExternalLink, Unplug, ShieldCheck, ShieldOff, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { MfaSetup } from "@/pages/MfaSetup";
 import {
   Dialog,

@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import logo from "@/assets/fuchs-bildmarke.png";
 import { z } from "zod";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 
 // Login: deliberately lenient (min 6) — existing accounts may have shorter passwords.
 // New passwords (reset/set) enforce the strict policy defined in passwordSchema.
