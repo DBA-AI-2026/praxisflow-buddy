@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText, UserCog, Clock, Upload, Download, CheckCircle, Mail, Eye } from "lucide-react";
+import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText, UserCog, Clock, Upload, Download, CheckCircle, Mail, Eye, ShieldOff } from "lucide-react";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { RegionalAssignmentDialog } from "@/components/admin/RegionalAssignmentDialog";
 import {
@@ -69,6 +69,8 @@ export default function AdminUsers() {
   const [uploadingAgreement, setUploadingAgreement] = useState(false);
   const [credentialsPreviewOpen, setCredentialsPreviewOpen] = useState(false);
   const [sendingCredentials, setSendingCredentials] = useState(false);
+  const [mfaResetDialogOpen, setMfaResetDialogOpen] = useState(false);
+  const [resettingMfa, setResettingMfa] = useState(false);
   const agreementInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
