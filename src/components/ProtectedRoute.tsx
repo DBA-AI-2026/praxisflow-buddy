@@ -158,22 +158,75 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
 
   // MFA not enrolled but REQUIRED for this privileged role
   const PRIVILEGED_ROLES: (AppRole | null)[] = ["admin", "sales_lead"];
+  const [showMfaSetupForm, setShowMfaSetupForm] = useState(false);
+
   if (mfaState === "required" && !mfaFactorId && PRIVILEGED_ROLES.includes(role)) {
+    // Step 1: Show onboarding intro, Step 2: Show actual MFA setup
+    if (!showMfaSetupForm) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background px-4">
+          <div className="w-full max-w-md space-y-6">
+            <div className="text-center">
+              <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                <ShieldCheck className="h-8 w-8 text-primary" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground">Zusätzlicher Schutz für Ihr Konto</h1>
+              <p className="text-sm text-muted-foreground mt-2">
+                Als {role === "admin" ? "Administrator" : "Vertriebsleitung"} benötigen Sie eine Zwei-Faktor-Authentifizierung (2FA), um auf das HFX-Portal zugreifen zu können.
+              </p>
+            </div>
+
+            <div className="card-elevated p-5 space-y-4">
+              <h3 className="text-sm font-semibold text-foreground">Was Sie jetzt benötigen:</h3>
+              <ul className="space-y-3 text-sm text-muted-foreground">
+                <li className="flex items-start gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">1</span>
+                  <span>Eine <strong className="text-foreground">Authenticator-App</strong> auf Ihrem Smartphone (z.B. Google Authenticator, Microsoft Authenticator oder Authy).</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">2</span>
+                  <span>Im nächsten Schritt scannen Sie einen <strong className="text-foreground">QR-Code</strong> mit der App und bestätigen mit einem 6-stelligen Code.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">3</span>
+                  <span>Danach wird bei jeder Anmeldung zusätzlich ein Code aus der App abgefragt – das dauert nur wenige Sekunden.</span>
+                </li>
+              </ul>
+
+              <div className="rounded-lg bg-muted/50 border p-3 text-xs text-muted-foreground">
+                <strong className="text-foreground">Warum ist das nötig?</strong> Die 2FA schützt Ihren Zugang auch dann, wenn Ihr Passwort kompromittiert wird. Für privilegierte Rollen ist dieser Schutz Pflicht.
+              </div>
+            </div>
+
+            <Button className="w-full" size="lg" onClick={() => setShowMfaSetupForm(true)}>
+              Jetzt 2FA einrichten
+            </Button>
+
+            <div className="text-center">
+              <Button variant="ghost" size="sm" onClick={async () => { await supabase.auth.signOut(); }}>
+                Abmelden
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Step 2: Actual MFA setup form
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <div className="w-full max-w-md space-y-6">
           <div className="text-center">
-            <div className="mx-auto w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
-              <ShieldOff className="h-8 w-8 text-destructive" />
+            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <ShieldCheck className="h-8 w-8 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">2FA Pflicht</h1>
+            <h1 className="text-2xl font-bold text-foreground">Authenticator-App verbinden</h1>
             <p className="text-sm text-muted-foreground mt-2">
-              Ihr Konto benötigt eine aktive Zwei-Faktor-Authentifizierung, um auf das Portal zugreifen zu können.
-              Bitte richten Sie 2FA jetzt ein.
+              Scannen Sie den QR-Code mit Ihrer Authenticator-App und bestätigen Sie mit dem angezeigten Code.
             </p>
           </div>
           <div className="card-elevated p-6">
-            <MfaSetup onComplete={() => setMfaState("checking")} />
+            <MfaSetup onComplete={() => setMfaState("checking")} onCancel={() => setShowMfaSetupForm(false)} />
           </div>
           <div className="text-center">
             <Button variant="ghost" size="sm" onClick={async () => { await supabase.auth.signOut(); }}>
