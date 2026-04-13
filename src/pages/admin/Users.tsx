@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText, UserCog, Clock, Upload, Download, CheckCircle, Mail, Eye } from "lucide-react";
+import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText, UserCog, Clock, Upload, Download, CheckCircle, Mail, Eye, ShieldOff } from "lucide-react";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { RegionalAssignmentDialog } from "@/components/admin/RegionalAssignmentDialog";
 import {
@@ -69,6 +69,8 @@ export default function AdminUsers() {
   const [uploadingAgreement, setUploadingAgreement] = useState(false);
   const [credentialsPreviewOpen, setCredentialsPreviewOpen] = useState(false);
   const [sendingCredentials, setSendingCredentials] = useState(false);
+  const [mfaResetDialogOpen, setMfaResetDialogOpen] = useState(false);
+  const [resettingMfa, setResettingMfa] = useState(false);
   const agreementInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -227,6 +229,33 @@ export default function AdminUsers() {
   const handleSendCredentialsClick = (user: UserWithRole) => {
     setSelectedUser(user);
     setCredentialsPreviewOpen(true);
+  };
+
+  const handleMfaResetClick = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setMfaResetDialogOpen(true);
+  };
+
+  const handleMfaResetConfirm = async () => {
+    if (!selectedUser) return;
+    setResettingMfa(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("reset-user-mfa", {
+        body: { targetUserId: selectedUser.user_id },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+
+      toast({
+        title: data?.reset ? "2FA zurückgesetzt" : "Kein 2FA aktiv",
+        description: data?.message || "Die 2FA wurde erfolgreich zurückgesetzt.",
+      });
+      setMfaResetDialogOpen(false);
+    } catch (e: unknown) {
+      toast({ title: "Fehler", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setResettingMfa(false);
+    }
   };
 
   const handleSendCredentialsConfirm = async () => {
@@ -441,7 +470,11 @@ export default function AdminUsers() {
                            )}
                            <DropdownMenuItem onClick={() => handleSendCredentialsClick(user)}>
                              <Mail className="h-4 w-4 mr-2" />
-                             Zugangsdaten zusenden
+                              Zugangsdaten zusenden
+                           </DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => handleMfaResetClick(user)}>
+                              <ShieldOff className="h-4 w-4 mr-2" />
+                              2FA zurücksetzen
                            </DropdownMenuItem>
                            <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -723,6 +756,49 @@ export default function AdminUsers() {
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Wird gesendet…</>
               ) : (
                 <><Mail className="h-4 w-4 mr-2" />Zugangsdaten jetzt senden</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MFA Reset Confirmation Dialog */}
+      <Dialog open={mfaResetDialogOpen} onOpenChange={setMfaResetDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldOff className="h-5 w-5 text-destructive" />
+              2FA zurücksetzen
+            </DialogTitle>
+            <DialogDescription>
+              Die Zwei-Faktor-Authentifizierung für diesen Benutzer wird vollständig entfernt. 
+              Bei der nächsten Anmeldung muss der Benutzer 2FA neu einrichten (sofern für seine Rolle Pflicht).
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedUser && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="font-medium">{selectedUser.full_name}</p>
+                <p className="text-sm text-muted-foreground">{selectedUser.email} · {roleConfig[selectedUser.role]?.label}</p>
+              </div>
+
+              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                <span className="text-base leading-none mt-0.5">⚠️</span>
+                <span>Diese Aktion wird im Audit-Log protokolliert. Der Benutzer wird beim nächsten Login durch das 2FA-Setup geführt.</span>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setMfaResetDialogOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button variant="destructive" onClick={handleMfaResetConfirm} disabled={resettingMfa}>
+              {resettingMfa ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Wird zurückgesetzt…</>
+              ) : (
+                <><ShieldOff className="h-4 w-4 mr-2" />2FA jetzt zurücksetzen</>
               )}
             </Button>
           </DialogFooter>
