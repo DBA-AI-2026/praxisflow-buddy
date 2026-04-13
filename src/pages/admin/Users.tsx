@@ -470,7 +470,11 @@ export default function AdminUsers() {
                            )}
                            <DropdownMenuItem onClick={() => handleSendCredentialsClick(user)}>
                              <Mail className="h-4 w-4 mr-2" />
-                             Zugangsdaten zusenden
+                              Zugangsdaten zusenden
+                           </DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => handleMfaResetClick(user)}>
+                              <ShieldOff className="h-4 w-4 mr-2" />
+                              2FA zurücksetzen
                            </DropdownMenuItem>
                            <DropdownMenuSeparator />
                           <DropdownMenuItem
