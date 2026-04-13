@@ -231,6 +231,33 @@ export default function AdminUsers() {
     setCredentialsPreviewOpen(true);
   };
 
+  const handleMfaResetClick = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setMfaResetDialogOpen(true);
+  };
+
+  const handleMfaResetConfirm = async () => {
+    if (!selectedUser) return;
+    setResettingMfa(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("reset-user-mfa", {
+        body: { targetUserId: selectedUser.user_id },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+
+      toast({
+        title: data?.reset ? "2FA zurückgesetzt" : "Kein 2FA aktiv",
+        description: data?.message || "Die 2FA wurde erfolgreich zurückgesetzt.",
+      });
+      setMfaResetDialogOpen(false);
+    } catch (e: unknown) {
+      toast({ title: "Fehler", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setResettingMfa(false);
+    }
+  };
+
   const handleSendCredentialsConfirm = async () => {
     if (!selectedUser) return;
     setSendingCredentials(true);
