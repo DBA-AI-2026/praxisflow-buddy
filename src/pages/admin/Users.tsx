@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText, UserCog, Clock, Upload, Download, CheckCircle, Mail, Eye, ShieldOff } from "lucide-react";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { RegionalAssignmentDialog } from "@/components/admin/RegionalAssignmentDialog";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,6 +75,7 @@ export default function AdminUsers() {
   const agreementInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAdmin } = useUserRole();
 
   // Fetch users with roles
   const { data: users = [], isLoading } = useQuery({
@@ -472,10 +474,12 @@ export default function AdminUsers() {
                              <Mail className="h-4 w-4 mr-2" />
                               Zugangsdaten zusenden
                            </DropdownMenuItem>
-                           <DropdownMenuItem onClick={() => handleMfaResetClick(user)}>
-                              <ShieldOff className="h-4 w-4 mr-2" />
-                              2FA zurücksetzen
-                           </DropdownMenuItem>
+                            {isAdmin && (
+                            <DropdownMenuItem onClick={() => handleMfaResetClick(user)}>
+                               <ShieldOff className="h-4 w-4 mr-2" />
+                               2FA zurücksetzen
+                            </DropdownMenuItem>
+                            )}
                            <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-destructive"
