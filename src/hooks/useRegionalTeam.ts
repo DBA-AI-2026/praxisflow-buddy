@@ -11,7 +11,7 @@
  */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "./useAuth";
 import { useUserRole } from "./useUserRole";
 

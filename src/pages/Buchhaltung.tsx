@@ -60,7 +60,7 @@ import {
   Pencil,
   Ban,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useLexwareIntegration } from "@/hooks/useLexwareIntegration";

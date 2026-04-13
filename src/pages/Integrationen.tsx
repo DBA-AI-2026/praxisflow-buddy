@@ -47,7 +47,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLexwareIntegration } from "@/hooks/useLexwareIntegration";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 

@@ -23,7 +23,7 @@ import {
 import { Search, Plus, Loader2, FlaskConical, ArrowUpRight, Upload } from "lucide-react";
 import { CsvImportDialog } from "@/components/demo-tracking/CsvImportDialog";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useRegionalTeam } from "@/hooks/useRegionalTeam";

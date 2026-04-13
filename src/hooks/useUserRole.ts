@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "./useAuth";
 import { useRolePreview } from "@/contexts/RolePreviewContext";
 import type { Database } from "@/integrations/supabase/types";
@@ -26,8 +26,18 @@ export function useUserRole(): UseUserRoleResult & { isRegionalLead: boolean; ac
   const [actualRole, setActualRole] = useState<AppRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [roleError, setRoleError] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
   const { previewRole } = useRolePreview();
+
+  // Guard against state updates after unmount or stale retry chains
+  const mountedRef = useRef(true);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelPendingRetry = useCallback(() => {
+    if (retryTimerRef.current !== null) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  }, []);
 
   const fetchRole = useCallback(async (attempt: number = 0) => {
     if (!user) {
@@ -47,14 +57,17 @@ export function useUserRole(): UseUserRoleResult & { isRegionalLead: boolean; ac
         .eq("user_id", user.id)
         .maybeSingle();
 
+      if (!mountedRef.current) return;
+
       if (data && !error) {
         setActualRole(data.role);
         setIsLoading(false);
         setRoleError(false);
       } else if (attempt < MAX_RETRIES - 1) {
-        // Retry after delay – role row might not be provisioned yet
         console.warn(`useUserRole: role fetch attempt ${attempt + 1} returned no data, retrying…`);
-        setTimeout(() => fetchRole(attempt + 1), RETRY_DELAY_MS);
+        retryTimerRef.current = setTimeout(() => {
+          if (mountedRef.current) fetchRole(attempt + 1);
+        }, RETRY_DELAY_MS);
       } else {
         console.error("useUserRole: no role found after retries", error);
         setActualRole(null);
@@ -62,9 +75,12 @@ export function useUserRole(): UseUserRoleResult & { isRegionalLead: boolean; ac
         setRoleError(true);
       }
     } catch (error) {
+      if (!mountedRef.current) return;
       console.error("useUserRole: error fetching role:", error);
       if (attempt < MAX_RETRIES - 1) {
-        setTimeout(() => fetchRole(attempt + 1), RETRY_DELAY_MS);
+        retryTimerRef.current = setTimeout(() => {
+          if (mountedRef.current) fetchRole(attempt + 1);
+        }, RETRY_DELAY_MS);
       } else {
         setActualRole(null);
         setIsLoading(false);
@@ -74,15 +90,21 @@ export function useUserRole(): UseUserRoleResult & { isRegionalLead: boolean; ac
   }, [user]);
 
   useEffect(() => {
+    mountedRef.current = true;
     if (!authLoading) {
+      cancelPendingRetry();
       fetchRole(0);
     }
-  }, [user, authLoading, fetchRole]);
+    return () => {
+      mountedRef.current = false;
+      cancelPendingRetry();
+    };
+  }, [user, authLoading, fetchRole, cancelPendingRetry]);
 
   const retryRoleFetch = useCallback(() => {
-    setRetryCount(prev => prev + 1);
+    cancelPendingRetry();
     fetchRole(0);
-  }, [fetchRole]);
+  }, [fetchRole, cancelPendingRetry]);
 
   // Admins can preview as another role; actual role is always preserved
   const role = (actualRole === "admin" && previewRole) ? previewRole : actualRole;

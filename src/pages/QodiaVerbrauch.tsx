@@ -15,7 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { RefreshCw, AlertCircle, TrendingUp } from "lucide-react";
 import { format, startOfMonth } from "date-fns";
 
