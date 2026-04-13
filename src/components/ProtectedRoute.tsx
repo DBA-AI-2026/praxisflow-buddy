@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole, AppRole } from "@/hooks/useUserRole";
 import { canAccessRoute } from "@/config/routePermissions";
 import { logAuditEvent } from "@/hooks/useAuditLog";
-import { Loader2, ShieldX, ShieldOff, RefreshCw, AlertTriangle } from "lucide-react";
+import { Loader2, ShieldX, ShieldOff, ShieldCheck, RefreshCw, AlertTriangle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { MfaChallenge } from "@/pages/MfaChallenge";
@@ -24,6 +24,7 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
   const hasLoggedRef = useRef(false);
   const [mfaState, setMfaState] = useState<"checking" | "required" | "verified" | "not_enrolled">("checking");
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [showMfaSetupForm, setShowMfaSetupForm] = useState(false);
 
   // Check MFA status
   useEffect(() => {
