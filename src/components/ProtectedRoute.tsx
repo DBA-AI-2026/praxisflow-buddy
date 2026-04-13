@@ -159,7 +159,6 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
 
   // MFA not enrolled but REQUIRED for this privileged role
   const PRIVILEGED_ROLES: (AppRole | null)[] = ["admin", "sales_lead"];
-  const [showMfaSetupForm, setShowMfaSetupForm] = useState(false);
 
   if (mfaState === "required" && !mfaFactorId && PRIVILEGED_ROLES.includes(role)) {
     // Step 1: Show onboarding intro, Step 2: Show actual MFA setup
