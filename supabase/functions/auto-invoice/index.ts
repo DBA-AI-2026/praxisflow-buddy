@@ -227,8 +227,7 @@ Deno.serve(async (req) => {
         const collectionDateFormatted = collectionDate.toLocaleDateString("de-DE");
         const todayStr = today.toISOString().split("T")[0];
 
-        // ── Stripe SEPA payment ──────────────────────────────────────────────
-        let stripeInvoiceId: string | null = null;
+        // ── Stripe SEPA Prüfung ──────────────────────────────────────────────
         const hasStripeCustomer = !!contract.stripe_customer_id;
 
         // Kein SEPA-Mandat → Checkout-Setup-Link senden
