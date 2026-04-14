@@ -28,12 +28,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Current month: 1st to today
+    // ── Vormonat berechnen (abgeschlossener Zeitraum) ────────────────────────
     const now = new Date();
-    const startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-      .toISOString()
-      .slice(0, 10);
-    const endDate = now.toISOString().slice(0, 10);
+    const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevYear = prevMonthDate.getFullYear();
+    const prevMonth = prevMonthDate.getMonth(); // 0-based
+    const daysInPrevMonth = new Date(prevYear, prevMonth + 1, 0).getDate();
+
+    const startDate = `${prevYear}-${String(prevMonth + 1).padStart(2, "0")}-01`;
+    const endDate = `${prevYear}-${String(prevMonth + 1).padStart(2, "0")}-${String(daysInPrevMonth).padStart(2, "0")}`;
+
+    const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+    const billingPeriodLabel = `${monthNames[prevMonth]} ${prevYear}`;
+
+    console.log(`[qodia-auto-usage-sync] Sync für Vormonat: ${startDate} – ${endDate} (${billingPeriodLabel})`);
 
     // Fetch all active HFX GOÄ contracts with email and hfx_customer_number
     const { data: contracts, error: contractsError } = await supabase
@@ -110,10 +118,10 @@ Deno.serve(async (req) => {
             quantity,
             unit_price: unitPrice,
             net_amount: netAmount,
-            unit_description: "Abgerechnete Qodia-Vorgänge",
+            unit_description: `Geprüfte GOÄ-Rechnungen (HFX GOÄ) – ${billingPeriodLabel}`,
             source: "qodia-auto",
             status: "pending",
-            notes: `Automatisch abgerufen am ${endDate}`,
+            notes: `Automatisch abgerufen für ${billingPeriodLabel}`,
           });
         }
 
@@ -125,7 +133,7 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[qodia-auto-usage-sync] Fertig: ${synced} synchronisiert, ${errors} Fehler.`);
-    return new Response(JSON.stringify({ success: true, synced, errors }), {
+    return new Response(JSON.stringify({ success: true, synced, errors, period: `${startDate} – ${endDate}` }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
