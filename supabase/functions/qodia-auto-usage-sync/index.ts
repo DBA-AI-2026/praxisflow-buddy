@@ -15,10 +15,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Debug mode: accept custom date range via body
-    let bodyOverride: Record<string, string> = {};
-    try { bodyOverride = await req.json(); } catch { /* no body */ }
-
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -32,13 +28,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Use overrides if provided, else current month
+    // Current month: 1st to today
     const now = new Date();
-    const startDate = bodyOverride.startDate ?? new Date(now.getFullYear(), now.getMonth(), 1)
+    const startDate = new Date(now.getFullYear(), now.getMonth(), 1)
       .toISOString()
       .slice(0, 10);
-    const endDate = bodyOverride.endDate ?? now.toISOString().slice(0, 10);
-    const debugEmail = bodyOverride.debugEmail ?? null;
+    const endDate = now.toISOString().slice(0, 10);
 
     // Fetch all active HFX GOÄ contracts with email and hfx_customer_number
     const { data: contracts, error: contractsError } = await supabase
