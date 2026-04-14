@@ -2459,6 +2459,7 @@ export type Database = {
       }
     }
     Functions: {
+      get_cron_secret: { Args: never; Returns: string }
       get_public_contract_booking: {
         Args: { p_contract_id: string }
         Returns: {
