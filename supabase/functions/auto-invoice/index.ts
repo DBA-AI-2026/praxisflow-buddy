@@ -143,6 +143,34 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // ── Übergangsguard: Wenn Usage für diese Periode bereits invoiced ist,
+        //    aber kein pending-Charge mehr existiert, darf keine leere Folgerechnung entstehen ──
+        if (contract.hfx_customer_number) {
+          const { data: alreadyInvoicedUsage } = await supabase
+            .from("usage_charges")
+            .select("id")
+            .eq("hfx_customer_number", contract.hfx_customer_number)
+            .eq("period_from", periodStart)
+            .eq("status", "invoiced")
+            .limit(1);
+
+          if (alreadyInvoicedUsage && alreadyInvoicedUsage.length > 0) {
+            const { data: pendingUsage } = await supabase
+              .from("usage_charges")
+              .select("id")
+              .eq("hfx_customer_number", contract.hfx_customer_number)
+              .eq("period_from", periodStart)
+              .eq("status", "pending")
+              .limit(1);
+
+            if (!pendingUsage || pendingUsage.length === 0) {
+              console.log(`[auto-invoice] Usage for ${contract.hfx_customer_number} in ${periodMonthStr} already invoiced, no pending charges – skipping to avoid duplicate.`);
+              skipped++;
+              continue;
+            }
+          }
+        }
+
         if (!contract.rechnungs_email && !contract.email) {
           console.log(`[auto-invoice] No email for contract ${contract.id}, skipping.`);
           skipped++;
