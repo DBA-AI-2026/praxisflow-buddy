@@ -101,7 +101,22 @@ Deno.serve(async (req) => {
         const unitPrice = contract.qodia_unit_price ?? 0.99;
         const netAmount = Math.round(quantity * unitPrice * 100) / 100;
 
-        // Delete existing pending charge for this contract+period and re-insert
+        // Prüfe ob für diese Periode bereits ein abgerechneter Datensatz existiert
+        const { data: existingInvoiced } = await supabase
+          .from("usage_charges")
+          .select("id")
+          .eq("hfx_customer_number", contract.hfx_customer_number)
+          .eq("period_from", startDate)
+          .eq("status", "invoiced")
+          .limit(1);
+
+        if (existingInvoiced && existingInvoiced.length > 0) {
+          console.log(`[qodia-auto-usage-sync] ${contract.hfx_customer_number} – Periode ${startDate} bereits fakturiert, überspringe.`);
+          synced++;
+          continue;
+        }
+
+        // Delete existing pending charge for this contract+period and re-insert (idempotent)
         await supabase
           .from("usage_charges")
           .delete()

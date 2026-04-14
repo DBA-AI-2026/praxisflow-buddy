@@ -52,12 +52,14 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Validate cron secret for security
-  const cronSecret = req.headers.get("x-cron-secret");
-  const expectedSecret = Deno.env.get("CRON_SECRET");
+  // Validate cron secret for security (consistent with usage-sync: CRON_SECRET_2)
+  const cronSecret = req.headers.get("x-cron-secret") ?? "";
+  const expectedSecret = Deno.env.get("CRON_SECRET_2") ?? "";
   const authHeader = req.headers.get("authorization") || "";
-  const isAuthorizedUser = authHeader.startsWith("Bearer ") && authHeader.length > 20;
-  if (expectedSecret && cronSecret !== expectedSecret && !isAuthorizedUser) {
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+  const validCron = cronSecret !== "" && cronSecret === expectedSecret;
+  const validAnon = authHeader === `Bearer ${anonKey}`;
+  if (!validCron && !validAnon) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -127,31 +129,16 @@ Deno.serve(async (req) => {
 
     for (const contract of contracts) {
       try {
-        // ── Duplikat-Check: Rechnung für diesen Vormonat schon vorhanden? ──
+        // ── Duplikat-Check: Robuste Prüfung über billing_period_month ──
         const { data: existing } = await supabase
           .from("invoices")
           .select("id")
           .eq("contract_id", contract.id)
-          .gte("invoice_date", periodStart)
-          .lte("invoice_date", periodEnd)
+          .eq("billing_period_month", periodMonthStr)
           .maybeSingle();
 
         if (existing) {
           console.log(`[auto-invoice] Invoice already exists for contract ${contract.id} in ${periodMonthStr}, skipping.`);
-          skipped++;
-          continue;
-        }
-
-        // Zweiter Guard: Prüfe auch anhand notes/period_month ob bereits abgerechnet
-        const { data: existingByNotes } = await supabase
-          .from("invoices")
-          .select("id")
-          .eq("contract_id", contract.id)
-          .ilike("notes", `%${periodMonthStr}%`)
-          .maybeSingle();
-
-        if (existingByNotes) {
-          console.log(`[auto-invoice] Invoice for period ${periodMonthStr} found in notes for contract ${contract.id}, skipping.`);
           skipped++;
           continue;
         }
@@ -162,15 +149,17 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // ── Grundgebühr-Waiver-Logik ─────────────────────────────────────────
-        const contractSignedAt = new Date(contract.created_at || contract.start_date);
-        const waiverCutoffDate = new Date("2026-06-30");
-        const waiverEndDate = new Date("2027-01-01");
-        const isInWaiverPeriod = contractSignedAt <= waiverCutoffDate && today < waiverEndDate;
+        // ── Grundgebühr-Waiver-Logik (aus Vertragsfeldern statt hart codiert) ──
+        const isInWaiverPeriod = contract.base_fee_waived === true &&
+          contract.base_fee_waived_until != null &&
+          new Date(periodEnd) <= new Date(contract.base_fee_waived_until);
+        const waiverUntilFormatted = contract.base_fee_waived_until
+          ? new Date(contract.base_fee_waived_until).toLocaleDateString("de-DE")
+          : "";
 
         let baseNetAmount = Number(contract.monthly_price) || 0;
         if (isInWaiverPeriod && baseNetAmount > 0) {
-          console.log(`[auto-invoice] Grundgebühr-Waiver aktiv für Vertrag ${contract.id} (abgeschlossen: ${contractSignedAt.toISOString().split("T")[0]}): ${baseNetAmount} € → 0 €`);
+          console.log(`[auto-invoice] Grundgebühr-Waiver aktiv für Vertrag ${contract.id} (bis ${contract.base_fee_waived_until}): ${baseNetAmount} € → 0 €`);
           baseNetAmount = 0;
         }
 
@@ -188,7 +177,7 @@ Deno.serve(async (req) => {
           });
         } else if (isInWaiverPeriod) {
           positions.push({
-            description: `Grundgebühr ${contract.product_name} – ${billingPeriod} (Einführungsaktion – Grundgebühr ausgesetzt bis 31.12.2026)`,
+            description: `Grundgebühr ${contract.product_name} – ${billingPeriod} (Einführungsaktion – Grundgebühr ausgesetzt bis ${waiverUntilFormatted})`,
             quantity: contract.license_count || 1,
             unit_price: 0,
           });
@@ -200,19 +189,20 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Position 2: Nutzungsgebühren aus usage_charges (pending, passend zum Vormonat)
+        // Position 2: Nutzungsgebühren – NUR für den exakten Abrechnungs-Vormonat
         let usageChargeIds: string[] = [];
         if (contract.hfx_customer_number) {
           const { data: usageCharges } = await supabase
             .from("usage_charges")
             .select("*")
             .eq("hfx_customer_number", contract.hfx_customer_number)
-            .eq("status", "pending");
+            .eq("status", "pending")
+            .eq("period_from", periodStart)
+            .eq("period_to", periodEnd);
 
           if (usageCharges && usageCharges.length > 0) {
             usageChargeIds = usageCharges.map((u: any) => u.id);
             for (const uc of usageCharges) {
-              // White-Label: unit_description aus usage_charges verwenden (bereits HFX-konform)
               positions.push({
                 description: uc.unit_description || `Geprüfte GOÄ-Rechnungen (HFX GOÄ) – ${billingPeriod}`,
                 quantity: uc.quantity,
@@ -294,6 +284,53 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // ── 1. ZUERST interner Rechnungsdatensatz anlegen ──────────────────
+        const { data: invoice, error: insertError } = await supabase
+          .from("invoices")
+          .insert({
+            contract_id: contract.id,
+            customer_name: contract.customer_name,
+            customer_number: contract.hfx_customer_number,
+            rechnungs_email: contract.rechnungs_email || contract.email,
+            adresse: contract.adresse || contract.praxisanschrift,
+            plz: contract.plz,
+            ort: contract.ort,
+            invoice_date: todayStr,
+            due_date: dueDateStr,
+            billing_period_month: periodMonthStr,
+            positions: positions,
+            net_amount: netAmount,
+            tax_rate: taxRate,
+            tax_amount: taxAmount,
+            gross_amount: grossAmount,
+            status: "entwurf",
+            notes: `Automatisch generiert – Abrechnungszeitraum: ${billingPeriod} (${periodMonthStr})${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} geprüfte GOÄ-Rechnungen: ${usageNetAmount.toFixed(2)} € netto` : ""}`,
+          } as any)
+          .select()
+          .single();
+
+        if (insertError || !invoice) {
+          // Unique-Constraint-Verletzung = bereits fakturiert
+          if ((insertError as any)?.code === "23505") {
+            console.log(`[auto-invoice] Duplicate blocked by unique constraint for contract ${contract.id} in ${periodMonthStr}`);
+            skipped++;
+          } else {
+            errors.push(`Contract ${contract.id}: ${insertError?.message}`);
+          }
+          continue;
+        }
+
+        // ── 2. Usage charges als invoiced markieren ──────────────────────────
+        if (usageChargeIds.length > 0) {
+          await supabase
+            .from("usage_charges")
+            .update({ status: "invoiced", invoice_id: invoice.id })
+            .in("id", usageChargeIds);
+          console.log(`[auto-invoice] Attached ${usageChargeIds.length} usage charges to invoice ${invoice.invoice_number}`);
+        }
+
+        // ── 3. DANACH Stripe-Zahlung auslösen ───────────────────────────────
+        let stripeInvoiceId: string | null = null;
         if (hasStripeCustomer && grossAmount > 0) {
           try {
             for (const pos of positions) {
@@ -314,7 +351,6 @@ Deno.serve(async (req) => {
               description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
             });
 
-            // White-Label: Kein "Qodia" in Stripe-Beschreibung
             const stripeDescription = `${contract.product_name} – ${billingPeriod}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}${usageChargeIds.length > 0 ? ` | Nutzung: ${usageChargeIds.length} geprüfte GOÄ-Rechnungen (${usageNetAmount.toFixed(2)} €)` : ""}`;
 
             const stripeInvoice = await stripe.invoices.create({
@@ -326,6 +362,8 @@ Deno.serve(async (req) => {
                 hfx_contract_id: contract.id,
                 hfx_customer_number: contract.hfx_customer_number || "",
                 billing_period: periodMonthStr,
+                hfx_invoice_id: invoice.id,
+                hfx_invoice_number: invoice.invoice_number,
               },
             });
 
@@ -333,52 +371,21 @@ Deno.serve(async (req) => {
             await stripe.invoices.pay(finalizedInvoice.id);
 
             stripeInvoiceId = stripeInvoice.id;
+
+            // Stripe-ID auf interner Rechnung nachführen
+            await supabase
+              .from("invoices")
+              .update({ stripe_invoice_id: stripeInvoiceId })
+              .eq("id", invoice.id);
+
             console.log(`[auto-invoice] Stripe invoice ${stripeInvoice.id} created and payment initiated for contract ${contract.id}`);
           } catch (stripeErr: any) {
             console.error(`[auto-invoice] Stripe error for contract ${contract.id}:`, stripeErr?.message);
             errors.push(`Stripe [${contract.id}]: ${stripeErr?.message}`);
+            // Rechnung bleibt im Status 'entwurf' – kann manuell weiterverarbeitet werden
           }
         } else if (grossAmount === 0) {
           console.log(`[auto-invoice] Contract ${contract.id} – Gesamtbetrag 0 €, kein Stripe-Einzug nötig`);
-        }
-
-        // ── Insert invoice in DB ──────────────────────────────────────────────
-        const { data: invoice, error: insertError } = await supabase
-          .from("invoices")
-          .insert({
-            contract_id: contract.id,
-            customer_name: contract.customer_name,
-            customer_number: contract.hfx_customer_number,
-            rechnungs_email: contract.rechnungs_email || contract.email,
-            adresse: contract.adresse || contract.praxisanschrift,
-            plz: contract.plz,
-            ort: contract.ort,
-            invoice_date: todayStr,
-            due_date: dueDateStr,
-            positions: positions,
-            net_amount: netAmount,
-            tax_rate: taxRate,
-            tax_amount: taxAmount,
-            gross_amount: grossAmount,
-            status: "entwurf",
-            stripe_invoice_id: stripeInvoiceId,
-            notes: `Automatisch generiert – Abrechnungszeitraum: ${billingPeriod} (${periodMonthStr})${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} geprüfte GOÄ-Rechnungen: ${usageNetAmount.toFixed(2)} € netto` : ""}`,
-          })
-          .select()
-          .single();
-
-        if (insertError || !invoice) {
-          errors.push(`Contract ${contract.id}: ${insertError?.message}`);
-          continue;
-        }
-
-        // Mark usage charges as invoiced (Schutz vor Doppelabrechnung)
-        if (usageChargeIds.length > 0) {
-          await supabase
-            .from("usage_charges")
-            .update({ status: "invoiced", invoice_id: invoice.id })
-            .in("id", usageChargeIds);
-          console.log(`[auto-invoice] Attached ${usageChargeIds.length} usage charges to invoice ${invoice.invoice_number}`);
         }
 
         // ── Send invoice email ────────────────────────────────────────────────
