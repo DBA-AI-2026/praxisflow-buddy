@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Validate cron secret for security (skip if CRON_SECRET not configured)
+  // Validate cron secret for security
   const cronSecret = req.headers.get("x-cron-secret");
   const expectedSecret = Deno.env.get("CRON_SECRET");
   const authHeader = req.headers.get("authorization") || "";
@@ -82,11 +82,21 @@ Deno.serve(async (req) => {
 
   try {
     const today = new Date();
-    const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth() + 1;
-    const periodMonthStr = `${currentYear}-${String(currentMonth).padStart(2, "0")}`;
 
-    console.log(`[auto-invoice] Running for ${today.toISOString()} – billing period: ${periodMonthStr}`);
+    // ── Vormonat als Abrechnungszeitraum ──────────────────────────────────
+    const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const billingYear = prevMonthDate.getFullYear();
+    const billingMonth = prevMonthDate.getMonth(); // 0-based
+    const daysInBillingMonth = new Date(billingYear, billingMonth + 1, 0).getDate();
+
+    const periodMonthStr = `${billingYear}-${String(billingMonth + 1).padStart(2, "0")}`;
+    const periodStart = `${billingYear}-${String(billingMonth + 1).padStart(2, "0")}-01`;
+    const periodEnd = `${billingYear}-${String(billingMonth + 1).padStart(2, "0")}-${String(daysInBillingMonth).padStart(2, "0")}`;
+
+    const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+    const billingPeriod = `${monthNames[billingMonth]} ${billingYear}`;
+
+    console.log(`[auto-invoice] Running for ${today.toISOString()} – billing period: ${periodMonthStr} (${billingPeriod})`);
 
     // Load contracts – either single (manual) or all active (cron)
     let contractQuery = supabase
@@ -117,11 +127,7 @@ Deno.serve(async (req) => {
 
     for (const contract of contracts) {
       try {
-        // Check if an invoice for this period already exists
-        const periodStart = `${currentYear}-${String(currentMonth).padStart(2, "0")}-01`;
-        const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-        const periodEnd = `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
-
+        // ── Duplikat-Check: Rechnung für diesen Vormonat schon vorhanden? ──
         const { data: existing } = await supabase
           .from("invoices")
           .select("id")
@@ -136,6 +142,20 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // Zweiter Guard: Prüfe auch anhand notes/period_month ob bereits abgerechnet
+        const { data: existingByNotes } = await supabase
+          .from("invoices")
+          .select("id")
+          .eq("contract_id", contract.id)
+          .ilike("notes", `%${periodMonthStr}%`)
+          .maybeSingle();
+
+        if (existingByNotes) {
+          console.log(`[auto-invoice] Invoice for period ${periodMonthStr} found in notes for contract ${contract.id}, skipping.`);
+          skipped++;
+          continue;
+        }
+
         if (!contract.rechnungs_email && !contract.email) {
           console.log(`[auto-invoice] No email for contract ${contract.id}, skipping.`);
           skipped++;
@@ -143,7 +163,6 @@ Deno.serve(async (req) => {
         }
 
         // ── Grundgebühr-Waiver-Logik ─────────────────────────────────────────
-        // Verträge abgeschlossen vor 30.06.2026 zahlen keine Grundgebühr bis 01.01.2027
         const contractSignedAt = new Date(contract.created_at || contract.start_date);
         const waiverCutoffDate = new Date("2026-06-30");
         const waiverEndDate = new Date("2027-01-01");
@@ -157,32 +176,31 @@ Deno.serve(async (req) => {
 
         // Build invoice positions
         const taxRate = 19;
-        const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
-        const billingPeriod = `${monthNames[today.getMonth()]} ${currentYear}`;
 
         const positions: { description: string; quantity: number; unit_price: number }[] = [];
 
+        // Position 1: Grundgebühr
         if (baseNetAmount > 0) {
           positions.push({
-            description: `${contract.product_name} – ${billingPeriod}`,
+            description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
             quantity: contract.license_count || 1,
             unit_price: baseNetAmount / (contract.license_count || 1),
           });
         } else if (isInWaiverPeriod) {
           positions.push({
-            description: `${contract.product_name} – ${billingPeriod} (Einführungsangebot: Grundgebühr entfällt bis 31.12.2026)`,
+            description: `Grundgebühr ${contract.product_name} – ${billingPeriod} (Einführungsaktion – Grundgebühr ausgesetzt bis 31.12.2026)`,
             quantity: contract.license_count || 1,
             unit_price: 0,
           });
         } else {
           positions.push({
-            description: `${contract.product_name} – ${billingPeriod}`,
+            description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
             quantity: contract.license_count || 1,
             unit_price: 0,
           });
         }
 
-        // Collect pending usage charges for this HFX-Nr
+        // Position 2: Nutzungsgebühren aus usage_charges (pending, passend zum Vormonat)
         let usageChargeIds: string[] = [];
         if (contract.hfx_customer_number) {
           const { data: usageCharges } = await supabase
@@ -194,8 +212,9 @@ Deno.serve(async (req) => {
           if (usageCharges && usageCharges.length > 0) {
             usageChargeIds = usageCharges.map((u: any) => u.id);
             for (const uc of usageCharges) {
+              // White-Label: unit_description aus usage_charges verwenden (bereits HFX-konform)
               positions.push({
-                description: `${uc.unit_description} (${new Date(uc.period_from).toLocaleDateString("de-DE")} – ${new Date(uc.period_to).toLocaleDateString("de-DE")})`,
+                description: uc.unit_description || `Geprüfte GOÄ-Rechnungen (HFX GOÄ) – ${billingPeriod}`,
                 quantity: uc.quantity,
                 unit_price: Number(uc.unit_price),
               });
@@ -203,7 +222,7 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Verbrauchsnettobetrag separat ermitteln (für Stripe-Beschreibung und Provisionen)
+        // Verbrauchsnettobetrag separat
         const usageNetAmount = positions
           .slice(1)
           .reduce((s, p) => s + p.quantity * p.unit_price, 0);
@@ -222,26 +241,23 @@ Deno.serve(async (req) => {
         let stripeInvoiceId: string | null = null;
         const hasStripeCustomer = !!contract.stripe_customer_id;
 
-        // Kein SEPA-Mandat vorhanden → Checkout-Setup-Link senden und Rechnung überspringen
+        // Kein SEPA-Mandat → Checkout-Setup-Link senden
         if (!hasStripeCustomer) {
           console.warn(`[auto-invoice] Contract ${contract.id} (${contract.customer_name}) hat kein Stripe-Mandat – sende Mandatsanforderungs-E-Mail`);
           try {
             const emailRecipient = contract.rechnungs_email || contract.email;
             if (emailRecipient) {
-              // Stripe-Kunden anlegen
               const stripeCustomer = await stripe.customers.create({
                 name: contract.customer_name,
                 email: emailRecipient,
                 metadata: { hfx_contract_id: contract.id, hfx_customer_number: contract.hfx_customer_number || "" },
               });
 
-              // stripe_customer_id sofort am Vertrag speichern
               await supabase
                 .from("contracts")
                 .update({ stripe_customer_id: stripeCustomer.id } as any)
                 .eq("id", contract.id);
 
-              // Checkout-Session im Setup-Modus für SEPA-Lastschrift
               const setupSession = await stripe.checkout.sessions.create({
                 mode: "setup",
                 customer: stripeCustomer.id,
@@ -255,7 +271,6 @@ Deno.serve(async (req) => {
                 },
               });
 
-              // Mandatsanforderungs-E-Mail versenden
               const mandateEmailHtml = buildMandateRequestEmail({
                 customerName: contract.customer_name,
                 productName: contract.product_name,
@@ -276,7 +291,7 @@ Deno.serve(async (req) => {
             errors.push(`Mandate [${contract.id}]: ${mandateErr?.message}`);
           }
           skipped++;
-          continue; // Keine Rechnung erstellen bis Mandat vorliegt
+          continue;
         }
 
         if (hasStripeCustomer && grossAmount > 0) {
@@ -299,11 +314,14 @@ Deno.serve(async (req) => {
               description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
             });
 
+            // White-Label: Kein "Qodia" in Stripe-Beschreibung
+            const stripeDescription = `${contract.product_name} – ${billingPeriod}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}${usageChargeIds.length > 0 ? ` | Nutzung: ${usageChargeIds.length} geprüfte GOÄ-Rechnungen (${usageNetAmount.toFixed(2)} €)` : ""}`;
+
             const stripeInvoice = await stripe.invoices.create({
               customer: contract.stripe_customer_id,
               auto_advance: false,
               collection_method: "charge_automatically",
-              description: `${contract.product_name} – ${billingPeriod}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}${usageChargeIds.length > 0 ? ` | Verbrauch: ${usageChargeIds.length} Qodia-Vorgänge (${usageNetAmount.toFixed(2)} €)` : ""}`,
+              description: stripeDescription,
               metadata: {
                 hfx_contract_id: contract.id,
                 hfx_customer_number: contract.hfx_customer_number || "",
@@ -344,7 +362,7 @@ Deno.serve(async (req) => {
             gross_amount: grossAmount,
             status: "entwurf",
             stripe_invoice_id: stripeInvoiceId,
-            notes: `Automatisch generiert – Laufzeit: ${billingPeriod}${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} Qodia-Verbrauchsposten: ${usageNetAmount.toFixed(2)} € netto` : ""}`,
+            notes: `Automatisch generiert – Abrechnungszeitraum: ${billingPeriod} (${periodMonthStr})${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} geprüfte GOÄ-Rechnungen: ${usageNetAmount.toFixed(2)} € netto` : ""}`,
           })
           .select()
           .single();
@@ -354,7 +372,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Mark usage charges as invoiced
+        // Mark usage charges as invoiced (Schutz vor Doppelabrechnung)
         if (usageChargeIds.length > 0) {
           await supabase
             .from("usage_charges")
@@ -365,7 +383,7 @@ Deno.serve(async (req) => {
 
         // ── Send invoice email ────────────────────────────────────────────────
         const positionsHtml = positions
-          .filter(p => p.unit_price > 0 || (isInWaiverPeriod && p === positions[0])) // Grundgebühr immer zeigen (auch bei 0 €/Waiver), sonstige 0€-Pos ausblenden
+          .filter(p => p.unit_price > 0 || (isInWaiverPeriod && p === positions[0]))
           .map((p) => `
           <tr>
             <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">${p.description}</td>
@@ -374,18 +392,18 @@ Deno.serve(async (req) => {
             <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${(p.quantity * p.unit_price).toFixed(2)} €</td>
           </tr>`).join("");
 
-        // ── Zahlungshinweis: je nach Zahlungsmethode unterschiedlicher Block ──
+        // ── Zahlungshinweis ──
         const paymentBlockHtml = hasStripeCustomer && grossAmount > 0
           ? `<div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
               <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug (SEPA via Stripe)</strong></p>
               <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">Der Betrag wird automatisch von Ihrem hinterlegten SEPA-Konto eingezogen.</p>
               <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">📅 <strong>Einzugsdatum:</strong> ${collectionDateFormatted}</p>
-              ${usageNetAmount > 0 ? `<p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">📊 <strong>Enthält Qodia-Verbrauch:</strong> ${usageNetAmount.toFixed(2)} € netto (${usageChargeIds.length} abgerechnete Vorgänge, zzgl. MwSt.)</p>` : ""}
+              ${usageNetAmount > 0 ? `<p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">📊 <strong>Enthält Nutzungsgebühren:</strong> ${usageNetAmount.toFixed(2)} € netto (${usageChargeIds.length} geprüfte GOÄ-Rechnungen, zzgl. MwSt.)</p>` : ""}
             </div>`
           : grossAmount === 0
           ? `<div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
               <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>✅ Diese Rechnung weist keinen Zahlbetrag aus.</strong></p>
-              <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">Es sind keine Zahlungen erforderlich. Diese Abrechnung dient als Nachweis für den aktuellen Abrechnungszeitraum.</p>
+              <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">Es sind keine Zahlungen erforderlich. Diese Abrechnung dient als Nachweis für den Abrechnungszeitraum ${billingPeriod}.</p>
             </div>`
           : `<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:14px 16px;margin-top:20px;">
               <p style="margin:0;font-size:14px;color:#8a6d00;"><strong>💳 Zahlung per Überweisung</strong></p>
@@ -406,7 +424,7 @@ Deno.serve(async (req) => {
   </div>
   <div style="background:#f9fafb;padding:30px 20px;border:1px solid #e5e7eb;border-top:none;">
     <p style="font-size:15px;color:#333;">Sehr geehrte Damen und Herren,</p>
-    <p style="color:#555;font-size:14px;line-height:1.6;">anbei erhalten Sie Ihre Rechnung <strong>${invoice.invoice_number}</strong> vom <strong>${new Date(todayStr).toLocaleDateString("de-DE")}</strong>.</p>
+    <p style="color:#555;font-size:14px;line-height:1.6;">anbei erhalten Sie Ihre Rechnung <strong>${invoice.invoice_number}</strong> vom <strong>${new Date(todayStr).toLocaleDateString("de-DE")}</strong> für den Abrechnungszeitraum <strong>${billingPeriod}</strong>.</p>
     <p style="color:#555;font-size:14px;"><strong>Rechnungsempfänger:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</p>
     <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;margin-top:20px;">
       <thead><tr>
@@ -437,20 +455,19 @@ Deno.serve(async (req) => {
           from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
           reply_to: "info@hfx-honorarfuchs.de",
           to: [emailTo],
-          subject: `Rechnung ${invoice.invoice_number} – ${contract.customer_name}${subjectSuffix}`,
+          subject: `Rechnung ${invoice.invoice_number} – ${contract.customer_name} – ${billingPeriod}${subjectSuffix}`,
           html: emailHtml,
           text: grossAmount > 0
-            ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nGesamtbetrag: ${grossAmount.toFixed(2)} €\n${hasStripeCustomer ? `Einzugsdatum: ${collectionDateFormatted}` : `Bitte überweisen Sie bis zum ${collectionDateFormatted}.`}\nDiese Rechnung wurde automatisch generiert.`
-            : `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nDiese Rechnung weist keinen Zahlbetrag aus (Einführungsangebot aktiv).\nDiese Rechnung wurde automatisch generiert.`,
+            ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nGesamtbetrag: ${grossAmount.toFixed(2)} €\n${hasStripeCustomer ? `Einzugsdatum: ${collectionDateFormatted}` : `Bitte überweisen Sie bis zum ${collectionDateFormatted}.`}\nDiese Rechnung wurde automatisch generiert.`
+            : `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus (Einführungsangebot aktiv).\nDiese Rechnung wurde automatisch generiert.`,
         });
 
-        const now = new Date().toISOString();
+        const nowTs = new Date().toISOString();
 
-        // Phase 2: customer_revenues INSERT entfernt – invoices ist die führende Quelle.
         // Update invoice status to 'versendet'
         await supabase
           .from("invoices")
-          .update({ status: "versendet", email_sent_at: now })
+          .update({ status: "versendet", email_sent_at: nowTs })
           .eq("id", invoice.id);
 
         // Auto-generate commission payout
@@ -458,7 +475,6 @@ Deno.serve(async (req) => {
           const isGoae = /GOÄ|GOA/i.test(contract.product_name || "");
 
           if (isGoae) {
-            // ── HFX GOÄ: Rollenbasierte Provisionslogik ──────────────────────
             await createGoaeCommissions({
               supabase,
               contract,
@@ -467,12 +483,13 @@ Deno.serve(async (req) => {
               baseNetAmount,
               usageChargeIds,
               periodMonthStr,
+              periodStart,
+              periodEnd,
+              billingPeriod,
               today,
             });
           } else {
-            // ── Andere Produkte: Provisionsberechnung mit Override-Hierarchie ──────────
-            // Sicherheits-Fix: partner_commission_overrides hat Vorrang vor product_commissions.
-            // Beide Quellen werden serverseitig gelesen – kein Frontend-Input beeinflusst die Berechnung.
+            // Andere Produkte: Provisionsberechnung mit Override-Hierarchie
             const [{ data: productCommission }, { data: partnerOverride }] = await Promise.all([
               supabase
                 .from("product_commissions")
@@ -490,7 +507,6 @@ Deno.serve(async (req) => {
                 : Promise.resolve({ data: null, error: null }),
             ]);
 
-            // Individuelle Override-Regel hat Vorrang; Fallback auf Produkt-Standardregel
             const effectiveRule = partnerOverride ?? productCommission;
             const overrideApplied = !!partnerOverride;
 
@@ -510,7 +526,6 @@ Deno.serve(async (req) => {
                   .maybeSingle();
 
                 if (!existingPayout) {
-                  // rule_version zeigt an ob Override oder Standardregel angewendet wurde
                   const ruleVersion = overrideApplied
                     ? (effectiveRule.commission_type === "prozent"
                         ? `OVERRIDE-PARTNER-${effectiveRule.commission_value}PCT-v1`
@@ -535,7 +550,7 @@ Deno.serve(async (req) => {
                   });
                   console.log(`[auto-invoice] Created commission payout ${commissionAmount} € for partner ${contract.sales_partner_name} (rule: ${ruleVersion})`);
 
-                  // ── FiBu: partner_commission_approved event (additive, non-blocking) ──
+                  // FiBu: partner_commission_approved event
                   try {
                     const { error: fibuCommErr } = await supabase.from("fibu_events").insert({
                       event_type: "partner_commission_approved",
@@ -582,23 +597,15 @@ Deno.serve(async (req) => {
           }
         }
 
-        // ── FiBu-Vorbereitungs-Events (Phase 2) ────────────────────────────────
-        // Restpunkt 1: FiBu-Block steht VOR dem sendResult-continue-Guard.
-        //   → Auch bei E-Mail-Fehler wird das fibu_event geschrieben, da die Rechnung
-        //     bereits in der DB existiert und FiBu-relevant ist.
-        // Fehler hier dürfen den operativen Flow NICHT unterbrechen (kein throw, kein continue).
+        // ── FiBu-Vorbereitungs-Events ──────────────────────────────────────────
         try {
           const fibuCustomerId: string | null = contract.customer_id ?? null;
 
-          // Restpunkt 3: baseTaxAmount direkt aus den bereits korrekt berechneten
-          // Rechnungsbeträgen ableiten – verhindert ±1-Cent-Abweichung durch Doppelrundung.
-          // Wenn kein Verbrauch → ist taxAmount komplett der Grundgebühr zuzuordnen.
-          // Wenn Verbrauch vorhanden → Grundgebühr-Anteil proportional aus netAmount.
           const baseShare = netAmount > 0 ? baseNetAmount / netAmount : 0;
           const baseTaxAmount = Math.round(taxAmount * baseShare * 100) / 100;
           const baseGrossAmount = Math.round((baseNetAmount + baseTaxAmount) * 100) / 100;
 
-          // Event 1: invoice_base_fee_created (immer, auch bei 0 € / Waiver)
+          // Event 1: invoice_base_fee_created
           const { error: fibuBaseErr } = await supabase.from("fibu_events").insert({
             event_type: "invoice_base_fee_created",
             source_module: "invoices",
@@ -631,9 +638,8 @@ Deno.serve(async (req) => {
             console.error(`[auto-invoice] fibu_events invoice_base_fee_created failed for ${invoice.invoice_number}:`, fibuBaseErr.message);
           }
 
-          // Event 2: invoice_usage_created (nur wenn Qodia-Verbrauch > 0)
+          // Event 2: invoice_usage_created (nur wenn Nutzungsgebühren > 0)
           if (usageNetAmount > 0) {
-            // Restpunkt 3: Verbrauch-Anteil der Steuer analog zum Grundgebühr-Anteil
             const usageShare = netAmount > 0 ? usageNetAmount / netAmount : 0;
             const usageTaxAmount = Math.round(taxAmount * usageShare * 100) / 100;
             const usageGrossAmount = Math.round((usageNetAmount + usageTaxAmount) * 100) / 100;
@@ -653,7 +659,7 @@ Deno.serve(async (req) => {
               currency: "EUR",
               status: "approved",
               export_status: "open",
-              description: `Qodia-Verbrauch ${invoice.invoice_number} – ${contract.product_name} – ${billingPeriod} (${usageChargeIds.length} Vorgänge)`,
+              description: `Nutzungsgebühren ${invoice.invoice_number} – Geprüfte GOÄ-Rechnungen – ${billingPeriod} (${usageChargeIds.length} Vorgänge)`,
               created_by: null,
               metadata: {
                 invoice_number: invoice.invoice_number,
@@ -662,7 +668,7 @@ Deno.serve(async (req) => {
                 contract_id: contract.id,
                 hfx_customer_number: contract.hfx_customer_number ?? null,
                 usage_charge_ids: usageChargeIds,
-                charge_count: usageChargeIds.length,  // Restpunkt 2: war usage_charge_count
+                charge_count: usageChargeIds.length,
                 usage_net_amount: usageNetAmount,
                 billing_period: billingPeriod,
                 period_month: periodMonthStr,
@@ -677,16 +683,13 @@ Deno.serve(async (req) => {
         } catch (fibuErr) {
           console.error(`[auto-invoice] fibu_events block failed for ${invoice.invoice_number} – operative flow unaffected:`, String(fibuErr));
         }
-        // ── Ende FiBu-Block ─────────────────────────────────────────────────
 
-        // Restpunkt 1: sendResult-Fehlerprüfung NACH FiBu-Block –
-        //   fibu_event ist bereits geschrieben, auch wenn E-Mail fehlschlug.
         if (sendResult.error) {
           errors.push(`Invoice email [${invoice.invoice_number}]: ${sendResult.error.message}`);
           continue;
         }
 
-        console.log(`[auto-invoice] ✓ Invoice ${invoice.invoice_number} sent to ${emailTo}${stripeInvoiceId ? ` | Stripe: ${stripeInvoiceId}` : ""}`);
+        console.log(`[auto-invoice] ✓ Invoice ${invoice.invoice_number} sent to ${emailTo}${stripeInvoiceId ? ` | Stripe: ${stripeInvoiceId}` : ""} | Zeitraum: ${billingPeriod}`);
         processed++;
       } catch (contractErr) {
         console.error(`[auto-invoice] Error processing contract ${contract.id}:`, contractErr);
@@ -697,7 +700,7 @@ Deno.serve(async (req) => {
     console.log(`[auto-invoice] Done. Processed: ${processed}, Skipped: ${skipped}, Errors: ${errors.length}`);
 
     return new Response(
-      JSON.stringify({ success: true, processed, skipped, errors }),
+      JSON.stringify({ success: true, processed, skipped, errors, billingPeriod: periodMonthStr }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
@@ -721,11 +724,14 @@ async function createGoaeCommissions(params: {
   baseNetAmount: number;
   usageChargeIds: string[];
   periodMonthStr: string;
+  periodStart: string;
+  periodEnd: string;
+  billingPeriod: string;
   today: Date;
 }) {
-  const { supabase, contract, invoice, netAmount, baseNetAmount, usageChargeIds, periodMonthStr, today } = params;
+  const { supabase, contract, invoice, netAmount, baseNetAmount, usageChargeIds, periodMonthStr, periodStart, periodEnd, billingPeriod, today } = params;
 
-  // Net amount from usage charges (excluding base fee)
+  // Net amount from usage charges
   let usageNetAmount = 0;
   if (usageChargeIds.length > 0) {
     const { data: charges } = await supabase
@@ -760,9 +766,8 @@ async function createGoaeCommissions(params: {
   if (isAdRole) {
     // 1. Festbetrag bei Vertragsabschluss (erste Rechnung)
     if (isFirstInvoice) {
-      let fixedAmount = 100; // Basis-Festbetrag
+      let fixedAmount = 100;
 
-      // Sprint-Check: AD hat >= 25 GOÄ-Verträge bis 31.12.2026?
       const sprintEnd = new Date("2026-12-31");
       if (today <= sprintEnd) {
         const { count: contractCount } = await supabase
@@ -772,7 +777,7 @@ async function createGoaeCommissions(params: {
           .or("product_name.ilike.%GOÄ%,product_name.ilike.%GOA%")
           .in("status", ["aktiv", "gekündigt", "beendet"]);
         if ((contractCount || 0) >= 25) {
-          fixedAmount = 250; // Sprint-Bonus: 100 + 150
+          fixedAmount = 250;
         }
       }
 
@@ -803,7 +808,6 @@ async function createGoaeCommissions(params: {
         });
         console.log(`[auto-invoice] GOÄ AD fixed payout ${fixedAmount} € for ${contract.sales_partner_name}`);
 
-        // ── FiBu: internal_sales_bonus_reference event for GOÄ AD signup (additive) ──
         try {
           const { error: fibuAdSignupErr } = await supabase.from("fibu_events").insert({
             event_type: "internal_sales_bonus_reference",
@@ -873,7 +877,6 @@ async function createGoaeCommissions(params: {
           });
           console.log(`[auto-invoice] GOÄ AD usage payout ${usageCommission} € for ${contract.sales_partner_name}`);
 
-          // ── FiBu: internal_sales_bonus_reference event for GOÄ AD usage (additive) ──
           try {
             const { error: fibuAdUsageErr } = await supabase.from("fibu_events").insert({
               event_type: "internal_sales_bonus_reference",
@@ -953,7 +956,6 @@ async function createGoaeCommissions(params: {
         });
         console.log(`[auto-invoice] GOÄ sales_partner payout ${totalCommission} € for ${contract.sales_partner_name}`);
 
-        // ── FiBu: partner_commission_approved event for GOÄ sales_partner (additive) ──
         try {
           const { error: fibuGoePartnerErr } = await supabase.from("fibu_events").insert({
             event_type: "partner_commission_approved",
@@ -1000,7 +1002,6 @@ async function createGoaeCommissions(params: {
 
   // ── Tippgeber-Meilenstein (500 € Kumulierschwelle) ────────────────────────
   if (contract.tippgeber_id) {
-    // Kumulierten Nettobetrag aller Rechnungen für diesen Vertrag berechnen
     const { data: allInvoices } = await supabase
       .from("invoices")
       .select("net_amount")
@@ -1009,7 +1010,6 @@ async function createGoaeCommissions(params: {
 
     const cumulativeRevenue = (allInvoices || []).reduce((s: number, inv: any) => s + Number(inv.net_amount), 0);
 
-    // Prüfen ob Meilenstein bereits vorhanden
     const { data: existingMilestone } = await supabase
       .from("tippgeber_milestone_tracking")
       .select("id, milestone_reached")
@@ -1018,7 +1018,6 @@ async function createGoaeCommissions(params: {
       .maybeSingle();
 
     if (existingMilestone) {
-      // Update kumulierten Betrag
       if (!existingMilestone.milestone_reached && cumulativeRevenue >= 500) {
         await supabase
           .from("tippgeber_milestone_tracking")
@@ -1036,7 +1035,6 @@ async function createGoaeCommissions(params: {
           .eq("id", existingMilestone.id);
       }
     } else {
-      // Neuen Meilenstein-Eintrag anlegen
       await supabase.from("tippgeber_milestone_tracking").insert({
         tippgeber_id: contract.tippgeber_id,
         contract_id: contract.id,
@@ -1064,42 +1062,25 @@ function buildMandateRequestEmail(params: {
   return `<!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f4f6fa;font-family:Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fa;padding:40px 0;">
-  <tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-      <tr><td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:32px 40px;text-align:center;">
-        <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg"
-          alt="Honorarfuchs" style="width:56px;height:56px;border-radius:50%;object-fit:cover;margin:0 auto 12px;display:block;"/>
-        <p style="color:#ffffff;font-size:22px;font-weight:700;margin:0;">Zahlungsmethode hinterlegen</p>
-        <p style="color:rgba(255,255,255,0.85);font-size:13px;margin:6px 0 0;">HFX Honorarfuchs – Abrechnung ${billingPeriod}</p>
-      </td></tr>
-      <tr><td style="padding:40px;">
-        <p style="font-size:15px;color:#1a1a2e;margin:0 0 16px;">Sehr geehrte Damen und Herren,</p>
-        <p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 16px;">
-          für Ihren Vertrag <strong>${productName}</strong> bei Honorarfuchs ist noch keine SEPA-Zahlungsmethode hinterlegt.
-          Um Ihre monatliche Abrechnung für <strong>${billingPeriod}</strong> und alle folgenden Monate automatisch per SEPA-Lastschrift abwickeln zu können,
-          bitten wir Sie, Ihre Bankverbindung einmalig zu hinterlegen.
-        </p>
-        <div style="background:#f0f4ff;border-radius:8px;padding:20px;margin:24px 0;text-align:center;">
-          <p style="margin:0 0 6px;font-size:13px;color:#4b5563;">Sicher, schnell und einmalig – powered by Stripe</p>
-          <a href="${setupUrl}"
-            style="display:inline-block;background:#0b367f;color:#ffffff;font-size:15px;font-weight:700;padding:14px 32px;border-radius:6px;text-decoration:none;margin-top:8px;">
-            💳 SEPA-Lastschrift einrichten
-          </a>
-        </div>
-        <p style="font-size:13px;color:#6b7280;line-height:1.6;margin:0 0 8px;">
-          Nach erfolgreicher Einrichtung wird Ihr monatlicher Beitrag automatisch eingezogen. Sie erhalten keine weiteren Aufforderungen.
-        </p>
-        <p style="font-size:13px;color:#9ca3af;margin:0;">
-          Bei Fragen wenden Sie sich bitte an <a href="mailto:buchhaltung@hfx-honorarfuchs.de" style="color:#0b367f;">buchhaltung@hfx-honorarfuchs.de</a>.
-        </p>
-        <p style="font-size:14px;color:#374151;margin-top:24px;">Mit freundlichen Grüßen,<br><strong>Ihr HFX Honorarfuchs Team</strong></p>
-      </td></tr>
-      <tr><td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 40px;text-align:center;">
-        <p style="color:#9ca3af;font-size:11px;margin:0;">© HFX Honorarfuchs • Diese E-Mail wurde automatisch generiert.</p>
-      </td></tr>
-    </table>
-  </td></tr>
-</table>
+<div style="max-width:600px;margin:0 auto;padding:20px;">
+  <div style="background:linear-gradient(135deg,#0b367f,#1a4a9e);color:#fff;padding:30px 20px;border-radius:8px 8px 0 0;text-align:center;">
+    <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg"
+      alt="Honorarfuchs" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin:0 auto 12px;display:block;"/>
+    <h1 style="margin:0;font-size:22px;">Zahlungsmethode hinterlegen</h1>
+    <p style="margin:8px 0 0;opacity:0.9;font-size:14px;">Honorarfuchs – HFX Sales Portal</p>
+  </div>
+  <div style="background:#fff;padding:30px 20px;border:1px solid #e5e7eb;border-top:none;">
+    <p style="font-size:15px;color:#333;">Sehr geehrte/r ${customerName},</p>
+    <p style="color:#555;font-size:14px;line-height:1.6;">für Ihren Vertrag <strong>${productName}</strong> (Abrechnungszeitraum: ${billingPeriod}) benötigen wir Ihre SEPA-Zahlungsdaten, um den monatlichen Einzug zu ermöglichen.</p>
+    <p style="color:#555;font-size:14px;">Bitte klicken Sie auf den folgenden Button, um Ihre Zahlungsmethode sicher zu hinterlegen:</p>
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${setupUrl}" style="background:#0b367f;color:#fff;padding:14px 28px;border-radius:8px;font-size:16px;text-decoration:none;display:inline-block;font-weight:bold;">Zahlungsmethode hinterlegen</a>
+    </div>
+    <p style="color:#888;font-size:12px;">Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br/><a href="${setupUrl}" style="color:#0b367f;word-break:break-all;">${setupUrl}</a></p>
+  </div>
+  <div style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
+    <p style="font-size:11px;color:#9ca3af;margin:0;">© Honorarfuchs – HFX Sales Portal</p>
+  </div>
+</div>
 </body></html>`;
 }
