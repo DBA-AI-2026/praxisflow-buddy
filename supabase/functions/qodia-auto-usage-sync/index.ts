@@ -64,10 +64,16 @@ Deno.serve(async (req) => {
       return true;
     });
 
+    // If debugEmail set, filter to only that contract
+    const targetContracts = debugEmail 
+      ? uniqueContracts.filter(c => c.email === debugEmail)
+      : uniqueContracts;
+
     let synced = 0;
     let errors = 0;
+    const debugResults: unknown[] = [];
 
-    for (const contract of uniqueContracts) {
+    for (const contract of targetContracts) {
       try {
         const res = await fetch("https://auth.qodia.de/api/external/usage", {
           method: "POST",
