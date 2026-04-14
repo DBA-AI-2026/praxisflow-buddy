@@ -5,9 +5,11 @@ Deno.serve(async (req) => {
     // Allow cron trigger via Authorization (anon key) or cron secret header
     const authHeader = req.headers.get("Authorization") ?? "";
     const cronSecret = req.headers.get("x-cron-secret") ?? "";
+    const envCronSecret = Deno.env.get("CRON_SECRET") ?? "";
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-    const validCron = cronSecret === Deno.env.get("CRON_SECRET");
+    const validCron = cronSecret !== "" && cronSecret === envCronSecret;
     const validAnon = authHeader === `Bearer ${anonKey}`;
+    console.log(`[auth-debug] authHeader-length=${authHeader.length}, anonKey-length=${anonKey.length}, cronSecret-present=${cronSecret !== ""}, envCronSecret-present=${envCronSecret !== ""}, validCron=${validCron}, validAnon=${validAnon}`);
     if (!validCron && !validAnon) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
