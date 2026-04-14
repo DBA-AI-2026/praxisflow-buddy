@@ -375,6 +375,8 @@ export type Database = {
           approved_by: string | null
           auto_renewal: boolean
           bank_name: string | null
+          base_fee_waived: boolean
+          base_fee_waived_until: string | null
           bic: string | null
           bsnr: string | null
           cancellation_period_months: number
@@ -448,6 +450,8 @@ export type Database = {
           approved_by?: string | null
           auto_renewal?: boolean
           bank_name?: string | null
+          base_fee_waived?: boolean
+          base_fee_waived_until?: string | null
           bic?: string | null
           bsnr?: string | null
           cancellation_period_months?: number
@@ -521,6 +525,8 @@ export type Database = {
           approved_by?: string | null
           auto_renewal?: boolean
           bank_name?: string | null
+          base_fee_waived?: boolean
+          base_fee_waived_until?: string | null
           bic?: string | null
           bsnr?: string | null
           cancellation_period_months?: number
@@ -1184,6 +1190,7 @@ export type Database = {
       invoices: {
         Row: {
           adresse: string | null
+          billing_period_month: string | null
           contract_id: string | null
           created_at: string
           created_by: string | null
@@ -1214,6 +1221,7 @@ export type Database = {
         }
         Insert: {
           adresse?: string | null
+          billing_period_month?: string | null
           contract_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -1244,6 +1252,7 @@ export type Database = {
         }
         Update: {
           adresse?: string | null
+          billing_period_month?: string | null
           contract_id?: string | null
           created_at?: string
           created_by?: string | null
