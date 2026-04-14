@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[qodia-auto-usage-sync] Fertig: ${synced} synchronisiert, ${errors} Fehler.`);
-    return new Response(JSON.stringify({ success: true, synced, errors }), {
+    return new Response(JSON.stringify({ success: true, synced, errors, ...(debugEmail ? { debug: debugResults } : {}) }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
