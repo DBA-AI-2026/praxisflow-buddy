@@ -43,3 +43,5 @@ project_id = "gvsxentbbzuyanqbqvea"
     verify_jwt = false
   [functions.qodia-usage-query]
     verify_jwt = false
+  [functions.qodia-auto-usage-sync]
+    verify_jwt = false
