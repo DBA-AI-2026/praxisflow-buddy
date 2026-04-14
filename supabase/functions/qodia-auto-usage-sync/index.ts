@@ -59,16 +59,10 @@ Deno.serve(async (req) => {
       return true;
     });
 
-    // If debugEmail set, filter to only that contract
-    const targetContracts = debugEmail 
-      ? uniqueContracts.filter(c => c.email === debugEmail)
-      : uniqueContracts;
-
     let synced = 0;
     let errors = 0;
-    const debugResults: unknown[] = [];
 
-    for (const contract of targetContracts) {
+    for (const contract of uniqueContracts) {
       try {
         const res = await fetch("https://auth.qodia.de/api/external/usage", {
           method: "POST",
@@ -83,14 +77,6 @@ Deno.serve(async (req) => {
         let data: Record<string, unknown> = {};
         try { data = JSON.parse(rawText); } catch { /* not JSON */ }
 
-        if (debugEmail) {
-          debugResults.push({
-            hfx_customer_number: contract.hfx_customer_number,
-            email: contract.email,
-            request: { endpoint: "https://auth.qodia.de/api/external/usage", body: { email: contract.email, startDate, endDate } },
-            response: { httpStatus: res.status, body: data, rawText },
-          });
-        }
         console.log(`[qodia-auto-usage-sync] ${contract.hfx_customer_number} (${contract.email}) → HTTP ${res.status}`);
 
         if (!res.ok || !data.success) {
@@ -139,7 +125,7 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[qodia-auto-usage-sync] Fertig: ${synced} synchronisiert, ${errors} Fehler.`);
-    return new Response(JSON.stringify({ success: true, synced, errors, ...(debugEmail ? { debug: debugResults } : {}) }), {
+    return new Response(JSON.stringify({ success: true, synced, errors }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
