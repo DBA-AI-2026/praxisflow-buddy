@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const validCron = cronSecret !== "" && cronSecret === envCronSecret;
     const validAnon = authHeader === `Bearer ${anonKey}`;
-    console.log(`[auth-debug] cronSecret-len=${cronSecret.length}-val=[${cronSecret}], envCronSecret-len=${envCronSecret.length}-val=[${envCronSecret}], validCron=${validCron}`);
+    console.log(`[auth-debug] cronSecret-present=${cronSecret !== ""}, envCronSecret-present=${envCronSecret !== ""}, validCron=${validCron}, validAnon=${validAnon}`);
     if (!validCron && !validAnon) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
