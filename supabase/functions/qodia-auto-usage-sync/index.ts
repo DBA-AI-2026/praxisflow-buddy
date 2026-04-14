@@ -2,20 +2,22 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 Deno.serve(async (req) => {
   try {
-    // Allow cron trigger via Authorization (anon key) or cron secret header
     const authHeader = req.headers.get("Authorization") ?? "";
     const cronSecret = req.headers.get("x-cron-secret") ?? "";
     const envCronSecret = Deno.env.get("CRON_SECRET_2") ?? "";
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const validCron = cronSecret !== "" && cronSecret === envCronSecret;
     const validAnon = authHeader === `Bearer ${anonKey}`;
-    console.log(`[auth-debug] cronSecret-present=${cronSecret !== ""}, envCronSecret-present=${envCronSecret !== ""}, validCron=${validCron}, validAnon=${validAnon}`);
     if (!validCron && !validAnon) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
       });
     }
+
+    // Debug mode: accept custom date range via body
+    let bodyOverride: Record<string, string> = {};
+    try { bodyOverride = await req.json(); } catch { /* no body */ }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -30,12 +32,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Current month period
+    // Use overrides if provided, else current month
     const now = new Date();
-    const startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+    const startDate = bodyOverride.startDate ?? new Date(now.getFullYear(), now.getMonth(), 1)
       .toISOString()
       .slice(0, 10);
-    const endDate = now.toISOString().slice(0, 10);
+    const endDate = bodyOverride.endDate ?? now.toISOString().slice(0, 10);
+    const debugEmail = bodyOverride.debugEmail ?? null;
 
     // Fetch all active HFX GOÄ contracts with email and hfx_customer_number
     const { data: contracts, error: contractsError } = await supabase
