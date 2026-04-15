@@ -125,6 +125,10 @@ Deno.serve(async (req) => {
           .eq("status", "pending");
 
         if (quantity > 0) {
+          // Wenn Nutzung vorhanden, aber Nettobetrag = 0 (z. B. Promo, unit_price = 0):
+          // Datensatz direkt als "invoiced" markieren – nicht abrechnungsrelevant, aber dokumentiert.
+          const chargeStatus = netAmount > 0 ? "pending" : "invoiced";
+
           await supabase.from("usage_charges").insert({
             hfx_customer_number: contract.hfx_customer_number,
             contract_id: contract.id,
@@ -135,9 +139,15 @@ Deno.serve(async (req) => {
             net_amount: netAmount,
             unit_description: `Geprüfte GOÄ-Rechnungen (HFX GOÄ) – ${billingPeriodLabel}`,
             source: "qodia-auto",
-            status: "pending",
-            notes: `Automatisch abgerufen für ${billingPeriodLabel}`,
+            status: chargeStatus,
+            notes: netAmount > 0
+              ? `Automatisch abgerufen für ${billingPeriodLabel}`
+              : `Automatisch abgerufen für ${billingPeriodLabel} – 0,00 € (nicht abrechnungsrelevant)`,
           });
+
+          if (chargeStatus === "invoiced") {
+            console.log(`[qodia-auto-usage-sync] ${contract.hfx_customer_number} – ${quantity} Nutzungen, aber 0,00 € netto → direkt als invoiced markiert.`);
+          }
         }
 
         synced++;
