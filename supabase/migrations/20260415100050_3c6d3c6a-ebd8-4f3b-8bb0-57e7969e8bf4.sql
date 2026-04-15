@@ -1,0 +1,1 @@
+UPDATE public.usage_charges SET status = 'invoiced', notes = 'Automatisch abgerufen für März 2026 – 0,00 € (nicht abrechnungsrelevant, nachträglich bereinigt)' WHERE id = '5b662c1b-b675-463d-bdd7-053152156bd0' AND status = 'pending' AND net_amount = 0;
