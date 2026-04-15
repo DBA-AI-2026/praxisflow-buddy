@@ -71,13 +71,13 @@ const App = () => (
             <Route path="/mandate-success" element={<MandateSuccess />} />
             <Route path="/buchen" element={<Buchen />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/pipeline" element={<ProtectedRoute><PraxenJourney /></ProtectedRoute>} />
+            {/* Legacy redirects → Pipeline */}
+            <Route path="/praxen-journey" element={<Navigate to="/pipeline" replace />} />
+            <Route path="/praxen" element={<Navigate to="/pipeline" replace />} />
+            <Route path="/interessenten" element={<Navigate to="/pipeline" replace />} />
+            <Route path="/kunden" element={<Navigate to="/pipeline?tab=bestandskunden" replace />} />
             <Route path="/reservierungen" element={<ProtectedRoute><Reservierungen /></ProtectedRoute>} />
-            {/* Legacy /praxen → redirect to /praxen-journey (Kunden-Journey ist die aktuelle Ansicht) */}
-            <Route path="/praxen" element={<ProtectedRoute><PraxenJourney /></ProtectedRoute>} />
-            <Route path="/kunden" element={<ProtectedRoute><Kunden /></ProtectedRoute>} />
-            <Route path="/kunden/:id" element={<ProtectedRoute><Kunden /></ProtectedRoute>} />
-            <Route path="/interessenten" element={<ProtectedRoute><Interessenten /></ProtectedRoute>} />
-            <Route path="/demo-tracking" element={<ProtectedRoute><DemoTracking /></ProtectedRoute>} />
             <Route path="/tickets" element={<ProtectedRoute><Tickets /></ProtectedRoute>} />
             <Route path="/kalender" element={<ProtectedRoute><Kalender /></ProtectedRoute>} />
             <Route path="/lizenzen" element={<ProtectedRoute><Lizenzen /></ProtectedRoute>} />
