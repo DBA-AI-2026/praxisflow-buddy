@@ -44,13 +44,13 @@ function getQuickLinks(role: AppRole | null): QuickLink[] {
       ];
     case "user":
       return [
-        { to: "/interessenten", label: "Meine Leads", icon: Users, primary: true },
-        { to: "/praxen", label: "Kunden", icon: Building2 },
+        { to: "/pipeline", label: "Meine Leads", icon: Users, primary: true },
+        { to: "/pipeline?tab=bestandskunden", label: "Kunden", icon: Building2 },
         { to: "/reservierungen", label: "Reservierungen", icon: BookMarked },
       ];
     case "sales_partner":
       return [
-        { to: "/interessenten", label: "Interessenten", icon: Users, primary: true },
+        { to: "/pipeline", label: "Interessenten", icon: Users, primary: true },
         { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle },
         { to: "/reservierungen", label: "Reservierungen", icon: BookMarked },
         { to: "/vertrieb/provisionen", label: "Provisionen", icon: BarChart3 },
@@ -58,20 +58,20 @@ function getQuickLinks(role: AppRole | null): QuickLink[] {
     case "regional_lead":
       return [
         { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle, primary: true },
-        { to: "/interessenten", label: "Interessenten", icon: Users },
+        { to: "/pipeline", label: "Pipeline", icon: Users },
         { to: "/vertrieb/provisionen", label: "Provisionen", icon: BarChart3 },
-        { to: "/praxen", label: "Kunden", icon: Building2 },
+        { to: "/pipeline?tab=bestandskunden", label: "Kunden", icon: Building2 },
       ];
     case "vertragsabteilung":
       return [
         { to: "/vertrieb/vertraege", label: "Verträge prüfen", icon: FileText, primary: true },
-        { to: "/praxen", label: "Kunden", icon: Building2 },
+        { to: "/pipeline?tab=bestandskunden", label: "Kunden", icon: Building2 },
         { to: "/umsaetze", label: "Umsätze", icon: TrendingUp },
       ];
     case "sales_lead":
       return [
         { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle, primary: true },
-        { to: "/interessenten", label: "Interessenten", icon: Users },
+        { to: "/pipeline", label: "Pipeline", icon: Users },
         { to: "/vertrieb/provisionen", label: "Provisionen", icon: BarChart3 },
         { to: "/admin/plz-mapping", label: "PLZ-Zuordnung", icon: MapPin },
       ];
@@ -79,8 +79,8 @@ function getQuickLinks(role: AppRole | null): QuickLink[] {
     default:
       return [
         { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle, primary: true },
-        { to: "/interessenten", label: "Interessenten", icon: Users },
-        { to: "/praxen", label: "Kunden", icon: Eye },
+        { to: "/pipeline", label: "Pipeline", icon: Users },
+        { to: "/pipeline?tab=bestandskunden", label: "Kunden", icon: Eye },
       ];
   }
 }

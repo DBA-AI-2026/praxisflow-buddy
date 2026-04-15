@@ -13,21 +13,23 @@ export interface RoutePermission {
 export const routePermissions: RoutePermission[] = [
   // Base routes
   { path: "/", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "tippgeber", "admin"] },
+
+  // Pipeline (zentraler Arbeitsbereich – ersetzt Interessenten, Kunden-Journey, Kundenstamm)
+  { path: "/pipeline", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
+
+  // Legacy redirects (→ /pipeline) – permissions kept for ProtectedRoute compatibility
   { path: "/praxen", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
+  { path: "/praxen-journey", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
+  { path: "/interessenten", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
   { path: "/kunden", allowedRoles: ["user", "sales_lead", "regional_lead", "admin"] },
-  // tippgeber: kein Zugriff auf Tickets, Lizenzen, Umsätze, Interessenten
+
+  // tippgeber: kein Zugriff auf Tickets, Lizenzen, Umsätze
   { path: "/tickets", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
   { path: "/lizenzen", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
   { path: "/umsaetze", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
 
   // Reservierungen
   { path: "/reservierungen", allowedRoles: ["user", "sales_partner", "regional_lead", "admin"] },
-
-  // Interessenten
-  { path: "/interessenten", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
-
-  // Journey-Übersicht
-  { path: "/praxen-journey", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
 
   // Demo-Tracking
   { path: "/demo-tracking", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
@@ -37,7 +39,7 @@ export const routePermissions: RoutePermission[] = [
   { path: "/export", allowedRoles: ["sales_lead", "admin"] },
   { path: "/integrationen", allowedRoles: ["admin"] },
 
-  // Vertrieb routes
+  // Vertrieb routes (Vertragsdetail kontextbezogen, kein Nav-Eintrag)
   { path: "/vertrieb/vertriebler", allowedRoles: ["sales_lead", "regional_lead", "admin"] },
   { path: "/vertrieb/vertraege", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
   { path: "/vertrieb/provisionen", allowedRoles: ["user", "sales_partner", "tippgeber", "sales_lead", "regional_lead", "admin"] },
