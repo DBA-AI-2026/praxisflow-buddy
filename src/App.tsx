@@ -77,6 +77,8 @@ const App = () => (
             <Route path="/praxen" element={<Navigate to="/pipeline" replace />} />
             <Route path="/interessenten" element={<Navigate to="/pipeline" replace />} />
             <Route path="/kunden" element={<Navigate to="/pipeline?tab=bestandskunden" replace />} />
+            <Route path="/kunden/:id" element={<ProtectedRoute><Kunden /></ProtectedRoute>} />
+            <Route path="/demo-tracking" element={<ProtectedRoute><DemoTracking /></ProtectedRoute>} />
             <Route path="/reservierungen" element={<ProtectedRoute><Reservierungen /></ProtectedRoute>} />
             <Route path="/tickets" element={<ProtectedRoute><Tickets /></ProtectedRoute>} />
             <Route path="/kalender" element={<ProtectedRoute><Kalender /></ProtectedRoute>} />
@@ -86,7 +88,7 @@ const App = () => (
             {/* P1-Fix: /integrationen zeigt jetzt korrekt Integrationen.tsx (Lexware), nicht Buchhaltung */}
             <Route path="/integrationen" element={<ProtectedRoute><Integrationen /></ProtectedRoute>} />
             <Route path="/vertrieb/vertriebler" element={<ProtectedRoute><Vertriebler /></ProtectedRoute>} />
-            {/* P1-Fix: /vertrieb/vertraege war versteckt, jetzt in Nav sichtbar */}
+            {/* Vertragsdetail – kontextbezogen erreichbar, kein Nav-Eintrag */}
             <Route path="/vertrieb/vertraege" element={<ProtectedRoute><Vertraege /></ProtectedRoute>} />
             <Route path="/vertrieb/provisionen" element={<ProtectedRoute><Provisionen /></ProtectedRoute>} />
             <Route path="/rechnungen" element={<ProtectedRoute><Rechnungen /></ProtectedRoute>} />
@@ -109,7 +111,7 @@ const App = () => (
             <Route path="/admin/plz-mapping" element={<ProtectedRoute><PlzMapping /></ProtectedRoute>} />
             {/* P1-Fix: /buchhaltung ist die kanonische Route für FiBu/Rechnungen */}
             <Route path="/buchhaltung" element={<ProtectedRoute><Buchhaltung /></ProtectedRoute>} />
-            <Route path="/praxen-journey" element={<ProtectedRoute><PraxenJourney /></ProtectedRoute>} />
+            {/* /praxen-journey redirect is handled above */}
             <Route path="/qodia-verbrauch" element={<ProtectedRoute><QodiaVerbrauch /></ProtectedRoute>} />
             <Route path="/admin/rollen-uebersicht" element={<ProtectedRoute><RollenUebersicht /></ProtectedRoute>} />
             <Route path="/admin/fibu-reconciliation" element={<ProtectedRoute><FibuReconciliation /></ProtectedRoute>} />
