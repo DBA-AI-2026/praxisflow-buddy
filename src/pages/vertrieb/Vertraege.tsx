@@ -2178,14 +2178,23 @@ export default function Vertraege() {
                             </DropdownMenuItem>
                           )}
                           {(c.status === "aktiv" || c.status === "gezeichnet") && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => openExtensionDialog(c)} className="text-primary">
-                                <GitMerge className="h-4 w-4 mr-2" />
-                                Produkt hinzubuchen
-                              </DropdownMenuItem>
-                            </>
-                          )}
+                             <>
+                               <DropdownMenuSeparator />
+                               <DropdownMenuItem onClick={() => openExtensionDialog(c)} className="text-primary">
+                                 <GitMerge className="h-4 w-4 mr-2" />
+                                 Produkt hinzubuchen
+                               </DropdownMenuItem>
+                             </>
+                           )}
+                          {(c.status === "aktiv" || c.status === "eingegangen" || c.status === "gezeichnet") && !c.stripe_customer_id && (
+                             <>
+                               <DropdownMenuSeparator />
+                               <DropdownMenuItem onClick={() => handleStripeCheckout(c.id)} className="text-primary">
+                                 <CreditCard className="h-4 w-4 mr-2" />
+                                 Digitale Zahlung starten
+                               </DropdownMenuItem>
+                             </>
+                           )}
                           {isAdmin && c.status === "gezeichnet" && (
                             <>
                               <DropdownMenuSeparator />
