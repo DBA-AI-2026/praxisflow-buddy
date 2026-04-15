@@ -970,8 +970,10 @@ export default function PraxenJourney() {
   const urlTab = searchParams.get("tab");
   const urlId = searchParams.get("id") ?? undefined;
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"leads" | "vertraege" | "kunden">(
-    urlTab === "vertraege" ? "vertraege" : urlTab === "kunden" ? "kunden" : "leads"
+  const [tab, setTab] = useState<"interessenten" | "abschlussphase" | "bestandskunden">(
+    urlTab === "abschlussphase" || urlTab === "vertraege" ? "abschlussphase"
+      : urlTab === "bestandskunden" || urlTab === "kunden" ? "bestandskunden"
+      : "interessenten"
   );
 
   const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions, isRegionalLead } = useRegionalTeam();
@@ -990,21 +992,19 @@ export default function PraxenJourney() {
   });
 
   const tabs: TabDef[] = [
-    { key: "leads", label: "Interessenten", icon: Users, count: counts.leads },
-    { key: "vertraege", label: "Verträge", icon: FileText, count: counts.contracts, warningCount: counts.missingEmail },
-    { key: "kunden", label: "Kunden", icon: Building2, count: counts.kunden },
+    { key: "interessenten", label: "Interessenten", icon: Users, count: counts.leads },
+    { key: "abschlussphase", label: "Abschlussphase", icon: FileText, count: counts.contracts, warningCount: counts.missingEmail },
+    { key: "bestandskunden", label: "Bestandskunden", icon: Building2, count: counts.kunden },
   ];
 
   return (
     <MainLayout
-      title="Kunden-Journey"
-      subtitle="Von der Anfrage bis zum aktiven Kunden — alles in einem Blick"
+      title="Pipeline"
+      subtitle="Vom Interessenten zum aktiven Kunden — dein zentraler Arbeitsbereich"
     >
       <div className="card-elevated overflow-hidden">
-        {/* Tab navigation */}
         <JourneyTabBar activeTab={tab} onSelect={(t) => setTab(t as any)} tabs={tabs} />
 
-        {/* Search bar */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/10 gap-3 flex-wrap">
           <div className="relative w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -1016,7 +1016,6 @@ export default function PraxenJourney() {
             />
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Team filter — only for Regionalleiter */}
             {isRegionalLead && teamFilterOptions.length > 1 && (
               <Select value={teamFilter} onValueChange={setTeamFilter}>
                 <SelectTrigger className="h-8 w-52 text-xs">
@@ -1029,8 +1028,7 @@ export default function PraxenJourney() {
                 </SelectContent>
               </Select>
             )}
-            {/* Warning notice inline — only for vertraege tab */}
-            {tab === "vertraege" && counts.missingEmail > 0 && (
+            {tab === "abschlussphase" && counts.missingEmail > 0 && (
               <div className="flex items-center gap-2 text-xs text-warning font-medium">
                 <FileText className="h-3.5 w-3.5" />
                 <span>{counts.missingEmail} Vertrag{counts.missingEmail > 1 ? "e" : ""} ohne Bestätigungs-E-Mail</span>
@@ -1039,10 +1037,9 @@ export default function PraxenJourney() {
           </div>
         </div>
 
-        {/* Tab content */}
-        {tab === "leads" && <InteressentenTab search={search} highlightId={urlId} teamFilter={teamFilter} matchesTeamFilter={matchesTeamFilter} />}
-        {tab === "vertraege" && <VertraegeTab search={search} highlightId={urlId} missingEmailCount={counts.missingEmail} matchesTeamFilter={matchesTeamFilter} />}
-        {tab === "kunden" && <KundenTab search={search} highlightId={urlId} matchesTeamFilter={matchesTeamFilter} />}
+        {tab === "interessenten" && <InteressentenTab search={search} highlightId={urlId} teamFilter={teamFilter} matchesTeamFilter={matchesTeamFilter} />}
+        {tab === "abschlussphase" && <VertraegeTab search={search} highlightId={urlId} missingEmailCount={counts.missingEmail} matchesTeamFilter={matchesTeamFilter} />}
+        {tab === "bestandskunden" && <KundenTab search={search} highlightId={urlId} matchesTeamFilter={matchesTeamFilter} />}
       </div>
     </MainLayout>
   );

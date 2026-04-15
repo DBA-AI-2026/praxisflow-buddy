@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { RolePreviewProvider } from "@/contexts/RolePreviewContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -16,7 +16,7 @@ import Export from "./pages/Export";
 import Umsaetze from "./pages/Umsaetze";
 import Reservierungen from "./pages/Reservierungen";
 import DemoTracking from "./pages/DemoTracking";
-import Interessenten from "./pages/Interessenten";
+// Interessenten.tsx removed – Pipeline Tab "Interessenten" replaces it
 import Provisionen from "./pages/vertrieb/Provisionen";
 import Rechnungen from "./pages/Rechnungen";
 import Vertraege from "./pages/vertrieb/Vertraege";
@@ -71,13 +71,15 @@ const App = () => (
             <Route path="/mandate-success" element={<MandateSuccess />} />
             <Route path="/buchen" element={<Buchen />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/reservierungen" element={<ProtectedRoute><Reservierungen /></ProtectedRoute>} />
-            {/* Legacy /praxen → redirect to /praxen-journey (Kunden-Journey ist die aktuelle Ansicht) */}
-            <Route path="/praxen" element={<ProtectedRoute><PraxenJourney /></ProtectedRoute>} />
-            <Route path="/kunden" element={<ProtectedRoute><Kunden /></ProtectedRoute>} />
+            <Route path="/pipeline" element={<ProtectedRoute><PraxenJourney /></ProtectedRoute>} />
+            {/* Legacy redirects → Pipeline */}
+            <Route path="/praxen-journey" element={<Navigate to="/pipeline" replace />} />
+            <Route path="/praxen" element={<Navigate to="/pipeline" replace />} />
+            <Route path="/interessenten" element={<Navigate to="/pipeline" replace />} />
+            <Route path="/kunden" element={<Navigate to="/pipeline?tab=bestandskunden" replace />} />
             <Route path="/kunden/:id" element={<ProtectedRoute><Kunden /></ProtectedRoute>} />
-            <Route path="/interessenten" element={<ProtectedRoute><Interessenten /></ProtectedRoute>} />
             <Route path="/demo-tracking" element={<ProtectedRoute><DemoTracking /></ProtectedRoute>} />
+            <Route path="/reservierungen" element={<ProtectedRoute><Reservierungen /></ProtectedRoute>} />
             <Route path="/tickets" element={<ProtectedRoute><Tickets /></ProtectedRoute>} />
             <Route path="/kalender" element={<ProtectedRoute><Kalender /></ProtectedRoute>} />
             <Route path="/lizenzen" element={<ProtectedRoute><Lizenzen /></ProtectedRoute>} />
@@ -86,7 +88,7 @@ const App = () => (
             {/* P1-Fix: /integrationen zeigt jetzt korrekt Integrationen.tsx (Lexware), nicht Buchhaltung */}
             <Route path="/integrationen" element={<ProtectedRoute><Integrationen /></ProtectedRoute>} />
             <Route path="/vertrieb/vertriebler" element={<ProtectedRoute><Vertriebler /></ProtectedRoute>} />
-            {/* P1-Fix: /vertrieb/vertraege war versteckt, jetzt in Nav sichtbar */}
+            {/* Vertragsdetail – kontextbezogen erreichbar, kein Nav-Eintrag */}
             <Route path="/vertrieb/vertraege" element={<ProtectedRoute><Vertraege /></ProtectedRoute>} />
             <Route path="/vertrieb/provisionen" element={<ProtectedRoute><Provisionen /></ProtectedRoute>} />
             <Route path="/rechnungen" element={<ProtectedRoute><Rechnungen /></ProtectedRoute>} />
@@ -109,7 +111,7 @@ const App = () => (
             <Route path="/admin/plz-mapping" element={<ProtectedRoute><PlzMapping /></ProtectedRoute>} />
             {/* P1-Fix: /buchhaltung ist die kanonische Route für FiBu/Rechnungen */}
             <Route path="/buchhaltung" element={<ProtectedRoute><Buchhaltung /></ProtectedRoute>} />
-            <Route path="/praxen-journey" element={<ProtectedRoute><PraxenJourney /></ProtectedRoute>} />
+            {/* /praxen-journey redirect is handled above */}
             <Route path="/qodia-verbrauch" element={<ProtectedRoute><QodiaVerbrauch /></ProtectedRoute>} />
             <Route path="/admin/rollen-uebersicht" element={<ProtectedRoute><RollenUebersicht /></ProtectedRoute>} />
             <Route path="/admin/fibu-reconciliation" element={<ProtectedRoute><FibuReconciliation /></ProtectedRoute>} />
