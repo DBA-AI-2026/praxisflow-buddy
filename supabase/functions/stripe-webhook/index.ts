@@ -565,6 +565,36 @@ async function handleContractActivation(
 
   log("Contract activated via Stripe", contractId);
 
+  // ── Ensure default_payment_method is set on the Stripe customer ──
+  if (stripeCustomerId) {
+    try {
+      const customer = await stripe.customers.retrieve(stripeCustomerId) as Stripe.Customer;
+      const currentDefault = customer.invoice_settings?.default_payment_method;
+      if (!currentDefault) {
+        const pms = await stripe.paymentMethods.list({
+          customer: stripeCustomerId,
+          type: "sepa_debit",
+        });
+        if (pms.data.length === 1) {
+          await stripe.customers.update(stripeCustomerId, {
+            invoice_settings: { default_payment_method: pms.data[0].id },
+          });
+          log("Set SEPA default_payment_method after contract activation", {
+            stripeCustomerId,
+            pmId: pms.data[0].id,
+          });
+        } else if (pms.data.length > 1) {
+          log("WARN: multiple SEPA PMs, cannot auto-set default", {
+            stripeCustomerId,
+            count: pms.data.length,
+          });
+        }
+      }
+    } catch (pmErr) {
+      log("WARN: could not ensure default_payment_method", String(pmErr));
+    }
+  }
+
   // 3-Tier: customers-Eintrag sicherstellen
   if (contract?.hfx_customer_number) {
     const { error: custErr } = await supabase
