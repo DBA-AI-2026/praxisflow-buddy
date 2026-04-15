@@ -264,7 +264,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <nav className="flex-1 space-y-1 px-2 lg:px-3 py-4 overflow-y-auto">
         <NavSection label="Übersicht" items={dashboardNav} {...sectionProps} />
         <NavSection label="Vertrieb" items={vertriebNavigation} {...sectionProps} />
-        <NavSection label="Kunden & Verträge" items={kundenVertraegeNavigation} {...sectionProps} />
+        <NavSection label="Pipeline & Kunden" items={kundenVertraegeNavigation} {...sectionProps} />
         <NavSection label="Finanzen" items={finanzenNavigation} {...sectionProps} />
         <NavSection label="Allgemein" items={allgemeinNavigation} {...sectionProps} />
         <NavSection label="Vertriebs-Admin" items={vertriebsAdminNavigation} {...sectionProps} />
