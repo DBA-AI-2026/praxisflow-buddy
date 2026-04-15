@@ -16,7 +16,7 @@ import Export from "./pages/Export";
 import Umsaetze from "./pages/Umsaetze";
 import Reservierungen from "./pages/Reservierungen";
 import DemoTracking from "./pages/DemoTracking";
-import Interessenten from "./pages/Interessenten";
+// Interessenten.tsx removed – Pipeline Tab "Interessenten" replaces it
 import Provisionen from "./pages/vertrieb/Provisionen";
 import Rechnungen from "./pages/Rechnungen";
 import Vertraege from "./pages/vertrieb/Vertraege";
