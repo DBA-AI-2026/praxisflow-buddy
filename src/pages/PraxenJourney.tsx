@@ -298,10 +298,6 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
     },
   });
 
-  const activeCount = leads.filter((l: any) => ACTIVE_LEAD_STATUSES.includes(l.status)).length;
-  const closedKeinCount = leads.filter((l: any) => l.status === "kein_abschluss").length;
-  const closedAblCount = leads.filter((l: any) => l.status === "abgelehnt").length;
-
   const getSource = (l: any): "homepage" | "manuell" => {
     if (l.source === "manual") return "manuell";
     if (l.source === "homepage") return "homepage";
@@ -309,18 +305,26 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
     return "manuell";
   };
 
-  const homepageCount = leads.filter((l: any) => getSource(l) === "homepage").length;
-  const manuellCount = leads.filter((l: any) => getSource(l) === "manuell").length;
+  // Team-filtered leads (respects regional lead / partner visibility)
+  const teamLeads = useMemo(() => {
+    if (isSalesPartner || isTippgeber) return leads;
+    return leads.filter((l: any) => matchesTeamFilter(l.assigned_to));
+  }, [leads, matchesTeamFilter, isSalesPartner, isTippgeber]);
+
+  const activeCount = teamLeads.filter((l: any) => ACTIVE_LEAD_STATUSES.includes(l.status)).length;
+  const closedKeinCount = teamLeads.filter((l: any) => l.status === "kein_abschluss").length;
+  const closedAblCount = teamLeads.filter((l: any) => l.status === "abgelehnt").length;
+  const homepageCount = teamLeads.filter((l: any) => getSource(l) === "homepage").length;
+  const manuellCount = teamLeads.filter((l: any) => getSource(l) === "manuell").length;
 
   const s = search.toLowerCase();
 
-  const filtered = leads.filter((l: any) => {
+  const filtered = teamLeads.filter((l: any) => {
     const src = getSource(l);
     if (sourceFilter !== "alle" && src !== sourceFilter) return false;
     if (statusFilter === "aktiv" && !ACTIVE_LEAD_STATUSES.includes(l.status)) return false;
     if (statusFilter === "kein_abschluss" && l.status !== "kein_abschluss") return false;
     if (statusFilter === "abgelehnt" && l.status !== "abgelehnt") return false;
-    if (!isSalesPartner && !isTippgeber && !matchesTeamFilter(l.assigned_to)) return false;
 
     if (!s) return true;
     return (
@@ -346,14 +350,15 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
   }, [filtered]);
 
   // Attention metrics
+  // Attention metrics — based on team-filtered, active leads only
   const attentionMetrics = useMemo(() => {
-    const activeLeads = leads.filter((l: any) => ACTIVE_LEAD_STATUSES.includes(l.status));
+    const activeLeads = teamLeads.filter((l: any) => ACTIVE_LEAD_STATUSES.includes(l.status));
     const overdue14 = activeLeads.filter((l: any) => differenceInDays(new Date(), new Date(l.created_at)) > 14).length;
     const overdue7 = activeLeads.filter((l: any) => { const d = differenceInDays(new Date(), new Date(l.created_at)); return d > 7 && d <= 14; }).length;
     const qualifiziert = activeLeads.filter((l: any) => l.status === "qualifiziert").length;
     const neu = activeLeads.filter((l: any) => l.status === "neu").length;
     return { overdue14, overdue7, qualifiziert, neu };
-  }, [leads]);
+  }, [teamLeads]);
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -441,12 +446,12 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
           <FilterPill active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")} label="Im Prozess" count={activeCount} />
           <FilterPill active={statusFilter === "kein_abschluss"} onClick={() => setStatusFilter("kein_abschluss")} label="Kein Abschluss" count={closedKeinCount} />
           <FilterPill active={statusFilter === "abgelehnt"} onClick={() => setStatusFilter("abgelehnt")} label="Abgelehnt" count={closedAblCount} />
-          <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={leads.length} />
+          <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={teamLeads.length} />
 
           <span className="h-5 w-px bg-border mx-1" />
 
           {[
-            { key: "alle" as const, icon: null, label: "Alle Quellen", count: leads.length },
+            { key: "alle" as const, icon: null, label: "Alle Quellen", count: teamLeads.length },
             { key: "homepage" as const, icon: <Globe className="h-3 w-3" />, label: "Homepage", count: homepageCount },
             { key: "manuell" as const, icon: <PenLine className="h-3 w-3" />, label: "Manuell", count: manuellCount },
           ].map((t) => (
@@ -656,15 +661,20 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
     },
   });
 
+  // Team-filtered contracts
+  const teamContracts = useMemo(() => {
+    if (isSalesPartner || isTippgeber) return contracts;
+    return contracts.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
+  }, [contracts, matchesTeamFilter, isSalesPartner, isTippgeber]);
+
   const statusCounts = ABSCHLUSS_STATUSES.reduce((acc, s) => {
-    acc[s] = contracts.filter((c: any) => c.status === s).length;
+    acc[s] = teamContracts.filter((c: any) => c.status === s).length;
     return acc;
   }, {} as Record<string, number>);
 
   const s = search.toLowerCase();
-  const filteredBase = contracts.filter((c: any) => {
+  const filteredBase = teamContracts.filter((c: any) => {
     if (statusFilter !== "alle" && c.status !== statusFilter) return false;
-    if (!isSalesPartner && !isTippgeber && !matchesTeamFilter(c.sales_partner_id) && !matchesTeamFilter(c.created_by)) return false;
     if (!s) return true;
     return (
       c.customer_name?.toLowerCase().includes(s) ||
@@ -695,11 +705,11 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
 
   // Attention metrics
   const attentionMetrics = useMemo(() => {
-    const missingEmail = contracts.filter((c: any) => c.status === "eingegangen" && !c.confirmation_email_sent_at).length;
-    const waitingPayment = contracts.filter((c: any) => c.status === "eingegangen" && c.confirmation_email_sent_at && !c.customer_confirmed_at).length;
-    const stale7 = contracts.filter((c: any) => differenceInDays(new Date(), new Date(c.created_at)) > 7).length;
+    const missingEmail = teamContracts.filter((c: any) => c.status === "eingegangen" && !c.confirmation_email_sent_at).length;
+    const waitingPayment = teamContracts.filter((c: any) => c.status === "eingegangen" && c.confirmation_email_sent_at && !c.customer_confirmed_at).length;
+    const stale7 = teamContracts.filter((c: any) => differenceInDays(new Date(), new Date(c.created_at)) > 7).length;
     return { missingEmail, waitingPayment, stale7 };
-  }, [contracts]);
+  }, [teamContracts]);
 
   const getNextAction = (c: any) => {
     switch (c.status) {
@@ -742,7 +752,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
 
       {/* Status filter pills */}
       <div className="p-4 border-b border-border flex flex-wrap gap-2 items-center">
-        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={contracts.length} />
+        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={teamContracts.length} />
         {ABSCHLUSS_STATUSES.map((st) => {
           const cfg = contractStatusCfg[st];
           if (!cfg) return null;
@@ -1033,7 +1043,7 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                   <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => navigate(`/vertrieb/vertraege?contractId=${c.id}`)}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-primary bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors opacity-0 group-hover:opacity-100"
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-primary bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors"
                     >
                       <Eye className="h-3 w-3" />
                       Vertrag
