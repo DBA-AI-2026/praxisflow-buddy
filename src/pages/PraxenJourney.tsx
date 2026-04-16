@@ -1123,6 +1123,7 @@ function JourneyTabBar({ activeTab, onSelect, tabs }: {
 export default function PraxenJourney() {
   const [searchParams] = useSearchParams();
   const urlTab = searchParams.get("tab");
+  const urlFilter = searchParams.get("filter") ?? undefined;
   const urlId = searchParams.get("id") ?? undefined;
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"interessenten" | "abschlussphase" | "kunden">(
