@@ -1066,7 +1066,7 @@ export default function PraxenJourney() {
     queryKey: ["journey-counts"],
     queryFn: async () => {
       const [l, ab, k, me] = await Promise.all([
-        supabase.from("leads").select("id", { count: "exact", head: true }).neq("status", "kunde"),
+        supabase.from("leads").select("id", { count: "exact", head: true }).in("status", ACTIVE_LEAD_STATUSES),
         supabase.from("contracts").select("id", { count: "exact", head: true }).in("status", ["entwurf", "eingegangen", "gezeichnet"]),
         supabase.from("contracts").select("id", { count: "exact", head: true }).in("status", ["aktiv", "gekuendigt", "beendet"]),
         supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "eingegangen").is("confirmation_email_sent_at", null),
