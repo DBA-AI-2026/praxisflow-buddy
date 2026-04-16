@@ -673,9 +673,8 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
   }, {} as Record<string, number>);
 
   const s = search.toLowerCase();
-  const filteredBase = contracts.filter((c: any) => {
+  const filteredBase = teamContracts.filter((c: any) => {
     if (statusFilter !== "alle" && c.status !== statusFilter) return false;
-    if (!isSalesPartner && !isTippgeber && !matchesTeamFilter(c.sales_partner_id) && !matchesTeamFilter(c.created_by)) return false;
     if (!s) return true;
     return (
       c.customer_name?.toLowerCase().includes(s) ||
@@ -706,11 +705,11 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
 
   // Attention metrics
   const attentionMetrics = useMemo(() => {
-    const missingEmail = contracts.filter((c: any) => c.status === "eingegangen" && !c.confirmation_email_sent_at).length;
-    const waitingPayment = contracts.filter((c: any) => c.status === "eingegangen" && c.confirmation_email_sent_at && !c.customer_confirmed_at).length;
-    const stale7 = contracts.filter((c: any) => differenceInDays(new Date(), new Date(c.created_at)) > 7).length;
+    const missingEmail = teamContracts.filter((c: any) => c.status === "eingegangen" && !c.confirmation_email_sent_at).length;
+    const waitingPayment = teamContracts.filter((c: any) => c.status === "eingegangen" && c.confirmation_email_sent_at && !c.customer_confirmed_at).length;
+    const stale7 = teamContracts.filter((c: any) => differenceInDays(new Date(), new Date(c.created_at)) > 7).length;
     return { missingEmail, waitingPayment, stale7 };
-  }, [contracts]);
+  }, [teamContracts]);
 
   const getNextAction = (c: any) => {
     switch (c.status) {
