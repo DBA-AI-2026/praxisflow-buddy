@@ -999,22 +999,22 @@ export default function PraxenJourney() {
 
   const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions, isRegionalLead } = useRegionalTeam();
 
-  const { data: counts = { leads: 0, contracts: 0, kunden: 0, missingEmail: 0 } } = useQuery({
+  const { data: counts = { leads: 0, abschluss: 0, kunden: 0, missingEmail: 0 } } = useQuery({
     queryKey: ["journey-counts"],
     queryFn: async () => {
-      const [l, c, k, me] = await Promise.all([
+      const [l, ab, k, me] = await Promise.all([
         supabase.from("leads").select("id", { count: "exact", head: true }).neq("status", "kunde"),
-        supabase.from("contracts").select("id", { count: "exact", head: true }),
-        supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "aktiv"),
+        supabase.from("contracts").select("id", { count: "exact", head: true }).in("status", ["entwurf", "eingegangen", "gezeichnet"]),
+        supabase.from("contracts").select("id", { count: "exact", head: true }).in("status", ["aktiv", "gekuendigt", "beendet"]),
         supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "eingegangen").is("confirmation_email_sent_at", null),
       ]);
-      return { leads: l.count ?? 0, contracts: c.count ?? 0, kunden: k.count ?? 0, missingEmail: me.count ?? 0 };
+      return { leads: l.count ?? 0, abschluss: ab.count ?? 0, kunden: k.count ?? 0, missingEmail: me.count ?? 0 };
     },
   });
 
   const tabs: TabDef[] = [
     { key: "interessenten", label: "Interessenten", icon: Users, count: counts.leads },
-    { key: "abschlussphase", label: "Abschlussphase", icon: FileText, count: counts.contracts, warningCount: counts.missingEmail },
+    { key: "abschlussphase", label: "Abschlussphase", icon: FileText, count: counts.abschluss, warningCount: counts.missingEmail },
     { key: "kunden", label: "Kunden", icon: Building2, count: counts.kunden },
   ];
 
