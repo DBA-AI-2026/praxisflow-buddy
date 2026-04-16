@@ -919,21 +919,27 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
     },
   });
 
+  // Team-filtered contracts for consistent counts
+  const teamContracts = useMemo(() => {
+    if (isSalesPartner || isTippgeber) return allContracts;
+    return allContracts.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
+  }, [allContracts, matchesTeamFilter, isSalesPartner, isTippgeber]);
+
   const statusCounts = KUNDEN_STATUSES.reduce((acc, s) => {
-    acc[s] = allContracts.filter((c: any) => c.status === s).length;
+    acc[s] = teamContracts.filter((c: any) => c.status === s).length;
     return acc;
   }, {} as Record<string, number>);
 
   const s = search.toLowerCase();
 
+  // Deduplicate by hfx_customer_number for cleaner view
   const statusFiltered = statusFilter === "alle"
-    ? allContracts
-    : allContracts.filter((c: any) => c.status === statusFilter);
+    ? teamContracts
+    : teamContracts.filter((c: any) => c.status === statusFilter);
 
   // Deduplicate by hfx_customer_number for cleaner view
   const seenKeys = new Set<string>();
   const rows = statusFiltered.filter((c: any) => {
-    if (!isSalesPartner && !matchesTeamFilter(c.sales_partner_id) && !matchesTeamFilter(c.created_by)) return false;
     const key = c.hfx_customer_number
       ? `hfx:${c.hfx_customer_number}`
       : `name:${(c.praxis || c.customer_name || "").toLowerCase().trim()}`;
@@ -981,7 +987,7 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
         <FilterPill active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")} label="Aktiv" count={statusCounts.aktiv ?? 0} />
         <FilterPill active={statusFilter === "gekuendigt"} onClick={() => setStatusFilter("gekuendigt")} label="Gekündigt" count={statusCounts.gekuendigt ?? 0} />
         <FilterPill active={statusFilter === "beendet"} onClick={() => setStatusFilter("beendet")} label="Beendet" count={statusCounts.beendet ?? 0} />
-        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={allContracts.length} />
+        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={teamContracts.length} />
       </div>
 
       {/* Table */}
