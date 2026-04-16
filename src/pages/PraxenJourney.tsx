@@ -298,10 +298,6 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
     },
   });
 
-  const activeCount = leads.filter((l: any) => ACTIVE_LEAD_STATUSES.includes(l.status)).length;
-  const closedKeinCount = leads.filter((l: any) => l.status === "kein_abschluss").length;
-  const closedAblCount = leads.filter((l: any) => l.status === "abgelehnt").length;
-
   const getSource = (l: any): "homepage" | "manuell" => {
     if (l.source === "manual") return "manuell";
     if (l.source === "homepage") return "homepage";
@@ -309,18 +305,26 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
     return "manuell";
   };
 
-  const homepageCount = leads.filter((l: any) => getSource(l) === "homepage").length;
-  const manuellCount = leads.filter((l: any) => getSource(l) === "manuell").length;
+  // Team-filtered leads (respects regional lead / partner visibility)
+  const teamLeads = useMemo(() => {
+    if (isSalesPartner || isTippgeber) return leads;
+    return leads.filter((l: any) => matchesTeamFilter(l.assigned_to));
+  }, [leads, matchesTeamFilter, isSalesPartner, isTippgeber]);
+
+  const activeCount = teamLeads.filter((l: any) => ACTIVE_LEAD_STATUSES.includes(l.status)).length;
+  const closedKeinCount = teamLeads.filter((l: any) => l.status === "kein_abschluss").length;
+  const closedAblCount = teamLeads.filter((l: any) => l.status === "abgelehnt").length;
+  const homepageCount = teamLeads.filter((l: any) => getSource(l) === "homepage").length;
+  const manuellCount = teamLeads.filter((l: any) => getSource(l) === "manuell").length;
 
   const s = search.toLowerCase();
 
-  const filtered = leads.filter((l: any) => {
+  const filtered = teamLeads.filter((l: any) => {
     const src = getSource(l);
     if (sourceFilter !== "alle" && src !== sourceFilter) return false;
     if (statusFilter === "aktiv" && !ACTIVE_LEAD_STATUSES.includes(l.status)) return false;
     if (statusFilter === "kein_abschluss" && l.status !== "kein_abschluss") return false;
     if (statusFilter === "abgelehnt" && l.status !== "abgelehnt") return false;
-    if (!isSalesPartner && !isTippgeber && !matchesTeamFilter(l.assigned_to)) return false;
 
     if (!s) return true;
     return (
@@ -346,14 +350,15 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
   }, [filtered]);
 
   // Attention metrics
+  // Attention metrics — based on team-filtered, active leads only
   const attentionMetrics = useMemo(() => {
-    const activeLeads = leads.filter((l: any) => ACTIVE_LEAD_STATUSES.includes(l.status));
+    const activeLeads = teamLeads.filter((l: any) => ACTIVE_LEAD_STATUSES.includes(l.status));
     const overdue14 = activeLeads.filter((l: any) => differenceInDays(new Date(), new Date(l.created_at)) > 14).length;
     const overdue7 = activeLeads.filter((l: any) => { const d = differenceInDays(new Date(), new Date(l.created_at)); return d > 7 && d <= 14; }).length;
     const qualifiziert = activeLeads.filter((l: any) => l.status === "qualifiziert").length;
     const neu = activeLeads.filter((l: any) => l.status === "neu").length;
     return { overdue14, overdue7, qualifiziert, neu };
-  }, [leads]);
+  }, [teamLeads]);
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
