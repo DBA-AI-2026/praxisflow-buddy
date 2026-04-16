@@ -438,6 +438,9 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
                     {lead.plz}{lead.ort ? ` ${lead.ort}` : ""}
                   </td>
                   <td className="py-3 px-4">
+                    <VorbezugBadge value={lead.abrechnungszentrum} />
+                  </td>
+                  <td className="py-3 px-4">
                     <StatusPill label={sc.label} cls={sc.cls} />
                   </td>
                   <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
