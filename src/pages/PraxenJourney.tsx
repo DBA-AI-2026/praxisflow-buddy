@@ -919,8 +919,14 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
     },
   });
 
+  // Team-filtered contracts for consistent counts
+  const teamContracts = useMemo(() => {
+    if (isSalesPartner || isTippgeber) return allContracts;
+    return allContracts.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
+  }, [allContracts, matchesTeamFilter, isSalesPartner, isTippgeber]);
+
   const statusCounts = KUNDEN_STATUSES.reduce((acc, s) => {
-    acc[s] = allContracts.filter((c: any) => c.status === s).length;
+    acc[s] = teamContracts.filter((c: any) => c.status === s).length;
     return acc;
   }, {} as Record<string, number>);
 
