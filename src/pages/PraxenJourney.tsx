@@ -317,8 +317,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
       case "qualifiziert":
         return { label: "Vertrag erstellen", icon: <FilePlus className="h-3 w-3" />, cls: "bg-success/10 text-success border border-success/20 hover:bg-success/20", action: () => navigate(`/vertrieb/vertraege?leadId=${lead.id}&praxis=${encodeURIComponent(lead.praxis_name)}&vorname=${encodeURIComponent(lead.vorname)}&nachname=${encodeURIComponent(lead.nachname)}&email=${encodeURIComponent(lead.email)}&plz=${encodeURIComponent(lead.plz)}&ort=${encodeURIComponent(lead.ort || "")}&adresse=${encodeURIComponent(lead.adresse || "")}&hfx=${encodeURIComponent(lead.hfx_customer_number || "")}`) };
       case "vertrag":
-        // Paper flow decommissioned – no action for 'vertrag' status
-        return null;
+        return { label: "→ Abschlussphase", icon: <ArrowRight className="h-3 w-3" />, cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20", action: () => navigate("/pipeline?tab=abschlussphase") };
       default:
         return null;
     }
@@ -503,10 +502,11 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
   );
 }
 
-// ─── Tab: Verträge (Im Prozess + Abgeschlossen) ──────────────────────────────
+// ─── Tab: Abschlussphase (nur Verträge im Abschlussprozess) ──────────────────
 
-function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilter }: { search: string; highlightId?: string; missingEmailCount: number; matchesTeamFilter: (id?: string | null) => boolean }) {
-  const [groupFilter, setGroupFilter] = useState<"prozess" | "abgeschlossen">("prozess");
+const ABSCHLUSS_STATUSES = ["entwurf", "eingegangen", "gezeichnet"];
+
+function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeamFilter }: { search: string; highlightId?: string; missingEmailCount: number; matchesTeamFilter: (id?: string | null) => boolean }) {
   const [statusFilter, setStatusFilter] = useState<string>("alle");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -528,7 +528,7 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
       });
       if (error) throw error;
       toast.success(`Buchungsmail an ${contract.email} gesendet`);
-      queryClient.invalidateQueries({ queryKey: ["journey-contracts-all"] });
+      queryClient.invalidateQueries({ queryKey: ["journey-contracts-abschluss"] });
       queryClient.invalidateQueries({ queryKey: ["journey-counts"] });
     } catch (err: any) {
       toast.error(err.message || "Fehler beim Senden der Buchungsmail");
@@ -544,20 +544,18 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
   }, [highlightId]);
 
   const { data: contracts = [], isLoading } = useQuery({
-    queryKey: ["journey-contracts-all", user?.id, role],
+    queryKey: ["journey-contracts-abschluss", user?.id, role],
     queryFn: async () => {
+      if (isTippgeber) return [];
+
       let query = supabase
         .from("contracts")
         .select("id, customer_name, product_name, status, monthly_price, hfx_customer_number, email, vorname, nachname, praxis, created_at, start_date, confirmation_email_sent_at, customer_confirmed_at, sales_partner_name, sales_partner_id, created_by")
+        .in("status", ABSCHLUSS_STATUSES)
         .order("created_at", { ascending: false });
 
-      // Sales Partner: nur eigene Verträge
       if (isSalesPartner && user?.id) {
         query = query.or(`sales_partner_id.eq.${user.id},created_by.eq.${user.id}`);
-      }
-      // Tippgeber: keine Vertragsansicht
-      if (isTippgeber) {
-        return [];
       }
 
       const { data } = await query;
@@ -565,23 +563,14 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
     },
   });
 
-  const processStatuses = ["entwurf", "eingegangen", "gezeichnet"];
-  const completedStatuses = ["aktiv", "gekuendigt", "beendet"];
-  const currentGroupStatuses = groupFilter === "prozess" ? processStatuses : completedStatuses;
-
-  const groupContracts = contracts.filter((c: any) => currentGroupStatuses.includes(c.status));
-  const processCount = contracts.filter((c: any) => processStatuses.includes(c.status)).length;
-  const completedCount = contracts.filter((c: any) => completedStatuses.includes(c.status)).length;
-
-  const statusCounts = currentGroupStatuses.reduce((acc, s) => {
+  const statusCounts = ABSCHLUSS_STATUSES.reduce((acc, s) => {
     acc[s] = contracts.filter((c: any) => c.status === s).length;
     return acc;
   }, {} as Record<string, number>);
 
   const s = search.toLowerCase();
-  const filtered = groupContracts.filter((c: any) => {
+  const filtered = contracts.filter((c: any) => {
     if (statusFilter !== "alle" && c.status !== statusFilter) return false;
-    // Team filter only for admin/sales_lead/regional_lead — sales_partner already filtered at DB level
     if (!isSalesPartner && !isTippgeber && !matchesTeamFilter(c.sales_partner_id) && !matchesTeamFilter(c.created_by)) return false;
     if (!s) return true;
     return (
@@ -595,17 +584,31 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
     );
   });
 
+  const getNextAction = (c: any) => {
+    switch (c.status) {
+      case "entwurf":
+        return { label: "Vertrag bearbeiten", icon: <PenLine className="h-3 w-3" />, cls: "bg-muted text-muted-foreground border border-border hover:bg-muted/80" };
+      case "eingegangen":
+        if (!c.confirmation_email_sent_at) {
+          return { label: "Buchungsmail senden", icon: <Send className="h-3 w-3" />, cls: "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20" };
+        }
+        if (!c.customer_confirmed_at) {
+          return { label: "Warten auf Zahlung", icon: <Loader2 className="h-3 w-3" />, cls: "bg-warning/10 text-warning border border-warning/20" };
+        }
+        return { label: "Aktivierung prüfen", icon: <CheckCircle2 className="h-3 w-3" />, cls: "bg-success/10 text-success border border-success/20 hover:bg-success/20" };
+      case "gezeichnet":
+        return { label: "Aktivierung vorbereiten", icon: <CheckCircle2 className="h-3 w-3" />, cls: "bg-success/10 text-success border border-success/20 hover:bg-success/20" };
+      default:
+        return null;
+    }
+  };
+
   return (
     <div>
-      {/* Group toggle: Im Prozess / Abgeschlossen */}
+      {/* Status filter pills */}
       <div className="p-4 border-b border-border flex flex-wrap gap-2 items-center">
-        <FilterPill active={groupFilter === "prozess"} onClick={() => { setGroupFilter("prozess"); setStatusFilter("alle"); }} label="Im Prozess" count={processCount} />
-        <FilterPill active={groupFilter === "abgeschlossen"} onClick={() => { setGroupFilter("abgeschlossen"); setStatusFilter("alle"); }} label="Abgeschlossen" count={completedCount} />
-
-        <span className="h-5 w-px bg-border mx-1" />
-
-        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={groupContracts.length} />
-        {currentGroupStatuses.map((st) => {
+        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={contracts.length} />
+        {ABSCHLUSS_STATUSES.map((st) => {
           const cfg = contractStatusCfg[st];
           if (!cfg) return null;
           return (
@@ -632,20 +635,21 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
               <TH right>Monatlich</TH>
               <TH>E-Mail versendet</TH>
               <TH>Zahlung</TH>
+              <TH>Nächster Schritt</TH>
               <TH>Vertrieb</TH>
               <TH>Datum</TH>
-              <TH>{""}</TH>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
               <tr><td colSpan={10} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : filtered.length === 0 ? (
-              <EmptyState icon={FileText} title="Keine ausstehenden Verträge" sub="Alle Verträge sind aktiv oder es gibt noch keine Verträge" />
+              <EmptyState icon={FileText} title="Keine Verträge in der Abschlussphase" sub="Neue Verträge erscheinen hier sobald ein Lead qualifiziert wird" />
             ) : filtered.map((c: any) => {
               const sc = contractStatusCfg[c.status] ?? contractStatusCfg.entwurf;
               const praxisLabel = c.praxis || c.customer_name || "–";
               const arztLabel = [c.vorname, c.nachname].filter(Boolean).join(" ") || null;
+              const nextAction = getNextAction(c);
               return (
                 <tr
                   key={c.id}
@@ -695,46 +699,28 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
                       </span>
                     )}
                   </td>
+                  <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                    {nextAction && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (c.status === "eingegangen" && !c.confirmation_email_sent_at) {
+                            sendBuchungsmail(c, e);
+                          } else {
+                            navigate(`/vertrieb/vertraege?contractId=${c.id}`);
+                          }
+                        }}
+                        disabled={sendingBuchungsmail === c.id}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors whitespace-nowrap ${nextAction.cls}`}
+                      >
+                        {sendingBuchungsmail === c.id ? <Loader2 className="h-3 w-3 animate-spin" /> : nextAction.icon}
+                        {nextAction.label}
+                      </button>
+                    )}
+                  </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground">{c.sales_partner_name || "–"}</td>
                   <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
                     {c.created_at ? format(new Date(c.created_at), "dd.MM.yy", { locale: de }) : "–"}
-                  </td>
-                  <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-2">
-                      {/* Buchungsmail senden – shown for eingegangen contracts without sent email */}
-                      {c.status === "eingegangen" && !c.confirmation_email_sent_at && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={(e) => sendBuchungsmail(c, e)}
-                                disabled={sendingBuchungsmail === c.id}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 disabled:opacity-50 transition-colors whitespace-nowrap"
-                              >
-                                {sendingBuchungsmail === c.id
-                                  ? <Loader2 className="h-3 w-3 animate-spin" />
-                                  : <Send className="h-3 w-3" />}
-                                Buchungsmail erneut
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>Digitalen Buchungslink an Kunden senden</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => navigate(`/vertrieb/vertraege?contractId=${c.id}`)}
-                              className="text-primary hover:text-primary/70 transition-colors"
-                            >
-                              <ArrowRight className="h-3.5 w-3.5" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>In Vertragsübersicht öffnen</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
                   </td>
                 </tr>
               );
@@ -746,33 +732,41 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
   );
 }
 
-// ─── Tab: Kunden ──────────────────────────────────────────────────────────────
+// ─── Tab: Kunden (aktiv, gekündigt, beendet) ─────────────────────────────────
+
+const KUNDEN_STATUSES = ["aktiv", "gekuendigt", "beendet"];
+
+const kundenStatusCfg: Record<string, { label: string; cls: string }> = {
+  aktiv:      { label: "Aktiv",     cls: "bg-success/10 text-success" },
+  gekuendigt: { label: "Gekündigt", cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400" },
+  beendet:    { label: "Beendet",   cls: "bg-destructive/10 text-destructive" },
+};
 
 function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string; highlightId?: string; matchesTeamFilter: (id?: string | null) => boolean }) {
   const navigate = useNavigate();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
   const { isSalesPartner, isTippgeber, role } = useUserRole();
   const { user } = useAuth();
+  const [statusFilter, setStatusFilter] = useState<string>("aktiv");
+  const [sendingId, setSendingId] = useState<string | null>(null);
+
   useEffect(() => {
     if (highlightId && highlightRef.current) {
       setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
     }
   }, [highlightId]);
-  const [sendingId, setSendingId] = useState<string | null>(null);
 
-  const { data: activeContracts = [], isLoading } = useQuery({
+  const { data: allContracts = [], isLoading } = useQuery({
     queryKey: ["journey-kunden", user?.id, role],
     queryFn: async () => {
-      // Tippgeber haben keine Kunden-Ansicht
       if (isTippgeber) return [];
 
       let query = supabase
         .from("contracts")
-        .select("id, customer_name, hfx_customer_number, mp_nr, email, praxis, vorname, nachname, product_name, monthly_price, start_date, plz, ort, customer_id, sales_partner_name, sales_partner_id, created_by")
-        .eq("status", "aktiv")
+        .select("id, customer_name, hfx_customer_number, mp_nr, email, praxis, vorname, nachname, product_name, monthly_price, start_date, end_date, status, plz, ort, customer_id, sales_partner_name, sales_partner_id, created_by")
+        .in("status", KUNDEN_STATUSES)
         .order("start_date", { ascending: false });
 
-      // Sales Partner: nur eigene Kunden
       if (isSalesPartner && user?.id) {
         query = query.or(`sales_partner_id.eq.${user.id},created_by.eq.${user.id}`);
       }
@@ -810,11 +804,21 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
     }
   };
 
+  const statusCounts = KUNDEN_STATUSES.reduce((acc, s) => {
+    acc[s] = allContracts.filter((c: any) => c.status === s).length;
+    return acc;
+  }, {} as Record<string, number>);
+
   const s = search.toLowerCase();
 
+  const statusFiltered = statusFilter === "alle"
+    ? allContracts
+    : allContracts.filter((c: any) => c.status === statusFilter);
+
+  // Deduplicate by hfx_customer_number for cleaner view
   const seenKeys = new Set<string>();
-  const rows = activeContracts.filter((c: any) => {
-    if (!matchesTeamFilter(c.sales_partner_id) && !matchesTeamFilter(c.created_by)) return false;
+  const rows = statusFiltered.filter((c: any) => {
+    if (!isSalesPartner && !matchesTeamFilter(c.sales_partner_id) && !matchesTeamFilter(c.created_by)) return false;
     const key = c.hfx_customer_number
       ? `hfx:${c.hfx_customer_number}`
       : `name:${(c.praxis || c.customer_name || "").toLowerCase().trim()}`;
@@ -839,11 +843,12 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
 
   return (
     <div>
-      {/* Toolbar */}
-      <div className="p-4 border-b border-border flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">{filtered.length}</span> aktive Kunden
-        </span>
+      {/* Status filter pills */}
+      <div className="p-4 border-b border-border flex flex-wrap gap-2 items-center">
+        <FilterPill active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")} label="Aktiv" count={statusCounts.aktiv ?? 0} />
+        <FilterPill active={statusFilter === "gekuendigt"} onClick={() => setStatusFilter("gekuendigt")} label="Gekündigt" count={statusCounts.gekuendigt ?? 0} />
+        <FilterPill active={statusFilter === "beendet"} onClick={() => setStatusFilter("beendet")} label="Beendet" count={statusCounts.beendet ?? 0} />
+        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={allContracts.length} />
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -855,6 +860,7 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
               <TH>E-Mail</TH>
               <TH>PLZ / Ort</TH>
               <TH>Produkt</TH>
+              <TH>Status</TH>
               <TH right>Qodia</TH>
               <TH>Seit</TH>
               <TH>{""}</TH>
@@ -862,13 +868,14 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={9} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              <tr><td colSpan={10} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : filtered.length === 0 ? (
-              <EmptyState icon={Building2} title="Keine aktiven Kunden" sub="Aktivierte Verträge erscheinen hier automatisch" />
+              <EmptyState icon={Building2} title="Keine Kunden gefunden" sub="Aktivierte Verträge erscheinen hier automatisch" />
             ) : (filtered as any[]).map((c) => {
               const praxisLabel = c.praxis || c.customer_name || "–";
               const arztLabel = [c.vorname, c.nachname].filter(Boolean).join(" ");
               const qodia = !!(c.hfx_customer_number ? qodiaMap[c.hfx_customer_number] : false);
+              const sc = kundenStatusCfg[c.status] ?? kundenStatusCfg.aktiv;
               return (
                 <tr
                   key={c.id}
@@ -913,6 +920,9 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                     {c.plz}{c.ort ? ` ${c.ort}` : ""}
                   </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground">{c.product_name || "–"}</td>
+                  <td className="py-3 px-4">
+                    <StatusPill label={sc.label} cls={sc.cls} />
+                  </td>
                   <td className="py-3 px-4 text-right"><QodiaIcon synced={qodia} /></td>
                   <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
                     {c.start_date ? format(new Date(c.start_date), "dd.MM.yy", { locale: de }) : "–"}
@@ -1012,22 +1022,22 @@ export default function PraxenJourney() {
 
   const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions, isRegionalLead } = useRegionalTeam();
 
-  const { data: counts = { leads: 0, contracts: 0, kunden: 0, missingEmail: 0 } } = useQuery({
+  const { data: counts = { leads: 0, abschluss: 0, kunden: 0, missingEmail: 0 } } = useQuery({
     queryKey: ["journey-counts"],
     queryFn: async () => {
-      const [l, c, k, me] = await Promise.all([
+      const [l, ab, k, me] = await Promise.all([
         supabase.from("leads").select("id", { count: "exact", head: true }).neq("status", "kunde"),
-        supabase.from("contracts").select("id", { count: "exact", head: true }),
-        supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "aktiv"),
+        supabase.from("contracts").select("id", { count: "exact", head: true }).in("status", ["entwurf", "eingegangen", "gezeichnet"]),
+        supabase.from("contracts").select("id", { count: "exact", head: true }).in("status", ["aktiv", "gekuendigt", "beendet"]),
         supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "eingegangen").is("confirmation_email_sent_at", null),
       ]);
-      return { leads: l.count ?? 0, contracts: c.count ?? 0, kunden: k.count ?? 0, missingEmail: me.count ?? 0 };
+      return { leads: l.count ?? 0, abschluss: ab.count ?? 0, kunden: k.count ?? 0, missingEmail: me.count ?? 0 };
     },
   });
 
   const tabs: TabDef[] = [
     { key: "interessenten", label: "Interessenten", icon: Users, count: counts.leads },
-    { key: "abschlussphase", label: "Abschlussphase", icon: FileText, count: counts.contracts, warningCount: counts.missingEmail },
+    { key: "abschlussphase", label: "Abschlussphase", icon: FileText, count: counts.abschluss, warningCount: counts.missingEmail },
     { key: "kunden", label: "Kunden", icon: Building2, count: counts.kunden },
   ];
 
@@ -1072,7 +1082,7 @@ export default function PraxenJourney() {
         </div>
 
         {tab === "interessenten" && <InteressentenTab search={search} highlightId={urlId} teamFilter={teamFilter} matchesTeamFilter={matchesTeamFilter} />}
-        {tab === "abschlussphase" && <VertraegeTab search={search} highlightId={urlId} missingEmailCount={counts.missingEmail} matchesTeamFilter={matchesTeamFilter} />}
+        {tab === "abschlussphase" && <AbschlussphaseTab search={search} highlightId={urlId} missingEmailCount={counts.missingEmail} matchesTeamFilter={matchesTeamFilter} />}
         {tab === "kunden" && <KundenTab search={search} highlightId={urlId} matchesTeamFilter={matchesTeamFilter} />}
       </div>
     </MainLayout>
