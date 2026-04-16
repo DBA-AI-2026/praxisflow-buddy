@@ -25,6 +25,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { PipelineKpiBar } from "@/components/pipeline/PipelineKpiBar";
 
 // ─── Status configs ──────────────────────────────────────────────────────────
 
@@ -1131,6 +1132,8 @@ export default function PraxenJourney() {
   );
 
   const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions, isRegionalLead } = useRegionalTeam();
+  const { isSalesPartner, isTippgeber } = useUserRole();
+  const { user } = useAuth();
 
   const { data: counts = { leads: 0, abschluss: 0, kunden: 0, missingEmail: 0 } } = useQuery({
     queryKey: ["journey-counts"],
@@ -1145,6 +1148,45 @@ export default function PraxenJourney() {
     },
   });
 
+  // KPI data: all leads (including kunde) for conversion metrics — RLS-filtered
+  const { data: kpiLeadsAll = [] } = useQuery({
+    queryKey: ["kpi-leads-all", user?.id],
+    queryFn: async () => {
+      let q = supabase.from("leads").select("id, status, source, nachricht, created_at, assigned_to, hfx_customer_number, tippgeber_id");
+      if (isTippgeber && user?.id) q = q.eq("tippgeber_id", user.id);
+      else if (isSalesPartner && user?.id) q = q.eq("assigned_to", user.id);
+      const { data } = await q;
+      return data ?? [];
+    },
+  });
+
+  // KPI data: all contracts for funnel + time metrics — RLS-filtered
+  const { data: kpiContractsAll = [] } = useQuery({
+    queryKey: ["kpi-contracts-all", user?.id],
+    queryFn: async () => {
+      if (isTippgeber) return [];
+      let q = supabase.from("contracts").select("id, status, created_at, start_date, hfx_customer_number, sales_partner_id, created_by");
+      if (isSalesPartner && user?.id) q = q.or(`sales_partner_id.eq.${user.id},created_by.eq.${user.id}`);
+      const { data } = await q;
+      return data ?? [];
+    },
+  });
+
+  // Apply team filter on KPI data (client-side, same as tabs)
+  const kpiTeamLeads = useMemo(() => {
+    if (isSalesPartner || isTippgeber) return kpiLeadsAll;
+    return kpiLeadsAll.filter((l: any) => matchesTeamFilter(l.assigned_to));
+  }, [kpiLeadsAll, matchesTeamFilter, isSalesPartner, isTippgeber]);
+
+  const kpiTeamContracts = useMemo(() => {
+    if (isSalesPartner || isTippgeber) return kpiContractsAll;
+    return kpiContractsAll.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
+  }, [kpiContractsAll, matchesTeamFilter, isSalesPartner, isTippgeber]);
+
+  // Split leads for KPI bar: non-kunde leads vs kunde leads
+  const kpiLeadsNonKunde = useMemo(() => kpiTeamLeads.filter((l: any) => l.status !== "kunde"), [kpiTeamLeads]);
+  const kpiLeadsKunde = useMemo(() => kpiTeamLeads.filter((l: any) => l.status === "kunde"), [kpiTeamLeads]);
+
   const tabs: TabDef[] = [
     { key: "interessenten", label: "Interessenten", icon: Users, count: counts.leads },
     { key: "abschlussphase", label: "Abschlussphase", icon: FileText, count: counts.abschluss, warningCount: counts.missingEmail },
@@ -1157,6 +1199,12 @@ export default function PraxenJourney() {
       subtitle="Vom Interessenten zum aktiven Kunden — dein zentraler Arbeitsbereich"
     >
       <div className="card-elevated overflow-hidden">
+        {/* KPI Bar */}
+        <PipelineKpiBar
+          allLeads={kpiLeadsNonKunde}
+          allContracts={kpiTeamContracts}
+          kundeLeads={kpiLeadsKunde}
+        />
         <JourneyTabBar activeTab={tab} onSelect={(t) => setTab(t as any)} tabs={tabs} />
 
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/10 gap-3 flex-wrap">
