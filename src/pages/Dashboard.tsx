@@ -106,7 +106,7 @@ export default function Dashboard() {
       let q = supabase
         .from("leads")
         .select("id, praxis_name, vorname, nachname, status, created_at, assigned_to")
-        .in("status", ["neu", "kontaktiert", "interessiert", "qualifiziert"])
+        .in("status", ["neu", "kontaktiert", "qualifiziert", "vertrag"])
         .order("created_at", { ascending: true });
       if (isSalesPartner) q = q.eq("assigned_to", user?.id ?? "");
       const { data } = await q;
@@ -124,7 +124,7 @@ export default function Dashboard() {
         .from("contracts")
         .select("id, customer_name, product_name, status, confirmation_email_sent_at, customer_confirmed_at, created_at, sales_partner_id, created_by")
         .eq("status", "eingegangen");
-      if (isSalesPartner) q = q.eq("sales_partner_id", user?.id ?? "");
+      if (isSalesPartner) q = q.or(`sales_partner_id.eq.${user?.id},created_by.eq.${user?.id}`);
       const { data } = await q;
       return data ?? [];
     },
@@ -139,18 +139,18 @@ export default function Dashboard() {
     queryFn: async () => {
       const [leadsRes, contractsRes, customersRes] = await Promise.all([
         (() => {
-          let q = supabase.from("leads").select("id, assigned_to").in("status", ["neu", "kontaktiert", "interessiert", "qualifiziert"]);
+          let q = supabase.from("leads").select("id, assigned_to").in("status", ["neu", "kontaktiert", "qualifiziert", "vertrag"]);
           if (isSalesPartner) q = q.eq("assigned_to", user?.id ?? "");
           return q;
         })(),
         (() => {
           let q = supabase.from("contracts").select("id, sales_partner_id, created_by").in("status", ["entwurf", "eingegangen", "gezeichnet"]);
-          if (isSalesPartner) q = q.eq("sales_partner_id", user?.id ?? "");
+          if (isSalesPartner) q = q.or(`sales_partner_id.eq.${user?.id},created_by.eq.${user?.id}`);
           return q;
         })(),
         (() => {
           let q = supabase.from("contracts").select("id, sales_partner_id, created_by").in("status", ["aktiv", "gekuendigt", "beendet"]);
-          if (isSalesPartner) q = q.eq("sales_partner_id", user?.id ?? "");
+          if (isSalesPartner) q = q.or(`sales_partner_id.eq.${user?.id},created_by.eq.${user?.id}`);
           return q;
         })(),
       ]);
@@ -177,7 +177,7 @@ export default function Dashboard() {
         .select("id, sales_partner_id, created_by")
         .eq("status", "aktiv")
         .gte("start_date", monthStart.split("T")[0]);
-      if (isSalesPartner) cq = cq.eq("sales_partner_id", user?.id ?? "");
+      if (isSalesPartner) cq = cq.or(`sales_partner_id.eq.${user?.id},created_by.eq.${user?.id}`);
 
       const [contractsRes, payoutsRes] = await Promise.all([
         cq,
@@ -215,7 +215,8 @@ export default function Dashboard() {
   const overdueLeads14 = filteredOverdueLeads.filter((l: any) => l.daysSince >= 14);
 
   const filteredContractAlerts = useMemo(() => {
-    return applyTeamFilter(contractAlerts, "sales_partner_id");
+    if (!isRegionalLead) return contractAlerts;
+    return contractAlerts.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
   }, [contractAlerts, matchesTeamFilter, isRegionalLead]);
 
   const contractsMissingEmail = filteredContractAlerts.filter(
@@ -235,18 +236,21 @@ export default function Dashboard() {
 
   const contractsCount = useMemo(() => {
     if (!pipelineCounts) return 0;
-    return applyTeamFilter(pipelineCounts.contractsRaw, "sales_partner_id").length;
+    if (!isRegionalLead) return pipelineCounts.contractsRaw.length;
+    return pipelineCounts.contractsRaw.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by)).length;
   }, [pipelineCounts, matchesTeamFilter, isRegionalLead]);
 
   const customersCount = useMemo(() => {
     if (!pipelineCounts) return 0;
-    return applyTeamFilter(pipelineCounts.customersRaw, "sales_partner_id").length;
+    if (!isRegionalLead) return pipelineCounts.customersRaw.length;
+    return pipelineCounts.customersRaw.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by)).length;
   }, [pipelineCounts, matchesTeamFilter, isRegionalLead]);
 
   // Filtered performance
   const closingsThisMonth = useMemo(() => {
     if (!performance) return 0;
-    return applyTeamFilter(performance.contractsThisMonthRaw, "sales_partner_id").length;
+    if (!isRegionalLead) return performance.contractsThisMonthRaw.length;
+    return performance.contractsThisMonthRaw.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by)).length;
   }, [performance, matchesTeamFilter, isRegionalLead]);
 
   // Onboarding
