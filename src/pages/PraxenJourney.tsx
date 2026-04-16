@@ -937,9 +937,13 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
     : allContracts.filter((c: any) => c.status === statusFilter);
 
   // Deduplicate by hfx_customer_number for cleaner view
+  const statusFiltered2 = statusFilter === "alle"
+    ? teamContracts
+    : teamContracts.filter((c: any) => c.status === statusFilter);
+
+  // Deduplicate by hfx_customer_number for cleaner view
   const seenKeys = new Set<string>();
-  const rows = statusFiltered.filter((c: any) => {
-    if (!isSalesPartner && !matchesTeamFilter(c.sales_partner_id) && !matchesTeamFilter(c.created_by)) return false;
+  const rows = statusFiltered2.filter((c: any) => {
     const key = c.hfx_customer_number
       ? `hfx:${c.hfx_customer_number}`
       : `name:${(c.praxis || c.customer_name || "").toLowerCase().trim()}`;
