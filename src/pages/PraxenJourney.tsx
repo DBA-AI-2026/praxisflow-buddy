@@ -103,8 +103,38 @@ function SourceBadge({ source }: { source: "homepage" | "manuell" }) {
     </span>
   );
 }
+function VorbezugBadge({ value }: { value?: string | null }) {
+  if (!value || value === "nein" || value === "keins") return <span className="text-muted-foreground/30">—</span>;
+  const known: Record<string, { label: string; cls: string }> = {
+    mcc: { label: "MCC", cls: "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20" },
+    privadis: { label: "Privadis", cls: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20" },
+  };
+  const key = value.toLowerCase().trim();
+  const match = known[key];
+  if (match) {
+    return (
+      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${match.cls}`}>
+        {match.label}
+      </span>
+    );
+  }
+  // "andere" or free text
+  const display = key === "andere" ? "Andere" : value.length > 12 ? value.slice(0, 12) + "…" : value;
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border bg-muted text-muted-foreground border-border cursor-default">
+            {display}
+          </span>
+        </TooltipTrigger>
+        {value.length > 12 && <TooltipContent>{value}</TooltipContent>}
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
-function TH({ children, right }: { children: React.ReactNode; right?: boolean }) {
+
   return (
     <th className={`py-2.5 px-4 text-${right ? "right" : "left"} text-xs font-medium text-muted-foreground bg-muted/40 border-b border-border`}>
       {children}
