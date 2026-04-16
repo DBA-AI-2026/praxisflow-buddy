@@ -7,9 +7,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Search, Users, FileText, Building2, CheckCircle2, XCircle,
    UserPlus, Phone, UserCheck, FilePlus, Upload, Ban, Send,
-  Loader2, Globe, PenLine, ArrowRight, RefreshCw, AlertTriangle,
+  Loader2, Globe, PenLine, ArrowRight, RefreshCw, AlertTriangle, Clock,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { de } from "date-fns/locale";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -17,7 +17,6 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useAuth } from "@/hooks/useAuth";
 import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
-// UploadPaperContractDialog removed – paper flow decommissioned
 import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -92,7 +91,7 @@ function StatusPill({ label, cls }: { label: string; cls: string }) {
 
 function SourceBadge({ source }: { source: "homepage" | "manuell" }) {
   return source === "homepage" ? (
-    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/8 text-primary border border-primary/20">
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
       <Globe className="h-2.5 w-2.5" />
       Homepage
     </span>
@@ -134,9 +133,49 @@ function VorbezugBadge({ value }: { value?: string | null }) {
   );
 }
 
-function TH({ children, right }: { children: React.ReactNode; right?: boolean }) {
+/** Age indicator — shows how many days since creation, orange >7d, red >14d */
+function AgeBadge({ dateStr }: { dateStr: string }) {
+  const days = differenceInDays(new Date(), new Date(dateStr));
+  if (days <= 2) return <span className="text-xs text-muted-foreground whitespace-nowrap">{days === 0 ? "Heute" : days === 1 ? "Gestern" : "Vor 2 T."}</span>;
+  const cls = days > 14 ? "text-destructive font-semibold" : days > 7 ? "text-warning font-medium" : "text-muted-foreground";
   return (
-    <th className={`py-2.5 px-4 text-${right ? "right" : "left"} text-xs font-medium text-muted-foreground bg-muted/40 border-b border-border`}>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={`text-xs whitespace-nowrap ${cls}`}>
+            {days > 14 && <AlertTriangle className="h-3 w-3 inline mr-0.5 -mt-0.5" />}
+            {days} T.
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{format(new Date(dateStr), "dd.MM.yyyy", { locale: de })}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+/** Staleness indicator for contracts — days since created/last updated */
+function StaleBadge({ dateStr, label }: { dateStr: string; label?: string }) {
+  const days = differenceInDays(new Date(), new Date(dateStr));
+  if (days <= 3) return null;
+  const cls = days > 14 ? "text-destructive" : days > 7 ? "text-warning" : "text-muted-foreground";
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium ${cls}`}>
+            <Clock className="h-3 w-3" />
+            {days} T.
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{label || "Erstellt"}: {format(new Date(dateStr), "dd.MM.yyyy", { locale: de })}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+function TH({ children, right, className }: { children: React.ReactNode; right?: boolean; className?: string }) {
+  return (
+    <th className={`py-2.5 px-4 text-${right ? "right" : "left"} text-xs font-medium text-muted-foreground bg-muted/40 border-b border-border ${className || ""}`}>
       {children}
     </th>
   );
@@ -196,7 +235,6 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("alle");
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("aktiv");
   const [createOpen, setCreateOpen] = useState(false);
-  // uploadLead state removed – paper flow decommissioned
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
@@ -230,16 +268,33 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
     },
   });
 
+  // Betreuer names lookup
+  const assignedIds = [...new Set(leads.map((l: any) => l.assigned_to).filter(Boolean))];
+  const { data: profileMap = {} } = useQuery({
+    queryKey: ["profile-names", assignedIds.join(",")],
+    enabled: assignedIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("user_id, full_name").in("user_id", assignedIds);
+      const map: Record<string, string> = {};
+      (data ?? []).forEach((p: any) => { map[p.user_id] = p.full_name; });
+      return map;
+    },
+  });
+
   const activeCount = leads.filter((l: any) => ACTIVE_LEAD_STATUSES.includes(l.status)).length;
   const closedKeinCount = leads.filter((l: any) => l.status === "kein_abschluss").length;
   const closedAblCount = leads.filter((l: any) => l.status === "abgelehnt").length;
-  const homepageCount = leads.filter((l: any) => l.nachricht && l.nachricht.trim().length > 0).length;
-  const manuellCount = leads.length - homepageCount;
 
   const getSource = (l: any): "homepage" | "manuell" => {
+    if (l.source === "manual") return "manuell";
+    if (l.source === "homepage") return "homepage";
+    // fallback for legacy data
     if (l.nachricht && l.nachricht.trim().length > 0) return "homepage";
     return "manuell";
   };
+
+  const homepageCount = leads.filter((l: any) => getSource(l) === "homepage").length;
+  const manuellCount = leads.filter((l: any) => getSource(l) === "manuell").length;
 
   const s = search.toLowerCase();
 
@@ -258,8 +313,8 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
       l.vorname?.toLowerCase().includes(s) ||
       l.nachname?.toLowerCase().includes(s) ||
       l.email?.toLowerCase().includes(s) ||
-      l.hfx_customer_number?.toLowerCase().includes(s) ||
       l.plz?.includes(s) ||
+      l.hfx_customer_number?.toLowerCase().includes(s) ||
       l.ort?.toLowerCase().includes(s)
     );
   });
@@ -366,26 +421,34 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
         )}
       </div>
 
-      {/* Table */}
+      {/* Table — optimized column order:
+        1. Praxis/Arzt (primary identifier)
+        2. Status (where are they?)
+        3. Alter (attention indicator)
+        4. Nächster Schritt (what to do?)
+        5. Quelle + Vorbezug (context)
+        6. PLZ/Ort (location)
+        7. Betreuer (who?)
+        8. Qodia (sync status)
+      */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr>
-              <TH>HFX-Nr.</TH>
               <TH>Praxis / Arzt</TH>
-              <TH>Quelle</TH>
-              <TH>E-Mail</TH>
-              <TH>PLZ / Ort</TH>
-              <TH>Vorbezug</TH>
               <TH>Status</TH>
+              <TH>Alter</TH>
               <TH>Nächster Schritt</TH>
+              <TH>Quelle</TH>
+              <TH>Vorbezug</TH>
+              <TH>PLZ / Ort</TH>
+              <TH>Betreuer</TH>
               <TH right>Qodia</TH>
-              <TH>Datum</TH>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={10} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              <tr><td colSpan={9} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : filtered.length === 0 ? (
               <EmptyState icon={Users} title="Keine Interessenten gefunden" sub="Versuche einen anderen Filter oder lege einen neuen Interessenten an" />
             ) : filtered.map((lead: any) => {
@@ -393,6 +456,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
               const src = getSource(lead);
               const nextStep = getNextStepAction(lead);
               const isClosed = CLOSED_LEAD_STATUSES.includes(lead.status);
+              const betreuerName = lead.assigned_to ? profileMap[lead.assigned_to] : null;
               return (
                 <tr
                   key={lead.id}
@@ -400,48 +464,25 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
                   onClick={() => setSelectedLead(lead)}
                   className={`hover:bg-muted/30 transition-colors group cursor-pointer ${highlightId === lead.id ? "bg-primary/5 ring-1 ring-primary/30" : ""}`}
                 >
-                  <td className="py-3 px-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
-                    {lead.hfx_customer_number || <span className="text-muted-foreground/40">—</span>}
-                  </td>
+                  {/* 1. Praxis / Arzt — with HFX-Nr as subtle sub-info */}
                   <td className="py-3 px-4">
                     <p className="font-semibold text-foreground leading-tight">{lead.praxis_name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{lead.vorname} {lead.nachname}</p>
-                  </td>
-                  <td className="py-3 px-4">
-                    <SourceBadge source={src} />
-                  </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-2">
-                      <span>{lead.email}</span>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {lead.vorname} {lead.nachname}
                       {lead.hfx_customer_number && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={() => sendCredentials(lead.id)}
-                                disabled={sendingId === lead.id}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-primary/70"
-                              >
-                                {sendingId === lead.id
-                                  ? <Loader2 className="h-3 w-3 animate-spin" />
-                                  : <Send className="h-3 w-3" />}
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>Zugangsdaten senden</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <span className="ml-1.5 font-mono text-muted-foreground/50">({lead.hfx_customer_number})</span>
                       )}
-                    </div>
+                    </p>
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
-                    {lead.plz}{lead.ort ? ` ${lead.ort}` : ""}
-                  </td>
-                  <td className="py-3 px-4">
-                    <VorbezugBadge value={lead.abrechnungszentrum} />
-                  </td>
+                  {/* 2. Status */}
                   <td className="py-3 px-4">
                     <StatusPill label={sc.label} cls={sc.cls} />
                   </td>
+                  {/* 3. Alter — attention indicator */}
+                  <td className="py-3 px-4">
+                    <AgeBadge dateStr={lead.created_at} />
+                  </td>
+                  {/* 4. Nächster Schritt */}
                   <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                     {!isClosed && nextStep ? (
                       <button
@@ -457,6 +498,27 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
                       </span>
                     ) : null}
                   </td>
+                  {/* 5. Quelle */}
+                  <td className="py-3 px-4">
+                    <SourceBadge source={src} />
+                  </td>
+                  {/* 6. Vorbezug */}
+                  <td className="py-3 px-4">
+                    <VorbezugBadge value={lead.abrechnungszentrum} />
+                  </td>
+                  {/* 7. PLZ / Ort */}
+                  <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
+                    {lead.plz}{lead.ort ? ` ${lead.ort}` : ""}
+                  </td>
+                  {/* 8. Betreuer */}
+                  <td className="py-3 px-4 text-xs text-muted-foreground">
+                    {betreuerName ? (
+                      <span className="whitespace-nowrap">{betreuerName}</span>
+                    ) : (
+                      <span className="text-muted-foreground/40">—</span>
+                    )}
+                  </td>
+                  {/* 9. Qodia */}
                   <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-1">
                       <QodiaIcon synced={!!lead.qodia_synced} conflict={!!lead.qodia_conflict} />
@@ -480,9 +542,6 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
                       )}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
-                    {lead.created_at ? format(new Date(lead.created_at), "dd.MM.yy", { locale: de }) : "–"}
-                  </td>
                 </tr>
               );
             })}
@@ -497,7 +556,6 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
         />
       )}
       <CreateLeadDialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); }} />
-      {/* UploadPaperContractDialog removed – paper flow decommissioned */}
     </div>
   );
 }
@@ -587,17 +645,17 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
   const getNextAction = (c: any) => {
     switch (c.status) {
       case "entwurf":
-        return { label: "Vertrag bearbeiten", icon: <PenLine className="h-3 w-3" />, cls: "bg-muted text-muted-foreground border border-border hover:bg-muted/80" };
+        return { label: "Vertrag bearbeiten", icon: <PenLine className="h-3 w-3" />, cls: "bg-muted text-muted-foreground border border-border hover:bg-muted/80", isClickable: true };
       case "eingegangen":
         if (!c.confirmation_email_sent_at) {
-          return { label: "Buchungsmail senden", icon: <Send className="h-3 w-3" />, cls: "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20" };
+          return { label: "Buchungsmail senden", icon: <Send className="h-3 w-3" />, cls: "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20", isClickable: true, isBuchungsmail: true };
         }
         if (!c.customer_confirmed_at) {
-          return { label: "Warten auf Zahlung", icon: <Loader2 className="h-3 w-3" />, cls: "bg-warning/10 text-warning border border-warning/20" };
+          return { label: "Warten auf Zahlung", icon: <Clock className="h-3 w-3" />, cls: "bg-warning/10 text-warning border border-warning/20", isClickable: false };
         }
-        return { label: "Aktivierung prüfen", icon: <CheckCircle2 className="h-3 w-3" />, cls: "bg-success/10 text-success border border-success/20 hover:bg-success/20" };
+        return { label: "Aktivierung prüfen", icon: <CheckCircle2 className="h-3 w-3" />, cls: "bg-success/10 text-success border border-success/20 hover:bg-success/20", isClickable: true };
       case "gezeichnet":
-        return { label: "Aktivierung vorbereiten", icon: <CheckCircle2 className="h-3 w-3" />, cls: "bg-success/10 text-success border border-success/20 hover:bg-success/20" };
+        return { label: "Aktivierung vorbereiten", icon: <CheckCircle2 className="h-3 w-3" />, cls: "bg-success/10 text-success border border-success/20 hover:bg-success/20", isClickable: true };
       default:
         return null;
     }
@@ -623,26 +681,33 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
         })}
       </div>
 
-      {/* Table */}
+      {/* Table — optimized column order:
+        1. Praxis / Arzt (primary)
+        2. Produkt (what?)
+        3. Status (where?)
+        4. Wartezeit (attention — stale indicator)
+        5. Nächster Schritt (action)
+        6. E-Mail Status + Zahlung (combined checklist)
+        7. Preis (context)
+        8. Vertrieb (who?)
+      */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr>
-              <TH>HFX-Nr.</TH>
               <TH>Praxis / Arzt</TH>
               <TH>Produkt</TH>
               <TH>Status</TH>
-              <TH right>Monatlich</TH>
-              <TH>E-Mail versendet</TH>
-              <TH>Zahlung</TH>
+              <TH>Wartezeit</TH>
               <TH>Nächster Schritt</TH>
+              <TH>Checkliste</TH>
+              <TH right>Monatlich</TH>
               <TH>Vertrieb</TH>
-              <TH>Datum</TH>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={10} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              <tr><td colSpan={8} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : filtered.length === 0 ? (
               <EmptyState icon={FileText} title="Keine Verträge in der Abschlussphase" sub="Neue Verträge erscheinen hier sobald ein Lead qualifiziert wird" />
             ) : filtered.map((c: any) => {
@@ -655,73 +720,69 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                   key={c.id}
                   ref={highlightId === c.id ? (highlightRef as any) : null}
                   onClick={() => navigate(`/vertrieb/vertraege?contractId=${c.id}`)}
-                  className={`hover:bg-muted/30 transition-colors cursor-pointer ${highlightId === c.id ? "bg-primary/5 ring-1 ring-primary/30" : ""}`}
+                  className={`hover:bg-muted/30 transition-colors cursor-pointer group ${highlightId === c.id ? "bg-primary/5 ring-1 ring-primary/30" : ""}`}
                 >
-                  <td className="py-3 px-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
-                    {c.hfx_customer_number || <span className="text-muted-foreground/40">—</span>}
-                  </td>
+                  {/* 1. Praxis / Arzt + HFX-Nr */}
                   <td className="py-3 px-4">
                     <p className="font-semibold text-foreground leading-tight">{praxisLabel}</p>
-                    {arztLabel && <p className="text-xs text-muted-foreground mt-0.5">{arztLabel}</p>}
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {arztLabel || "–"}
+                      {c.hfx_customer_number && (
+                        <span className="ml-1.5 font-mono text-muted-foreground/50">({c.hfx_customer_number})</span>
+                      )}
+                    </p>
                   </td>
+                  {/* 2. Produkt */}
                   <td className="py-3 px-4 text-xs text-muted-foreground">{c.product_name}</td>
+                  {/* 3. Status */}
                   <td className="py-3 px-4">
                     <StatusPill label={sc.label} cls={sc.cls} />
                   </td>
-                  <td className="py-3 px-4 text-right text-xs font-medium text-foreground whitespace-nowrap">
-                    {c.monthly_price > 0
-                      ? `${Number(c.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €`
-                      : "–"}
-                  </td>
+                  {/* 4. Wartezeit — stale indicator */}
                   <td className="py-3 px-4">
-                    {c.confirmation_email_sent_at ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] text-success font-medium">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        {format(new Date(c.confirmation_email_sent_at), "dd.MM.yy", { locale: de })}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/60">
-                        <XCircle className="h-3.5 w-3.5" />
-                        Ausstehend
-                      </span>
-                    )}
+                    <StaleBadge dateStr={c.created_at} label="Erstellt am" />
                   </td>
-                  <td className="py-3 px-4">
-                    {c.customer_confirmed_at ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] text-success font-medium">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Erfolgt
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/60">
-                        <XCircle className="h-3.5 w-3.5" />
-                        Ausstehend
-                      </span>
-                    )}
-                  </td>
+                  {/* 5. Nächster Schritt */}
                   <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                     {nextAction && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (c.status === "eingegangen" && !c.confirmation_email_sent_at) {
+                          if (nextAction.isBuchungsmail) {
                             sendBuchungsmail(c, e);
-                          } else {
+                          } else if (nextAction.isClickable) {
                             navigate(`/vertrieb/vertraege?contractId=${c.id}`);
                           }
                         }}
-                        disabled={sendingBuchungsmail === c.id}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors whitespace-nowrap ${nextAction.cls}`}
+                        disabled={sendingBuchungsmail === c.id || !nextAction.isClickable}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors whitespace-nowrap ${nextAction.cls} ${!nextAction.isClickable ? "cursor-default" : "cursor-pointer"}`}
                       >
                         {sendingBuchungsmail === c.id ? <Loader2 className="h-3 w-3 animate-spin" /> : nextAction.icon}
                         {nextAction.label}
                       </button>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground">{c.sales_partner_name || "–"}</td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
-                    {c.created_at ? format(new Date(c.created_at), "dd.MM.yy", { locale: de }) : "–"}
+                  {/* 6. Checklist — combined E-Mail + Zahlung */}
+                  <td className="py-3 px-4">
+                    <div className="flex flex-col gap-1">
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.confirmation_email_sent_at ? "text-success" : "text-muted-foreground/50"}`}>
+                        {c.confirmation_email_sent_at ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                        E-Mail
+                      </span>
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.customer_confirmed_at ? "text-success" : "text-muted-foreground/50"}`}>
+                        {c.customer_confirmed_at ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                        Zahlung
+                      </span>
+                    </div>
                   </td>
+                  {/* 7. Preis */}
+                  <td className="py-3 px-4 text-right text-xs font-medium text-foreground whitespace-nowrap">
+                    {c.monthly_price > 0
+                      ? `${Number(c.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €`
+                      : "–"}
+                  </td>
+                  {/* 8. Vertrieb */}
+                  <td className="py-3 px-4 text-xs text-muted-foreground">{c.sales_partner_name || "–"}</td>
                 </tr>
               );
             })}
@@ -748,7 +809,6 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
   const { isSalesPartner, isTippgeber, role } = useUserRole();
   const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState<string>("aktiv");
-  const [sendingId, setSendingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (highlightId && highlightRef.current) {
@@ -787,22 +847,6 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
       return map;
     },
   });
-
-  const sendCredentials = async (email: string, name: string, hfxNr: string, id: string) => {
-    setSendingId(id);
-    try {
-      const { data, error } = await supabase.functions.invoke("resend-lead-credentials", {
-        body: { email, nachname: name, hfxCustomerNumber: hfxNr },
-      });
-      if (error) throw error;
-      if (data?.error) toast.error(data.error);
-      else toast.success(`Zugangsdaten an ${email} gesendet`);
-    } catch (err: any) {
-      toast.error(err.message || "Versand fehlgeschlagen");
-    } finally {
-      setSendingId(null);
-    }
-  };
 
   const statusCounts = KUNDEN_STATUSES.reduce((acc, s) => {
     acc[s] = allContracts.filter((c: any) => c.status === s).length;
@@ -850,25 +894,33 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
         <FilterPill active={statusFilter === "beendet"} onClick={() => setStatusFilter("beendet")} label="Beendet" count={statusCounts.beendet ?? 0} />
         <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={allContracts.length} />
       </div>
+      {/* Table — optimized column order:
+        1. Praxis / Arzt (primary)
+        2. Produkt (what?)
+        3. Status (state)
+        4. Kunde seit (how long?)
+        5. PLZ / Ort (location)
+        6. Vertrieb (who?)
+        7. Qodia (sync)
+        8. → Detail (action)
+      */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr>
-              <TH>HFX-Nr.</TH>
-              <TH>MP-Nr.</TH>
               <TH>Praxis / Arzt</TH>
-              <TH>E-Mail</TH>
-              <TH>PLZ / Ort</TH>
               <TH>Produkt</TH>
               <TH>Status</TH>
+              <TH>Kunde seit</TH>
+              <TH>PLZ / Ort</TH>
+              <TH>Vertrieb</TH>
               <TH right>Qodia</TH>
-              <TH>Seit</TH>
               <TH>{""}</TH>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={10} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              <tr><td colSpan={8} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : filtered.length === 0 ? (
               <EmptyState icon={Building2} title="Keine Kunden gefunden" sub="Aktivierte Verträge erscheinen hier automatisch" />
             ) : (filtered as any[]).map((c) => {
@@ -883,50 +935,38 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                   onClick={() => navigate(`/vertrieb/vertraege?contractId=${c.id}`)}
                   className={`hover:bg-muted/30 transition-colors cursor-pointer group ${highlightId === c.id ? "bg-primary/5 ring-1 ring-primary/30" : ""}`}
                 >
-                  <td className="py-3 px-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
-                    {c.hfx_customer_number || <span className="text-muted-foreground/40">—</span>}
-                  </td>
-                  <td className="py-3 px-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
-                    {c.mp_nr || <span className="text-muted-foreground/40">—</span>}
-                  </td>
+                  {/* 1. Praxis / Arzt + HFX + MP */}
                   <td className="py-3 px-4">
                     <p className="font-semibold text-foreground leading-tight">{praxisLabel}</p>
-                    {arztLabel && <p className="text-xs text-muted-foreground mt-0.5">{arztLabel}</p>}
-                  </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-2">
-                      <span>{c.email || "–"}</span>
-                      {c.email && c.hfx_customer_number && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={() => sendCredentials(c.email, c.customer_name, c.hfx_customer_number, c.id)}
-                                disabled={sendingId === c.id}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-primary/70"
-                              >
-                                {sendingId === c.id
-                                  ? <Loader2 className="h-3 w-3 animate-spin" />
-                                  : <Send className="h-3 w-3" />}
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>Zugangsdaten senden</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {arztLabel || "–"}
+                      {c.hfx_customer_number && (
+                        <span className="ml-1.5 font-mono text-muted-foreground/50">({c.hfx_customer_number})</span>
                       )}
-                    </div>
+                      {c.mp_nr && (
+                        <span className="ml-1 font-mono text-muted-foreground/40">MP {c.mp_nr}</span>
+                      )}
+                    </p>
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
-                    {c.plz}{c.ort ? ` ${c.ort}` : ""}
-                  </td>
+                  {/* 2. Produkt */}
                   <td className="py-3 px-4 text-xs text-muted-foreground">{c.product_name || "–"}</td>
+                  {/* 3. Status */}
                   <td className="py-3 px-4">
                     <StatusPill label={sc.label} cls={sc.cls} />
                   </td>
-                  <td className="py-3 px-4 text-right"><QodiaIcon synced={qodia} /></td>
+                  {/* 4. Kunde seit */}
                   <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
                     {c.start_date ? format(new Date(c.start_date), "dd.MM.yy", { locale: de }) : "–"}
                   </td>
+                  {/* 5. PLZ / Ort */}
+                  <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
+                    {c.plz}{c.ort ? ` ${c.ort}` : ""}
+                  </td>
+                  {/* 6. Vertrieb */}
+                  <td className="py-3 px-4 text-xs text-muted-foreground">{c.sales_partner_name || "–"}</td>
+                  {/* 7. Qodia */}
+                  <td className="py-3 px-4 text-right"><QodiaIcon synced={qodia} /></td>
+                  {/* 8. Detail */}
                   <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                     <TooltipProvider>
                       <Tooltip>
