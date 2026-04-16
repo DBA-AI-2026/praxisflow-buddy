@@ -25,6 +25,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { PipelineKpiBar } from "@/components/pipeline/PipelineKpiBar";
 
 // ─── Status configs ──────────────────────────────────────────────────────────
 
