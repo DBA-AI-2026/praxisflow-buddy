@@ -503,10 +503,11 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
   );
 }
 
-// ─── Tab: Verträge (Im Prozess + Abgeschlossen) ──────────────────────────────
+// ─── Tab: Abschlussphase (nur Verträge im Abschlussprozess) ──────────────────
 
-function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilter }: { search: string; highlightId?: string; missingEmailCount: number; matchesTeamFilter: (id?: string | null) => boolean }) {
-  const [groupFilter, setGroupFilter] = useState<"prozess" | "abgeschlossen">("prozess");
+const ABSCHLUSS_STATUSES = ["entwurf", "eingegangen", "gezeichnet"];
+
+function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeamFilter }: { search: string; highlightId?: string; missingEmailCount: number; matchesTeamFilter: (id?: string | null) => boolean }) {
   const [statusFilter, setStatusFilter] = useState<string>("alle");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -528,7 +529,7 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
       });
       if (error) throw error;
       toast.success(`Buchungsmail an ${contract.email} gesendet`);
-      queryClient.invalidateQueries({ queryKey: ["journey-contracts-all"] });
+      queryClient.invalidateQueries({ queryKey: ["journey-contracts-abschluss"] });
       queryClient.invalidateQueries({ queryKey: ["journey-counts"] });
     } catch (err: any) {
       toast.error(err.message || "Fehler beim Senden der Buchungsmail");
@@ -544,20 +545,18 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
   }, [highlightId]);
 
   const { data: contracts = [], isLoading } = useQuery({
-    queryKey: ["journey-contracts-all", user?.id, role],
+    queryKey: ["journey-contracts-abschluss", user?.id, role],
     queryFn: async () => {
+      if (isTippgeber) return [];
+
       let query = supabase
         .from("contracts")
         .select("id, customer_name, product_name, status, monthly_price, hfx_customer_number, email, vorname, nachname, praxis, created_at, start_date, confirmation_email_sent_at, customer_confirmed_at, sales_partner_name, sales_partner_id, created_by")
+        .in("status", ABSCHLUSS_STATUSES)
         .order("created_at", { ascending: false });
 
-      // Sales Partner: nur eigene Verträge
       if (isSalesPartner && user?.id) {
         query = query.or(`sales_partner_id.eq.${user.id},created_by.eq.${user.id}`);
-      }
-      // Tippgeber: keine Vertragsansicht
-      if (isTippgeber) {
-        return [];
       }
 
       const { data } = await query;
@@ -565,23 +564,14 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
     },
   });
 
-  const processStatuses = ["entwurf", "eingegangen", "gezeichnet"];
-  const completedStatuses = ["aktiv", "gekuendigt", "beendet"];
-  const currentGroupStatuses = groupFilter === "prozess" ? processStatuses : completedStatuses;
-
-  const groupContracts = contracts.filter((c: any) => currentGroupStatuses.includes(c.status));
-  const processCount = contracts.filter((c: any) => processStatuses.includes(c.status)).length;
-  const completedCount = contracts.filter((c: any) => completedStatuses.includes(c.status)).length;
-
-  const statusCounts = currentGroupStatuses.reduce((acc, s) => {
+  const statusCounts = ABSCHLUSS_STATUSES.reduce((acc, s) => {
     acc[s] = contracts.filter((c: any) => c.status === s).length;
     return acc;
   }, {} as Record<string, number>);
 
   const s = search.toLowerCase();
-  const filtered = groupContracts.filter((c: any) => {
+  const filtered = contracts.filter((c: any) => {
     if (statusFilter !== "alle" && c.status !== statusFilter) return false;
-    // Team filter only for admin/sales_lead/regional_lead — sales_partner already filtered at DB level
     if (!isSalesPartner && !isTippgeber && !matchesTeamFilter(c.sales_partner_id) && !matchesTeamFilter(c.created_by)) return false;
     if (!s) return true;
     return (
@@ -595,17 +585,31 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
     );
   });
 
+  const getNextAction = (c: any) => {
+    switch (c.status) {
+      case "entwurf":
+        return { label: "Vertrag bearbeiten", icon: <PenLine className="h-3 w-3" />, cls: "bg-muted text-muted-foreground border border-border hover:bg-muted/80" };
+      case "eingegangen":
+        if (!c.confirmation_email_sent_at) {
+          return { label: "Buchungsmail senden", icon: <Send className="h-3 w-3" />, cls: "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20" };
+        }
+        if (!c.customer_confirmed_at) {
+          return { label: "Warten auf Zahlung", icon: <Loader2 className="h-3 w-3" />, cls: "bg-warning/10 text-warning border border-warning/20" };
+        }
+        return { label: "Aktivierung prüfen", icon: <CheckCircle2 className="h-3 w-3" />, cls: "bg-success/10 text-success border border-success/20 hover:bg-success/20" };
+      case "gezeichnet":
+        return { label: "Aktivierung vorbereiten", icon: <CheckCircle2 className="h-3 w-3" />, cls: "bg-success/10 text-success border border-success/20 hover:bg-success/20" };
+      default:
+        return null;
+    }
+  };
+
   return (
     <div>
-      {/* Group toggle: Im Prozess / Abgeschlossen */}
+      {/* Status filter pills */}
       <div className="p-4 border-b border-border flex flex-wrap gap-2 items-center">
-        <FilterPill active={groupFilter === "prozess"} onClick={() => { setGroupFilter("prozess"); setStatusFilter("alle"); }} label="Im Prozess" count={processCount} />
-        <FilterPill active={groupFilter === "abgeschlossen"} onClick={() => { setGroupFilter("abgeschlossen"); setStatusFilter("alle"); }} label="Abgeschlossen" count={completedCount} />
-
-        <span className="h-5 w-px bg-border mx-1" />
-
-        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={groupContracts.length} />
-        {currentGroupStatuses.map((st) => {
+        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={contracts.length} />
+        {ABSCHLUSS_STATUSES.map((st) => {
           const cfg = contractStatusCfg[st];
           if (!cfg) return null;
           return (
@@ -632,20 +636,21 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
               <TH right>Monatlich</TH>
               <TH>E-Mail versendet</TH>
               <TH>Zahlung</TH>
+              <TH>Nächster Schritt</TH>
               <TH>Vertrieb</TH>
               <TH>Datum</TH>
-              <TH>{""}</TH>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
               <tr><td colSpan={10} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : filtered.length === 0 ? (
-              <EmptyState icon={FileText} title="Keine ausstehenden Verträge" sub="Alle Verträge sind aktiv oder es gibt noch keine Verträge" />
+              <EmptyState icon={FileText} title="Keine Verträge in der Abschlussphase" sub="Neue Verträge erscheinen hier sobald ein Lead qualifiziert wird" />
             ) : filtered.map((c: any) => {
               const sc = contractStatusCfg[c.status] ?? contractStatusCfg.entwurf;
               const praxisLabel = c.praxis || c.customer_name || "–";
               const arztLabel = [c.vorname, c.nachname].filter(Boolean).join(" ") || null;
+              const nextAction = getNextAction(c);
               return (
                 <tr
                   key={c.id}
@@ -695,46 +700,28 @@ function VertraegeTab({ search, highlightId, missingEmailCount, matchesTeamFilte
                       </span>
                     )}
                   </td>
+                  <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                    {nextAction && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (c.status === "eingegangen" && !c.confirmation_email_sent_at) {
+                            sendBuchungsmail(c, e);
+                          } else {
+                            navigate(`/vertrieb/vertraege?contractId=${c.id}`);
+                          }
+                        }}
+                        disabled={sendingBuchungsmail === c.id}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors whitespace-nowrap ${nextAction.cls}`}
+                      >
+                        {sendingBuchungsmail === c.id ? <Loader2 className="h-3 w-3 animate-spin" /> : nextAction.icon}
+                        {nextAction.label}
+                      </button>
+                    )}
+                  </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground">{c.sales_partner_name || "–"}</td>
                   <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
                     {c.created_at ? format(new Date(c.created_at), "dd.MM.yy", { locale: de }) : "–"}
-                  </td>
-                  <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-2">
-                      {/* Buchungsmail senden – shown for eingegangen contracts without sent email */}
-                      {c.status === "eingegangen" && !c.confirmation_email_sent_at && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={(e) => sendBuchungsmail(c, e)}
-                                disabled={sendingBuchungsmail === c.id}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 disabled:opacity-50 transition-colors whitespace-nowrap"
-                              >
-                                {sendingBuchungsmail === c.id
-                                  ? <Loader2 className="h-3 w-3 animate-spin" />
-                                  : <Send className="h-3 w-3" />}
-                                Buchungsmail erneut
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>Digitalen Buchungslink an Kunden senden</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => navigate(`/vertrieb/vertraege?contractId=${c.id}`)}
-                              className="text-primary hover:text-primary/70 transition-colors"
-                            >
-                              <ArrowRight className="h-3.5 w-3.5" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>In Vertragsübersicht öffnen</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
                   </td>
                 </tr>
               );
