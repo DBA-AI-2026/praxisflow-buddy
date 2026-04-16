@@ -330,6 +330,14 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     if (statusFilter === "kein_abschluss" && l.status !== "kein_abschluss") return false;
     if (statusFilter === "abgelehnt" && l.status !== "abgelehnt") return false;
 
+    // Deep-link overdue filter from Dashboard
+    if (overdueFilter) {
+      if (!ACTIVE_LEAD_STATUSES.includes(l.status)) return false;
+      const days = differenceInDays(new Date(), new Date(l.created_at));
+      if (overdueFilter === "overdue14" && days < 14) return false;
+      if (overdueFilter === "overdue7" && (days < 7 || days >= 14)) return false;
+    }
+
     if (!s) return true;
     return (
       l.praxis_name?.toLowerCase().includes(s) ||
@@ -684,6 +692,11 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
   const s = search.toLowerCase();
   const filteredBase = teamContracts.filter((c: any) => {
     if (statusFilter !== "alle" && c.status !== statusFilter) return false;
+
+    // Deep-link contract filter from Dashboard
+    if (contractFilter === "missing_email" && !(c.status === "eingegangen" && !c.confirmation_email_sent_at)) return false;
+    if (contractFilter === "waiting_payment" && !(c.status === "eingegangen" && c.confirmation_email_sent_at && !c.customer_confirmed_at)) return false;
+
     if (!s) return true;
     return (
       c.customer_name?.toLowerCase().includes(s) ||
