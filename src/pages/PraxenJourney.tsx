@@ -134,7 +134,7 @@ function VorbezugBadge({ value }: { value?: string | null }) {
   );
 }
 
-
+function TH({ children, right }: { children: React.ReactNode; right?: boolean }) {
   return (
     <th className={`py-2.5 px-4 text-${right ? "right" : "left"} text-xs font-medium text-muted-foreground bg-muted/40 border-b border-border`}>
       {children}
