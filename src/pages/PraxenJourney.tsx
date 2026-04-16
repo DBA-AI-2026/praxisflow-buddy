@@ -1043,7 +1043,7 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                   <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => navigate(`/vertrieb/vertraege?contractId=${c.id}`)}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-primary bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors opacity-0 group-hover:opacity-100"
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-primary bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors"
                     >
                       <Eye className="h-3 w-3" />
                       Vertrag
