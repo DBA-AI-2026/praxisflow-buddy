@@ -932,12 +932,8 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
 
   const s = search.toLowerCase();
 
-  const statusFiltered = statusFilter === "alle"
-    ? allContracts
-    : allContracts.filter((c: any) => c.status === statusFilter);
-
   // Deduplicate by hfx_customer_number for cleaner view
-  const statusFiltered2 = statusFilter === "alle"
+  const statusFiltered = statusFilter === "alle"
     ? teamContracts
     : teamContracts.filter((c: any) => c.status === statusFilter);
 
