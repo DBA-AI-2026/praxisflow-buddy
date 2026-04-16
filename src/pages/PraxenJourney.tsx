@@ -446,12 +446,12 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
           <FilterPill active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")} label="Im Prozess" count={activeCount} />
           <FilterPill active={statusFilter === "kein_abschluss"} onClick={() => setStatusFilter("kein_abschluss")} label="Kein Abschluss" count={closedKeinCount} />
           <FilterPill active={statusFilter === "abgelehnt"} onClick={() => setStatusFilter("abgelehnt")} label="Abgelehnt" count={closedAblCount} />
-          <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={leads.length} />
+          <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={teamLeads.length} />
 
           <span className="h-5 w-px bg-border mx-1" />
 
           {[
-            { key: "alle" as const, icon: null, label: "Alle Quellen", count: leads.length },
+            { key: "alle" as const, icon: null, label: "Alle Quellen", count: teamLeads.length },
             { key: "homepage" as const, icon: <Globe className="h-3 w-3" />, label: "Homepage", count: homepageCount },
             { key: "manuell" as const, icon: <PenLine className="h-3 w-3" />, label: "Manuell", count: manuellCount },
           ].map((t) => (
@@ -661,8 +661,14 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
     },
   });
 
+  // Team-filtered contracts
+  const teamContracts = useMemo(() => {
+    if (isSalesPartner || isTippgeber) return contracts;
+    return contracts.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
+  }, [contracts, matchesTeamFilter, isSalesPartner, isTippgeber]);
+
   const statusCounts = ABSCHLUSS_STATUSES.reduce((acc, s) => {
-    acc[s] = contracts.filter((c: any) => c.status === s).length;
+    acc[s] = teamContracts.filter((c: any) => c.status === s).length;
     return acc;
   }, {} as Record<string, number>);
 
