@@ -246,7 +246,7 @@ const CLOSED_LEAD_STATUSES = ["kein_abschluss", "abgelehnt"];
 type LeadSourceFilter = "alle" | "homepage" | "manuell";
 type LeadStatusFilter = "aktiv" | "kein_abschluss" | "abgelehnt" | "alle";
 
-function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }: { search: string; highlightId?: string; teamFilter: string; matchesTeamFilter: (id?: string | null) => boolean }) {
+function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, initialFilter }: { search: string; highlightId?: string; teamFilter: string; matchesTeamFilter: (id?: string | null) => boolean; initialFilter?: string }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAdmin, isSalesLead, isRegionalLead, isSalesPartner, isTippgeber, role } = useUserRole();
@@ -259,6 +259,9 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [overdueFilter, setOverdueFilter] = useState<"overdue7" | "overdue14" | null>(
+    initialFilter === "overdue7" ? "overdue7" : initialFilter === "overdue14" ? "overdue14" : null
+  );
 
   useEffect(() => {
     if (highlightId && highlightRef.current) {
@@ -605,8 +608,13 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
 
 const ABSCHLUSS_STATUSES = ["entwurf", "eingegangen", "gezeichnet"];
 
-function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeamFilter }: { search: string; highlightId?: string; missingEmailCount: number; matchesTeamFilter: (id?: string | null) => boolean }) {
-  const [statusFilter, setStatusFilter] = useState<string>("alle");
+function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeamFilter, initialFilter }: { search: string; highlightId?: string; missingEmailCount: number; matchesTeamFilter: (id?: string | null) => boolean; initialFilter?: string }) {
+  const [statusFilter, setStatusFilter] = useState<string>(
+    initialFilter === "missing_email" || initialFilter === "waiting_payment" ? "eingegangen" : "alle"
+  );
+  const [contractFilter, setContractFilter] = useState<"missing_email" | "waiting_payment" | null>(
+    initialFilter === "missing_email" ? "missing_email" : initialFilter === "waiting_payment" ? "waiting_payment" : null
+  );
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
