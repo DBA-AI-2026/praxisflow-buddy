@@ -4,10 +4,6 @@ import {
   ChevronDown, ChevronUp, BarChart3,
 } from "lucide-react";
 import { differenceInDays } from "date-fns";
-import {
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
-} from "@/components/ui/tooltip";
-
 interface KpiCardProps {
   label: string;
   value: string | number;
