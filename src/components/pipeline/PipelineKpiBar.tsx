@@ -12,7 +12,7 @@ interface KpiCardProps {
   accent?: "primary" | "success" | "warning" | "destructive" | "muted";
 }
 
-function KpiCard({ label, value, sub, icon, accent = "primary" }: KpiCardProps) {
+const KpiCard = React.forwardRef<HTMLDivElement, KpiCardProps>(({ label, value, sub, icon, accent = "primary" }, ref) => {
   const accentCls: Record<string, string> = {
     primary: "bg-primary/10 text-primary",
     success: "bg-success/10 text-success",
@@ -21,7 +21,7 @@ function KpiCard({ label, value, sub, icon, accent = "primary" }: KpiCardProps) 
     muted: "bg-muted text-muted-foreground",
   };
   return (
-    <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-border bg-card min-w-[180px]">
+    <div ref={ref} className="flex items-center gap-3 px-4 py-3 rounded-lg border border-border bg-card min-w-[180px]">
       <div className={`flex items-center justify-center h-9 w-9 rounded-lg shrink-0 ${accentCls[accent]}`}>
         {icon}
       </div>
@@ -32,7 +32,8 @@ function KpiCard({ label, value, sub, icon, accent = "primary" }: KpiCardProps) 
       </div>
     </div>
   );
-}
+});
+KpiCard.displayName = "KpiCard";
 
 function FunnelBar({ stages }: { stages: { label: string; count: number; pct: number; cls: string }[] }) {
   const maxCount = Math.max(...stages.map((s) => s.count), 1);
