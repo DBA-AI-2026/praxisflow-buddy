@@ -103,6 +103,36 @@ function SourceBadge({ source }: { source: "homepage" | "manuell" }) {
     </span>
   );
 }
+function VorbezugBadge({ value }: { value?: string | null }) {
+  if (!value || value === "nein" || value === "keins") return <span className="text-muted-foreground/30">—</span>;
+  const known: Record<string, { label: string; cls: string }> = {
+    mcc: { label: "MCC", cls: "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20" },
+    privadis: { label: "Privadis", cls: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20" },
+  };
+  const key = value.toLowerCase().trim();
+  const match = known[key];
+  if (match) {
+    return (
+      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${match.cls}`}>
+        {match.label}
+      </span>
+    );
+  }
+  // "andere" or free text
+  const display = key === "andere" ? "Andere" : value.length > 12 ? value.slice(0, 12) + "…" : value;
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border bg-muted text-muted-foreground border-border cursor-default">
+            {display}
+          </span>
+        </TooltipTrigger>
+        {value.length > 12 && <TooltipContent>{value}</TooltipContent>}
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 function TH({ children, right }: { children: React.ReactNode; right?: boolean }) {
   return (
@@ -347,6 +377,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
               <TH>Quelle</TH>
               <TH>E-Mail</TH>
               <TH>PLZ / Ort</TH>
+              <TH>Vorbezug</TH>
               <TH>Status</TH>
               <TH>Nächster Schritt</TH>
               <TH right>Qodia</TH>
@@ -355,7 +386,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={9} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              <tr><td colSpan={10} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : filtered.length === 0 ? (
               <EmptyState icon={Users} title="Keine Interessenten gefunden" sub="Versuche einen anderen Filter oder lege einen neuen Interessenten an" />
             ) : filtered.map((lead: any) => {
@@ -405,6 +436,9 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
                   </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
                     {lead.plz}{lead.ort ? ` ${lead.ort}` : ""}
+                  </td>
+                  <td className="py-3 px-4">
+                    <VorbezugBadge value={lead.abrechnungszentrum} />
                   </td>
                   <td className="py-3 px-4">
                     <StatusPill label={sc.label} cls={sc.cls} />
@@ -970,9 +1004,9 @@ export default function PraxenJourney() {
   const urlTab = searchParams.get("tab");
   const urlId = searchParams.get("id") ?? undefined;
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"interessenten" | "abschlussphase" | "bestandskunden">(
+  const [tab, setTab] = useState<"interessenten" | "abschlussphase" | "kunden">(
     urlTab === "abschlussphase" || urlTab === "vertraege" ? "abschlussphase"
-      : urlTab === "bestandskunden" || urlTab === "kunden" ? "bestandskunden"
+      : urlTab === "kunden" || urlTab === "bestandskunden" ? "kunden"
       : "interessenten"
   );
 
@@ -994,7 +1028,7 @@ export default function PraxenJourney() {
   const tabs: TabDef[] = [
     { key: "interessenten", label: "Interessenten", icon: Users, count: counts.leads },
     { key: "abschlussphase", label: "Abschlussphase", icon: FileText, count: counts.contracts, warningCount: counts.missingEmail },
-    { key: "bestandskunden", label: "Bestandskunden", icon: Building2, count: counts.kunden },
+    { key: "kunden", label: "Kunden", icon: Building2, count: counts.kunden },
   ];
 
   return (
@@ -1039,7 +1073,7 @@ export default function PraxenJourney() {
 
         {tab === "interessenten" && <InteressentenTab search={search} highlightId={urlId} teamFilter={teamFilter} matchesTeamFilter={matchesTeamFilter} />}
         {tab === "abschlussphase" && <VertraegeTab search={search} highlightId={urlId} missingEmailCount={counts.missingEmail} matchesTeamFilter={matchesTeamFilter} />}
-        {tab === "bestandskunden" && <KundenTab search={search} highlightId={urlId} matchesTeamFilter={matchesTeamFilter} />}
+        {tab === "kunden" && <KundenTab search={search} highlightId={urlId} matchesTeamFilter={matchesTeamFilter} />}
       </div>
     </MainLayout>
   );

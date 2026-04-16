@@ -45,7 +45,7 @@ function getQuickLinks(role: AppRole | null): QuickLink[] {
     case "user":
       return [
         { to: "/pipeline", label: "Meine Leads", icon: Users, primary: true },
-        { to: "/pipeline?tab=bestandskunden", label: "Kunden", icon: Building2 },
+        { to: "/pipeline?tab=kunden", label: "Kunden", icon: Building2 },
         { to: "/reservierungen", label: "Reservierungen", icon: BookMarked },
       ];
     case "sales_partner":
@@ -60,12 +60,12 @@ function getQuickLinks(role: AppRole | null): QuickLink[] {
         { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle, primary: true },
         { to: "/pipeline", label: "Pipeline", icon: Users },
         { to: "/vertrieb/provisionen", label: "Provisionen", icon: BarChart3 },
-        { to: "/pipeline?tab=bestandskunden", label: "Kunden", icon: Building2 },
+        { to: "/pipeline?tab=kunden", label: "Kunden", icon: Building2 },
       ];
     case "vertragsabteilung":
       return [
         { to: "/vertrieb/vertraege", label: "Verträge prüfen", icon: FileText, primary: true },
-        { to: "/pipeline?tab=bestandskunden", label: "Kunden", icon: Building2 },
+        { to: "/pipeline?tab=kunden", label: "Kunden", icon: Building2 },
         { to: "/umsaetze", label: "Umsätze", icon: TrendingUp },
       ];
     case "sales_lead":
@@ -80,7 +80,7 @@ function getQuickLinks(role: AppRole | null): QuickLink[] {
       return [
         { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle, primary: true },
         { to: "/pipeline", label: "Pipeline", icon: Users },
-        { to: "/pipeline?tab=bestandskunden", label: "Kunden", icon: Eye },
+        { to: "/pipeline?tab=kunden", label: "Kunden", icon: Eye },
       ];
   }
 }

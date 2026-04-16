@@ -197,7 +197,7 @@ function CustomerDetail({ customerId }: { customerId: string }) {
     return (
       <div className="text-center py-20 text-muted-foreground">
         Kunde nicht gefunden.
-        <Button variant="link" onClick={() => navigate("/pipeline?tab=bestandskunden")}>Zurück zur Übersicht</Button>
+        <Button variant="link" onClick={() => navigate("/pipeline?tab=kunden")}>Zurück zur Übersicht</Button>
       </div>
     );
   }
@@ -208,7 +208,7 @@ function CustomerDetail({ customerId }: { customerId: string }) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/pipeline?tab=bestandskunden")} className="mt-0.5">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/pipeline?tab=kunden")} className="mt-0.5">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1 min-w-0">

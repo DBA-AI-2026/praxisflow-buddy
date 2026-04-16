@@ -34,7 +34,7 @@ export function RecentPraxen() {
       <div className="flex items-center justify-between p-4 border-b border-border">
         <h3 className="font-semibold text-foreground">Neue Kunden</h3>
         <Link
-          to="/pipeline?tab=bestandskunden"
+          to="/pipeline?tab=kunden"
           className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
         >
           Alle anzeigen
