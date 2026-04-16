@@ -752,7 +752,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
 
       {/* Status filter pills */}
       <div className="p-4 border-b border-border flex flex-wrap gap-2 items-center">
-        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={contracts.length} />
+        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={teamContracts.length} />
         {ABSCHLUSS_STATUSES.map((st) => {
           const cfg = contractStatusCfg[st];
           if (!cfg) return null;
