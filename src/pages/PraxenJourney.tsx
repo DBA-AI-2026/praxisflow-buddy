@@ -1234,8 +1234,8 @@ export default function PraxenJourney() {
           </div>
         </div>
 
-        {tab === "interessenten" && <InteressentenTab search={search} highlightId={urlId} teamFilter={teamFilter} matchesTeamFilter={matchesTeamFilter} />}
-        {tab === "abschlussphase" && <AbschlussphaseTab search={search} highlightId={urlId} missingEmailCount={counts.missingEmail} matchesTeamFilter={matchesTeamFilter} />}
+        {tab === "interessenten" && <InteressentenTab search={search} highlightId={urlId} teamFilter={teamFilter} matchesTeamFilter={matchesTeamFilter} initialFilter={urlFilter} />}
+        {tab === "abschlussphase" && <AbschlussphaseTab search={search} highlightId={urlId} missingEmailCount={counts.missingEmail} matchesTeamFilter={matchesTeamFilter} initialFilter={urlFilter} />}
         {tab === "kunden" && <KundenTab search={search} highlightId={urlId} matchesTeamFilter={matchesTeamFilter} />}
       </div>
     </MainLayout>
