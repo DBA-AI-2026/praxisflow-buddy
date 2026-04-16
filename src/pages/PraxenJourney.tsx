@@ -733,33 +733,41 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
   );
 }
 
-// ─── Tab: Kunden ──────────────────────────────────────────────────────────────
+// ─── Tab: Kunden (aktiv, gekündigt, beendet) ─────────────────────────────────
+
+const KUNDEN_STATUSES = ["aktiv", "gekuendigt", "beendet"];
+
+const kundenStatusCfg: Record<string, { label: string; cls: string }> = {
+  aktiv:      { label: "Aktiv",     cls: "bg-success/10 text-success" },
+  gekuendigt: { label: "Gekündigt", cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400" },
+  beendet:    { label: "Beendet",   cls: "bg-destructive/10 text-destructive" },
+};
 
 function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string; highlightId?: string; matchesTeamFilter: (id?: string | null) => boolean }) {
   const navigate = useNavigate();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
   const { isSalesPartner, isTippgeber, role } = useUserRole();
   const { user } = useAuth();
+  const [statusFilter, setStatusFilter] = useState<string>("aktiv");
+  const [sendingId, setSendingId] = useState<string | null>(null);
+
   useEffect(() => {
     if (highlightId && highlightRef.current) {
       setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
     }
   }, [highlightId]);
-  const [sendingId, setSendingId] = useState<string | null>(null);
 
-  const { data: activeContracts = [], isLoading } = useQuery({
+  const { data: allContracts = [], isLoading } = useQuery({
     queryKey: ["journey-kunden", user?.id, role],
     queryFn: async () => {
-      // Tippgeber haben keine Kunden-Ansicht
       if (isTippgeber) return [];
 
       let query = supabase
         .from("contracts")
-        .select("id, customer_name, hfx_customer_number, mp_nr, email, praxis, vorname, nachname, product_name, monthly_price, start_date, plz, ort, customer_id, sales_partner_name, sales_partner_id, created_by")
-        .eq("status", "aktiv")
+        .select("id, customer_name, hfx_customer_number, mp_nr, email, praxis, vorname, nachname, product_name, monthly_price, start_date, end_date, status, plz, ort, customer_id, sales_partner_name, sales_partner_id, created_by")
+        .in("status", KUNDEN_STATUSES)
         .order("start_date", { ascending: false });
 
-      // Sales Partner: nur eigene Kunden
       if (isSalesPartner && user?.id) {
         query = query.or(`sales_partner_id.eq.${user.id},created_by.eq.${user.id}`);
       }
@@ -797,11 +805,21 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
     }
   };
 
+  const statusCounts = KUNDEN_STATUSES.reduce((acc, s) => {
+    acc[s] = allContracts.filter((c: any) => c.status === s).length;
+    return acc;
+  }, {} as Record<string, number>);
+
   const s = search.toLowerCase();
 
+  const statusFiltered = statusFilter === "alle"
+    ? allContracts
+    : allContracts.filter((c: any) => c.status === statusFilter);
+
+  // Deduplicate by hfx_customer_number for cleaner view
   const seenKeys = new Set<string>();
-  const rows = activeContracts.filter((c: any) => {
-    if (!matchesTeamFilter(c.sales_partner_id) && !matchesTeamFilter(c.created_by)) return false;
+  const rows = statusFiltered.filter((c: any) => {
+    if (!isSalesPartner && !matchesTeamFilter(c.sales_partner_id) && !matchesTeamFilter(c.created_by)) return false;
     const key = c.hfx_customer_number
       ? `hfx:${c.hfx_customer_number}`
       : `name:${(c.praxis || c.customer_name || "").toLowerCase().trim()}`;
@@ -826,11 +844,12 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
 
   return (
     <div>
-      {/* Toolbar */}
-      <div className="p-4 border-b border-border flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">{filtered.length}</span> aktive Kunden
-        </span>
+      {/* Status filter pills */}
+      <div className="p-4 border-b border-border flex flex-wrap gap-2 items-center">
+        <FilterPill active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")} label="Aktiv" count={statusCounts.aktiv ?? 0} />
+        <FilterPill active={statusFilter === "gekuendigt"} onClick={() => setStatusFilter("gekuendigt")} label="Gekündigt" count={statusCounts.gekuendigt ?? 0} />
+        <FilterPill active={statusFilter === "beendet"} onClick={() => setStatusFilter("beendet")} label="Beendet" count={statusCounts.beendet ?? 0} />
+        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={allContracts.length} />
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -842,6 +861,7 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
               <TH>E-Mail</TH>
               <TH>PLZ / Ort</TH>
               <TH>Produkt</TH>
+              <TH>Status</TH>
               <TH right>Qodia</TH>
               <TH>Seit</TH>
               <TH>{""}</TH>
@@ -849,13 +869,14 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={9} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              <tr><td colSpan={10} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : filtered.length === 0 ? (
-              <EmptyState icon={Building2} title="Keine aktiven Kunden" sub="Aktivierte Verträge erscheinen hier automatisch" />
+              <EmptyState icon={Building2} title="Keine Kunden gefunden" sub="Aktivierte Verträge erscheinen hier automatisch" />
             ) : (filtered as any[]).map((c) => {
               const praxisLabel = c.praxis || c.customer_name || "–";
               const arztLabel = [c.vorname, c.nachname].filter(Boolean).join(" ");
               const qodia = !!(c.hfx_customer_number ? qodiaMap[c.hfx_customer_number] : false);
+              const sc = kundenStatusCfg[c.status] ?? kundenStatusCfg.aktiv;
               return (
                 <tr
                   key={c.id}
@@ -900,6 +921,9 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                     {c.plz}{c.ort ? ` ${c.ort}` : ""}
                   </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground">{c.product_name || "–"}</td>
+                  <td className="py-3 px-4">
+                    <StatusPill label={sc.label} cls={sc.cls} />
+                  </td>
                   <td className="py-3 px-4 text-right"><QodiaIcon synced={qodia} /></td>
                   <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
                     {c.start_date ? format(new Date(c.start_date), "dd.MM.yy", { locale: de }) : "–"}
