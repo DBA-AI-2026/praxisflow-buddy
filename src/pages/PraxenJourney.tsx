@@ -377,6 +377,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
               <TH>Quelle</TH>
               <TH>E-Mail</TH>
               <TH>PLZ / Ort</TH>
+              <TH>Vorbezug</TH>
               <TH>Status</TH>
               <TH>Nächster Schritt</TH>
               <TH right>Qodia</TH>
