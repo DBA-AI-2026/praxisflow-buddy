@@ -1,89 +1,22 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { supabase } from "@/lib/supabaseClient";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Building2, FlaskConical, TrendingUp, FileText,
-  ArrowRight, Clock, Users,
+  Users, FileText, Building2, ArrowRight, Clock,
   PlusCircle, Eye, FileSignature, Lightbulb, MapPin, BarChart3, BookMarked,
-  X, Sparkles, Activity, FileCheck, UserPlus, MessageSquare, CheckCircle2, XCircle,
+  X, Sparkles, AlertTriangle, Flame, Zap, Target, Rocket, UserPlus,
 } from "lucide-react";
 import type { AppRole } from "@/hooks/useUserRole";
-import { format, formatDistanceToNow, subHours } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { de } from "date-fns/locale";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
 import { Button } from "@/components/ui/button";
 import { useRolePreview } from "@/contexts/RolePreviewContext";
-
-interface ActivityItem {
-  id: string;
-  type: "contract" | "lead" | "tipp";
-  label: string;
-  sub: string;
-  status: string;
-  time: string;
-  link: string;
-}
-
-interface QuickLink {
-  to: string;
-  label: string;
-  icon: React.ElementType;
-  primary?: boolean;
-}
-
-function getQuickLinks(role: AppRole | null): QuickLink[] {
-  switch (role) {
-    case "tippgeber":
-      return [
-        { to: "/tipp-leads", label: "Tipp-Lead einreichen", icon: Lightbulb, primary: true },
-        { to: "/tipp-leads", label: "Meine Tipp-Leads", icon: Eye },
-      ];
-    case "user":
-      return [
-        { to: "/pipeline", label: "Meine Leads", icon: Users, primary: true },
-        { to: "/pipeline?tab=kunden", label: "Kunden", icon: Building2 },
-        { to: "/reservierungen", label: "Reservierungen", icon: BookMarked },
-      ];
-    case "sales_partner":
-      return [
-        { to: "/pipeline", label: "Interessenten", icon: Users, primary: true },
-        { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle },
-        { to: "/reservierungen", label: "Reservierungen", icon: BookMarked },
-        { to: "/vertrieb/provisionen", label: "Provisionen", icon: BarChart3 },
-      ];
-    case "regional_lead":
-      return [
-        { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle, primary: true },
-        { to: "/pipeline", label: "Pipeline", icon: Users },
-        { to: "/vertrieb/provisionen", label: "Provisionen", icon: BarChart3 },
-        { to: "/pipeline?tab=kunden", label: "Kunden", icon: Building2 },
-      ];
-    case "vertragsabteilung":
-      return [
-        { to: "/vertrieb/vertraege", label: "Verträge prüfen", icon: FileText, primary: true },
-        { to: "/pipeline?tab=kunden", label: "Kunden", icon: Building2 },
-        { to: "/umsaetze", label: "Umsätze", icon: TrendingUp },
-      ];
-    case "sales_lead":
-      return [
-        { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle, primary: true },
-        { to: "/pipeline", label: "Pipeline", icon: Users },
-        { to: "/vertrieb/provisionen", label: "Provisionen", icon: BarChart3 },
-        { to: "/admin/plz-mapping", label: "PLZ-Zuordnung", icon: MapPin },
-      ];
-    case "admin":
-    default:
-      return [
-        { to: "/vertrieb/vertraege", label: "Neuer Vertrag", icon: PlusCircle, primary: true },
-        { to: "/pipeline", label: "Pipeline", icon: Users },
-        { to: "/pipeline?tab=kunden", label: "Kunden", icon: Eye },
-      ];
-  }
-}
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -109,7 +42,7 @@ const onboardingConfig: Partial<Record<AppRole, { icon: React.ElementType; title
   tippgeber: {
     icon: Lightbulb,
     title: "Willkommen als Tippgeber!",
-    text: "Reichen Sie jetzt Ihren ersten Empfehlungs-Lead ein. Wählen Sie Arzt, Praxis und gewünschte Dienstleistung – der Außendienst kümmert sich um den Rest.",
+    text: "Reichen Sie jetzt Ihren ersten Empfehlungs-Lead ein.",
     cta: "Ersten Tipp-Lead einreichen",
     to: "/tipp-leads",
   },
@@ -117,186 +50,206 @@ const onboardingConfig: Partial<Record<AppRole, { icon: React.ElementType; title
     icon: Users,
     title: "Willkommen als Gebietsleiter!",
     text: "Ihr Gebiet ist bereit. Erfassen Sie Interessenten oder schauen Sie sich Ihre zugeordneten Kunden an.",
-    cta: "Interessenten anzeigen",
-    to: "/interessenten",
+    cta: "Pipeline öffnen",
+    to: "/pipeline",
   },
   sales_partner: {
     icon: FileText,
     title: "Willkommen als Vertriebspartner!",
     text: "Legen Sie jetzt Ihren ersten Interessenten an oder erstellen Sie direkt einen Vertrag.",
-    cta: "Interessenten erfassen",
-    to: "/interessenten",
+    cta: "Pipeline öffnen",
+    to: "/pipeline",
   },
   regional_lead: {
     icon: BarChart3,
     title: "Willkommen als Regionalleiter!",
-    text: "Verwalten Sie Ihr Team, bearbeiten Sie Interessenten und behalten Sie die Provisionen im Blick.",
-    cta: "Vertragsübersicht öffnen",
-    to: "/vertrieb/vertraege",
+    text: "Verwalten Sie Ihr Team und behalten Sie die Pipeline im Blick.",
+    cta: "Pipeline öffnen",
+    to: "/pipeline",
   },
   vertragsabteilung: {
     icon: FileSignature,
     title: "Willkommen in der Vertragsabteilung!",
-    text: "Prüfen und genehmigen Sie eingereichte Verträge. Alle gezeichneten Verträge warten auf Ihre Freigabe.",
+    text: "Prüfen und genehmigen Sie eingereichte Verträge.",
     cta: "Verträge prüfen",
     to: "/vertrieb/vertraege",
   },
   sales_lead: {
     icon: MapPin,
     title: "Willkommen als Vertriebsleitung!",
-    text: "Überblicken Sie alle Vertriebsaktivitäten. Richten Sie zunächst die PLZ-Zuordnung ein, damit Leads automatisch zugewiesen werden.",
-    cta: "PLZ-Zuordnung einrichten",
-    to: "/admin/plz-mapping",
+    text: "Überblicken Sie alle Vertriebsaktivitäten.",
+    cta: "Pipeline öffnen",
+    to: "/pipeline",
   },
 };
 
-// Which KPI cards to show per role
-type KpiKey = "praxen" | "demos" | "leads" | "revenue" | "contracts" | "tippLeads" | "provisionen";
-function getKpiKeys(role: AppRole | null): KpiKey[] {
-  switch (role) {
-    case "tippgeber":
-      return ["tippLeads", "provisionen"];
-    case "sales_partner":
-      return ["leads", "contracts", "provisionen"];
-    case "user":
-      return ["leads", "praxen", "demos"];
-    case "regional_lead":
-      return ["leads", "contracts", "praxen", "provisionen"];
-    case "vertragsabteilung":
-      return ["contracts", "praxen", "revenue"];
-    case "sales_lead":
-      return ["leads", "contracts", "praxen", "revenue"];
-    case "admin":
-    default:
-      return ["praxen", "demos", "leads", "revenue"];
-  }
-}
-
 export default function Dashboard() {
   const { profile, user } = useAuth();
-  const { role, isAdmin, isTippgeber, isSalesPartner } = useUserRole();
+  const { role, isAdmin, isTippgeber, isSalesPartner, isRegionalLead } = useUserRole();
   const { previewRole, isPreviewActive, setPreviewRole } = useRolePreview();
+  const { matchesTeamFilter } = useRegionalTeam();
   const navigate = useNavigate();
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "Willkommen";
-
-  const canSeeLeads = role !== "tippgeber" && role !== "vertragsabteilung";
-  const canSeeContracts = role !== "tippgeber";
   const canCreateLead = role !== "tippgeber" && role !== "vertragsabteilung";
+  const canSeePipeline = role !== "tippgeber";
 
-  // Live KPIs from DB – filtered by role
-  const { data: kpis } = useQuery({
-    queryKey: ["dashboard-kpis", role, user?.id],
+  // ── BLOCK 1: "Heute wichtig" data ──
+  const { data: overdueLeads = [] } = useQuery({
+    queryKey: ["dashboard-overdue-leads", role, user?.id],
+    enabled: canSeePipeline,
     staleTime: 0,
     refetchOnMount: "always",
     queryFn: async () => {
-      const kpiKeys = getKpiKeys(role);
+      let q = supabase
+        .from("leads")
+        .select("id, praxis_name, vorname, nachname, status, created_at, assigned_to")
+        .in("status", ["neu", "kontaktiert", "interessiert", "qualifiziert"])
+        .order("created_at", { ascending: true });
+      if (isSalesPartner) q = q.eq("assigned_to", user?.id ?? "");
+      const { data } = await q;
+      return data ?? [];
+    },
+  });
 
-      const [praxen, demos, leads, contracts, revenues, tippLeads, payouts] = await Promise.all([
-        kpiKeys.includes("praxen")
-          ? supabase.from("praxen").select("id", { count: "exact", head: true }).eq("status", "aktiv")
-          : Promise.resolve({ count: null }),
-        kpiKeys.includes("demos")
-          ? supabase.from("demo_downloads").select("id", { count: "exact", head: true }).eq("status", "aktiv")
-          : Promise.resolve({ count: null }),
-        kpiKeys.includes("leads")
-          ? (() => {
-              let q = supabase.from("leads").select("id", { count: "exact", head: true }).eq("status", "neu");
-              // sales_partner / user see only own leads
-              if (role === "sales_partner") q = q.eq("assigned_to", user?.id ?? "");
-              return q;
-            })()
-          : Promise.resolve({ count: null }),
-        kpiKeys.includes("contracts")
-          ? (() => {
-              let q = supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "gezeichnet");
-              if (role === "sales_partner") q = q.eq("sales_partner_id", user?.id ?? "");
-              return q;
-            })()
-          : Promise.resolve({ count: null }),
-        kpiKeys.includes("revenue")
-          ? supabase.from("invoices").select("gross_amount").eq("status", "bezahlt")
-          : Promise.resolve({ data: null }),
-        kpiKeys.includes("tippLeads")
-          ? supabase.from("tipp_leads").select("id", { count: "exact", head: true })
-          : Promise.resolve({ count: null }),
-        kpiKeys.includes("provisionen")
-          ? supabase.from("commission_payouts").select("commission_amount").eq("sales_partner_id", user?.id ?? "")
-          : Promise.resolve({ data: null }),
+  const { data: contractAlerts = [] } = useQuery({
+    queryKey: ["dashboard-contract-alerts", role, user?.id],
+    enabled: canSeePipeline,
+    staleTime: 0,
+    refetchOnMount: "always",
+    queryFn: async () => {
+      let q = supabase
+        .from("contracts")
+        .select("id, customer_name, product_name, status, confirmation_email_sent_at, customer_confirmed_at, created_at, sales_partner_id, created_by")
+        .eq("status", "eingegangen");
+      if (isSalesPartner) q = q.eq("sales_partner_id", user?.id ?? "");
+      const { data } = await q;
+      return data ?? [];
+    },
+  });
+
+  // ── BLOCK 2: Pipeline counts ──
+  const { data: pipelineCounts } = useQuery({
+    queryKey: ["dashboard-pipeline-counts", role, user?.id],
+    enabled: canSeePipeline,
+    staleTime: 0,
+    refetchOnMount: "always",
+    queryFn: async () => {
+      const [leadsRes, contractsRes, customersRes] = await Promise.all([
+        (() => {
+          let q = supabase.from("leads").select("id, assigned_to").in("status", ["neu", "kontaktiert", "interessiert", "qualifiziert"]);
+          if (isSalesPartner) q = q.eq("assigned_to", user?.id ?? "");
+          return q;
+        })(),
+        (() => {
+          let q = supabase.from("contracts").select("id, sales_partner_id, created_by").in("status", ["entwurf", "eingegangen", "gezeichnet"]);
+          if (isSalesPartner) q = q.eq("sales_partner_id", user?.id ?? "");
+          return q;
+        })(),
+        (() => {
+          let q = supabase.from("contracts").select("id, sales_partner_id, created_by").in("status", ["aktiv", "gekuendigt", "beendet"]);
+          if (isSalesPartner) q = q.eq("sales_partner_id", user?.id ?? "");
+          return q;
+        })(),
       ]);
-
-      const monthRevenue = (revenues.data ?? []).reduce((s: number, r: any) => s + (r.gross_amount ?? 0), 0);
-      const totalProvision = (payouts.data ?? []).reduce((s: number, r: any) => s + Number(r.commission_amount ?? 0), 0);
-
       return {
-        activePraxen: praxen.count ?? 0,
-        activeDemos: demos.count ?? 0,
-        openLeads: leads.count ?? 0,
-        pendingContracts: contracts.count ?? 0,
-        monthRevenue,
-        tippLeadsCount: tippLeads.count ?? 0,
-        totalProvision,
-        kpiKeys,
+        leadsRaw: leadsRes.data ?? [],
+        contractsRaw: contractsRes.data ?? [],
+        customersRaw: customersRes.data ?? [],
       };
     },
   });
 
-  // Recent contracts – only for roles that can see them
-  const { data: recentContracts = [] } = useQuery({
-    queryKey: ["dashboard-recent-contracts", role, user?.id],
+  // ── BLOCK 3: Performance ──
+  const { data: performance } = useQuery({
+    queryKey: ["dashboard-performance", role, user?.id],
+    enabled: canSeePipeline,
     staleTime: 0,
     refetchOnMount: "always",
-    enabled: canSeeContracts,
     queryFn: async () => {
-      let q = supabase
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+      let cq = supabase
         .from("contracts")
-        .select("id, customer_name, product_name, status, created_at, monthly_price, hfx_customer_number")
-        .order("created_at", { ascending: false })
-        .limit(5);
-      if (role === "sales_partner") q = q.eq("sales_partner_id", user?.id ?? "");
-      const { data } = await q;
-      return data ?? [];
+        .select("id, sales_partner_id, created_by")
+        .eq("status", "aktiv")
+        .gte("start_date", monthStart.split("T")[0]);
+      if (isSalesPartner) cq = cq.eq("sales_partner_id", user?.id ?? "");
+
+      const [contractsRes, payoutsRes] = await Promise.all([
+        cq,
+        supabase
+          .from("commission_payouts")
+          .select("commission_amount")
+          .eq("sales_partner_id", user?.id ?? ""),
+      ]);
+
+      const totalProvision = (payoutsRes.data ?? []).reduce((s: number, r: any) => s + Number(r.commission_amount ?? 0), 0);
+
+      return {
+        contractsThisMonthRaw: contractsRes.data ?? [],
+        totalProvision,
+      };
     },
   });
 
-  // Recent leads – only for roles that can see them
-  const { data: recentLeads = [] } = useQuery({
-    queryKey: ["dashboard-recent-leads", role, user?.id],
-    staleTime: 0,
-    refetchOnMount: "always",
-    enabled: canSeeLeads,
-    queryFn: async () => {
-      let q = supabase
-        .from("leads")
-        .select("id, praxis_name, vorname, nachname, status, created_at, abrechnungszentrum, qodia_synced, assigned_to, tippgeber_id")
-        .not("status", "eq", "kunde")
-        .order("created_at", { ascending: false })
-        .limit(5);
-      if (role === "sales_partner") q = q.eq("assigned_to", user?.id ?? "");
-      const { data } = await q;
-      return data ?? [];
-    },
-  });
+  // ── Apply team filter for regional leads ──
+  const applyTeamFilter = (items: any[], field: string) => {
+    if (!isRegionalLead) return items;
+    return items.filter((item) => matchesTeamFilter(item[field]));
+  };
 
-  // Recent tipp-leads – only for tippgeber
-  const { data: recentTippLeads = [] } = useQuery({
-    queryKey: ["dashboard-recent-tipp-leads", user?.id],
-    staleTime: 0,
-    refetchOnMount: "always",
-    enabled: isTippgeber,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("tipp_leads")
-        .select("id, praxis_name, arzt_name, status, created_at")
-        .order("created_at", { ascending: false })
-        .limit(5);
-      return data ?? [];
-    },
-  });
+  // Filtered "Heute wichtig" items
+  const filteredOverdueLeads = useMemo(() => {
+    const items = applyTeamFilter(overdueLeads, "assigned_to");
+    const now = new Date();
+    return items
+      .map((l: any) => ({ ...l, daysSince: differenceInDays(now, new Date(l.created_at)) }))
+      .filter((l: any) => l.daysSince >= 7);
+  }, [overdueLeads, matchesTeamFilter, isRegionalLead]);
 
-  // Onboarding check
+  const overdueLeads7 = filteredOverdueLeads.filter((l: any) => l.daysSince >= 7 && l.daysSince < 14);
+  const overdueLeads14 = filteredOverdueLeads.filter((l: any) => l.daysSince >= 14);
+
+  const filteredContractAlerts = useMemo(() => {
+    return applyTeamFilter(contractAlerts, "sales_partner_id");
+  }, [contractAlerts, matchesTeamFilter, isRegionalLead]);
+
+  const contractsMissingEmail = filteredContractAlerts.filter(
+    (c: any) => !c.confirmation_email_sent_at
+  );
+  const contractsWaitingPayment = filteredContractAlerts.filter(
+    (c: any) => c.confirmation_email_sent_at && !c.customer_confirmed_at
+  );
+
+  const totalAlerts = overdueLeads14.length + overdueLeads7.length + contractsMissingEmail.length + contractsWaitingPayment.length;
+
+  // Filtered pipeline counts
+  const leadsCount = useMemo(() => {
+    if (!pipelineCounts) return 0;
+    return applyTeamFilter(pipelineCounts.leadsRaw, "assigned_to").length;
+  }, [pipelineCounts, matchesTeamFilter, isRegionalLead]);
+
+  const contractsCount = useMemo(() => {
+    if (!pipelineCounts) return 0;
+    return applyTeamFilter(pipelineCounts.contractsRaw, "sales_partner_id").length;
+  }, [pipelineCounts, matchesTeamFilter, isRegionalLead]);
+
+  const customersCount = useMemo(() => {
+    if (!pipelineCounts) return 0;
+    return applyTeamFilter(pipelineCounts.customersRaw, "sales_partner_id").length;
+  }, [pipelineCounts, matchesTeamFilter, isRegionalLead]);
+
+  // Filtered performance
+  const closingsThisMonth = useMemo(() => {
+    if (!performance) return 0;
+    return applyTeamFilter(performance.contractsThisMonthRaw, "sales_partner_id").length;
+  }, [performance, matchesTeamFilter, isRegionalLead]);
+
+  // Onboarding
   const { data: hasOwnData } = useQuery({
     queryKey: ["dashboard-onboarding-check", role],
     enabled: !!role && role !== "admin",
@@ -310,82 +263,8 @@ export default function Dashboard() {
     },
   });
 
-  // Activity feed: role-filtered
-  const { data: activityFeed = [] } = useQuery({
-    queryKey: ["dashboard-activity", role, user?.id],
-    enabled: !!role,
-    staleTime: 0,
-    refetchOnMount: "always",
-    queryFn: async () => {
-      const since = subHours(new Date(), 48).toISOString();
-      const items: ActivityItem[] = [];
-
-      if (isTippgeber) {
-        const { data } = await supabase
-          .from("tipp_leads")
-          .select("id, praxis_name, arzt_name, status, created_at, updated_at")
-          .gte("updated_at", since)
-          .order("updated_at", { ascending: false })
-          .limit(10);
-        (data ?? []).forEach((r) => items.push({
-          id: r.id, type: "tipp", label: r.praxis_name, sub: r.arzt_name,
-          status: r.status, time: r.updated_at, link: "/tipp-leads",
-        }));
-      } else {
-        if (canSeeContracts) {
-          let cq = supabase
-            .from("contracts")
-            .select("id, customer_name, product_name, status, created_at, updated_at")
-            .gte("updated_at", since)
-            .order("updated_at", { ascending: false })
-            .limit(8);
-          if (isSalesPartner) cq = cq.eq("sales_partner_id", user?.id ?? "");
-          const { data: contracts } = await cq;
-          (contracts ?? []).forEach((r) => items.push({
-            id: r.id, type: "contract", label: r.customer_name, sub: r.product_name,
-            status: r.status, time: r.updated_at, link: `/praxen-journey?tab=vertraege&id=${r.id}`,
-          }));
-        }
-
-        if (canSeeLeads) {
-          let lq = supabase
-            .from("leads")
-            .select("id, praxis_name, vorname, nachname, status, created_at, updated_at")
-            .not("status", "eq", "kunde")
-            .gte("updated_at", since)
-            .order("updated_at", { ascending: false })
-            .limit(8);
-          if (isSalesPartner) lq = lq.eq("assigned_to", user?.id ?? "");
-          const { data: leads } = await lq;
-          (leads ?? []).forEach((r) => items.push({
-            id: r.id, type: "lead", label: r.praxis_name, sub: `${r.vorname} ${r.nachname}`.trim(),
-            status: r.status, time: r.updated_at, link: `/praxen-journey?tab=leads&id=${r.id}`,
-          }));
-        }
-      }
-
-      return items.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 12);
-    },
-  });
-
   const showOnboarding = !bannerDismissed && hasOwnData === false && !!role && role !== "admin";
   const onboarding = role ? onboardingConfig[role] : undefined;
-
-  const statusBadge = (status: string) => {
-    const map: Record<string, string> = {
-      entwurf: "bg-muted text-muted-foreground",
-      aktiv: "bg-green-500/10 text-green-700",
-      gezeichnet: "bg-blue-500/10 text-blue-700",
-      gekuendigt: "bg-orange-500/10 text-orange-700",
-      beendet: "bg-destructive/10 text-destructive",
-      neu: "bg-primary/10 text-primary",
-      demo: "bg-amber-500/10 text-amber-700",
-      interessent: "bg-purple-500/10 text-purple-700",
-    };
-    return map[status] ?? "bg-muted text-muted-foreground";
-  };
-
-  const kpiKeys = kpis?.kpiKeys ?? getKpiKeys(role);
 
   return (
     <MainLayout title="" subtitle="">
@@ -431,29 +310,6 @@ export default function Dashboard() {
             </span>
           )}
         </div>
-        {/* Quick Actions – rollenspezifisch */}
-        <div className="flex gap-2 flex-wrap">
-          {canCreateLead && (
-            <Button
-              size="sm"
-              onClick={() => setCreateLeadOpen(true)}
-              className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              <UserPlus className="h-4 w-4" />
-              Neuer Interessent
-            </Button>
-          )}
-          {getQuickLinks(role).map((ql) => (
-            <Link
-              key={ql.to + ql.label}
-              to={ql.to}
-              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${ql.primary ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"}`}
-            >
-              <ql.icon className="h-4 w-4" />
-              {ql.label}
-            </Link>
-          ))}
-        </div>
       </div>
 
       {/* === ONBOARDING BANNER === */}
@@ -488,272 +344,277 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* === KPI CARDS === */}
-      <div className={`grid gap-4 mb-8 ${kpiKeys.length <= 2 ? "grid-cols-2" : kpiKeys.length === 3 ? "grid-cols-2 lg:grid-cols-3" : "grid-cols-2 lg:grid-cols-4"}`}>
-        {kpiKeys.includes("praxen") && (
-          <KpiCard title="Aktive Kunden" value={kpis?.activePraxen ?? "–"} icon={Building2} iconClass="bg-primary/10 text-primary" link="/praxen" />
-        )}
-        {kpiKeys.includes("demos") && (
-          <KpiCard title="Demo-Phase" value={kpis?.activeDemos ?? "–"} icon={FlaskConical} iconClass="bg-amber-500/10 text-amber-600" link="/demo-tracking" />
-        )}
-        {kpiKeys.includes("leads") && (
-          <KpiCard title="Neue Interessenten" value={kpis?.openLeads ?? "–"} icon={Users} iconClass="bg-purple-500/10 text-purple-600" link="/interessenten" />
-        )}
-        {kpiKeys.includes("contracts") && (
-          <KpiCard title="Aktive Verträge" value={kpis?.pendingContracts ?? "–"} icon={FileText} iconClass="bg-blue-500/10 text-blue-600" link="/vertrieb/vertraege" />
-        )}
-        {kpiKeys.includes("revenue") && (
-          <KpiCard
-            title="Monatsumsatz"
-            value={kpis?.monthRevenue != null ? kpis.monthRevenue.toLocaleString("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }) : "–"}
-            icon={TrendingUp}
-            iconClass="bg-green-500/10 text-green-600"
-            link="/umsaetze"
-          />
-        )}
-        {kpiKeys.includes("tippLeads") && (
-          <KpiCard title="Meine Tipp-Leads" value={kpis?.tippLeadsCount ?? "–"} icon={Lightbulb} iconClass="bg-amber-500/10 text-amber-600" link="/tipp-leads" />
-        )}
-        {kpiKeys.includes("provisionen") && (
-          <KpiCard
-            title="Meine Provisionen"
-            value={kpis?.totalProvision != null ? kpis.totalProvision.toLocaleString("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }) : "–"}
-            icon={BarChart3}
-            iconClass="bg-green-500/10 text-green-600"
-            link="/vertrieb/provisionen"
-          />
-        )}
-      </div>
-
-      {/* === MAIN CONTENT GRID === */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* Tippgeber: eigene Tipp-Leads */}
-        {isTippgeber && (
-          <div className="card-elevated lg:col-span-2">
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <div className="flex items-center gap-2">
-                <Lightbulb className="h-4 w-4 text-amber-600" />
-                <h3 className="font-semibold text-foreground">Meine Tipp-Leads</h3>
-              </div>
-              <Link to="/tipp-leads" className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
-                Alle <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-            <div className="divide-y divide-border">
-              {recentTippLeads.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">Noch keine Tipp-Leads eingereicht.</p>
-              ) : recentTippLeads.map((l: any) => (
-                <button
-                  key={l.id}
-                  onClick={() => navigate("/tipp-leads")}
-                  className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left group"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground text-sm truncate">{l.praxis_name}</span>
-                      <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${statusBadge(l.status)}`}>
-                        {l.status}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{l.arzt_name}</p>
-                  </div>
-                  <div className="text-right text-xs text-muted-foreground ml-2 shrink-0 flex items-center gap-2">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {format(new Date(l.created_at), "dd.MM.yy")}
-                    </span>
-                    <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
-                  </div>
-                </button>
-              ))}
-            </div>
+      {/* ══════════════════════════════════════════════
+          TIPPGEBER: Eigene simple Ansicht
+         ══════════════════════════════════════════════ */}
+      {isTippgeber && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <PipelineQuickCard
+              label="Meine Tipp-Leads"
+              icon={Lightbulb}
+              iconClass="bg-amber-500/10 text-amber-600"
+              to="/tipp-leads"
+            />
+            <PipelineQuickCard
+              label="Meine Provisionen"
+              icon={BarChart3}
+              iconClass="bg-green-500/10 text-green-600"
+              to="/vertrieb/provisionen"
+            />
           </div>
-        )}
-
-        {/* Letzte Interessenten – nur für Rollen die Leads sehen */}
-        {canSeeLeads && (
-          <div className="card-elevated">
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-purple-600" />
-                <h3 className="font-semibold text-foreground">
-                  {isSalesPartner ? "Meine Interessenten" : "Letzte Interessenten"}
-                </h3>
-              </div>
-              <Link to="/interessenten" className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
-                Alle <ArrowRight className="h-4 w-4" />
+          <div className="flex gap-3 flex-wrap">
+            <Button asChild className="gap-2">
+              <Link to="/tipp-leads">
+                <Lightbulb className="h-4 w-4" />
+                Tipp-Lead einreichen
               </Link>
-            </div>
-            <div className="divide-y divide-border">
-              {recentLeads.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">Noch keine Interessenten vorhanden.</p>
-              ) : recentLeads.map((l: any) => (
-                <button
-                  key={l.id}
-                  onClick={() => navigate(`/praxen-journey?tab=leads&id=${l.id}`)}
-                  className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left group"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground text-sm truncate">{l.praxis_name}</span>
-                      <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${statusBadge(l.status)}`}>
-                        {l.status}
-                      </span>
-                      {l.qodia_synced ? (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
-                      ) : (
-                        <XCircle className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {l.vorname} {l.nachname} · {l.abrechnungszentrum}
-                    </p>
-                  </div>
-                  <div className="text-right text-xs text-muted-foreground ml-2 shrink-0 flex items-center gap-2">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {format(new Date(l.created_at), "dd.MM.yy")}
-                    </span>
-                    <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Letzte Verträge – nur für Rollen die Verträge sehen */}
-        {canSeeContracts && (
-          <div className="card-elevated">
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" />
-                <h3 className="font-semibold text-foreground">
-                  {isSalesPartner ? "Meine Verträge" : "Letzte Verträge"}
-                </h3>
-              </div>
-              <Link to="/vertrieb/vertraege" className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
-                Alle <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-            <div className="divide-y divide-border">
-              {recentContracts.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">Noch keine Verträge vorhanden.</p>
-              ) : recentContracts.map((c: any) => (
-                <button
-                  key={c.id}
-                  onClick={() => navigate(`/praxen-journey?tab=vertraege&id=${c.id}`)}
-                  className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left group"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground text-sm truncate">{c.customer_name}</span>
-                      <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${statusBadge(c.status)}`}>
-                        {c.status}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {c.product_name}{c.hfx_customer_number ? ` · ${c.hfx_customer_number}` : ""}
-                    </p>
-                  </div>
-                  <div className="text-right text-xs text-muted-foreground ml-2 shrink-0 flex items-center gap-2">
-                    <div>
-                      <div className="flex items-center gap-1 justify-end">
-                        <Clock className="h-3 w-3" />
-                        {format(new Date(c.created_at), "dd.MM.yy")}
-                      </div>
-                      {c.monthly_price > 0 && (
-                        <div className="font-medium text-foreground mt-0.5">
-                          {c.monthly_price.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}/Mo.
-                        </div>
-                      )}
-                    </div>
-                    <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-      </div>
-
-      {/* === AKTIVITÄTS-FEED === */}
-      <div className="mt-6 card-elevated">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-primary" />
-            <h3 className="font-semibold text-foreground">Letzte Aktivitäten</h3>
-            <span className="text-xs text-muted-foreground">(48 Std.)</span>
+            </Button>
           </div>
         </div>
-        <div className="divide-y divide-border">
-          {activityFeed.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">Keine Aktivitäten in den letzten 48 Stunden.</p>
-          ) : activityFeed.map((item) => {
-            const Icon = item.type === "contract" ? FileCheck : item.type === "lead" ? UserPlus : MessageSquare;
-            const iconClass = item.type === "contract"
-              ? "bg-primary/10 text-primary"
-              : item.type === "lead"
-              ? "bg-purple-500/10 text-purple-600"
-              : "bg-amber-500/10 text-amber-600";
-            const typeLabel = item.type === "contract" ? "Vertrag" : item.type === "lead" ? "Interessent" : "Tipp-Lead";
-            return (
-              <Link
-                key={item.id + item.type}
-                to={item.link}
-                className="flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors"
-              >
-                <div className={`shrink-0 rounded-lg p-2 ${iconClass}`}>
-                  <Icon className="h-4 w-4" />
+      )}
+
+      {/* ══════════════════════════════════════════════
+          STANDARD ROLLEN: 4-Block Layout
+         ══════════════════════════════════════════════ */}
+      {canSeePipeline && (
+        <div className="space-y-6">
+
+          {/* ── BLOCK 1: 🔥 Heute wichtig ── */}
+          <div className="card-elevated">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Flame className="h-4 w-4 text-destructive" />
+                <h3 className="font-semibold text-foreground">Heute wichtig</h3>
+                {totalAlerts > 0 && (
+                  <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full text-[10px] font-bold bg-destructive text-destructive-foreground">
+                    {totalAlerts}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="divide-y divide-border">
+              {totalAlerts === 0 ? (
+                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                  <span className="text-green-600">✓</span> Alles erledigt – keine offenen Handlungsbedarfe
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-foreground text-sm truncate">{item.label}</span>
-                    <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${statusBadge(item.status)}`}>
-                      {item.status}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {typeLabel} · {item.sub}
+              ) : (
+                <>
+                  {overdueLeads14.length > 0 && (
+                    <AlertRow
+                      icon={AlertTriangle}
+                      iconClass="text-destructive"
+                      bgClass="bg-destructive/5"
+                      label={`${overdueLeads14.length} Lead${overdueLeads14.length > 1 ? "s" : ""} ohne Kontakt > 14 Tage`}
+                      sub="Dringend – diese Leads drohen verloren zu gehen"
+                      to="/pipeline?tab=interessenten&filter=overdue14"
+                      accent="destructive"
+                    />
+                  )}
+                  {overdueLeads7.length > 0 && (
+                    <AlertRow
+                      icon={Clock}
+                      iconClass="text-amber-600"
+                      bgClass="bg-amber-500/5"
+                      label={`${overdueLeads7.length} Lead${overdueLeads7.length > 1 ? "s" : ""} ohne Kontakt > 7 Tage`}
+                      sub="Bitte zeitnah kontaktieren"
+                      to="/pipeline?tab=interessenten&filter=overdue7"
+                      accent="warning"
+                    />
+                  )}
+                  {contractsMissingEmail.length > 0 && (
+                    <AlertRow
+                      icon={FileText}
+                      iconClass="text-blue-600"
+                      bgClass="bg-blue-500/5"
+                      label={`${contractsMissingEmail.length} Vertrag/Verträge ohne Buchungsmail`}
+                      sub="Bestätigungsmail noch nicht versendet"
+                      to="/pipeline?tab=abschlussphase&filter=missing_email"
+                      accent="primary"
+                    />
+                  )}
+                  {contractsWaitingPayment.length > 0 && (
+                    <AlertRow
+                      icon={Clock}
+                      iconClass="text-purple-600"
+                      bgClass="bg-purple-500/5"
+                      label={`${contractsWaitingPayment.length} Vertrag/Verträge warten auf Zahlung`}
+                      sub="Buchungsmail versendet, Kundenbestätigung ausstehend"
+                      to="/pipeline?tab=abschlussphase&filter=waiting_payment"
+                      accent="primary"
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* ── BLOCK 2: ⚡ Pipeline Schnellzugriff ── */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Zap className="h-4 w-4 text-primary" />
+              <h3 className="font-semibold text-foreground text-sm">Pipeline Schnellzugriff</h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <PipelineQuickCard
+                label="Interessenten"
+                count={leadsCount}
+                icon={Users}
+                iconClass="bg-purple-500/10 text-purple-600"
+                to="/pipeline?tab=interessenten"
+              />
+              <PipelineQuickCard
+                label="Abschlussphase"
+                count={contractsCount}
+                icon={FileText}
+                iconClass="bg-blue-500/10 text-blue-600"
+                to="/pipeline?tab=abschlussphase"
+              />
+              <PipelineQuickCard
+                label="Kunden"
+                count={customersCount}
+                icon={Building2}
+                iconClass="bg-green-500/10 text-green-600"
+                to="/pipeline?tab=kunden"
+              />
+            </div>
+          </div>
+
+          {/* ── BLOCK 3: 🎯 Meine Performance ── */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Target className="h-4 w-4 text-primary" />
+              <h3 className="font-semibold text-foreground text-sm">Meine Performance</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="stat-card">
+                <p className="text-xs font-medium text-muted-foreground">Abschlüsse diesen Monat</p>
+                <p className="mt-2 text-2xl font-bold text-foreground">{closingsThisMonth}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Verträge → aktiv</p>
+              </div>
+              {(role === "sales_partner" || role === "regional_lead" || role === "user") && (
+                <Link to="/vertrieb/provisionen" className="stat-card group block hover:shadow-md transition-all">
+                  <p className="text-xs font-medium text-muted-foreground">Gesamtprovision</p>
+                  <p className="mt-2 text-2xl font-bold text-foreground">
+                    {performance?.totalProvision != null
+                      ? performance.totalProvision.toLocaleString("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 })
+                      : "–"}
                   </p>
+                  <div className="mt-1 flex items-center gap-1 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                    Details <ArrowRight className="h-3 w-3" />
+                  </div>
+                </Link>
+              )}
+              {(role === "admin" || role === "sales_lead" || role === "vertragsabteilung") && (
+                <div className="stat-card">
+                  <p className="text-xs font-medium text-muted-foreground">Offene Alerts</p>
+                  <p className="mt-2 text-2xl font-bold text-foreground">{totalAlerts}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Handlungsbedarfe gesamt</p>
                 </div>
-                <div className="shrink-0 text-xs text-muted-foreground hidden sm:flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {formatDistanceToNow(new Date(item.time), { addSuffix: true, locale: de })}
-                </div>
-              </Link>
-            );
-          })}
+              )}
+            </div>
+          </div>
+
+          {/* ── BLOCK 4: 🚀 Quick Actions ── */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Rocket className="h-4 w-4 text-primary" />
+              <h3 className="font-semibold text-foreground text-sm">Schnellaktionen</h3>
+            </div>
+            <div className="flex gap-3 flex-wrap">
+              {canCreateLead && (
+                <Button
+                  size="sm"
+                  onClick={() => setCreateLeadOpen(true)}
+                  className="gap-2"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Neuer Interessent
+                </Button>
+              )}
+              {(role !== "vertragsabteilung") && (
+                <Button size="sm" variant="outline" asChild className="gap-2">
+                  <Link to="/vertrieb/vertraege">
+                    <PlusCircle className="h-4 w-4" />
+                    Vertrag erstellen
+                  </Link>
+                </Button>
+              )}
+              {(role === "sales_partner" || role === "user" || role === "regional_lead") && (
+                <Button size="sm" variant="outline" asChild className="gap-2">
+                  <Link to="/reservierungen">
+                    <BookMarked className="h-4 w-4" />
+                    Reservierungen
+                  </Link>
+                </Button>
+              )}
+              <Button size="sm" variant="secondary" asChild className="gap-2 font-semibold">
+                <Link to="/pipeline">
+                  <ArrowRight className="h-4 w-4" />
+                  Zur Pipeline
+                </Link>
+              </Button>
+            </div>
+          </div>
+
         </div>
-      </div>
+      )}
 
       <CreateLeadDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} />
     </MainLayout>
   );
 }
 
-// ---- Kleine KPI-Karte ----
-interface KpiCardProps {
-  title: string;
-  value: string | number;
+// ── Alert Row Component ──
+interface AlertRowProps {
   icon: React.ElementType;
   iconClass: string;
-  link: string;
-  highlight?: boolean;
+  bgClass: string;
+  label: string;
+  sub: string;
+  to: string;
+  accent: string;
 }
 
-function KpiCard({ title, value, icon: Icon, iconClass, link, highlight }: KpiCardProps) {
+function AlertRow({ icon: Icon, iconClass, bgClass, label, sub, to, accent }: AlertRowProps) {
   return (
     <Link
-      to={link}
-      className={`stat-card group block transition-all hover:shadow-md ${highlight ? "ring-2 ring-destructive/30" : ""}`}
+      to={to}
+      className={`flex items-center gap-3 p-4 ${bgClass} hover:bg-muted/50 transition-colors group`}
+    >
+      <div className={`shrink-0 rounded-lg p-2 bg-background border border-border`}>
+        <Icon className={`h-4 w-4 ${iconClass}`} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
+      </div>
+      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+    </Link>
+  );
+}
+
+// ── Pipeline Quick Card ──
+interface PipelineQuickCardProps {
+  label: string;
+  count?: number;
+  icon: React.ElementType;
+  iconClass: string;
+  to: string;
+}
+
+function PipelineQuickCard({ label, count, icon: Icon, iconClass, to }: PipelineQuickCardProps) {
+  return (
+    <Link
+      to={to}
+      className="stat-card group block transition-all hover:shadow-md"
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-medium text-muted-foreground">{title}</p>
-          <p className="mt-2 text-2xl font-bold text-foreground">{value}</p>
+          <p className="text-xs font-medium text-muted-foreground">{label}</p>
+          {count !== undefined && (
+            <p className="mt-2 text-2xl font-bold text-foreground">{count}</p>
+          )}
         </div>
         <div className={`rounded-lg p-2.5 ${iconClass}`}>
           <Icon className="h-5 w-5" />
