@@ -317,8 +317,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
       case "qualifiziert":
         return { label: "Vertrag erstellen", icon: <FilePlus className="h-3 w-3" />, cls: "bg-success/10 text-success border border-success/20 hover:bg-success/20", action: () => navigate(`/vertrieb/vertraege?leadId=${lead.id}&praxis=${encodeURIComponent(lead.praxis_name)}&vorname=${encodeURIComponent(lead.vorname)}&nachname=${encodeURIComponent(lead.nachname)}&email=${encodeURIComponent(lead.email)}&plz=${encodeURIComponent(lead.plz)}&ort=${encodeURIComponent(lead.ort || "")}&adresse=${encodeURIComponent(lead.adresse || "")}&hfx=${encodeURIComponent(lead.hfx_customer_number || "")}`) };
       case "vertrag":
-        // Paper flow decommissioned – no action for 'vertrag' status
-        return null;
+        return { label: "→ Abschlussphase", icon: <ArrowRight className="h-3 w-3" />, cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 hover:bg-blue-500/20", action: () => navigate("/pipeline?tab=abschlussphase") };
       default:
         return null;
     }
