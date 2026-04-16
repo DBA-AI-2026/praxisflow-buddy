@@ -246,7 +246,7 @@ const CLOSED_LEAD_STATUSES = ["kein_abschluss", "abgelehnt"];
 type LeadSourceFilter = "alle" | "homepage" | "manuell";
 type LeadStatusFilter = "aktiv" | "kein_abschluss" | "abgelehnt" | "alle";
 
-function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }: { search: string; highlightId?: string; teamFilter: string; matchesTeamFilter: (id?: string | null) => boolean }) {
+function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, initialFilter }: { search: string; highlightId?: string; teamFilter: string; matchesTeamFilter: (id?: string | null) => boolean; initialFilter?: string }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAdmin, isSalesLead, isRegionalLead, isSalesPartner, isTippgeber, role } = useUserRole();
@@ -259,6 +259,9 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [overdueFilter, setOverdueFilter] = useState<"overdue7" | "overdue14" | null>(
+    initialFilter === "overdue7" ? "overdue7" : initialFilter === "overdue14" ? "overdue14" : null
+  );
 
   useEffect(() => {
     if (highlightId && highlightRef.current) {
@@ -326,6 +329,14 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
     if (statusFilter === "aktiv" && !ACTIVE_LEAD_STATUSES.includes(l.status)) return false;
     if (statusFilter === "kein_abschluss" && l.status !== "kein_abschluss") return false;
     if (statusFilter === "abgelehnt" && l.status !== "abgelehnt") return false;
+
+    // Deep-link overdue filter from Dashboard
+    if (overdueFilter) {
+      if (!ACTIVE_LEAD_STATUSES.includes(l.status)) return false;
+      const days = differenceInDays(new Date(), new Date(l.created_at));
+      if (overdueFilter === "overdue14" && days < 14) return false;
+      if (overdueFilter === "overdue7" && (days < 7 || days >= 14)) return false;
+    }
 
     if (!s) return true;
     return (
@@ -605,8 +616,13 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter }
 
 const ABSCHLUSS_STATUSES = ["entwurf", "eingegangen", "gezeichnet"];
 
-function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeamFilter }: { search: string; highlightId?: string; missingEmailCount: number; matchesTeamFilter: (id?: string | null) => boolean }) {
-  const [statusFilter, setStatusFilter] = useState<string>("alle");
+function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeamFilter, initialFilter }: { search: string; highlightId?: string; missingEmailCount: number; matchesTeamFilter: (id?: string | null) => boolean; initialFilter?: string }) {
+  const [statusFilter, setStatusFilter] = useState<string>(
+    initialFilter === "missing_email" || initialFilter === "waiting_payment" ? "eingegangen" : "alle"
+  );
+  const [contractFilter, setContractFilter] = useState<"missing_email" | "waiting_payment" | null>(
+    initialFilter === "missing_email" ? "missing_email" : initialFilter === "waiting_payment" ? "waiting_payment" : null
+  );
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
@@ -676,6 +692,11 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
   const s = search.toLowerCase();
   const filteredBase = teamContracts.filter((c: any) => {
     if (statusFilter !== "alle" && c.status !== statusFilter) return false;
+
+    // Deep-link contract filter from Dashboard
+    if (contractFilter === "missing_email" && !(c.status === "eingegangen" && !c.confirmation_email_sent_at)) return false;
+    if (contractFilter === "waiting_payment" && !(c.status === "eingegangen" && c.confirmation_email_sent_at && !c.customer_confirmed_at)) return false;
+
     if (!s) return true;
     return (
       c.customer_name?.toLowerCase().includes(s) ||
@@ -1123,6 +1144,7 @@ function JourneyTabBar({ activeTab, onSelect, tabs }: {
 export default function PraxenJourney() {
   const [searchParams] = useSearchParams();
   const urlTab = searchParams.get("tab");
+  const urlFilter = searchParams.get("filter") ?? undefined;
   const urlId = searchParams.get("id") ?? undefined;
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"interessenten" | "abschlussphase" | "kunden">(
@@ -1233,8 +1255,8 @@ export default function PraxenJourney() {
           </div>
         </div>
 
-        {tab === "interessenten" && <InteressentenTab search={search} highlightId={urlId} teamFilter={teamFilter} matchesTeamFilter={matchesTeamFilter} />}
-        {tab === "abschlussphase" && <AbschlussphaseTab search={search} highlightId={urlId} missingEmailCount={counts.missingEmail} matchesTeamFilter={matchesTeamFilter} />}
+        {tab === "interessenten" && <InteressentenTab search={search} highlightId={urlId} teamFilter={teamFilter} matchesTeamFilter={matchesTeamFilter} initialFilter={urlFilter} />}
+        {tab === "abschlussphase" && <AbschlussphaseTab search={search} highlightId={urlId} missingEmailCount={counts.missingEmail} matchesTeamFilter={matchesTeamFilter} initialFilter={urlFilter} />}
         {tab === "kunden" && <KundenTab search={search} highlightId={urlId} matchesTeamFilter={matchesTeamFilter} />}
       </div>
     </MainLayout>
