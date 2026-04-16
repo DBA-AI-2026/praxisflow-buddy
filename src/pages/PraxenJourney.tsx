@@ -970,9 +970,9 @@ export default function PraxenJourney() {
   const urlTab = searchParams.get("tab");
   const urlId = searchParams.get("id") ?? undefined;
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"interessenten" | "abschlussphase" | "bestandskunden">(
+  const [tab, setTab] = useState<"interessenten" | "abschlussphase" | "kunden">(
     urlTab === "abschlussphase" || urlTab === "vertraege" ? "abschlussphase"
-      : urlTab === "bestandskunden" || urlTab === "kunden" ? "bestandskunden"
+      : urlTab === "kunden" || urlTab === "bestandskunden" ? "kunden"
       : "interessenten"
   );
 
@@ -994,7 +994,7 @@ export default function PraxenJourney() {
   const tabs: TabDef[] = [
     { key: "interessenten", label: "Interessenten", icon: Users, count: counts.leads },
     { key: "abschlussphase", label: "Abschlussphase", icon: FileText, count: counts.contracts, warningCount: counts.missingEmail },
-    { key: "bestandskunden", label: "Bestandskunden", icon: Building2, count: counts.kunden },
+    { key: "kunden", label: "Kunden", icon: Building2, count: counts.kunden },
   ];
 
   return (
@@ -1039,7 +1039,7 @@ export default function PraxenJourney() {
 
         {tab === "interessenten" && <InteressentenTab search={search} highlightId={urlId} teamFilter={teamFilter} matchesTeamFilter={matchesTeamFilter} />}
         {tab === "abschlussphase" && <VertraegeTab search={search} highlightId={urlId} missingEmailCount={counts.missingEmail} matchesTeamFilter={matchesTeamFilter} />}
-        {tab === "bestandskunden" && <KundenTab search={search} highlightId={urlId} matchesTeamFilter={matchesTeamFilter} />}
+        {tab === "kunden" && <KundenTab search={search} highlightId={urlId} matchesTeamFilter={matchesTeamFilter} />}
       </div>
     </MainLayout>
   );

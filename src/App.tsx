@@ -76,7 +76,7 @@ const App = () => (
             <Route path="/praxen-journey" element={<Navigate to="/pipeline" replace />} />
             <Route path="/praxen" element={<Navigate to="/pipeline" replace />} />
             <Route path="/interessenten" element={<Navigate to="/pipeline" replace />} />
-            <Route path="/kunden" element={<Navigate to="/pipeline?tab=bestandskunden" replace />} />
+            <Route path="/kunden" element={<Navigate to="/pipeline?tab=kunden" replace />} />
             <Route path="/kunden/:id" element={<ProtectedRoute><Kunden /></ProtectedRoute>} />
             <Route path="/demo-tracking" element={<ProtectedRoute><DemoTracking /></ProtectedRoute>} />
             <Route path="/reservierungen" element={<ProtectedRoute><Reservierungen /></ProtectedRoute>} />

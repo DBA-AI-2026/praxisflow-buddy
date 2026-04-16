@@ -71,7 +71,7 @@ const vertriebNavigation: NavItem[] = [
 ];
 
 // ─── PIPELINE & KUNDEN ────────────────────────────────────────────────────────
-// Pipeline = zentraler Arbeitsbereich (Interessenten → Abschlussphase → Bestandskunden)
+// Pipeline = zentraler Arbeitsbereich (Interessenten → Abschlussphase → Kunden)
 // Verträge haben keinen eigenen Nav-Eintrag, nur kontextbezogener Zugriff aus Pipeline
 const kundenVertraegeNavigation: NavItem[] = [
   { name: "Pipeline", href: "/pipeline", icon: Building2, roles: operativeRoles },
