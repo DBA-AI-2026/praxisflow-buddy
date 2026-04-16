@@ -939,7 +939,7 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
 
   // Deduplicate by hfx_customer_number for cleaner view
   const seenKeys = new Set<string>();
-  const rows = statusFiltered2.filter((c: any) => {
+  const rows = statusFiltered.filter((c: any) => {
     const key = c.hfx_customer_number
       ? `hfx:${c.hfx_customer_number}`
       : `name:${(c.praxis || c.customer_name || "").toLowerCase().trim()}`;
@@ -987,7 +987,7 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
         <FilterPill active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")} label="Aktiv" count={statusCounts.aktiv ?? 0} />
         <FilterPill active={statusFilter === "gekuendigt"} onClick={() => setStatusFilter("gekuendigt")} label="Gekündigt" count={statusCounts.gekuendigt ?? 0} />
         <FilterPill active={statusFilter === "beendet"} onClick={() => setStatusFilter("beendet")} label="Beendet" count={statusCounts.beendet ?? 0} />
-        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={allContracts.length} />
+        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={teamContracts.length} />
       </div>
 
       {/* Table */}
