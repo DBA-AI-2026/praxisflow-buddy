@@ -1,14 +1,18 @@
 /**
- * Loads all contracts for a set of customer IDs, grouped by customer_id.
+ * Builds a `customer_id → contracts[]` map.
  *
- * Used in the Pipeline (Kunden tab) to display ALL active products a
- * customer holds — not just the row's own contract — without introducing
- * a parallel data source. When the schema later moves from
- * contracts.product_name to a contract_products / product_id model, only
- * this hook (and the mapping in the consumer) needs to change.
+ * Performance note (Pipeline / Kunden tab):
+ * The Kunden tab already loads ALL contracts in scope (statuses aktiv,
+ * gekuendigt, beendet) for the user/team via its own query. A second
+ * round-trip to fetch contracts per customer would be redundant and
+ * scale linearly with the number of visible customers.
+ *
+ * We therefore aggregate client-side from the already-loaded contract
+ * list. The hook signature stays stable so a later move to a dedicated
+ * RPC (e.g. when the schema introduces contract_products / product_id)
+ * can swap the implementation without touching the consumer.
  */
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabaseClient";
+import { useMemo } from "react";
 
 export interface CustomerContractRow {
   id: string;
@@ -17,26 +21,21 @@ export interface CustomerContractRow {
   status: string;
 }
 
-const ACTIVE_STATUSES = ["aktiv", "gekuendigt"];
+/** Statuses considered "currently held" for product-badge display. */
+const ACTIVE_STATUSES = new Set(["aktiv", "gekuendigt"]);
 
-export function useCustomerContractsMap(customerIds: string[], enabled = true) {
-  const idsKey = [...customerIds].filter(Boolean).sort().join(",");
-  return useQuery({
-    queryKey: ["customer-contracts-map", idsKey],
-    enabled: enabled && customerIds.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("contracts")
-        .select("id, customer_id, product_name, status")
-        .in("customer_id", customerIds)
-        .in("status", ACTIVE_STATUSES);
-      if (error) throw error;
-      const map: Record<string, CustomerContractRow[]> = {};
-      (data ?? []).forEach((row: any) => {
-        if (!row.customer_id) return;
-        (map[row.customer_id] ??= []).push(row as CustomerContractRow);
-      });
-      return map;
-    },
-  });
+/**
+ * Group an already-loaded contracts array by customer_id, keeping only
+ * statuses relevant for the product-badge display.
+ */
+export function useCustomerContractsMap(contracts: CustomerContractRow[]) {
+  return useMemo(() => {
+    const map: Record<string, CustomerContractRow[]> = {};
+    for (const row of contracts) {
+      if (!row.customer_id) continue;
+      if (!ACTIVE_STATUSES.has(row.status)) continue;
+      (map[row.customer_id] ??= []).push(row);
+    }
+    return map;
+  }, [contracts]);
 }

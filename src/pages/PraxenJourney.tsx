@@ -980,13 +980,9 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
     provider: "qodia",
   });
 
-  // Multi-product display: load all active contracts grouped per customer
-  // so a customer holding several products shows all of them as chips.
-  const customerIds = useMemo(
-    () => Array.from(new Set(teamContracts.map((c: any) => c.customer_id).filter(Boolean))) as string[],
-    [teamContracts],
-  );
-  const { data: customerContractsMap = {} } = useCustomerContractsMap(customerIds);
+  // Multi-product display: derive a customer→contracts map from the
+  // already-loaded list (no extra round-trip). See useCustomerContractsMap.
+  const customerContractsMap = useCustomerContractsMap(allContracts as any);
 
   const statusCounts = KUNDEN_STATUSES.reduce((acc, s) => {
     acc[s] = teamContracts.filter((c: any) => c.status === s).length;
