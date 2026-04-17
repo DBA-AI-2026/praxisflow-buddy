@@ -30,7 +30,9 @@ import {
   QodiaStatusCell, QodiaUsageCell, QodiaLastActivityCell, QodiaWarningIcon,
   type ProviderStatusRow,
 } from "@/components/pipeline/QodiaStatusBadges";
+import { ProductBadges, type ProductBadgeItem } from "@/components/pipeline/ProductBadges";
 import { useProviderStatusMap, useProductProviderFlags } from "@/hooks/useProviderStatus";
+import { useCustomerContractsMap } from "@/hooks/useCustomerContracts";
 
 // ─── Status configs ──────────────────────────────────────────────────────────
 
@@ -849,7 +851,11 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                       )}
                     </p>
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground">{c.product_name}</td>
+                  <td className="py-3 px-4">
+                    <ProductBadges
+                      products={c.product_name ? [{ key: c.product_name, label: c.product_name, variant: "primary" }] : []}
+                    />
+                  </td>
                   <td className="py-3 px-4">
                     <StatusPill label={sc.label} cls={sc.cls} />
                   </td>
@@ -974,6 +980,14 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
     provider: "qodia",
   });
 
+  // Multi-product display: load all active contracts grouped per customer
+  // so a customer holding several products shows all of them as chips.
+  const customerIds = useMemo(
+    () => Array.from(new Set(teamContracts.map((c: any) => c.customer_id).filter(Boolean))) as string[],
+    [teamContracts],
+  );
+  const { data: customerContractsMap = {} } = useCustomerContractsMap(customerIds);
+
   const statusCounts = KUNDEN_STATUSES.reduce((acc, s) => {
     acc[s] = teamContracts.filter((c: any) => c.status === s).length;
     return acc;
@@ -1085,7 +1099,22 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                       )}
                     </p>
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground">{c.product_name || "–"}</td>
+                  <td className="py-3 px-4">
+                    {(() => {
+                      // Prefer the customer-wide list when available; fall back to the row's own product.
+                      const list = c.customer_id ? (customerContractsMap[c.customer_id] ?? []) : [];
+                      const items: ProductBadgeItem[] = list.length > 0
+                        ? list.map((row) => ({
+                            key: row.product_name,
+                            label: row.product_name,
+                            variant: row.id === c.id ? "primary" : "default",
+                          }))
+                        : c.product_name
+                          ? [{ key: c.product_name, label: c.product_name, variant: "primary" }]
+                          : [];
+                      return <ProductBadges products={items} />;
+                    })()}
+                  </td>
                   <td className="py-3 px-4">
                     <StatusPill label={sc.label} cls={sc.cls} />
                   </td>
