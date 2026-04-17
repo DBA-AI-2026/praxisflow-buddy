@@ -1048,22 +1048,24 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
               <TH>Produkt</TH>
               <TH>Status</TH>
               <TH>Kunde seit</TH>
-              <TH>PLZ / Ort</TH>
               <TH>Vertrieb</TH>
-              <TH right>Qodia</TH>
+              <TH>Qodia</TH>
+              <TH>Usage</TH>
+              <TH>Letzte Aktivität</TH>
               <TH>{""}</TH>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={8} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              <tr><td colSpan={10} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : filtered.length === 0 ? (
               <EmptyState icon={Building2} title="Keine Kunden gefunden" sub="Aktivierte Verträge erscheinen hier automatisch" />
             ) : (filtered as any[]).map((c) => {
               const praxisLabel = c.praxis || c.customer_name || "–";
               const arztLabel = [c.vorname, c.nachname].filter(Boolean).join(" ");
-              const qodia = !!(c.hfx_customer_number ? qodiaMap[c.hfx_customer_number] : false);
               const sc = kundenStatusCfg[c.status] ?? kundenStatusCfg.aktiv;
+              const usesQodia = !!providerFlags[c.product_name];
+              const qodiaRow: ProviderStatusRow | null = usesQodia ? (qodiaStatusMap[c.id] ?? null) : null;
               return (
                 <tr
                   key={c.id}
@@ -1090,11 +1092,23 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                   <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
                     {c.start_date ? format(new Date(c.start_date), "dd.MM.yy", { locale: de }) : "–"}
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
-                    {c.plz}{c.ort ? ` ${c.ort}` : ""}
-                  </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground">{c.sales_partner_name || "–"}</td>
-                  <td className="py-3 px-4 text-right"><QodiaIcon synced={qodia} /></td>
+                  <td className="py-3 px-4">
+                    {usesQodia ? (
+                      <div className="flex items-center gap-1.5">
+                        <QodiaStatusCell row={qodiaRow} />
+                        <QodiaWarningIcon row={qodiaRow} contractStatus={c.status} />
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/40">–</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    {usesQodia ? <QodiaUsageCell row={qodiaRow} /> : <span className="text-[10px] text-muted-foreground/40">–</span>}
+                  </td>
+                  <td className="py-3 px-4">
+                    {usesQodia ? <QodiaLastActivityCell row={qodiaRow} /> : <span className="text-[10px] text-muted-foreground/40">–</span>}
+                  </td>
                   <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => navigate(`/vertrieb/vertraege?contractId=${c.id}`)}
