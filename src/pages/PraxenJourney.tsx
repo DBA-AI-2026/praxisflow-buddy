@@ -26,6 +26,11 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { PipelineKpiBar } from "@/components/pipeline/PipelineKpiBar";
+import {
+  QodiaStatusCell, QodiaUsageCell, QodiaLastActivityCell, QodiaWarningIcon,
+  type ProviderStatusRow,
+} from "@/components/pipeline/QodiaStatusBadges";
+import { useProviderStatusMap, useProductProviderFlags } from "@/hooks/useProviderStatus";
 
 // ─── Status configs ──────────────────────────────────────────────────────────
 
