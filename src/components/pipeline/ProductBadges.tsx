@@ -21,9 +21,21 @@ import {
 } from "@/components/ui/tooltip";
 
 export interface ProductBadgeItem {
-  /** Stable key (product_id later, product_name today) */
+  /**
+   * Opaque, stable identifier for de-duplication and React keys.
+   *
+   * IMPORTANT: This is intentionally typed as an abstract `key`, NOT as
+   * `product_name` or `product_id`. The component must never assume the
+   * value carries display meaning — `label` is the only field used for
+   * rendering. Callers are responsible for choosing the most stable
+   * identifier currently available:
+   *   - Today: `contracts.product_name` (string)
+   *   - Future: `products.id` / `contract_products.product_id` (uuid)
+   * Switching the source only requires changing the caller's mapping;
+   * the badge component, its de-dup logic, and the tooltip stay intact.
+   */
   key: string;
-  /** Display label */
+  /** Human-readable display label (independent from `key`). */
   label: string;
   /** Visual variant — "primary" highlights the focus product (Abschlussphase) */
   variant?: "default" | "primary" | "muted";
