@@ -689,6 +689,17 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
     return contracts.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
   }, [contracts, matchesTeamFilter, isSalesPartner, isTippgeber]);
 
+  // Qodia provider status: only relevant for products flagged with provider_flags.qodia
+  const { data: providerFlags = {} } = useProductProviderFlags("qodia");
+  const qodiaContractIds = useMemo(
+    () => teamContracts.filter((c: any) => providerFlags[c.product_name]).map((c: any) => c.id),
+    [teamContracts, providerFlags],
+  );
+  const { data: qodiaStatusMap = {} } = useProviderStatusMap({
+    contractIds: qodiaContractIds,
+    provider: "qodia",
+  });
+
   const statusCounts = ABSCHLUSS_STATUSES.reduce((acc, s) => {
     acc[s] = teamContracts.filter((c: any) => c.status === s).length;
     return acc;
@@ -806,6 +817,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
               <TH>Wartezeit</TH>
               <TH>Nächster Schritt</TH>
               <TH>Checkliste</TH>
+              <TH>Qodia</TH>
               <TH right>Monatlich</TH>
               <TH>Vertrieb</TH>
             </tr>
