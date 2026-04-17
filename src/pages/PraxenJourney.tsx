@@ -956,23 +956,23 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
     },
   });
 
-  const { data: qodiaMap = {} } = useQuery({
-    queryKey: ["journey-kunden-qodia"],
-    queryFn: async () => {
-      const { data } = await supabase.from("leads").select("hfx_customer_number, qodia_synced");
-      const map: Record<string, boolean> = {};
-      (data ?? []).forEach((l: any) => {
-        if (l.hfx_customer_number) map[l.hfx_customer_number] = !!l.qodia_synced;
-      });
-      return map;
-    },
-  });
-
   // Team-filtered contracts for consistent counts
   const teamContracts = useMemo(() => {
     if (isSalesPartner || isTippgeber) return allContracts;
     return allContracts.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
   }, [allContracts, matchesTeamFilter, isSalesPartner, isTippgeber]);
+
+  // Qodia provider status (generic provider model). Only shown for products
+  // whose products.provider_flags.qodia is true.
+  const { data: providerFlags = {} } = useProductProviderFlags("qodia");
+  const qodiaContractIds = useMemo(
+    () => teamContracts.filter((c: any) => providerFlags[c.product_name]).map((c: any) => c.id),
+    [teamContracts, providerFlags],
+  );
+  const { data: qodiaStatusMap = {} } = useProviderStatusMap({
+    contractIds: qodiaContractIds,
+    provider: "qodia",
+  });
 
   const statusCounts = KUNDEN_STATUSES.reduce((acc, s) => {
     acc[s] = teamContracts.filter((c: any) => c.status === s).length;
