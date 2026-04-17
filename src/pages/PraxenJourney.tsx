@@ -824,7 +824,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={8} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              <tr><td colSpan={9} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : sorted.length === 0 ? (
               <EmptyState icon={FileText} title="Keine Verträge in der Abschlussphase" sub="Neue Verträge erscheinen hier sobald ein Lead qualifiziert wird" />
             ) : sorted.map((c: any) => {
@@ -886,6 +886,16 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                         Zahlung
                       </span>
                     </div>
+                  </td>
+                  <td className="py-3 px-4">
+                    {providerFlags[c.product_name] ? (
+                      <div className="flex items-center gap-1.5">
+                        <QodiaStatusCell row={qodiaStatusMap[c.id]} />
+                        <QodiaWarningIcon row={qodiaStatusMap[c.id]} contractStatus={c.status} />
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/40">–</span>
+                    )}
                   </td>
                   <td className="py-3 px-4 text-right text-xs font-medium text-foreground whitespace-nowrap">
                     {c.monthly_price > 0
