@@ -26,6 +26,11 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { PipelineKpiBar } from "@/components/pipeline/PipelineKpiBar";
+import {
+  QodiaStatusCell, QodiaUsageCell, QodiaLastActivityCell, QodiaWarningIcon,
+  type ProviderStatusRow,
+} from "@/components/pipeline/QodiaStatusBadges";
+import { useProviderStatusMap, useProductProviderFlags } from "@/hooks/useProviderStatus";
 
 // ─── Status configs ──────────────────────────────────────────────────────────
 
@@ -684,6 +689,17 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
     return contracts.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
   }, [contracts, matchesTeamFilter, isSalesPartner, isTippgeber]);
 
+  // Qodia provider status: only relevant for products flagged with provider_flags.qodia
+  const { data: providerFlags = {} } = useProductProviderFlags("qodia");
+  const qodiaContractIds = useMemo(
+    () => teamContracts.filter((c: any) => providerFlags[c.product_name]).map((c: any) => c.id),
+    [teamContracts, providerFlags],
+  );
+  const { data: qodiaStatusMap = {} } = useProviderStatusMap({
+    contractIds: qodiaContractIds,
+    provider: "qodia",
+  });
+
   const statusCounts = ABSCHLUSS_STATUSES.reduce((acc, s) => {
     acc[s] = teamContracts.filter((c: any) => c.status === s).length;
     return acc;
@@ -801,13 +817,14 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
               <TH>Wartezeit</TH>
               <TH>Nächster Schritt</TH>
               <TH>Checkliste</TH>
+              <TH>Qodia</TH>
               <TH right>Monatlich</TH>
               <TH>Vertrieb</TH>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={8} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              <tr><td colSpan={9} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : sorted.length === 0 ? (
               <EmptyState icon={FileText} title="Keine Verträge in der Abschlussphase" sub="Neue Verträge erscheinen hier sobald ein Lead qualifiziert wird" />
             ) : sorted.map((c: any) => {
@@ -870,6 +887,16 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                       </span>
                     </div>
                   </td>
+                  <td className="py-3 px-4">
+                    {providerFlags[c.product_name] ? (
+                      <div className="flex items-center gap-1.5">
+                        <QodiaStatusCell row={qodiaStatusMap[c.id]} />
+                        <QodiaWarningIcon row={qodiaStatusMap[c.id]} contractStatus={c.status} />
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/40">–</span>
+                    )}
+                  </td>
                   <td className="py-3 px-4 text-right text-xs font-medium text-foreground whitespace-nowrap">
                     {c.monthly_price > 0
                       ? `${Number(c.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €`
@@ -929,23 +956,23 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
     },
   });
 
-  const { data: qodiaMap = {} } = useQuery({
-    queryKey: ["journey-kunden-qodia"],
-    queryFn: async () => {
-      const { data } = await supabase.from("leads").select("hfx_customer_number, qodia_synced");
-      const map: Record<string, boolean> = {};
-      (data ?? []).forEach((l: any) => {
-        if (l.hfx_customer_number) map[l.hfx_customer_number] = !!l.qodia_synced;
-      });
-      return map;
-    },
-  });
-
   // Team-filtered contracts for consistent counts
   const teamContracts = useMemo(() => {
     if (isSalesPartner || isTippgeber) return allContracts;
     return allContracts.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
   }, [allContracts, matchesTeamFilter, isSalesPartner, isTippgeber]);
+
+  // Qodia provider status (generic provider model). Only shown for products
+  // whose products.provider_flags.qodia is true.
+  const { data: providerFlags = {} } = useProductProviderFlags("qodia");
+  const qodiaContractIds = useMemo(
+    () => teamContracts.filter((c: any) => providerFlags[c.product_name]).map((c: any) => c.id),
+    [teamContracts, providerFlags],
+  );
+  const { data: qodiaStatusMap = {} } = useProviderStatusMap({
+    contractIds: qodiaContractIds,
+    provider: "qodia",
+  });
 
   const statusCounts = KUNDEN_STATUSES.reduce((acc, s) => {
     acc[s] = teamContracts.filter((c: any) => c.status === s).length;
@@ -1021,22 +1048,24 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
               <TH>Produkt</TH>
               <TH>Status</TH>
               <TH>Kunde seit</TH>
-              <TH>PLZ / Ort</TH>
               <TH>Vertrieb</TH>
-              <TH right>Qodia</TH>
+              <TH>Qodia</TH>
+              <TH>Usage</TH>
+              <TH>Letzte Aktivität</TH>
               <TH>{""}</TH>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={8} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              <tr><td colSpan={10} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : filtered.length === 0 ? (
               <EmptyState icon={Building2} title="Keine Kunden gefunden" sub="Aktivierte Verträge erscheinen hier automatisch" />
             ) : (filtered as any[]).map((c) => {
               const praxisLabel = c.praxis || c.customer_name || "–";
               const arztLabel = [c.vorname, c.nachname].filter(Boolean).join(" ");
-              const qodia = !!(c.hfx_customer_number ? qodiaMap[c.hfx_customer_number] : false);
               const sc = kundenStatusCfg[c.status] ?? kundenStatusCfg.aktiv;
+              const usesQodia = !!providerFlags[c.product_name];
+              const qodiaRow: ProviderStatusRow | null = usesQodia ? (qodiaStatusMap[c.id] ?? null) : null;
               return (
                 <tr
                   key={c.id}
@@ -1063,11 +1092,23 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                   <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
                     {c.start_date ? format(new Date(c.start_date), "dd.MM.yy", { locale: de }) : "–"}
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
-                    {c.plz}{c.ort ? ` ${c.ort}` : ""}
-                  </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground">{c.sales_partner_name || "–"}</td>
-                  <td className="py-3 px-4 text-right"><QodiaIcon synced={qodia} /></td>
+                  <td className="py-3 px-4">
+                    {usesQodia ? (
+                      <div className="flex items-center gap-1.5">
+                        <QodiaStatusCell row={qodiaRow} />
+                        <QodiaWarningIcon row={qodiaRow} contractStatus={c.status} />
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/40">–</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    {usesQodia ? <QodiaUsageCell row={qodiaRow} /> : <span className="text-[10px] text-muted-foreground/40">–</span>}
+                  </td>
+                  <td className="py-3 px-4">
+                    {usesQodia ? <QodiaLastActivityCell row={qodiaRow} /> : <span className="text-[10px] text-muted-foreground/40">–</span>}
+                  </td>
                   <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => navigate(`/vertrieb/vertraege?contractId=${c.id}`)}

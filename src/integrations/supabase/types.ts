@@ -368,6 +368,78 @@ export type Database = {
           },
         ]
       }
+      contract_provider_status: {
+        Row: {
+          contract_id: string
+          created_at: string
+          external_customer_id: string | null
+          first_usage_at: string | null
+          id: string
+          last_sync_at: string | null
+          last_usage_at: string | null
+          metadata: Json
+          provider: string
+          registration_status: Database["public"]["Enums"]["provider_registration_status"]
+          submitted_invoice_count_current_month: number
+          submitted_invoice_count_total: number
+          sync_error_message: string | null
+          sync_status: Database["public"]["Enums"]["provider_sync_status"]
+          updated_at: string
+          usage_status: Database["public"]["Enums"]["provider_usage_status"]
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          external_customer_id?: string | null
+          first_usage_at?: string | null
+          id?: string
+          last_sync_at?: string | null
+          last_usage_at?: string | null
+          metadata?: Json
+          provider: string
+          registration_status?: Database["public"]["Enums"]["provider_registration_status"]
+          submitted_invoice_count_current_month?: number
+          submitted_invoice_count_total?: number
+          sync_error_message?: string | null
+          sync_status?: Database["public"]["Enums"]["provider_sync_status"]
+          updated_at?: string
+          usage_status?: Database["public"]["Enums"]["provider_usage_status"]
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          external_customer_id?: string | null
+          first_usage_at?: string | null
+          id?: string
+          last_sync_at?: string | null
+          last_usage_at?: string | null
+          metadata?: Json
+          provider?: string
+          registration_status?: Database["public"]["Enums"]["provider_registration_status"]
+          submitted_invoice_count_current_month?: number
+          submitted_invoice_count_total?: number
+          sync_error_message?: string | null
+          sync_status?: Database["public"]["Enums"]["provider_sync_status"]
+          updated_at?: string
+          usage_status?: Database["public"]["Enums"]["provider_usage_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_provider_status_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_provider_status_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts_public_booking"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           adresse: string | null
@@ -1783,6 +1855,7 @@ export type Database = {
           promo_end_date: string | null
           promo_price: number | null
           promo_price_label: string | null
+          provider_flags: Json
           updated_at: string
         }
         Insert: {
@@ -1808,6 +1881,7 @@ export type Database = {
           promo_end_date?: string | null
           promo_price?: number | null
           promo_price_label?: string | null
+          provider_flags?: Json
           updated_at?: string
         }
         Update: {
@@ -1833,6 +1907,7 @@ export type Database = {
           promo_end_date?: string | null
           promo_price?: number | null
           promo_price_label?: string | null
+          provider_flags?: Json
           updated_at?: string
         }
         Relationships: []
@@ -2468,6 +2543,10 @@ export type Database = {
       }
     }
     Functions: {
+      contract_uses_provider: {
+        Args: { _contract_id: string; _provider: string }
+        Returns: boolean
+      }
       get_cron_secret: { Args: never; Returns: string }
       get_public_contract_booking: {
         Args: { p_contract_id: string }
@@ -2494,6 +2573,10 @@ export type Database = {
       is_in_regional_lead_team: {
         Args: { _regional_lead_id: string; _user_id: string }
         Returns: boolean
+      }
+      recompute_contract_provider_usage: {
+        Args: { _contract_id: string; _provider?: string }
+        Returns: undefined
       }
       resolve_plz_ad: {
         Args: { plz_input: string }
@@ -2522,6 +2605,13 @@ export type Database = {
         | "vertragsabteilung"
         | "regional_lead"
         | "tippgeber"
+      provider_registration_status:
+        | "not_registered"
+        | "invited"
+        | "registered"
+        | "active"
+      provider_sync_status: "not_started" | "transferred" | "error" | "unknown"
+      provider_usage_status: "no_usage" | "first_usage" | "active" | "inactive"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2658,6 +2748,14 @@ export const Constants = {
         "regional_lead",
         "tippgeber",
       ],
+      provider_registration_status: [
+        "not_registered",
+        "invited",
+        "registered",
+        "active",
+      ],
+      provider_sync_status: ["not_started", "transferred", "error", "unknown"],
+      provider_usage_status: ["no_usage", "first_usage", "active", "inactive"],
     },
   },
 } as const
