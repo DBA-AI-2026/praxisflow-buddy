@@ -284,6 +284,37 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     }
   }, [highlightId]);
 
+  // Deep-Link: ?lead=<id> → Lead-Detaildialog automatisch öffnen.
+  // Falls der Lead nicht in der gefilterten Liste ist, gezielt per ID nachladen.
+  useEffect(() => {
+    if (!deepLinkLeadId) return;
+    if (selectedLead?.id === deepLinkLeadId) return;
+    const inList = leads.find((l: any) => l.id === deepLinkLeadId);
+    if (inList) {
+      setSelectedLead(inList);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("leads")
+        .select("*")
+        .eq("id", deepLinkLeadId)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error || !data) {
+        toast.error("Interessent nicht gefunden", {
+          description: "Der verknüpfte Interessent ist nicht (mehr) sichtbar.",
+        });
+        onClearDeepLink?.();
+        return;
+      }
+      setSelectedLead(data);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkLeadId, leads]);
+
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["journey-leads", user?.id, role],
     queryFn: async () => {
