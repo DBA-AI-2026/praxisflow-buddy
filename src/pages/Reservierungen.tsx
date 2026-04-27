@@ -735,6 +735,11 @@ export default function Reservierungen() {
         open={extendOpen}
         onOpenChange={setExtendOpen}
       />
+      <ReservationConvertToLeadDialog
+        reservation={activeReservation}
+        open={convertOpen}
+        onOpenChange={setConvertOpen}
+      />
     </MainLayout>
   );
 }
