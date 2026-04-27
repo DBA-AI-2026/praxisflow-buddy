@@ -424,14 +424,31 @@ export default function Interessenten() {
                       <TableCell>{lead.plz}</TableCell>
                       <TableCell>{(lead.abrechnungszentrum === "nein" || lead.abrechnungszentrum === "keins") ? "–" : lead.abrechnungszentrum}</TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${
-                          lead.source === "manual"
-                            ? "bg-accent/10 text-accent border-accent/30"
-                            : "bg-primary/10 text-primary border-primary/30"
-                        }`}>
-                          {lead.source === "manual" ? <UserPlus className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
-                          {lead.source === "manual" ? "Manuell" : "Homepage"}
-                        </span>
+                        {(() => {
+                          const src = lead.source;
+                          if (src === "reservation_conversion") {
+                            return (
+                              <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border bg-warning/10 text-warning-foreground border-warning/30">
+                                <CalendarCheck className="h-3 w-3" />
+                                Reservierung
+                              </span>
+                            );
+                          }
+                          if (src === "manual") {
+                            return (
+                              <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border bg-accent/10 text-accent border-accent/30">
+                                <UserPlus className="h-3 w-3" />
+                                Manuell
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/30">
+                              <Globe className="h-3 w-3" />
+                              Homepage
+                            </span>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-muted-foreground whitespace-nowrap">
                         {format(new Date(lead.created_at), "dd.MM.yy HH:mm", { locale: de })}
