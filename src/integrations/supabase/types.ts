@@ -2603,6 +2603,20 @@ export type Database = {
         Args: { _contract_id: string; _provider: string }
         Returns: boolean
       }
+      convert_reservation_to_lead: {
+        Args: {
+          p_email: string
+          p_force?: boolean
+          p_mobilnummer: string
+          p_nachname: string
+          p_reservation_id: string
+          p_vorname: string
+        }
+        Returns: {
+          hfx_customer_number: string
+          lead_id: string
+        }[]
+      }
       get_cron_secret: { Args: never; Returns: string }
       get_public_contract_booking: {
         Args: { p_contract_id: string }

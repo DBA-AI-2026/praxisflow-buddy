@@ -59,6 +59,7 @@ import { ReservationStatusBadge } from "@/components/reservierungen/ReservationS
 import { ReservationDetailDialog } from "@/components/reservierungen/ReservationDetailDialog";
 import { ReservationEditDialog } from "@/components/reservierungen/ReservationEditDialog";
 import { ReservationExtendDialog } from "@/components/reservierungen/ReservationExtendDialog";
+import { ReservationConvertToLeadDialog } from "@/components/reservierungen/ReservationConvertToLeadDialog";
 import {
   ReservationActions,
   type ReservationPermissions,
@@ -125,6 +126,9 @@ function computePermissions(opts: {
     canMarkInProgress: elevated || ownerLikeNonConverted || regionalLeadCanEdit,
     canMarkExpired: elevated || ownerLikeNonConverted || regionalLeadCanEdit,
     canDelete: isAdmin,
+    // Konvertierung sichtbar für Admin/Sales Lead/Regional Lead/Ersteller/AD.
+    // Bereits konvertierte Datensätze zeigen stattdessen die Verknüpfung an.
+    canConvertToLead: elevated || isCreator || isAssignedAd || isRegionalLead,
   };
 }
 
@@ -139,6 +143,7 @@ export default function Reservierungen() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [extendOpen, setExtendOpen] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
   const [activeReservation, setActiveReservation] = useState<Reservation | null>(null);
 
   const { toast } = useToast();
@@ -681,6 +686,10 @@ export default function Reservierungen() {
                               setActiveReservation(res);
                               setExtendOpen(true);
                             }}
+                            onConvertToLead={(res) => {
+                              setActiveReservation(res);
+                              setConvertOpen(true);
+                            }}
                           />
                         </TableCell>
                       </TableRow>
@@ -725,6 +734,11 @@ export default function Reservierungen() {
         reservation={activeReservation}
         open={extendOpen}
         onOpenChange={setExtendOpen}
+      />
+      <ReservationConvertToLeadDialog
+        reservation={activeReservation}
+        open={convertOpen}
+        onOpenChange={setConvertOpen}
       />
     </MainLayout>
   );

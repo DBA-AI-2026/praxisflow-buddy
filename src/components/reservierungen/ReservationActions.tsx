@@ -25,6 +25,8 @@ import {
   PlayCircle,
   AlertOctagon,
   Trash2,
+  UserPlus,
+  ExternalLink,
 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
@@ -40,6 +42,7 @@ export interface ReservationPermissions {
   canMarkInProgress: boolean;
   canMarkExpired: boolean;
   canDelete: boolean;
+  canConvertToLead: boolean;
 }
 
 interface Props {
@@ -48,6 +51,7 @@ interface Props {
   onView: (r: Reservation) => void;
   onEdit: (r: Reservation) => void;
   onExtend: (r: Reservation) => void;
+  onConvertToLead: (r: Reservation) => void;
 }
 
 export function ReservationActions({
@@ -56,6 +60,7 @@ export function ReservationActions({
   onView,
   onEdit,
   onExtend,
+  onConvertToLead,
 }: Props) {
   const queryClient = useQueryClient();
   const [confirmRelease, setConfirmRelease] = useState(false);
@@ -126,6 +131,23 @@ export function ReservationActions({
               <CalendarPlus className="mr-2 h-4 w-4" />
               Verlängern
             </DropdownMenuItem>
+          )}
+
+          {permissions.canConvertToLead && (
+            <>
+              <DropdownMenuSeparator />
+              {status === "konvertiert" || reservation.lead_id ? (
+                <DropdownMenuItem onClick={() => onConvertToLead(reservation)}>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Verknüpften Interessenten öffnen
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => onConvertToLead(reservation)}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Zu Interessent entwickeln
+                </DropdownMenuItem>
+              )}
+            </>
           )}
 
           {(permissions.canMarkInProgress || permissions.canMarkExpired || permissions.canRelease) && (
