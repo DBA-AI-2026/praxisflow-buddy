@@ -8,7 +8,7 @@ import {
   Search, Users, FileText, Building2, CheckCircle2, XCircle,
   UserPlus, Phone, UserCheck, FilePlus, Upload, Ban, Send,
   Loader2, Globe, PenLine, ArrowRight, RefreshCw, AlertTriangle, Clock,
-  Flame, Eye, ChevronDown,
+  Flame, Eye, ChevronDown, CalendarCheck,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { de } from "date-fns/locale";
