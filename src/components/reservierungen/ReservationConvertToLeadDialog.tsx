@@ -321,6 +321,13 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
               </div>
             </div>
 
+            <ProductInterestPicker
+              value={interestedProducts}
+              onChange={setInterestedProducts}
+              layout="badges"
+              hint="Aus der Reservierung übernommen – kann hier angepasst werden."
+            />
+
             {/* Dubletten-Anzeige */}
             {dupLoading ? (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
