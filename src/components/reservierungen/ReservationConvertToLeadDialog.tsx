@@ -194,7 +194,7 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
           : "Lead wurde verknüpft.",
         action: {
           label: "Öffnen",
-          onClick: () => navigate(`/interessenten?lead=${res.lead_id}`),
+          onClick: () => navigate(`/pipeline?tab=interessenten&lead=${res.lead_id}`),
         },
       });
       queryClient.invalidateQueries({ queryKey: ["praxis_reservations"] });
