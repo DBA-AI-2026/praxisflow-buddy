@@ -198,6 +198,20 @@ export default function Dashboard() {
     },
   });
 
+  // ── BLOCK 4: Reservierungen (RLS-gefiltert) ──
+  const { data: reservationsRaw = [] } = useQuery({
+    queryKey: ["dashboard-reservations", role, user?.id],
+    enabled: canSeeReservations,
+    staleTime: 0,
+    refetchOnMount: "always",
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("praxis_reservations")
+        .select("id, status, reserved_until, assigned_ad_id, interested_products, converted_at, reserved_by");
+      return data ?? [];
+    },
+  });
+
   // ── Apply team filter for regional leads ──
   const applyTeamFilter = (items: any[], field: string) => {
     if (!isRegionalLead) return items;
