@@ -184,6 +184,7 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
         p_email: email.trim(),
         p_mobilnummer: mobilnummer.trim(),
         p_force: forceCreate,
+        p_interested_products: interestedProducts,
       });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
