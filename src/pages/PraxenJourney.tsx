@@ -549,6 +549,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
               <TH>Alter</TH>
               <TH>Nächster Schritt</TH>
               <TH>Quelle</TH>
+              <TH>Interesse an</TH>
               <TH>Vorbezug</TH>
               <TH>PLZ / Ort</TH>
               <TH>Betreuer</TH>
