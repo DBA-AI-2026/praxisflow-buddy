@@ -107,20 +107,25 @@ export function PipelineKpiBar({ allLeads, allContracts, kundeLeads }: PipelineK
     const abschlussContracts = allContracts.filter((c: any) => ["entwurf", "eingegangen", "gezeichnet"].includes(c.status)).length;
     const aktivContracts = allContracts.filter((c: any) => c.status === "aktiv").length;
 
-    // Source analysis
-    const getSource = (l: any): string => {
+    // Source analysis (3 buckets: homepage, manuell, reservierung)
+    const getSource = (l: any): "homepage" | "manuell" | "reservierung" => {
+      if (l.source === "reservation_conversion") return "reservierung";
       if (l.source === "manual") return "manuell";
       if (l.source === "homepage") return "homepage";
+      // Legacy fallback for older rows without explicit source
       if (l.nachricht && l.nachricht.trim().length > 0) return "homepage";
       return "manuell";
     };
     const allLeadsWithKunde = [...allLeads, ...kundeLeads];
     const homepageLeads = allLeadsWithKunde.filter((l) => getSource(l) === "homepage").length;
     const manuellLeads = allLeadsWithKunde.filter((l) => getSource(l) === "manuell").length;
+    const reservierungLeads = allLeadsWithKunde.filter((l) => getSource(l) === "reservierung").length;
     const homepageKunden = kundeLeads.filter((l) => getSource(l) === "homepage").length;
     const manuellKunden = kundeLeads.filter((l) => getSource(l) === "manuell").length;
+    const reservierungKunden = kundeLeads.filter((l) => getSource(l) === "reservierung").length;
     const homepageRate = homepageLeads > 0 ? ((homepageKunden / homepageLeads) * 100) : 0;
     const manuellRate = manuellLeads > 0 ? ((manuellKunden / manuellLeads) * 100) : 0;
+    const reservierungRate = reservierungLeads > 0 ? ((reservierungKunden / reservierungLeads) * 100) : 0;
 
     // Time metrics: avg days from lead creation to first contract creation
     // We approximate using leads that have status "kunde" and find matching contracts
