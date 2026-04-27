@@ -140,7 +140,46 @@ function computePermissions(opts: {
   };
 }
 
+type DashboardFilter =
+  | "active"
+  | "expiring"
+  | "expired"
+  | "without_ad"
+  | "without_product"
+  | "converted_recently";
+
+const DASHBOARD_FILTER_LABELS: Record<DashboardFilter, string> = {
+  active: "Aktiv",
+  expiring: "Läuft in 14 Tagen ab",
+  expired: "Abgelaufen",
+  without_ad: "Ohne AD",
+  without_product: "Ohne Produktinteresse",
+  converted_recently: "Konvertiert in den letzten 30 Tagen",
+};
+
+const DASHBOARD_FILTER_VALUES = new Set<DashboardFilter>([
+  "active",
+  "expiring",
+  "expired",
+  "without_ad",
+  "without_product",
+  "converted_recently",
+]);
+
 export default function Reservierungen() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlFilterRaw = searchParams.get("filter");
+  const dashboardFilter: DashboardFilter | null =
+    urlFilterRaw && DASHBOARD_FILTER_VALUES.has(urlFilterRaw as DashboardFilter)
+      ? (urlFilterRaw as DashboardFilter)
+      : null;
+
+  const clearDashboardFilter = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("filter");
+    setSearchParams(next, { replace: true });
+  };
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState<ReservationFormData>(initialFormData);
   const [duplicateWarnings, setDuplicateWarnings] = useState<DuplicateCheck[]>([]);
