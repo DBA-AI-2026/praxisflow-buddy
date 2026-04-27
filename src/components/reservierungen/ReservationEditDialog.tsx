@@ -97,6 +97,7 @@ export function ReservationEditDialog({
           telefon: data.telefon,
           notes: data.notes || null,
           status: data.status,
+          interested_products: data.interested_products ?? [],
         })
         .eq("id", reservation.id);
 
