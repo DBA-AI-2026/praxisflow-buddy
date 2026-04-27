@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.convert_reservation_to_lead(uuid, text, text, text, text, boolean) FROM anon;
