@@ -143,6 +143,7 @@ export default function Reservierungen() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [extendOpen, setExtendOpen] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
   const [activeReservation, setActiveReservation] = useState<Reservation | null>(null);
 
   const { toast } = useToast();
