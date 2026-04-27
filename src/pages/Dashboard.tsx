@@ -761,3 +761,33 @@ function PipelineQuickCard({ label, count, icon: Icon, iconClass, to }: Pipeline
     </Link>
   );
 }
+
+// ── Reservation Stat Card ──
+interface ReservationStatCardProps {
+  label: string;
+  count: number;
+  icon: React.ElementType;
+  iconClass: string;
+  highlight?: boolean;
+}
+
+function ReservationStatCard({ label, count, icon: Icon, iconClass, highlight }: ReservationStatCardProps) {
+  return (
+    <Link
+      to="/reservierungen"
+      className={`group block rounded-lg border bg-card p-3 transition-all hover:shadow-md ${
+        highlight ? "border-amber-500/40" : "border-border"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium text-muted-foreground leading-tight">{label}</p>
+          <p className="mt-1.5 text-xl font-bold text-foreground">{count}</p>
+        </div>
+        <div className={`shrink-0 rounded-md p-1.5 ${iconClass}`}>
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
+    </Link>
+  );
+}
