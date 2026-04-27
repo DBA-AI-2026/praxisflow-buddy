@@ -18,6 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, UserPlus, AlertTriangle, ExternalLink, Info } from "lucide-react";
 import type { Reservation } from "./types";
+import { ProductInterestPicker } from "@/components/products/ProductInterestPicker";
 
 interface Props {
   reservation: Reservation | null;
