@@ -171,6 +171,19 @@ export function ReservationFiltersBar({ filters, onChange, ads, creators }: Prop
           </SelectContent>
         </Select>
 
+        <Select value={filters.product} onValueChange={(v) => update("product", v)}>
+          <SelectTrigger className="h-8 w-44 text-xs">
+            <SelectValue placeholder="Interesse an" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Alle Produkte</SelectItem>
+            <SelectItem value="__none__">Ohne Produktinteresse</SelectItem>
+            {products.map((p) => (
+              <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <Toggle
           size="sm"
           pressed={filters.onlyMine}
