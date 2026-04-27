@@ -28,6 +28,7 @@ import {
   getEffectiveStatus,
   type Reservation,
 } from "./types";
+import { ProductInterestBadges } from "@/components/products/ProductInterestPicker";
 
 interface Props {
   reservation: Reservation | null;
@@ -157,6 +158,15 @@ export function ReservationDetailDialog({ reservation, open, onOpenChange }: Pro
             ) : null}
           </Field>
         </div>
+
+        {reservation.interested_products && reservation.interested_products.length > 0 ? (
+          <>
+            <Separator />
+            <Field label="Interesse an">
+              <ProductInterestBadges products={reservation.interested_products as string[]} />
+            </Field>
+          </>
+        ) : null}
 
         {reservation.notes ? (
           <>

@@ -31,6 +31,7 @@ import {
   type ProviderStatusRow,
 } from "@/components/pipeline/QodiaStatusBadges";
 import { ProductBadges, type ProductBadgeItem } from "@/components/pipeline/ProductBadges";
+import { ProductInterestBadges } from "@/components/products/ProductInterestPicker";
 import { useProviderStatusMap, useProductProviderFlags } from "@/hooks/useProviderStatus";
 import { useCustomerContractsMap } from "@/hooks/useCustomerContracts";
 
@@ -549,6 +550,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
               <TH>Alter</TH>
               <TH>Nächster Schritt</TH>
               <TH>Quelle</TH>
+              <TH>Interesse an</TH>
               <TH>Vorbezug</TH>
               <TH>PLZ / Ort</TH>
               <TH>Betreuer</TH>
@@ -557,7 +559,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={9} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              <tr><td colSpan={10} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : sorted.length === 0 ? (
               <EmptyState icon={Users} title="Keine Interessenten gefunden" sub="Versuche einen anderen Filter oder lege einen neuen Interessenten an" />
             ) : sorted.map((lead: any) => {
@@ -606,6 +608,9 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
                   </td>
                   <td className="py-3 px-4">
                     <SourceBadge source={src} />
+                  </td>
+                  <td className="py-3 px-4">
+                    <ProductInterestBadges products={lead.interested_products} />
                   </td>
                   <td className="py-3 px-4">
                     <VorbezugBadge value={lead.abrechnungszentrum} />

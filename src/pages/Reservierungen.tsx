@@ -70,6 +70,10 @@ import {
   type Reservation,
   type ReservationStatus,
 } from "@/components/reservierungen/types";
+import {
+  ProductInterestPicker,
+  ProductInterestBadges,
+} from "@/components/products/ProductInterestPicker";
 
 interface ReservationFormData {
   praxis_name: string;
@@ -81,6 +85,7 @@ interface ReservationFormData {
   telefon: string;
   reservation_months: number;
   notes: string;
+  interested_products: string[];
 }
 
 interface DuplicateCheck {
@@ -99,6 +104,7 @@ const initialFormData: ReservationFormData = {
   telefon: "",
   reservation_months: 6,
   notes: "",
+  interested_products: [],
 };
 
 function computePermissions(opts: {
@@ -230,6 +236,7 @@ export default function Reservierungen() {
         reserved_by: user?.id,
         reserved_by_name: profile?.full_name || user?.email || "Unbekannt",
         notes: data.notes || null,
+        interested_products: data.interested_products ?? [],
       });
       if (error) throw error;
     },
@@ -267,7 +274,7 @@ export default function Reservierungen() {
     createReservation.mutate(formData);
   };
 
-  const handleInputChange = (field: keyof ReservationFormData, value: string | number) => {
+  const handleInputChange = <K extends keyof ReservationFormData>(field: K, value: ReservationFormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -316,6 +323,14 @@ export default function Reservierungen() {
       }
       if (filters.activity === "active" && new Date(r.reserved_until).getTime() < now) return false;
       if (filters.activity === "expired" && new Date(r.reserved_until).getTime() >= now) return false;
+      if (filters.product !== "all") {
+        const ips = r.interested_products ?? [];
+        if (filters.product === "__none__") {
+          if (ips.length > 0) return false;
+        } else if (!ips.includes(filters.product)) {
+          return false;
+        }
+      }
       if (filters.search) {
         const q = filters.search.toLowerCase();
         const hay = `${r.praxis_name} ${r.arzt_namen} ${r.telefon} ${r.ort}`.toLowerCase();
@@ -521,6 +536,12 @@ export default function Reservierungen() {
                 />
               </div>
 
+              <ProductInterestPicker
+                value={formData.interested_products}
+                onChange={(next) => handleInputChange("interested_products", next)}
+                hint="Optional. Wird bei Konvertierung zum Interessenten übernommen."
+              />
+
               <div className="p-3 bg-muted rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
@@ -601,6 +622,7 @@ export default function Reservierungen() {
                     <TableHead>PLZ / Ort</TableHead>
                     <TableHead>Ansprechpartner</TableHead>
                     <TableHead>Telefon</TableHead>
+                    <TableHead className="min-w-[140px]">Interesse an</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Ersteller</TableHead>
                     <TableHead>Zust. AD</TableHead>
@@ -639,6 +661,9 @@ export default function Reservierungen() {
                         </TableCell>
                         <TableCell className="text-sm">{r.arzt_namen || "—"}</TableCell>
                         <TableCell className="text-sm">{r.telefon || "—"}</TableCell>
+                        <TableCell className="text-sm">
+                          <ProductInterestBadges products={r.interested_products} />
+                        </TableCell>
                         <TableCell>
                           <ReservationStatusBadge status={status} />
                         </TableCell>

@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Toggle } from "@/components/ui/toggle";
 import { X, Filter } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
 import {
   RESERVATION_STATUS_LABELS,
   RESERVATION_STATUS_VALUES,
@@ -24,6 +26,7 @@ export interface ReservationFilters {
   onlyMine: boolean;
   onlyAssignedToMe: boolean;
   activity: "all" | "active" | "expired";
+  product: string; // "all" or product name
 }
 
 export const DEFAULT_FILTERS: ReservationFilters = {
@@ -36,6 +39,7 @@ export const DEFAULT_FILTERS: ReservationFilters = {
   onlyMine: false,
   onlyAssignedToMe: false,
   activity: "all",
+  product: "all",
 };
 
 interface PersonOption {
@@ -58,6 +62,20 @@ export function ReservationFiltersBar({ filters, onChange, ads, creators }: Prop
 
   const reset = () => onChange(DEFAULT_FILTERS);
 
+  const { data: products = [] } = useQuery({
+    queryKey: ["active-products"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const hasActiveFilters =
     filters.search ||
     filters.status !== "all" ||
@@ -67,7 +85,8 @@ export function ReservationFiltersBar({ filters, onChange, ads, creators }: Prop
     filters.ort ||
     filters.onlyMine ||
     filters.onlyAssignedToMe ||
-    filters.activity !== "all";
+    filters.activity !== "all" ||
+    filters.product !== "all";
 
   return (
     <div className="space-y-2 rounded-lg border bg-card p-3">
@@ -149,6 +168,19 @@ export function ReservationFiltersBar({ filters, onChange, ads, creators }: Prop
             <SelectItem value="all">Aktiv & Abgelaufen</SelectItem>
             <SelectItem value="active">Nur aktive</SelectItem>
             <SelectItem value="expired">Nur abgelaufene</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={filters.product} onValueChange={(v) => update("product", v)}>
+          <SelectTrigger className="h-8 w-44 text-xs">
+            <SelectValue placeholder="Interesse an" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Alle Produkte</SelectItem>
+            <SelectItem value="__none__">Ohne Produktinteresse</SelectItem>
+            {products.map((p) => (
+              <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
 

@@ -18,6 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, UserPlus, AlertTriangle, ExternalLink, Info } from "lucide-react";
 import type { Reservation } from "./types";
+import { ProductInterestPicker } from "@/components/products/ProductInterestPicker";
 
 interface Props {
   reservation: Reservation | null;
@@ -73,6 +74,7 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
   const [email, setEmail] = useState("");
   const [mobilnummer, setMobilnummer] = useState("");
   const [forceCreate, setForceCreate] = useState(false);
+  const [interestedProducts, setInterestedProducts] = useState<string[]>([]);
 
   // Reset form whenever the dialog reopens with a new reservation
   useEffect(() => {
@@ -82,6 +84,7 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
       setEmail("");
       setMobilnummer(reservation.telefon ?? "");
       setForceCreate(false);
+      setInterestedProducts((reservation.interested_products as string[] | null) ?? []);
     }
   }, [open, reservation, initialNames.vorname, initialNames.nachname]);
 
@@ -181,6 +184,7 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
         p_email: email.trim(),
         p_mobilnummer: mobilnummer.trim(),
         p_force: forceCreate,
+        p_interested_products: interestedProducts,
       });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
@@ -316,6 +320,13 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
                 />
               </div>
             </div>
+
+            <ProductInterestPicker
+              value={interestedProducts}
+              onChange={setInterestedProducts}
+              layout="badges"
+              hint="Aus der Reservierung übernommen – kann hier angepasst werden."
+            />
 
             {/* Dubletten-Anzeige */}
             {dupLoading ? (

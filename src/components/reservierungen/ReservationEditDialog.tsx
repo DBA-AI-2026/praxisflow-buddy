@@ -26,6 +26,7 @@ import {
   type Reservation,
   type ReservationStatus,
 } from "./types";
+import { ProductInterestPicker } from "@/components/products/ProductInterestPicker";
 
 interface Props {
   reservation: Reservation | null;
@@ -45,6 +46,7 @@ interface EditState {
   telefon: string;
   notes: string;
   status: ReservationStatus;
+  interested_products: string[];
 }
 
 function toEditState(r: Reservation): EditState {
@@ -58,6 +60,7 @@ function toEditState(r: Reservation): EditState {
     telefon: r.telefon ?? "",
     notes: r.notes ?? "",
     status: ((r.status as ReservationStatus) ?? "reserviert"),
+    interested_products: (r.interested_products as string[] | null) ?? [],
   };
 }
 
@@ -94,6 +97,7 @@ export function ReservationEditDialog({
           telefon: data.telefon,
           notes: data.notes || null,
           status: data.status,
+          interested_products: data.interested_products ?? [],
         })
         .eq("id", reservation.id);
 
@@ -229,6 +233,12 @@ export function ReservationEditDialog({
               </SelectContent>
             </Select>
           </div>
+
+          <ProductInterestPicker
+            value={form.interested_products}
+            onChange={(next) => setForm({ ...form, interested_products: next })}
+            hint="Wird bei Konvertierung zum Interessenten übernommen."
+          />
 
           <div>
             <Label htmlFor="edit_notes">Notizen</Label>

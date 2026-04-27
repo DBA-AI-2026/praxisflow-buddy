@@ -1665,6 +1665,7 @@ export type Database = {
           customer_id: string | null
           hausnummer: string
           id: string
+          interested_products: string[]
           lead_id: string | null
           notes: string | null
           ort: string
@@ -1691,6 +1692,7 @@ export type Database = {
           customer_id?: string | null
           hausnummer: string
           id?: string
+          interested_products?: string[]
           lead_id?: string | null
           notes?: string | null
           ort: string
@@ -1717,6 +1719,7 @@ export type Database = {
           customer_id?: string | null
           hausnummer?: string
           id?: string
+          interested_products?: string[]
           lead_id?: string | null
           notes?: string | null
           ort?: string
@@ -2603,20 +2606,36 @@ export type Database = {
         Args: { _contract_id: string; _provider: string }
         Returns: boolean
       }
-      convert_reservation_to_lead: {
-        Args: {
-          p_email: string
-          p_force?: boolean
-          p_mobilnummer: string
-          p_nachname: string
-          p_reservation_id: string
-          p_vorname: string
-        }
-        Returns: {
-          hfx_customer_number: string
-          lead_id: string
-        }[]
-      }
+      convert_reservation_to_lead:
+        | {
+            Args: {
+              p_email: string
+              p_force?: boolean
+              p_mobilnummer: string
+              p_nachname: string
+              p_reservation_id: string
+              p_vorname: string
+            }
+            Returns: {
+              hfx_customer_number: string
+              lead_id: string
+            }[]
+          }
+        | {
+            Args: {
+              p_email: string
+              p_force?: boolean
+              p_interested_products?: string[]
+              p_mobilnummer: string
+              p_nachname: string
+              p_reservation_id: string
+              p_vorname: string
+            }
+            Returns: {
+              hfx_customer_number: string
+              lead_id: string
+            }[]
+          }
       get_cron_secret: { Args: never; Returns: string }
       get_public_contract_booking: {
         Args: { p_contract_id: string }
