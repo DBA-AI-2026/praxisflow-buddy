@@ -614,6 +614,7 @@ export default function Reservierungen() {
                     <TableHead>PLZ / Ort</TableHead>
                     <TableHead>Ansprechpartner</TableHead>
                     <TableHead>Telefon</TableHead>
+                    <TableHead className="min-w-[140px]">Interesse an</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Ersteller</TableHead>
                     <TableHead>Zust. AD</TableHead>
