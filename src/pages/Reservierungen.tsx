@@ -236,6 +236,7 @@ export default function Reservierungen() {
         reserved_by: user?.id,
         reserved_by_name: profile?.full_name || user?.email || "Unbekannt",
         notes: data.notes || null,
+        interested_products: data.interested_products ?? [],
       });
       if (error) throw error;
     },
