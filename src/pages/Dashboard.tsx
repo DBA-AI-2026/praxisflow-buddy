@@ -775,12 +775,13 @@ interface ReservationStatCardProps {
   icon: React.ElementType;
   iconClass: string;
   highlight?: boolean;
+  to?: string;
 }
 
-function ReservationStatCard({ label, count, icon: Icon, iconClass, highlight }: ReservationStatCardProps) {
+function ReservationStatCard({ label, count, icon: Icon, iconClass, highlight, to }: ReservationStatCardProps) {
   return (
     <Link
-      to="/reservierungen"
+      to={to ?? "/reservierungen"}
       className={`group block rounded-lg border bg-card p-3 transition-all hover:shadow-md ${
         highlight ? "border-amber-500/40" : "border-border"
       }`}
