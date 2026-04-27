@@ -276,6 +276,12 @@ export function PipelineKpiBar({ allLeads, allContracts, kundeLeads }: PipelineK
                 conversions={kpis.sources.manuellKunden}
                 rate={`${kpis.sources.manuellRate.toFixed(0)}%`}
               />
+              <SourceRow
+                source="Reservierung"
+                leads={kpis.sources.reservierungLeads}
+                conversions={kpis.sources.reservierungKunden}
+                rate={`${kpis.sources.reservierungRate.toFixed(0)}%`}
+              />
             </div>
             {kpis.time.avgLeadToContract !== null && (
               <div className="mt-3 rounded-lg border border-border bg-card p-3">
