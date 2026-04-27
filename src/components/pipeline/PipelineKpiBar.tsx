@@ -171,7 +171,11 @@ export function PipelineKpiBar({ allLeads, allContracts, kundeLeads }: PipelineK
     return {
       activeLeads, kundenCount, conversionRate, lostLeads, totalLeads,
       funnel: { neu, kontaktiert, qualifiziert, vertrag, abschlussContracts, aktivContracts },
-      sources: { homepageLeads, manuellLeads, homepageKunden, manuellKunden, homepageRate, manuellRate },
+      sources: {
+        homepageLeads, manuellLeads, reservierungLeads,
+        homepageKunden, manuellKunden, reservierungKunden,
+        homepageRate, manuellRate, reservierungRate,
+      },
       time: { avgLeadToContract, avgContractToActive },
     };
   }, [allLeads, allContracts, kundeLeads]);
