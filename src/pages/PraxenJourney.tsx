@@ -336,6 +336,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
   const closedAblCount = teamLeads.filter((l: any) => l.status === "abgelehnt").length;
   const homepageCount = teamLeads.filter((l: any) => getSource(l) === "homepage").length;
   const manuellCount = teamLeads.filter((l: any) => getSource(l) === "manuell").length;
+  const reservierungCount = teamLeads.filter((l: any) => getSource(l) === "reservierung").length;
 
   const s = search.toLowerCase();
 
