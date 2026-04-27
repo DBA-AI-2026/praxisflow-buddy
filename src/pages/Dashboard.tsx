@@ -570,7 +570,7 @@ export default function Dashboard() {
                   Alle anzeigen <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
-              {/* TODO: URL-Filter für /reservierungen ergänzen, sobald Reservierungs-Liste Query-Params unterstützt */}
+              
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 <ReservationStatCard
                   label="Aktiv"
