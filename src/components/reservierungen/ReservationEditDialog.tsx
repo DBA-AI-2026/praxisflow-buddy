@@ -26,6 +26,7 @@ import {
   type Reservation,
   type ReservationStatus,
 } from "./types";
+import { ProductInterestPicker } from "@/components/products/ProductInterestPicker";
 
 interface Props {
   reservation: Reservation | null;
