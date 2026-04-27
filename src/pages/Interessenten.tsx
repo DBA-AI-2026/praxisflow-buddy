@@ -87,6 +87,7 @@ export default function Interessenten() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAdmin, isSalesLead, isRegionalLead, isTippgeber, isSalesPartner } = useUserRole();
   const { user } = useAuth();
   const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions } = useRegionalTeam();
