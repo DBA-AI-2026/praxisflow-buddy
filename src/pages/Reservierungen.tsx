@@ -126,6 +126,9 @@ function computePermissions(opts: {
     canMarkInProgress: elevated || ownerLikeNonConverted || regionalLeadCanEdit,
     canMarkExpired: elevated || ownerLikeNonConverted || regionalLeadCanEdit,
     canDelete: isAdmin,
+    // Konvertierung sichtbar für Admin/Sales Lead/Regional Lead/Ersteller/AD.
+    // Bereits konvertierte Datensätze zeigen stattdessen die Verknüpfung an.
+    canConvertToLead: elevated || isCreator || isAssignedAd || isRegionalLead,
   };
 }
 
