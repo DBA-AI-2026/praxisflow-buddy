@@ -686,6 +686,10 @@ export default function Reservierungen() {
                               setActiveReservation(res);
                               setExtendOpen(true);
                             }}
+                            onConvertToLead={(res) => {
+                              setActiveReservation(res);
+                              setConvertOpen(true);
+                            }}
                           />
                         </TableCell>
                       </TableRow>
