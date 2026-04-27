@@ -42,6 +42,7 @@ export interface ReservationPermissions {
   canMarkInProgress: boolean;
   canMarkExpired: boolean;
   canDelete: boolean;
+  canConvertToLead: boolean;
 }
 
 interface Props {
@@ -50,6 +51,7 @@ interface Props {
   onView: (r: Reservation) => void;
   onEdit: (r: Reservation) => void;
   onExtend: (r: Reservation) => void;
+  onConvertToLead: (r: Reservation) => void;
 }
 
 export function ReservationActions({
