@@ -653,6 +653,9 @@ export default function Reservierungen() {
                         </TableCell>
                         <TableCell className="text-sm">{r.arzt_namen || "—"}</TableCell>
                         <TableCell className="text-sm">{r.telefon || "—"}</TableCell>
+                        <TableCell className="text-sm">
+                          <ProductInterestBadges products={r.interested_products} />
+                        </TableCell>
                         <TableCell>
                           <ReservationStatusBadge status={status} />
                         </TableCell>
