@@ -138,6 +138,52 @@ export default function Interessenten() {
     },
   });
 
+  // Deep-Link: ?lead=<id> → Lead automatisch öffnen (auch wenn nicht in aktueller Liste)
+  const leadIdFromUrl = searchParams.get("lead");
+  useEffect(() => {
+    if (!leadIdFromUrl) return;
+    if (selectedLead?.id === leadIdFromUrl) return;
+    const inList = leads.find((l: any) => l.id === leadIdFromUrl);
+    if (inList) {
+      setSelectedLead(inList);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("leads")
+        .select("*")
+        .eq("id", leadIdFromUrl)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error || !data) {
+        toast({
+          title: "Interessent nicht gefunden",
+          description: "Der verknüpfte Interessent ist nicht (mehr) sichtbar.",
+          variant: "destructive",
+        });
+        const next = new URLSearchParams(searchParams);
+        next.delete("lead");
+        setSearchParams(next, { replace: true });
+        return;
+      }
+      setSelectedLead(data);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leadIdFromUrl, leads]);
+
+  const closeLeadDialog = () => {
+    setSelectedLead(null);
+    if (searchParams.has("lead")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("lead");
+      setSearchParams(next, { replace: true });
+    }
+  };
+
   const [resending, setResending] = useState(false);
   const [syncingQodia, setSyncingQodia] = useState(false);
 
