@@ -28,6 +28,7 @@ import {
   getEffectiveStatus,
   type Reservation,
 } from "./types";
+import { ProductInterestBadges } from "@/components/products/ProductInterestPicker";
 
 interface Props {
   reservation: Reservation | null;
