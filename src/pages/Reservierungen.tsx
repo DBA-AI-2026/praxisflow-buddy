@@ -528,6 +528,12 @@ export default function Reservierungen() {
                 />
               </div>
 
+              <ProductInterestPicker
+                value={formData.interested_products}
+                onChange={(next) => handleInputChange("interested_products", next)}
+                hint="Optional. Wird bei Konvertierung zum Interessenten übernommen."
+              />
+
               <div className="p-3 bg-muted rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
