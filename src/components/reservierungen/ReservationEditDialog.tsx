@@ -46,6 +46,7 @@ interface EditState {
   telefon: string;
   notes: string;
   status: ReservationStatus;
+  interested_products: string[];
 }
 
 function toEditState(r: Reservation): EditState {
@@ -59,6 +60,7 @@ function toEditState(r: Reservation): EditState {
     telefon: r.telefon ?? "",
     notes: r.notes ?? "",
     status: ((r.status as ReservationStatus) ?? "reserviert"),
+    interested_products: (r.interested_products as string[] | null) ?? [],
   };
 }
 
