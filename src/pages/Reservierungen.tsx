@@ -274,7 +274,7 @@ export default function Reservierungen() {
     createReservation.mutate(formData);
   };
 
-  const handleInputChange = (field: keyof ReservationFormData, value: string | number) => {
+  const handleInputChange = <K extends keyof ReservationFormData>(field: K, value: ReservationFormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
