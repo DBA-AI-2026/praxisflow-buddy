@@ -1655,9 +1655,17 @@ export type Database = {
       praxis_reservations: {
         Row: {
           arzt_namen: string
+          assigned_ad_id: string | null
+          assigned_ad_name: string | null
+          assignment_source: string | null
+          contract_id: string | null
+          converted_at: string | null
+          converted_by_user_id: string | null
           created_at: string
+          customer_id: string | null
           hausnummer: string
           id: string
+          lead_id: string | null
           notes: string | null
           ort: string
           plz: string
@@ -1666,15 +1674,24 @@ export type Database = {
           reserved_by: string | null
           reserved_by_name: string | null
           reserved_until: string
+          status: string | null
           strasse: string
           telefon: string
           updated_at: string
         }
         Insert: {
           arzt_namen: string
+          assigned_ad_id?: string | null
+          assigned_ad_name?: string | null
+          assignment_source?: string | null
+          contract_id?: string | null
+          converted_at?: string | null
+          converted_by_user_id?: string | null
           created_at?: string
+          customer_id?: string | null
           hausnummer: string
           id?: string
+          lead_id?: string | null
           notes?: string | null
           ort: string
           plz: string
@@ -1683,15 +1700,24 @@ export type Database = {
           reserved_by?: string | null
           reserved_by_name?: string | null
           reserved_until: string
+          status?: string | null
           strasse: string
           telefon: string
           updated_at?: string
         }
         Update: {
           arzt_namen?: string
+          assigned_ad_id?: string | null
+          assigned_ad_name?: string | null
+          assignment_source?: string | null
+          contract_id?: string | null
+          converted_at?: string | null
+          converted_by_user_id?: string | null
           created_at?: string
+          customer_id?: string | null
           hausnummer?: string
           id?: string
+          lead_id?: string | null
           notes?: string | null
           ort?: string
           plz?: string
@@ -1700,11 +1726,41 @@ export type Database = {
           reserved_by?: string | null
           reserved_by_name?: string | null
           reserved_until?: string
+          status?: string | null
           strasse?: string
           telefon?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "praxis_reservations_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "praxis_reservations_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts_public_booking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "praxis_reservations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "praxis_reservations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       processed_stripe_events: {
         Row: {
