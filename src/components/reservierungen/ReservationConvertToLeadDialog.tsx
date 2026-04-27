@@ -74,6 +74,7 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
   const [email, setEmail] = useState("");
   const [mobilnummer, setMobilnummer] = useState("");
   const [forceCreate, setForceCreate] = useState(false);
+  const [interestedProducts, setInterestedProducts] = useState<string[]>([]);
 
   // Reset form whenever the dialog reopens with a new reservation
   useEffect(() => {
@@ -83,6 +84,7 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
       setEmail("");
       setMobilnummer(reservation.telefon ?? "");
       setForceCreate(false);
+      setInterestedProducts((reservation.interested_products as string[] | null) ?? []);
     }
   }, [open, reservation, initialNames.vorname, initialNames.nachname]);
 
