@@ -215,7 +215,11 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
   });
 
   // ── Render-Hilfen ──────────────────────────────────────────────────────────
-  const formValid = vorname.trim().length > 0 && nachname.trim().length > 0 && /\S+@\S+\.\S+/.test(email);
+  const formValid =
+    vorname.trim().length > 0 &&
+    nachname.trim().length > 0 &&
+    /\S+@\S+\.\S+/.test(email) &&
+    mobilnummer.trim().length > 0;
   const submitDisabled = !formValid || convert.isPending || alreadyConverted;
 
   return (
@@ -303,7 +307,7 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
                 />
               </div>
               <div className="space-y-1.5 col-span-2">
-                <Label htmlFor="conv-mobil">Mobilnummer</Label>
+                <Label htmlFor="conv-mobil">Mobilnummer *</Label>
                 <Input
                   id="conv-mobil"
                   value={mobilnummer}

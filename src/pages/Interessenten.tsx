@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Eye, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, Send, UserCheck, FilePlus, UserPlus, Upload, RefreshCw, Phone, FileSignature, ArrowRight, Ban, Globe } from "lucide-react";
+import { Search, Eye, CheckCircle2, XCircle, Clock, FileText, AlertTriangle, Send, UserCheck, FilePlus, UserPlus, Upload, RefreshCw, Phone, FileSignature, ArrowRight, Ban, Globe, CalendarCheck } from "lucide-react";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
 // UploadPaperContractDialog removed – paper flow decommissioned
 import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
@@ -87,6 +87,7 @@ export default function Interessenten() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAdmin, isSalesLead, isRegionalLead, isTippgeber, isSalesPartner } = useUserRole();
   const { user } = useAuth();
   const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions } = useRegionalTeam();
@@ -136,6 +137,52 @@ export default function Interessenten() {
       return data;
     },
   });
+
+  // Deep-Link: ?lead=<id> → Lead automatisch öffnen (auch wenn nicht in aktueller Liste)
+  const leadIdFromUrl = searchParams.get("lead");
+  useEffect(() => {
+    if (!leadIdFromUrl) return;
+    if (selectedLead?.id === leadIdFromUrl) return;
+    const inList = leads.find((l: any) => l.id === leadIdFromUrl);
+    if (inList) {
+      setSelectedLead(inList);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("leads")
+        .select("*")
+        .eq("id", leadIdFromUrl)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error || !data) {
+        toast({
+          title: "Interessent nicht gefunden",
+          description: "Der verknüpfte Interessent ist nicht (mehr) sichtbar.",
+          variant: "destructive",
+        });
+        const next = new URLSearchParams(searchParams);
+        next.delete("lead");
+        setSearchParams(next, { replace: true });
+        return;
+      }
+      setSelectedLead(data);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leadIdFromUrl, leads]);
+
+  const closeLeadDialog = () => {
+    setSelectedLead(null);
+    if (searchParams.has("lead")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("lead");
+      setSearchParams(next, { replace: true });
+    }
+  };
 
   const [resending, setResending] = useState(false);
   const [syncingQodia, setSyncingQodia] = useState(false);
@@ -377,14 +424,31 @@ export default function Interessenten() {
                       <TableCell>{lead.plz}</TableCell>
                       <TableCell>{(lead.abrechnungszentrum === "nein" || lead.abrechnungszentrum === "keins") ? "–" : lead.abrechnungszentrum}</TableCell>
                       <TableCell>
-                        <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border ${
-                          lead.source === "manual"
-                            ? "bg-accent/10 text-accent border-accent/30"
-                            : "bg-primary/10 text-primary border-primary/30"
-                        }`}>
-                          {lead.source === "manual" ? <UserPlus className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
-                          {lead.source === "manual" ? "Manuell" : "Homepage"}
-                        </span>
+                        {(() => {
+                          const src = lead.source;
+                          if (src === "reservation_conversion") {
+                            return (
+                              <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border bg-warning/10 text-warning-foreground border-warning/30">
+                                <CalendarCheck className="h-3 w-3" />
+                                Reservierung
+                              </span>
+                            );
+                          }
+                          if (src === "manual") {
+                            return (
+                              <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border bg-accent/10 text-accent border-accent/30">
+                                <UserPlus className="h-3 w-3" />
+                                Manuell
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/30">
+                              <Globe className="h-3 w-3" />
+                              Homepage
+                            </span>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-muted-foreground whitespace-nowrap">
                         {format(new Date(lead.created_at), "dd.MM.yy HH:mm", { locale: de })}
@@ -649,7 +713,7 @@ export default function Interessenten() {
       {selectedLead && (
         <LeadDetailDialog
           lead={selectedLead}
-          onClose={() => setSelectedLead(null)}
+          onClose={closeLeadDialog}
           gebietsleiter={gebietsleiter}
           canAssign={canAssign}
         />
