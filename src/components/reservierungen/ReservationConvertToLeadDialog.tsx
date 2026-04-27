@@ -194,7 +194,7 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
           : "Lead wurde verknüpft.",
         action: {
           label: "Öffnen",
-          onClick: () => navigate(`/interessenten?lead=${res.lead_id}`),
+          onClick: () => navigate(`/pipeline?tab=interessenten&lead=${res.lead_id}`),
         },
       });
       queryClient.invalidateQueries({ queryKey: ["praxis_reservations"] });
@@ -249,7 +249,7 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
                   variant="outline"
                   onClick={() => {
                     onOpenChange(false);
-                    navigate(`/interessenten?lead=${reservation.lead_id}`);
+                    navigate(`/pipeline?tab=interessenten&lead=${reservation.lead_id}`);
                   }}
                 >
                   <ExternalLink className="mr-2 h-3.5 w-3.5" />
@@ -360,7 +360,7 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
                           className="h-7 px-2 shrink-0"
                           onClick={() => {
                             onOpenChange(false);
-                            navigate(`/interessenten?lead=${d.id}`);
+                            navigate(`/pipeline?tab=interessenten&lead=${d.id}`);
                           }}
                         >
                           <ExternalLink className="h-3.5 w-3.5" />

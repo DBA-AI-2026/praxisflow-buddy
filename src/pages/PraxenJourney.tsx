@@ -8,7 +8,7 @@ import {
   Search, Users, FileText, Building2, CheckCircle2, XCircle,
   UserPlus, Phone, UserCheck, FilePlus, Upload, Ban, Send,
   Loader2, Globe, PenLine, ArrowRight, RefreshCw, AlertTriangle, Clock,
-  Flame, Eye, ChevronDown,
+  Flame, Eye, ChevronDown, CalendarCheck,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { de } from "date-fns/locale";
@@ -98,7 +98,15 @@ function StatusPill({ label, cls }: { label: string; cls: string }) {
   );
 }
 
-function SourceBadge({ source }: { source: "homepage" | "manuell" }) {
+function SourceBadge({ source }: { source: "homepage" | "manuell" | "reservierung" }) {
+  if (source === "reservierung") {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-warning/10 text-warning border border-warning/30">
+        <CalendarCheck className="h-2.5 w-2.5" />
+        Reservierung
+      </span>
+    );
+  }
   return source === "homepage" ? (
     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
       <Globe className="h-2.5 w-2.5" />
@@ -250,10 +258,10 @@ function FilterPill({
 const ACTIVE_LEAD_STATUSES = ["neu", "kontaktiert", "qualifiziert", "vertrag"];
 const CLOSED_LEAD_STATUSES = ["kein_abschluss", "abgelehnt"];
 
-type LeadSourceFilter = "alle" | "homepage" | "manuell";
+type LeadSourceFilter = "alle" | "homepage" | "manuell" | "reservierung";
 type LeadStatusFilter = "aktiv" | "kein_abschluss" | "abgelehnt" | "alle";
 
-function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, initialFilter }: { search: string; highlightId?: string; teamFilter: string; matchesTeamFilter: (id?: string | null) => boolean; initialFilter?: string }) {
+function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, initialFilter, deepLinkLeadId, onClearDeepLink }: { search: string; highlightId?: string; teamFilter: string; matchesTeamFilter: (id?: string | null) => boolean; initialFilter?: string; deepLinkLeadId?: string; onClearDeepLink?: () => void }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAdmin, isSalesLead, isRegionalLead, isSalesPartner, isTippgeber, role } = useUserRole();
@@ -296,6 +304,37 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     },
   });
 
+  // Deep-Link: ?lead=<id> → Lead-Detaildialog automatisch öffnen.
+  // Falls der Lead nicht in der gefilterten Liste ist, gezielt per ID nachladen.
+  useEffect(() => {
+    if (!deepLinkLeadId) return;
+    if (selectedLead?.id === deepLinkLeadId) return;
+    const inList = leads.find((l: any) => l.id === deepLinkLeadId);
+    if (inList) {
+      setSelectedLead(inList);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("leads")
+        .select("*")
+        .eq("id", deepLinkLeadId)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error || !data) {
+        toast.error("Interessent nicht gefunden", {
+          description: "Der verknüpfte Interessent ist nicht (mehr) sichtbar.",
+        });
+        onClearDeepLink?.();
+        return;
+      }
+      setSelectedLead(data);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkLeadId, leads]);
+
   // Betreuer names lookup
   const assignedIds = [...new Set(leads.map((l: any) => l.assigned_to).filter(Boolean))];
   const { data: profileMap = {} } = useQuery({
@@ -309,7 +348,8 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     },
   });
 
-  const getSource = (l: any): "homepage" | "manuell" => {
+  const getSource = (l: any): "homepage" | "manuell" | "reservierung" => {
+    if (l.source === "reservation_conversion") return "reservierung";
     if (l.source === "manual") return "manuell";
     if (l.source === "homepage") return "homepage";
     if (l.nachricht && l.nachricht.trim().length > 0) return "homepage";
@@ -327,6 +367,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
   const closedAblCount = teamLeads.filter((l: any) => l.status === "abgelehnt").length;
   const homepageCount = teamLeads.filter((l: any) => getSource(l) === "homepage").length;
   const manuellCount = teamLeads.filter((l: any) => getSource(l) === "manuell").length;
+  const reservierungCount = teamLeads.filter((l: any) => getSource(l) === "reservierung").length;
 
   const s = search.toLowerCase();
 
@@ -473,6 +514,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
             { key: "alle" as const, icon: null, label: "Alle Quellen", count: teamLeads.length },
             { key: "homepage" as const, icon: <Globe className="h-3 w-3" />, label: "Homepage", count: homepageCount },
             { key: "manuell" as const, icon: <PenLine className="h-3 w-3" />, label: "Manuell", count: manuellCount },
+            { key: "reservierung" as const, icon: <CalendarCheck className="h-3 w-3" />, label: "Reservierung", count: reservierungCount },
           ].map((t) => (
             <button
               key={t.key}
@@ -611,7 +653,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
       {selectedLead && (
         <LeadDetailDialog
           lead={selectedLead}
-          onClose={() => { setSelectedLead(null); queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); }}
+          onClose={() => { setSelectedLead(null); onClearDeepLink?.(); queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); }}
         />
       )}
       <CreateLeadDialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); }} />
@@ -1208,16 +1250,26 @@ function JourneyTabBar({ activeTab, onSelect, tabs }: {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function PraxenJourney() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get("tab");
   const urlFilter = searchParams.get("filter") ?? undefined;
   const urlId = searchParams.get("id") ?? undefined;
+  const urlLead = searchParams.get("lead") ?? undefined;
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"interessenten" | "abschlussphase" | "kunden">(
-    urlTab === "abschlussphase" || urlTab === "vertraege" ? "abschlussphase"
+    urlLead ? "interessenten"
+      : urlTab === "abschlussphase" || urlTab === "vertraege" ? "abschlussphase"
       : urlTab === "kunden" || urlTab === "bestandskunden" ? "kunden"
       : "interessenten"
   );
+
+  // If a deep-link arrives later (e.g. via toast action) and forces interessenten
+  useEffect(() => {
+    if (urlLead && tab !== "interessenten") {
+      setTab("interessenten");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlLead]);
 
   const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions, isRegionalLead } = useRegionalTeam();
   const { isSalesPartner, isTippgeber } = useUserRole();
@@ -1321,7 +1373,7 @@ export default function PraxenJourney() {
           </div>
         </div>
 
-        {tab === "interessenten" && <InteressentenTab search={search} highlightId={urlId} teamFilter={teamFilter} matchesTeamFilter={matchesTeamFilter} initialFilter={urlFilter} />}
+        {tab === "interessenten" && <InteressentenTab search={search} highlightId={urlId} teamFilter={teamFilter} matchesTeamFilter={matchesTeamFilter} initialFilter={urlFilter} deepLinkLeadId={urlLead} onClearDeepLink={() => { const next = new URLSearchParams(searchParams); next.delete("lead"); setSearchParams(next, { replace: true }); }} />}
         {tab === "abschlussphase" && <AbschlussphaseTab search={search} highlightId={urlId} missingEmailCount={counts.missingEmail} matchesTeamFilter={matchesTeamFilter} initialFilter={urlFilter} />}
         {tab === "kunden" && <KundenTab search={search} highlightId={urlId} matchesTeamFilter={matchesTeamFilter} />}
       </div>
