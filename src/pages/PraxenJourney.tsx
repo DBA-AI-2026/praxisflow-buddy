@@ -653,7 +653,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
       {selectedLead && (
         <LeadDetailDialog
           lead={selectedLead}
-          onClose={() => { setSelectedLead(null); queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); }}
+          onClose={() => { setSelectedLead(null); onClearDeepLink?.(); queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); }}
         />
       )}
       <CreateLeadDialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); }} />
