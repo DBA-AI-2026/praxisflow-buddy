@@ -234,6 +234,12 @@ export function ReservationEditDialog({
             </Select>
           </div>
 
+          <ProductInterestPicker
+            value={form.interested_products}
+            onChange={(next) => setForm({ ...form, interested_products: next })}
+            hint="Wird bei Konvertierung zum Interessenten übernommen."
+          />
+
           <div>
             <Label htmlFor="edit_notes">Notizen</Label>
             <Textarea
