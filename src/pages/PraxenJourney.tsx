@@ -483,6 +483,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
             { key: "alle" as const, icon: null, label: "Alle Quellen", count: teamLeads.length },
             { key: "homepage" as const, icon: <Globe className="h-3 w-3" />, label: "Homepage", count: homepageCount },
             { key: "manuell" as const, icon: <PenLine className="h-3 w-3" />, label: "Manuell", count: manuellCount },
+            { key: "reservierung" as const, icon: <CalendarCheck className="h-3 w-3" />, label: "Reservierung", count: reservierungCount },
           ].map((t) => (
             <button
               key={t.key}
