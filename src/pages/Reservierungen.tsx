@@ -323,6 +323,14 @@ export default function Reservierungen() {
       }
       if (filters.activity === "active" && new Date(r.reserved_until).getTime() < now) return false;
       if (filters.activity === "expired" && new Date(r.reserved_until).getTime() >= now) return false;
+      if (filters.product !== "all") {
+        const ips = r.interested_products ?? [];
+        if (filters.product === "__none__") {
+          if (ips.length > 0) return false;
+        } else if (!ips.includes(filters.product)) {
+          return false;
+        }
+      }
       if (filters.search) {
         const q = filters.search.toLowerCase();
         const hay = `${r.praxis_name} ${r.arzt_namen} ${r.telefon} ${r.ort}`.toLowerCase();
