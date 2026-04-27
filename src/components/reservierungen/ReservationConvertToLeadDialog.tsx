@@ -215,7 +215,11 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
   });
 
   // ── Render-Hilfen ──────────────────────────────────────────────────────────
-  const formValid = vorname.trim().length > 0 && nachname.trim().length > 0 && /\S+@\S+\.\S+/.test(email);
+  const formValid =
+    vorname.trim().length > 0 &&
+    nachname.trim().length > 0 &&
+    /\S+@\S+\.\S+/.test(email) &&
+    mobilnummer.trim().length > 0;
   const submitDisabled = !formValid || convert.isPending || alreadyConverted;
 
   return (
