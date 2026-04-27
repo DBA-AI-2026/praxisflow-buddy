@@ -377,9 +377,49 @@ export default function Reservierungen() {
         const hay = `${r.praxis_name} ${r.arzt_namen} ${r.telefon} ${r.ort}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
+
+      // ── Dashboard URL filter (?filter=…) – additive einschränkend ──
+      if (dashboardFilter) {
+        const status = (r.status ?? "reserviert") as ReservationStatus;
+        const until = new Date(r.reserved_until).getTime();
+        const isExpiredByDate = until < now;
+        const isActive = status === "reserviert" && !isExpiredByDate;
+        const in14dMs = now + 14 * 24 * 60 * 60 * 1000;
+        const back30dMs = now - 30 * 24 * 60 * 60 * 1000;
+
+        switch (dashboardFilter) {
+          case "active":
+            if (!isActive) return false;
+            break;
+          case "expiring":
+            if (!isActive || until > in14dMs) return false;
+            break;
+          case "expired":
+            if (!(status === "abgelaufen" || (status === "reserviert" && isExpiredByDate))) {
+              return false;
+            }
+            break;
+          case "without_ad":
+            if (!isActive || r.assigned_ad_id) return false;
+            break;
+          case "without_product":
+            if (!isActive) return false;
+            if (Array.isArray(r.interested_products) && r.interested_products.length > 0) {
+              return false;
+            }
+            break;
+          case "converted_recently": {
+            if (status !== "konvertiert") return false;
+            const convertedAt = r.converted_at ? new Date(r.converted_at).getTime() : null;
+            if (!convertedAt || convertedAt < back30dMs) return false;
+            break;
+          }
+        }
+      }
+
       return true;
     });
-  }, [reservations, filters, isRegionalLead, matchesTeamFilter, user?.id]);
+  }, [reservations, filters, isRegionalLead, matchesTeamFilter, user?.id, dashboardFilter]);
 
   const counts = useMemo(() => {
     const total = reservations?.length ?? 0;
