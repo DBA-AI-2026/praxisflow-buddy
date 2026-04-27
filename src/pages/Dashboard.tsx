@@ -10,6 +10,7 @@ import {
   Users, FileText, Building2, ArrowRight, Clock,
   PlusCircle, Eye, FileSignature, Lightbulb, MapPin, BarChart3, BookMarked,
   X, Sparkles, AlertTriangle, Flame, Zap, Target, Rocket, UserPlus,
+  CalendarCheck, CalendarX, UserX, Tag, CheckCircle2,
 } from "lucide-react";
 import type { AppRole } from "@/hooks/useUserRole";
 import { format, differenceInDays } from "date-fns";
