@@ -1219,16 +1219,26 @@ function JourneyTabBar({ activeTab, onSelect, tabs }: {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function PraxenJourney() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get("tab");
   const urlFilter = searchParams.get("filter") ?? undefined;
   const urlId = searchParams.get("id") ?? undefined;
+  const urlLead = searchParams.get("lead") ?? undefined;
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"interessenten" | "abschlussphase" | "kunden">(
-    urlTab === "abschlussphase" || urlTab === "vertraege" ? "abschlussphase"
+    urlLead ? "interessenten"
+      : urlTab === "abschlussphase" || urlTab === "vertraege" ? "abschlussphase"
       : urlTab === "kunden" || urlTab === "bestandskunden" ? "kunden"
       : "interessenten"
   );
+
+  // If a deep-link arrives later (e.g. via toast action) and forces interessenten
+  useEffect(() => {
+    if (urlLead && tab !== "interessenten") {
+      setTab("interessenten");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlLead]);
 
   const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions, isRegionalLead } = useRegionalTeam();
   const { isSalesPartner, isTippgeber } = useUserRole();
