@@ -96,6 +96,7 @@ export default function Dashboard() {
   const firstName = profile?.full_name?.split(" ")[0] ?? "Willkommen";
   const canCreateLead = role !== "tippgeber" && role !== "vertragsabteilung";
   const canSeePipeline = role !== "tippgeber";
+  const canSeeReservations = role !== "tippgeber" && role !== "vertragsabteilung";
 
   // ── BLOCK 1: "Heute wichtig" data ──
   const { data: overdueLeads = [] } = useQuery({
