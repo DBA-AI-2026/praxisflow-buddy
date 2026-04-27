@@ -317,7 +317,8 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     },
   });
 
-  const getSource = (l: any): "homepage" | "manuell" => {
+  const getSource = (l: any): "homepage" | "manuell" | "reservierung" => {
+    if (l.source === "reservation_conversion") return "reservierung";
     if (l.source === "manual") return "manuell";
     if (l.source === "homepage") return "homepage";
     if (l.nachricht && l.nachricht.trim().length > 0) return "homepage";
