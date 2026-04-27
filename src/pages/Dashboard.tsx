@@ -550,6 +550,71 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* ── BLOCK 2b: 📅 Reservierungen ── */}
+          {canSeeReservations && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <BookMarked className="h-4 w-4 text-primary" />
+                  <h3 className="font-semibold text-foreground text-sm">Reservierungen</h3>
+                  {reservationActionItems > 0 && (
+                    <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full text-[10px] font-bold bg-amber-500 text-white">
+                      {reservationActionItems}
+                    </span>
+                  )}
+                </div>
+                <Link
+                  to="/reservierungen"
+                  className="text-xs font-medium text-primary hover:text-primary/80 inline-flex items-center gap-1"
+                >
+                  Alle anzeigen <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+              {/* TODO: URL-Filter für /reservierungen ergänzen, sobald Reservierungs-Liste Query-Params unterstützt */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <ReservationStatCard
+                  label="Aktiv"
+                  count={reservationStats.active}
+                  icon={CalendarCheck}
+                  iconClass="bg-emerald-500/10 text-emerald-600"
+                />
+                <ReservationStatCard
+                  label="Läuft in 14 Tagen ab"
+                  count={reservationStats.expiringSoon}
+                  icon={Clock}
+                  iconClass="bg-amber-500/10 text-amber-600"
+                  highlight={reservationStats.expiringSoon > 0}
+                />
+                <ReservationStatCard
+                  label="Abgelaufen"
+                  count={reservationStats.expired}
+                  icon={CalendarX}
+                  iconClass="bg-destructive/10 text-destructive"
+                  highlight={reservationStats.expired > 0}
+                />
+                <ReservationStatCard
+                  label="Ohne AD"
+                  count={reservationStats.withoutAd}
+                  icon={UserX}
+                  iconClass="bg-orange-500/10 text-orange-600"
+                  highlight={reservationStats.withoutAd > 0}
+                />
+                <ReservationStatCard
+                  label="Ohne Produkt"
+                  count={reservationStats.withoutProduct}
+                  icon={Tag}
+                  iconClass="bg-purple-500/10 text-purple-600"
+                />
+                <ReservationStatCard
+                  label="Konvertiert (30 T.)"
+                  count={reservationStats.convertedRecently}
+                  icon={CheckCircle2}
+                  iconClass="bg-green-500/10 text-green-600"
+                />
+              </div>
+            </div>
+          )}
+
           {/* ── BLOCK 3: 🎯 Meine Performance ── */}
           <div>
             <div className="flex items-center gap-2 mb-3">
