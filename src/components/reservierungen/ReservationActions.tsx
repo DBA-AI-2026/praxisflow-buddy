@@ -25,6 +25,8 @@ import {
   PlayCircle,
   AlertOctagon,
   Trash2,
+  UserPlus,
+  ExternalLink,
 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
