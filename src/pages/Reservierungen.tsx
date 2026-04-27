@@ -70,6 +70,10 @@ import {
   type Reservation,
   type ReservationStatus,
 } from "@/components/reservierungen/types";
+import {
+  ProductInterestPicker,
+  ProductInterestBadges,
+} from "@/components/products/ProductInterestPicker";
 
 interface ReservationFormData {
   praxis_name: string;
@@ -81,6 +85,7 @@ interface ReservationFormData {
   telefon: string;
   reservation_months: number;
   notes: string;
+  interested_products: string[];
 }
 
 interface DuplicateCheck {
