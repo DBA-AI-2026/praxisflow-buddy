@@ -31,6 +31,7 @@ import {
   type ProviderStatusRow,
 } from "@/components/pipeline/QodiaStatusBadges";
 import { ProductBadges, type ProductBadgeItem } from "@/components/pipeline/ProductBadges";
+import { ProductInterestBadges } from "@/components/products/ProductInterestPicker";
 import { useProviderStatusMap, useProductProviderFlags } from "@/hooks/useProviderStatus";
 import { useCustomerContractsMap } from "@/hooks/useCustomerContracts";
 
