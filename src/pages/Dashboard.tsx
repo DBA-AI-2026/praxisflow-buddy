@@ -570,13 +570,14 @@ export default function Dashboard() {
                   Alle anzeigen <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
-              {/* TODO: URL-Filter für /reservierungen ergänzen, sobald Reservierungs-Liste Query-Params unterstützt */}
+              
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 <ReservationStatCard
                   label="Aktiv"
                   count={reservationStats.active}
                   icon={CalendarCheck}
                   iconClass="bg-emerald-500/10 text-emerald-600"
+                  to="/reservierungen?filter=active"
                 />
                 <ReservationStatCard
                   label="Läuft in 14 Tagen ab"
@@ -584,6 +585,7 @@ export default function Dashboard() {
                   icon={Clock}
                   iconClass="bg-amber-500/10 text-amber-600"
                   highlight={reservationStats.expiringSoon > 0}
+                  to="/reservierungen?filter=expiring"
                 />
                 <ReservationStatCard
                   label="Abgelaufen"
@@ -591,6 +593,7 @@ export default function Dashboard() {
                   icon={CalendarX}
                   iconClass="bg-destructive/10 text-destructive"
                   highlight={reservationStats.expired > 0}
+                  to="/reservierungen?filter=expired"
                 />
                 <ReservationStatCard
                   label="Ohne AD"
@@ -598,18 +601,21 @@ export default function Dashboard() {
                   icon={UserX}
                   iconClass="bg-orange-500/10 text-orange-600"
                   highlight={reservationStats.withoutAd > 0}
+                  to="/reservierungen?filter=without_ad"
                 />
                 <ReservationStatCard
                   label="Ohne Produkt"
                   count={reservationStats.withoutProduct}
                   icon={Tag}
                   iconClass="bg-purple-500/10 text-purple-600"
+                  to="/reservierungen?filter=without_product"
                 />
                 <ReservationStatCard
                   label="Konvertiert (30 T.)"
                   count={reservationStats.convertedRecently}
                   icon={CheckCircle2}
                   iconClass="bg-green-500/10 text-green-600"
+                  to="/reservierungen?filter=converted_recently"
                 />
               </div>
             </div>
@@ -769,12 +775,13 @@ interface ReservationStatCardProps {
   icon: React.ElementType;
   iconClass: string;
   highlight?: boolean;
+  to?: string;
 }
 
-function ReservationStatCard({ label, count, icon: Icon, iconClass, highlight }: ReservationStatCardProps) {
+function ReservationStatCard({ label, count, icon: Icon, iconClass, highlight, to }: ReservationStatCardProps) {
   return (
     <Link
-      to="/reservierungen"
+      to={to ?? "/reservierungen"}
       className={`group block rounded-lg border bg-card p-3 transition-all hover:shadow-md ${
         highlight ? "border-amber-500/40" : "border-border"
       }`}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import {
   CheckCircle2,
   Info,
   Link as LinkIcon,
+  X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -138,7 +140,46 @@ function computePermissions(opts: {
   };
 }
 
+type DashboardFilter =
+  | "active"
+  | "expiring"
+  | "expired"
+  | "without_ad"
+  | "without_product"
+  | "converted_recently";
+
+const DASHBOARD_FILTER_LABELS: Record<DashboardFilter, string> = {
+  active: "Aktiv",
+  expiring: "Läuft in 14 Tagen ab",
+  expired: "Abgelaufen",
+  without_ad: "Ohne AD",
+  without_product: "Ohne Produktinteresse",
+  converted_recently: "Konvertiert in den letzten 30 Tagen",
+};
+
+const DASHBOARD_FILTER_VALUES = new Set<DashboardFilter>([
+  "active",
+  "expiring",
+  "expired",
+  "without_ad",
+  "without_product",
+  "converted_recently",
+]);
+
 export default function Reservierungen() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlFilterRaw = searchParams.get("filter");
+  const dashboardFilter: DashboardFilter | null =
+    urlFilterRaw && DASHBOARD_FILTER_VALUES.has(urlFilterRaw as DashboardFilter)
+      ? (urlFilterRaw as DashboardFilter)
+      : null;
+
+  const clearDashboardFilter = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("filter");
+    setSearchParams(next, { replace: true });
+  };
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState<ReservationFormData>(initialFormData);
   const [duplicateWarnings, setDuplicateWarnings] = useState<DuplicateCheck[]>([]);
@@ -336,9 +377,49 @@ export default function Reservierungen() {
         const hay = `${r.praxis_name} ${r.arzt_namen} ${r.telefon} ${r.ort}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
+
+      // ── Dashboard URL filter (?filter=…) – additive einschränkend ──
+      if (dashboardFilter) {
+        const status = (r.status ?? "reserviert") as ReservationStatus;
+        const until = new Date(r.reserved_until).getTime();
+        const isExpiredByDate = until < now;
+        const isActive = status === "reserviert" && !isExpiredByDate;
+        const in14dMs = now + 14 * 24 * 60 * 60 * 1000;
+        const back30dMs = now - 30 * 24 * 60 * 60 * 1000;
+
+        switch (dashboardFilter) {
+          case "active":
+            if (!isActive) return false;
+            break;
+          case "expiring":
+            if (!isActive || until > in14dMs) return false;
+            break;
+          case "expired":
+            if (!(status === "abgelaufen" || (status === "reserviert" && isExpiredByDate))) {
+              return false;
+            }
+            break;
+          case "without_ad":
+            if (!isActive || r.assigned_ad_id) return false;
+            break;
+          case "without_product":
+            if (!isActive) return false;
+            if (Array.isArray(r.interested_products) && r.interested_products.length > 0) {
+              return false;
+            }
+            break;
+          case "converted_recently": {
+            if (status !== "konvertiert") return false;
+            const convertedAt = r.converted_at ? new Date(r.converted_at).getTime() : null;
+            if (!convertedAt || convertedAt < back30dMs) return false;
+            break;
+          }
+        }
+      }
+
       return true;
     });
-  }, [reservations, filters, isRegionalLead, matchesTeamFilter, user?.id]);
+  }, [reservations, filters, isRegionalLead, matchesTeamFilter, user?.id, dashboardFilter]);
 
   const counts = useMemo(() => {
     const total = reservations?.length ?? 0;
@@ -590,7 +671,26 @@ export default function Reservierungen() {
       </div>
 
       {/* Filters */}
-      <div className="mb-4">
+      <div className="mb-4 space-y-2">
+        {dashboardFilter && (
+          <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+            <Badge variant="default" className="gap-1">
+              Dashboard-Filter: {DASHBOARD_FILTER_LABELS[dashboardFilter]}
+            </Badge>
+            <span className="text-xs text-muted-foreground">
+              Aktiv durch Verlinkung aus dem Dashboard.
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearDashboardFilter}
+              className="ml-auto h-7 gap-1 text-xs"
+            >
+              <X className="h-3 w-3" />
+              Filter entfernen
+            </Button>
+          </div>
+        )}
         <ReservationFiltersBar
           filters={filters}
           onChange={setFilters}
