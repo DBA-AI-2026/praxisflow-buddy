@@ -249,7 +249,7 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
                   variant="outline"
                   onClick={() => {
                     onOpenChange(false);
-                    navigate(`/interessenten?lead=${reservation.lead_id}`);
+                    navigate(`/pipeline?tab=interessenten&lead=${reservation.lead_id}`);
                   }}
                 >
                   <ExternalLink className="mr-2 h-3.5 w-3.5" />
