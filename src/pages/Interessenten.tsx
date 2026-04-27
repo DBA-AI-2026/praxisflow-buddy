@@ -713,7 +713,7 @@ export default function Interessenten() {
       {selectedLead && (
         <LeadDetailDialog
           lead={selectedLead}
-          onClose={() => setSelectedLead(null)}
+          onClose={closeLeadDialog}
           gebietsleiter={gebietsleiter}
           canAssign={canAssign}
         />
