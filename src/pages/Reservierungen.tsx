@@ -104,6 +104,7 @@ const initialFormData: ReservationFormData = {
   telefon: "",
   reservation_months: 6,
   notes: "",
+  interested_products: [],
 };
 
 function computePermissions(opts: {
