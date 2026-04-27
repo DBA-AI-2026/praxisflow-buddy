@@ -269,7 +269,57 @@ export default function Dashboard() {
     return performance.contractsThisMonthRaw.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by)).length;
   }, [performance, matchesTeamFilter, isRegionalLead]);
 
-  // Onboarding
+  // Reservierungen-Kennzahlen (RLS sorgt schon für Sichtbarkeit; Regional Lead zusätzlich Team-Filter
+  // auf reserved_by/assigned_ad_id, damit "andere Teams" definitiv ausgeblendet sind, falls RLS breiter
+  // greifen sollte als das Team-Modell.)
+  const reservationsScoped = useMemo(() => {
+    if (!isRegionalLead) return reservationsRaw;
+    return reservationsRaw.filter(
+      (r: any) => matchesTeamFilter(r.reserved_by) || matchesTeamFilter(r.assigned_ad_id),
+    );
+  }, [reservationsRaw, matchesTeamFilter, isRegionalLead]);
+
+  const reservationStats = useMemo(() => {
+    const now = new Date();
+    const in14d = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const back30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    let active = 0;
+    let expiringSoon = 0;
+    let expired = 0;
+    let withoutAd = 0;
+    let withoutProduct = 0;
+    let convertedRecently = 0;
+
+    for (const r of reservationsScoped as any[]) {
+      const status = r.status ?? "reserviert";
+      const until = r.reserved_until ? new Date(r.reserved_until) : null;
+      const isExpiredByDate = until ? until < now : false;
+      const isActive = status === "reserviert" && !isExpiredByDate;
+
+      if (isActive) {
+        active += 1;
+        if (until && until <= in14d) expiringSoon += 1;
+        if (!r.assigned_ad_id) withoutAd += 1;
+        if (!Array.isArray(r.interested_products) || r.interested_products.length === 0) {
+          withoutProduct += 1;
+        }
+      }
+
+      if (status === "abgelaufen" || (status === "reserviert" && isExpiredByDate)) {
+        expired += 1;
+      }
+
+      if (status === "konvertiert" && r.converted_at && new Date(r.converted_at) >= back30d) {
+        convertedRecently += 1;
+      }
+    }
+
+    return { active, expiringSoon, expired, withoutAd, withoutProduct, convertedRecently };
+  }, [reservationsScoped]);
+
+  const reservationActionItems = reservationStats.expired + reservationStats.expiringSoon + reservationStats.withoutAd;
+
   const { data: hasOwnData } = useQuery({
     queryKey: ["dashboard-onboarding-check", role],
     enabled: !!role && role !== "admin",
