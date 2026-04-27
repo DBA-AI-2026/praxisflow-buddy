@@ -609,6 +609,9 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
                     <SourceBadge source={src} />
                   </td>
                   <td className="py-3 px-4">
+                    <ProductInterestBadges products={lead.interested_products} />
+                  </td>
+                  <td className="py-3 px-4">
                     <VorbezugBadge value={lead.abrechnungszentrum} />
                   </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
