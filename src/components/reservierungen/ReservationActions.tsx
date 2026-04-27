@@ -60,6 +60,7 @@ export function ReservationActions({
   onView,
   onEdit,
   onExtend,
+  onConvertToLead,
 }: Props) {
   const queryClient = useQueryClient();
   const [confirmRelease, setConfirmRelease] = useState(false);
