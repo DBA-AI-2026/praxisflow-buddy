@@ -284,6 +284,26 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     }
   }, [highlightId]);
 
+  const { data: leads = [], isLoading } = useQuery({
+    queryKey: ["journey-leads", user?.id, role],
+    queryFn: async () => {
+      let query = supabase
+        .from("leads")
+        .select("*")
+        .neq("status", "kunde")
+        .order("created_at", { ascending: false });
+
+      if (isTippgeber && user?.id) {
+        query = query.eq("tippgeber_id", user.id);
+      } else if (isSalesPartner && user?.id) {
+        query = query.eq("assigned_to", user.id);
+      }
+
+      const { data } = await query;
+      return data ?? [];
+    },
+  });
+
   // Deep-Link: ?lead=<id> → Lead-Detaildialog automatisch öffnen.
   // Falls der Lead nicht in der gefilterten Liste ist, gezielt per ID nachladen.
   useEffect(() => {
@@ -314,26 +334,6 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deepLinkLeadId, leads]);
-
-  const { data: leads = [], isLoading } = useQuery({
-    queryKey: ["journey-leads", user?.id, role],
-    queryFn: async () => {
-      let query = supabase
-        .from("leads")
-        .select("*")
-        .neq("status", "kunde")
-        .order("created_at", { ascending: false });
-
-      if (isTippgeber && user?.id) {
-        query = query.eq("tippgeber_id", user.id);
-      } else if (isSalesPartner && user?.id) {
-        query = query.eq("assigned_to", user.id);
-      }
-
-      const { data } = await query;
-      return data ?? [];
-    },
-  });
 
   // Betreuer names lookup
   const assignedIds = [...new Set(leads.map((l: any) => l.assigned_to).filter(Boolean))];
