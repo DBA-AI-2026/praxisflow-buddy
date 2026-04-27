@@ -360,7 +360,7 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
                           className="h-7 px-2 shrink-0"
                           onClick={() => {
                             onOpenChange(false);
-                            navigate(`/interessenten?lead=${d.id}`);
+                            navigate(`/pipeline?tab=interessenten&lead=${d.id}`);
                           }}
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
