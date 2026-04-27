@@ -258,7 +258,7 @@ function FilterPill({
 const ACTIVE_LEAD_STATUSES = ["neu", "kontaktiert", "qualifiziert", "vertrag"];
 const CLOSED_LEAD_STATUSES = ["kein_abschluss", "abgelehnt"];
 
-type LeadSourceFilter = "alle" | "homepage" | "manuell";
+type LeadSourceFilter = "alle" | "homepage" | "manuell" | "reservierung";
 type LeadStatusFilter = "aktiv" | "kein_abschluss" | "abgelehnt" | "alle";
 
 function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, initialFilter }: { search: string; highlightId?: string; teamFilter: string; matchesTeamFilter: (id?: string | null) => boolean; initialFilter?: string }) {
