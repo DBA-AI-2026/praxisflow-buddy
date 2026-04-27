@@ -98,7 +98,15 @@ function StatusPill({ label, cls }: { label: string; cls: string }) {
   );
 }
 
-function SourceBadge({ source }: { source: "homepage" | "manuell" }) {
+function SourceBadge({ source }: { source: "homepage" | "manuell" | "reservierung" }) {
+  if (source === "reservierung") {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-warning/10 text-warning border border-warning/30">
+        <CalendarCheck className="h-2.5 w-2.5" />
+        Reservierung
+      </span>
+    );
+  }
   return source === "homepage" ? (
     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
       <Globe className="h-2.5 w-2.5" />
