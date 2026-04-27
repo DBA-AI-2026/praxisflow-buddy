@@ -307,7 +307,7 @@ export function ReservationConvertToLeadDialog({ reservation, open, onOpenChange
                 />
               </div>
               <div className="space-y-1.5 col-span-2">
-                <Label htmlFor="conv-mobil">Mobilnummer</Label>
+                <Label htmlFor="conv-mobil">Mobilnummer *</Label>
                 <Input
                   id="conv-mobil"
                   value={mobilnummer}
