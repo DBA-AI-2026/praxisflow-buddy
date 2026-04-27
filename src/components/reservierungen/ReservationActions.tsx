@@ -133,6 +133,23 @@ export function ReservationActions({
             </DropdownMenuItem>
           )}
 
+          {permissions.canConvertToLead && (
+            <>
+              <DropdownMenuSeparator />
+              {status === "konvertiert" || reservation.lead_id ? (
+                <DropdownMenuItem onClick={() => onConvertToLead(reservation)}>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Verknüpften Interessenten öffnen
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => onConvertToLead(reservation)}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Zu Interessent entwickeln
+                </DropdownMenuItem>
+              )}
+            </>
+          )}
+
           {(permissions.canMarkInProgress || permissions.canMarkExpired || permissions.canRelease) && (
             <DropdownMenuSeparator />
           )}
