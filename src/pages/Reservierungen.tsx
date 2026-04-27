@@ -59,6 +59,7 @@ import { ReservationStatusBadge } from "@/components/reservierungen/ReservationS
 import { ReservationDetailDialog } from "@/components/reservierungen/ReservationDetailDialog";
 import { ReservationEditDialog } from "@/components/reservierungen/ReservationEditDialog";
 import { ReservationExtendDialog } from "@/components/reservierungen/ReservationExtendDialog";
+import { ReservationConvertToLeadDialog } from "@/components/reservierungen/ReservationConvertToLeadDialog";
 import {
   ReservationActions,
   type ReservationPermissions,
