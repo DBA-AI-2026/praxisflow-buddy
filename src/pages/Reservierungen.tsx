@@ -671,7 +671,26 @@ export default function Reservierungen() {
       </div>
 
       {/* Filters */}
-      <div className="mb-4">
+      <div className="mb-4 space-y-2">
+        {dashboardFilter && (
+          <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+            <Badge variant="default" className="gap-1">
+              Dashboard-Filter: {DASHBOARD_FILTER_LABELS[dashboardFilter]}
+            </Badge>
+            <span className="text-xs text-muted-foreground">
+              Aktiv durch Verlinkung aus dem Dashboard.
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearDashboardFilter}
+              className="ml-auto h-7 gap-1 text-xs"
+            >
+              <X className="h-3 w-3" />
+              Filter entfernen
+            </Button>
+          </div>
+        )}
         <ReservationFiltersBar
           filters={filters}
           onChange={setFilters}
