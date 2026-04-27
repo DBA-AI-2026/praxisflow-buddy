@@ -26,6 +26,7 @@ export interface ReservationFilters {
   onlyMine: boolean;
   onlyAssignedToMe: boolean;
   activity: "all" | "active" | "expired";
+  product: string; // "all" or product name
 }
 
 export const DEFAULT_FILTERS: ReservationFilters = {
@@ -38,6 +39,7 @@ export const DEFAULT_FILTERS: ReservationFilters = {
   onlyMine: false,
   onlyAssignedToMe: false,
   activity: "all",
+  product: "all",
 };
 
 interface PersonOption {
