@@ -62,6 +62,20 @@ export function ReservationFiltersBar({ filters, onChange, ads, creators }: Prop
 
   const reset = () => onChange(DEFAULT_FILTERS);
 
+  const { data: products = [] } = useQuery({
+    queryKey: ["active-products"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const hasActiveFilters =
     filters.search ||
     filters.status !== "all" ||
@@ -71,7 +85,8 @@ export function ReservationFiltersBar({ filters, onChange, ads, creators }: Prop
     filters.ort ||
     filters.onlyMine ||
     filters.onlyAssignedToMe ||
-    filters.activity !== "all";
+    filters.activity !== "all" ||
+    filters.product !== "all";
 
   return (
     <div className="space-y-2 rounded-lg border bg-card p-3">
