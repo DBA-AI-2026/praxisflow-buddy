@@ -251,10 +251,9 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
           <p className="text-muted-foreground mb-6">
             Sie haben keine Berechtigung, auf diese Seite zuzugreifen.
           </p>
-          <a
-         <Button onClick={() => navigate("/")}>
-  Zurück zum Dashboard
-</Button>
+          <Button onClick={() => navigate("/")}>
+            Zurück zum Dashboard
+          </Button>
         </div>
       </div>
     );
