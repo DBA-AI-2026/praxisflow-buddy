@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole, AppRole } from "@/hooks/useUserRole";
 import { canAccessRoute } from "@/config/routePermissions";
@@ -21,6 +21,7 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
   const { role, actualRole, isLoading: roleLoading, roleError, retryRoleFetch } = useUserRole();
   const { isPreviewActive } = useRolePreview();
   const location = useLocation();
+  const navigate = useNavigate();
   const hasLoggedRef = useRef(false);
   const [mfaState, setMfaState] = useState<"checking" | "required" | "verified" | "not_enrolled">("checking");
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
@@ -251,11 +252,9 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
             Sie haben keine Berechtigung, auf diese Seite zuzugreifen.
           </p>
           <a
-            href="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
-          >
-            Zurück zum Dashboard
-          </a>
+         <Button onClick={() => navigate("/")}>
+  Zurück zum Dashboard
+</Button>
         </div>
       </div>
     );
