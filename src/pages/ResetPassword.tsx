@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { MfaChallenge } from "@/pages/MfaChallenge";
 import logo from "@/assets/logo.png";
 import { z } from "zod";
@@ -31,6 +31,7 @@ export default function ResetPassword() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [isValidSession, setIsValidSession] = useState(false);
   const [checking, setChecking] = useState(true);
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
@@ -161,16 +162,27 @@ export default function ResetPassword() {
             <form autoComplete="off" onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="new-password">Neues Passwort</Label>
-                <Input
-                  id="new-password"
-                  type="password"
-                  placeholder="Mindestens 8 Zeichen, Buchstabe + Zahl"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  minLength={8}
-                />
+                <div className="relative">
+                  <Input
+                    id="new-password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Mindestens 8 Zeichen, Buchstabe + Zahl"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    minLength={8}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPassword((v) => !v)}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 <p className="text-xs text-muted-foreground">Mindestens 8 Zeichen, ein Buchstabe und eine Zahl.</p>
               </div>
               <div className="space-y-2">
