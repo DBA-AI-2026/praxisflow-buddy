@@ -396,9 +396,9 @@ Deno.serve(async (req) => {
     let assignmentSource = manualAssignment ? "manual" : "none";
     let matchedRule: string | null = null;
 
-    if (!manualAssignment && leadSource !== "manual") {
+    // Bei homepage-Leads UND bei manuellen Leads ohne explizite Zuweisung: PLZ-Auto
+    if (!manualAssignment) {
       try {
-        // Zentraler Aufruf der DB-Funktion – KEINE duplizierte Prefix-Logik hier
         const { data: resolved, error: plzErr } = await supabase
           .rpc("resolve_plz_ad", { plz_input: plz });
 
@@ -411,14 +411,36 @@ Deno.serve(async (req) => {
           assignmentSource = "auto_plz";
           console.log(`Lead PLZ ${plz} → assigned to ${assignedName} (rule: ${matchedRule})`);
         } else {
-          assignmentSource = "none";
-          console.log(`No GL mapping found for PLZ ${plz} – status: ungeklärt`);
+          console.log(`No GL mapping found for PLZ ${plz}`);
         }
       } catch (plzErr) {
         console.error("PLZ mapping lookup error:", plzErr);
       }
     } else {
       console.log(`Manual assignment: assigned_to=${assignedTo}`);
+    }
+
+    // Fallback bei manuellem Lead ohne Treffer: anlegender User wird assigned_to,
+    // damit der Ersteller seinen eigenen Lead in der Liste sehen kann (RLS).
+    if (!assignedTo && leadSource === "manual") {
+      const authHeader = req.headers.get("authorization") ?? "";
+      if (authHeader) {
+        try {
+          const userClient = createClient(
+            Deno.env.get("SUPABASE_URL")!,
+            Deno.env.get("SUPABASE_ANON_KEY")!,
+            { global: { headers: { authorization: authHeader } } }
+          );
+          const { data: { user } } = await userClient.auth.getUser();
+          if (user) {
+            assignedTo = user.id;
+            assignmentSource = "manual";
+            console.log(`Fallback: assigned_to=creator ${user.id}`);
+          }
+        } catch (e) {
+          console.error("Creator fallback failed:", e);
+        }
+      }
     }
 
     const { data: lead, error: insertError } = await supabase
