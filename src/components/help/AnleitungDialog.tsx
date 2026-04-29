@@ -210,7 +210,7 @@ export function AnleitungDialog({ open, onOpenChange }: AnleitungDialogProps) {
                   <Checklist
                     title="Interessent anlegen"
                     items={[
-                      "Pipeline → Tab „Interessenten" → „Neuer Interessent"",
+                      `Pipeline → Tab „Interessenten" → „Neuer Interessent"`,
                       "Praxis, Name, E-Mail, PLZ ausfüllen",
                       "Produktinteresse markieren",
                       "Tippgeber / AD zuweisen",
@@ -220,7 +220,7 @@ export function AnleitungDialog({ open, onOpenChange }: AnleitungDialogProps) {
                   <Checklist
                     title="Vertrag anlegen"
                     items={[
-                      "Dashboard → „Neuer Vertrag"",
+                      `Dashboard → „Neuer Vertrag"`,
                       "Kunden / Interessenten auswählen",
                       "Produkt, Laufzeit, Konditionen setzen",
                       "Unterschriften (digital) oder Bestands-PDF hochladen",
