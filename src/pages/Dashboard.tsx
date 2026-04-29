@@ -10,12 +10,13 @@ import {
   Users, FileText, Building2, ArrowRight, Clock,
   PlusCircle, Eye, FileSignature, Lightbulb, MapPin, BarChart3, BookMarked,
   X, Sparkles, AlertTriangle, Flame, Zap, Target, Rocket, UserPlus,
-  CalendarCheck, CalendarX, UserX, Tag, CheckCircle2,
+  CalendarCheck, CalendarX, UserX, Tag, CheckCircle2, BookOpen,
 } from "lucide-react";
 import type { AppRole } from "@/hooks/useUserRole";
 import { format, differenceInDays } from "date-fns";
 import { de } from "date-fns/locale";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
+import { AnleitungDialog } from "@/components/help/AnleitungDialog";
 import { Button } from "@/components/ui/button";
 import { useRolePreview } from "@/contexts/RolePreviewContext";
 
@@ -92,6 +93,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
+  const [anleitungOpen, setAnleitungOpen] = useState(false);
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "Willkommen";
   const canCreateLead = role !== "tippgeber" && role !== "vertragsabteilung";
@@ -380,7 +382,19 @@ export default function Dashboard() {
             </span>
           )}
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setAnleitungOpen(true)}
+          className="gap-2 self-start sm:self-end"
+        >
+          <BookOpen className="h-4 w-4" />
+          Anleitung
+        </Button>
       </div>
+
+      <AnleitungDialog open={anleitungOpen} onOpenChange={setAnleitungOpen} />
+
 
       {/* === ONBOARDING BANNER === */}
       {showOnboarding && onboarding && (
