@@ -382,7 +382,19 @@ export default function Dashboard() {
             </span>
           )}
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setAnleitungOpen(true)}
+          className="gap-2 self-start sm:self-end"
+        >
+          <BookOpen className="h-4 w-4" />
+          Anleitung
+        </Button>
       </div>
+
+      <AnleitungDialog open={anleitungOpen} onOpenChange={setAnleitungOpen} />
+
 
       {/* === ONBOARDING BANNER === */}
       {showOnboarding && onboarding && (
