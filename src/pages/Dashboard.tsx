@@ -10,12 +10,13 @@ import {
   Users, FileText, Building2, ArrowRight, Clock,
   PlusCircle, Eye, FileSignature, Lightbulb, MapPin, BarChart3, BookMarked,
   X, Sparkles, AlertTriangle, Flame, Zap, Target, Rocket, UserPlus,
-  CalendarCheck, CalendarX, UserX, Tag, CheckCircle2,
+  CalendarCheck, CalendarX, UserX, Tag, CheckCircle2, BookOpen,
 } from "lucide-react";
 import type { AppRole } from "@/hooks/useUserRole";
 import { format, differenceInDays } from "date-fns";
 import { de } from "date-fns/locale";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
+import { AnleitungDialog } from "@/components/help/AnleitungDialog";
 import { Button } from "@/components/ui/button";
 import { useRolePreview } from "@/contexts/RolePreviewContext";
 
