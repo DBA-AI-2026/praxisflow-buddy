@@ -1299,7 +1299,7 @@ export default function PraxenJourney() {
     queryFn: async () => {
       let q = supabase.from("leads").select("id, status, source, nachricht, created_at, assigned_to, hfx_customer_number, tippgeber_id");
       if (isTippgeber && user?.id) q = q.eq("tippgeber_id", user.id);
-      else if (isSalesPartner && user?.id) q = q.eq("assigned_to", user.id);
+      // Sales Partner werden jetzt durch RLS gefiltert (Migration fix_lead_visibility_and_assignment)
       const { data } = await q;
       return data ?? [];
     },
