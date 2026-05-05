@@ -83,6 +83,7 @@ function getNextStep(lead: any): NextStep {
 export default function Interessenten() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("alle");
+  const [poolOnly, setPoolOnly] = useState(false);
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
