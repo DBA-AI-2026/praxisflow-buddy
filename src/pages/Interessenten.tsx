@@ -92,7 +92,9 @@ export default function Interessenten() {
   const { user } = useAuth();
   const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions } = useRegionalTeam();
 
-  const canAssign = isAdmin || isSalesLead || isRegionalLead;
+  // Backend-Policy lässt UPDATE assigned_to nur für admin und sales_lead zu.
+  // Regional Leads haben kein UPDATE-Recht — Dropdown daher ausblenden, um Silent Failures zu vermeiden.
+  const canAssign = isAdmin || isSalesLead;
   // Tippgeber can create leads but cannot update status or assign
   const canOnlyViewOwn = isTippgeber || isSalesPartner;
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
