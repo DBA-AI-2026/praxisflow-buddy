@@ -141,6 +141,21 @@ export default function Interessenten() {
     },
   });
 
+  // Pool-Counter (nur Admin/Sales Lead): Zahl unzugewiesener, nicht-Kunde Leads
+  const { data: poolCount = 0 } = useQuery({
+    queryKey: ["leads-pool-count"],
+    enabled: isAdmin || isSalesLead,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("leads")
+        .select("id", { count: "exact", head: true })
+        .is("assigned_to", null)
+        .neq("status", "kunde");
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
   // Deep-Link: ?lead=<id> → Lead automatisch öffnen (auch wenn nicht in aktueller Liste)
   const leadIdFromUrl = searchParams.get("lead");
   useEffect(() => {
