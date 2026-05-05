@@ -349,6 +349,20 @@ export default function Interessenten() {
               </SelectContent>
             </Select>
           )}
+          {(isAdmin || isSalesLead) && (
+            <Button
+              type="button"
+              variant={poolOnly ? "default" : "outline"}
+              onClick={() => setPoolOnly((v) => !v)}
+              className="shrink-0 gap-2"
+              title="Nur unzugewiesene Leads anzeigen"
+            >
+              Unzugewiesen
+              <Badge variant={poolOnly ? "secondary" : "default"} className="ml-1">
+                {poolCount}
+              </Badge>
+            </Button>
+          )}
           <Button onClick={() => setCreateLeadOpen(true)} className="shrink-0 gap-2">
             <UserPlus className="h-4 w-4" />
             Neuer Interessent
