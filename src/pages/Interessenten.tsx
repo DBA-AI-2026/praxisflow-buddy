@@ -83,6 +83,7 @@ function getNextStep(lead: any): NextStep {
 export default function Interessenten() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("alle");
+  const [poolOnly, setPoolOnly] = useState(false);
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -137,6 +138,21 @@ export default function Interessenten() {
       const { data, error } = await query;
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Pool-Counter (nur Admin/Sales Lead): Zahl unzugewiesener, nicht-Kunde Leads
+  const { data: poolCount = 0 } = useQuery({
+    queryKey: ["leads-pool-count"],
+    enabled: isAdmin || isSalesLead,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("leads")
+        .select("id", { count: "exact", head: true })
+        .is("assigned_to", null)
+        .neq("status", "kunde");
+      if (error) throw error;
+      return count ?? 0;
     },
   });
 
@@ -240,6 +256,7 @@ export default function Interessenten() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["leads-pool-count"] });
       toast({ title: "Status aktualisiert" });
     },
   });
@@ -260,6 +277,7 @@ export default function Interessenten() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["leads-pool-count"] });
       toast({ title: "Gebietsleiter zugewiesen", description: "AD wurde per E-Mail benachrichtigt." });
     },
   });
@@ -272,6 +290,7 @@ export default function Interessenten() {
       if (isSalesPartner && l.assigned_to !== user?.id) return false;
     }
     if (!matchesTeamFilter(l.assigned_to)) return false;
+    if (poolOnly && l.assigned_to !== null) return false;
     const s = search.toLowerCase();
     return (
       !s ||
@@ -329,6 +348,20 @@ export default function Interessenten() {
                 ))}
               </SelectContent>
             </Select>
+          )}
+          {(isAdmin || isSalesLead) && (
+            <Button
+              type="button"
+              variant={poolOnly ? "default" : "outline"}
+              onClick={() => setPoolOnly((v) => !v)}
+              className="shrink-0 gap-2"
+              title="Nur unzugewiesene Leads anzeigen"
+            >
+              Unzugewiesen
+              <Badge variant={poolOnly ? "secondary" : "default"} className="ml-1">
+                {poolCount}
+              </Badge>
+            </Button>
           )}
           <Button onClick={() => setCreateLeadOpen(true)} className="shrink-0 gap-2">
             <UserPlus className="h-4 w-4" />
