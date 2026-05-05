@@ -256,6 +256,7 @@ export default function Interessenten() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["leads-pool-count"] });
       toast({ title: "Status aktualisiert" });
     },
   });
@@ -276,6 +277,7 @@ export default function Interessenten() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["leads-pool-count"] });
       toast({ title: "Gebietsleiter zugewiesen", description: "AD wurde per E-Mail benachrichtigt." });
     },
   });
