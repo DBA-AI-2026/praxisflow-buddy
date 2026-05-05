@@ -290,6 +290,7 @@ export default function Interessenten() {
       if (isSalesPartner && l.assigned_to !== user?.id) return false;
     }
     if (!matchesTeamFilter(l.assigned_to)) return false;
+    if (poolOnly && l.assigned_to !== null) return false;
     const s = search.toLowerCase();
     return (
       !s ||
