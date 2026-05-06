@@ -248,8 +248,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── invoice.paid: update invoice status, customer_revenues, create fibu_event ──
-    if (event.type === "invoice.paid") {
+    // ── invoice.paid / invoice.payment_succeeded: update invoice status, create fibu_event ──
+    // Stripe sendet beide Events synonym. Beide Pfade laufen identisch; Doppel-FiBu-Events
+    // werden vom Partial-Unique-Index auf (source_reference_id, event_type) abgefangen.
+    if (event.type === "invoice.paid" || event.type === "invoice.payment_succeeded") {
       const stripeInvoice = event.data.object as Stripe.Invoice;
       const stripeInvoiceId = stripeInvoice.id;
       const paymentIntentId = typeof stripeInvoice.payment_intent === "string"
@@ -277,9 +279,9 @@ Deno.serve(async (req) => {
           .maybeSingle();
         existingInv = alreadyPaid;
         if (alreadyPaid) {
-          log("invoice.paid – invoice already marked bezahlt (idempotent)", stripeInvoiceId);
+          log(`${event.type} – invoice already marked bezahlt (idempotent)`, stripeInvoiceId);
         } else {
-          log("invoice.paid – no matching HFX invoice found", stripeInvoiceId);
+          log(`${event.type} – no matching HFX invoice found`, stripeInvoiceId);
         }
       }
 
@@ -320,6 +322,7 @@ Deno.serve(async (req) => {
           stripe_customer_id: stripeCustomerId,
           hfx_invoice_number: existingInv?.invoice_number ?? null,
           unmatched: !existingInv,
+          stripe_event_type: event.type,
         },
       } as any);
 
@@ -327,11 +330,146 @@ Deno.serve(async (req) => {
         if ((fibuErr as any).code === "23505") {
           log("fibu_event payment_received_reference already exists (idempotent)", stripeInvoiceId);
         } else {
-          log("ERROR: fibu_events insert failed for invoice.paid", fibuErr.message);
+          log(`ERROR: fibu_events insert failed for ${event.type}`, fibuErr.message);
           await markEventFailed(supabase, event.id, `fibu_events insert failed: ${fibuErr.message}`);
         }
       }
-      log("invoice.paid processed", { stripeInvoiceId, found: !!existingInv, fibuStatus, customerId, productName });
+      log(`${event.type} processed`, { stripeInvoiceId, found: !!existingInv, fibuStatus, customerId, productName });
+    }
+
+    // ── invoice.payment_failed: Rechnung auf "zahlung_fehlgeschlagen" setzen, FiBu-Audit, Buchhaltung benachrichtigen ──
+    if (event.type === "invoice.payment_failed") {
+      const stripeInvoice = event.data.object as Stripe.Invoice;
+      const stripeInvoiceId = stripeInvoice.id;
+      const paymentIntentId = typeof stripeInvoice.payment_intent === "string"
+        ? stripeInvoice.payment_intent
+        : (stripeInvoice.payment_intent as any)?.id ?? null;
+      const stripeCustomerId = typeof stripeInvoice.customer === "string"
+        ? stripeInvoice.customer
+        : (stripeInvoice.customer as any)?.id ?? null;
+      const failureMessage =
+        (stripeInvoice as any)?.last_finalization_error?.message ??
+        (stripeInvoice as any)?.last_payment_error?.message ??
+        null;
+
+      // 1. HFX-Rechnung auf "zahlung_fehlgeschlagen" setzen (nur wenn nicht bereits bezahlt/storniert)
+      const { data: failedInv } = await supabase
+        .from("invoices")
+        .update({ status: "zahlung_fehlgeschlagen" })
+        .eq("stripe_invoice_id", stripeInvoiceId)
+        .not("status", "in", "(bezahlt,storniert)")
+        .select("id, invoice_number, contract_id, net_amount, tax_amount, gross_amount, customer_number, customer_name, rechnungs_email")
+        .maybeSingle();
+
+      let existingInv = failedInv;
+      if (!failedInv) {
+        const { data: anyInv } = await supabase
+          .from("invoices")
+          .select("id, invoice_number, contract_id, net_amount, tax_amount, gross_amount, customer_number, customer_name, rechnungs_email")
+          .eq("stripe_invoice_id", stripeInvoiceId)
+          .maybeSingle();
+        existingInv = anyInv;
+        if (anyInv) {
+          log("invoice.payment_failed – invoice in finalem Status (bezahlt/storniert), kein Update", stripeInvoiceId);
+        } else {
+          log("invoice.payment_failed – no matching HFX invoice found", stripeInvoiceId);
+        }
+      }
+
+      // 2. Vertragsdaten
+      let customerId: string | null = null;
+      let productName: string | null = null;
+      if (existingInv?.contract_id) {
+        const { data: ctr } = await supabase
+          .from("contracts")
+          .select("customer_id, product_name")
+          .eq("id", existingInv.contract_id)
+          .maybeSingle();
+        customerId = ctr?.customer_id ?? null;
+        productName = ctr?.product_name ?? null;
+      }
+
+      // 3. fibu_event Audit-Eintrag (Beträge der Rechnung, nicht 0)
+      const fibuStatus = existingInv ? "approved" : "draft";
+      const { error: fibuErr } = await supabase.from("fibu_events").insert({
+        event_type: "payment_failed_reference",
+        source_module: "stripe",
+        source_reference_id: stripeInvoiceId,
+        contract_id: existingInv?.contract_id ?? null,
+        customer_id: customerId,
+        product_name: productName,
+        amount_net: existingInv ? Number(existingInv.net_amount) : 0,
+        tax_amount: existingInv ? Number(existingInv.tax_amount) : 0,
+        amount_gross: existingInv ? Number(existingInv.gross_amount) : 0,
+        occurred_at: new Date().toISOString(),
+        status: fibuStatus,
+        export_status: "open",
+        description: `Zahlung fehlgeschlagen Stripe ${stripeInvoiceId}${existingInv?.invoice_number ? ` / ${existingInv.invoice_number}` : " (keine HFX-Rechnung gefunden)"}${failureMessage ? ` – ${failureMessage}` : ""}`,
+        metadata: {
+          stripe_invoice_id: stripeInvoiceId,
+          payment_intent_id: paymentIntentId,
+          stripe_customer_id: stripeCustomerId,
+          hfx_invoice_number: existingInv?.invoice_number ?? null,
+          unmatched: !existingInv,
+          failure_message: failureMessage,
+        },
+      } as any);
+
+      if (fibuErr) {
+        if ((fibuErr as any).code === "23505") {
+          log("fibu_event payment_failed_reference already exists (idempotent)", stripeInvoiceId);
+        } else {
+          log("ERROR: fibu_events insert failed for invoice.payment_failed", fibuErr.message);
+          await markEventFailed(supabase, event.id, `fibu_events insert failed: ${fibuErr.message}`);
+        }
+      }
+
+      // 4. Mail an Buchhaltung – Absender identisch zu auto-invoice (verifizierte Domain)
+      try {
+        const resendKey = Deno.env.get("RESEND_API_KEY");
+        if (!resendKey) {
+          log("WARN: RESEND_API_KEY not configured, skipping payment_failed notification", stripeInvoiceId);
+        } else {
+          const subject = `Stripe-Lastschrift fehlgeschlagen – ${existingInv?.invoice_number ?? stripeInvoiceId}`;
+          const html = `
+            <h2>Stripe-Lastschrift fehlgeschlagen</h2>
+            <p>Eine Lastschrift wurde von Stripe als fehlgeschlagen gemeldet.</p>
+            <table style="border-collapse:collapse">
+              <tr><td><b>HFX-Rechnung:</b></td><td>${existingInv?.invoice_number ?? "—"}</td></tr>
+              <tr><td><b>Stripe-Invoice-ID:</b></td><td>${stripeInvoiceId}</td></tr>
+              <tr><td><b>Kunde:</b></td><td>${existingInv?.customer_name ?? "—"} (${existingInv?.customer_number ?? "—"})</td></tr>
+              <tr><td><b>Brutto:</b></td><td>${existingInv ? Number(existingInv.gross_amount).toFixed(2) : "—"} €</td></tr>
+              <tr><td><b>Stripe-Customer:</b></td><td>${stripeCustomerId ?? "—"}</td></tr>
+              <tr><td><b>Fehler:</b></td><td>${failureMessage ?? "—"}</td></tr>
+            </table>
+            <p>HFX-Rechnungsstatus wurde auf <b>zahlung_fehlgeschlagen</b> gesetzt (sofern nicht bereits bezahlt/storniert).</p>
+          `;
+          const mailRes = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${resendKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+              reply_to: "info@hfx-honorarfuchs.de",
+              to: ["buchhaltung@hfx-honorarfuchs.de"],
+              subject,
+              html,
+            }),
+          });
+          if (!mailRes.ok) {
+            const txt = await mailRes.text();
+            log("WARN: Resend payment_failed mail failed", { status: mailRes.status, body: txt });
+          } else {
+            log("invoice.payment_failed mail sent to buchhaltung", stripeInvoiceId);
+          }
+        }
+      } catch (mailErr) {
+        log("WARN: payment_failed mail exception", String(mailErr));
+      }
+
+      log("invoice.payment_failed processed", { stripeInvoiceId, found: !!existingInv, fibuStatus, customerId, productName });
     }
 
     // ── Erfolgreiche Verarbeitung: Status auf "processed" setzen ─────────────
