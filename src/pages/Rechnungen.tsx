@@ -146,6 +146,7 @@ function calcAmounts(positions: InvoicePosition[], taxRate: number) {
 
 export default function Rechnungen() {
   const { toast } = useToast();
+  const { isAdmin } = useUserRole();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
