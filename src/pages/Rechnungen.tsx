@@ -131,6 +131,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
   entwurf: { label: "Entwurf", variant: "outline", icon: FileText },
   versendet: { label: "Versendet", variant: "secondary", icon: Send },
   bezahlt: { label: "Bezahlt", variant: "default", icon: CheckCircle2 },
+  zahlung_fehlgeschlagen: { label: "Zahlung fehlgeschlagen", variant: "destructive", icon: XCircle },
   storniert: { label: "Storniert", variant: "destructive", icon: XCircle },
 };
 
