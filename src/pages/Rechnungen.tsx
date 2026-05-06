@@ -830,16 +830,18 @@ export default function Rechnungen() {
                         </TableCell>
                         <TableCell className="text-right">
                           {uc.status === "pending" ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleManualInvoice(uc)}
-                              disabled={invoicingChargeId === uc.id}
-                              className="gap-1"
-                            >
-                              <FileText className="h-3.5 w-3.5" />
-                              {invoicingChargeId === uc.id ? "Wird erstellt..." : "Manuell abrechnen"}
-                            </Button>
+                            isAdmin ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleManualInvoice(uc)}
+                                disabled={invoicingChargeId === uc.id}
+                                className="gap-1"
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                                {invoicingChargeId === uc.id ? "Wird erstellt..." : "Manuell abrechnen"}
+                              </Button>
+                            ) : null
                           ) : uc.status === "ungeklaert" ? (
                             <Button
                               size="sm"
