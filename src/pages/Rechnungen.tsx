@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { supabase } from "@/lib/supabaseClient";
+import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -145,6 +146,7 @@ function calcAmounts(positions: InvoicePosition[], taxRate: number) {
 
 export default function Rechnungen() {
   const { toast } = useToast();
+  const { isAdmin } = useUserRole();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
@@ -828,16 +830,18 @@ export default function Rechnungen() {
                         </TableCell>
                         <TableCell className="text-right">
                           {uc.status === "pending" ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleManualInvoice(uc)}
-                              disabled={invoicingChargeId === uc.id}
-                              className="gap-1"
-                            >
-                              <FileText className="h-3.5 w-3.5" />
-                              {invoicingChargeId === uc.id ? "Wird erstellt..." : "Manuell abrechnen"}
-                            </Button>
+                            isAdmin ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleManualInvoice(uc)}
+                                disabled={invoicingChargeId === uc.id}
+                                className="gap-1"
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                                {invoicingChargeId === uc.id ? "Wird erstellt..." : "Manuell abrechnen"}
+                              </Button>
+                            ) : null
                           ) : uc.status === "ungeklaert" ? (
                             <Button
                               size="sm"
