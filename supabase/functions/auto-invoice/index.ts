@@ -412,7 +412,23 @@ Deno.serve(async (req) => {
           } catch (stripeErr: any) {
             console.error(`[auto-invoice] Stripe error for contract ${contract.id}:`, stripeErr?.message);
             errors.push(`Stripe [${contract.id}]: ${stripeErr?.message}`);
-            // Rechnung bleibt im Status 'entwurf' – kann manuell weiterverarbeitet werden
+
+            // Cleanup: in diesem Lauf erstellte, noch nicht zu einer Invoice gehörige InvoiceItems löschen,
+            // damit sie nicht im nächsten Stripe-Invoice-Zyklus mitgezogen werden.
+            for (const itemId of createdItemIds) {
+              try {
+                await stripe.invoiceItems.del(itemId);
+              } catch (cleanupErr: any) {
+                console.error(`[auto-invoice] Cleanup failed for invoiceItem ${itemId}:`, cleanupErr?.message);
+              }
+            }
+
+            // Interne Rechnung als 'zahlung_fehlgeschlagen' markieren, damit Buchhaltung sie sieht
+            // (analog zum Webhook-Pfad bei invoice.payment_failed). Stripe-ID bleibt NULL.
+            await supabase
+              .from("invoices")
+              .update({ status: "zahlung_fehlgeschlagen" })
+              .eq("id", invoice.id);
           }
         } else if (grossAmount === 0) {
           console.log(`[auto-invoice] Contract ${contract.id} – Gesamtbetrag 0 €, kein Stripe-Einzug nötig`);
