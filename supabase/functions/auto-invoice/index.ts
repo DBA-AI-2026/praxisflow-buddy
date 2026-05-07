@@ -359,24 +359,27 @@ Deno.serve(async (req) => {
         // ── 3. DANACH Stripe-Zahlung auslösen ───────────────────────────────
         let stripeInvoiceId: string | null = null;
         if (hasStripeCustomer && grossAmount > 0) {
+          const createdItemIds: string[] = [];
           try {
             for (const pos of positions) {
               if (pos.quantity * pos.unit_price <= 0) continue;
-              await stripe.invoiceItems.create({
+              const item = await stripe.invoiceItems.create({
                 customer: contract.stripe_customer_id,
                 amount: Math.round(pos.quantity * pos.unit_price * 100),
                 currency: "eur",
                 description: pos.description,
                 tax_rates: [],
               });
+              createdItemIds.push(item.id);
             }
 
-            await stripe.invoiceItems.create({
+            const taxItem = await stripe.invoiceItems.create({
               customer: contract.stripe_customer_id,
               amount: Math.round(taxAmount * 100),
               currency: "eur",
               description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
             });
+            createdItemIds.push(taxItem.id);
 
             const stripeDescription = `${contract.product_name} – ${billingPeriod}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}${usageChargeIds.length > 0 ? ` | Nutzung: ${usageChargeIds.length} geprüfte GOÄ-Rechnungen (${usageNetAmount.toFixed(2)} €)` : ""}`;
 
