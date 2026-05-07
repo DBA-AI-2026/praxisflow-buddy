@@ -424,8 +424,20 @@ Deno.serve(async (req) => {
         }
       }
 
-      // 4. Mail an Buchhaltung – Absender identisch zu auto-invoice (verifizierte Domain)
-      try {
+      // 4. Mail an Buchhaltung – nur bei FINAL fehlgeschlagener Zahlung.
+      //    Stripe retryt SEPA-Lastschriften mehrfach (next_payment_attempt != null).
+      //    Solange ein weiterer Versuch ansteht, wird die Buchhaltung nicht alarmiert.
+      const nextAttempt = (stripeInvoice as any)?.next_payment_attempt ?? null;
+      const attemptCount = (stripeInvoice as any)?.attempt_count ?? 0;
+      const isFinalFailure = nextAttempt === null || attemptCount >= 3;
+
+      if (!isFinalFailure) {
+        log("invoice.payment_failed – nicht final, Stripe retryt (keine Mail)", {
+          stripeInvoiceId,
+          nextAttempt,
+          attemptCount,
+        });
+      } else try {
         const resendKey = Deno.env.get("RESEND_API_KEY");
         if (!resendKey) {
           log("WARN: RESEND_API_KEY not configured, skipping payment_failed notification", stripeInvoiceId);

@@ -359,24 +359,27 @@ Deno.serve(async (req) => {
         // ── 3. DANACH Stripe-Zahlung auslösen ───────────────────────────────
         let stripeInvoiceId: string | null = null;
         if (hasStripeCustomer && grossAmount > 0) {
+          const createdItemIds: string[] = [];
           try {
             for (const pos of positions) {
               if (pos.quantity * pos.unit_price <= 0) continue;
-              await stripe.invoiceItems.create({
+              const item = await stripe.invoiceItems.create({
                 customer: contract.stripe_customer_id,
                 amount: Math.round(pos.quantity * pos.unit_price * 100),
                 currency: "eur",
                 description: pos.description,
                 tax_rates: [],
               });
+              createdItemIds.push(item.id);
             }
 
-            await stripe.invoiceItems.create({
+            const taxItem = await stripe.invoiceItems.create({
               customer: contract.stripe_customer_id,
               amount: Math.round(taxAmount * 100),
               currency: "eur",
               description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
             });
+            createdItemIds.push(taxItem.id);
 
             const stripeDescription = `${contract.product_name} – ${billingPeriod}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}${usageChargeIds.length > 0 ? ` | Nutzung: ${usageChargeIds.length} geprüfte GOÄ-Rechnungen (${usageNetAmount.toFixed(2)} €)` : ""}`;
 
@@ -409,7 +412,23 @@ Deno.serve(async (req) => {
           } catch (stripeErr: any) {
             console.error(`[auto-invoice] Stripe error for contract ${contract.id}:`, stripeErr?.message);
             errors.push(`Stripe [${contract.id}]: ${stripeErr?.message}`);
-            // Rechnung bleibt im Status 'entwurf' – kann manuell weiterverarbeitet werden
+
+            // Cleanup: in diesem Lauf erstellte, noch nicht zu einer Invoice gehörige InvoiceItems löschen,
+            // damit sie nicht im nächsten Stripe-Invoice-Zyklus mitgezogen werden.
+            for (const itemId of createdItemIds) {
+              try {
+                await stripe.invoiceItems.del(itemId);
+              } catch (cleanupErr: any) {
+                console.error(`[auto-invoice] Cleanup failed for invoiceItem ${itemId}:`, cleanupErr?.message);
+              }
+            }
+
+            // Interne Rechnung als 'zahlung_fehlgeschlagen' markieren, damit Buchhaltung sie sieht
+            // (analog zum Webhook-Pfad bei invoice.payment_failed). Stripe-ID bleibt NULL.
+            await supabase
+              .from("invoices")
+              .update({ status: "zahlung_fehlgeschlagen" })
+              .eq("id", invoice.id);
           }
         } else if (grossAmount === 0) {
           console.log(`[auto-invoice] Contract ${contract.id} – Gesamtbetrag 0 €, kein Stripe-Einzug nötig`);
