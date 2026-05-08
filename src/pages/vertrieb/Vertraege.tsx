@@ -252,6 +252,8 @@ interface ContractFormData {
   selected_products: string[];
   selected_modules: string[];
   license_count: number;
+  bsnr_count: number;
+  lanr_count: number;
   start_date: string;
   duration_months: number;
   cancellation_period_months: number;
