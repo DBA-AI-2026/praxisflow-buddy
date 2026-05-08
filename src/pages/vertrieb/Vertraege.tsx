@@ -1010,6 +1010,8 @@ export default function Vertraege() {
       selected_products: contract.modules?.length > 0 ? contract.modules : (contract.product_name ? [contract.product_name] : []),
       selected_modules: contract.selected_addon_modules || [],
       license_count: contract.license_count,
+      bsnr_count: contract.bsnr_count ?? 1,
+      lanr_count: contract.lanr_count ?? 3,
       start_date: contract.start_date,
       duration_months: contract.duration_months,
       cancellation_period_months: contract.cancellation_period_months,
