@@ -167,7 +167,11 @@ Deno.serve(async (req) => {
       };
 
       let stripeCheckoutUrl: string | null = null;
-      if (STRIPE_SECRET_KEY && demo.product_name && STRIPE_PRODUCT_MAP[demo.product_name]) {
+      // DEPRECATED — alte Stripe-Welt, abgeklemmt am 08.05.2026.
+      // Stripe-Checkout-Erstellung deaktiviert; CTA-Block fällt unten weg.
+      // Mail-Versand bleibt vorerst aktiv ohne Buchungs-Link
+      // (wird in Schritt 3 als 410 Gone vollständig entkernt).
+      if (false && STRIPE_SECRET_KEY && demo.product_name && STRIPE_PRODUCT_MAP[demo.product_name]) {
         try {
           const { default: Stripe } = await import("npm:stripe@14.21.0");
           const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2025-08-27.basil" });
