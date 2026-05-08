@@ -185,40 +185,120 @@ Deno.serve(async (req) => {
           ? new Date(contract.base_fee_waived_until).toLocaleDateString("de-DE")
           : "";
 
-        let baseNetAmount = Number(contract.monthly_price) || 0;
-        if (isInWaiverPeriod && baseNetAmount > 0) {
-          console.log(`[auto-invoice] Grundgebühr-Waiver aktiv für Vertrag ${contract.id} (bis ${contract.base_fee_waived_until}): ${baseNetAmount} € → 0 €`);
-          baseNetAmount = 0;
+        const contractMonthly = Number(contract.monthly_price) || 0;
+        if (isInWaiverPeriod) {
+          console.log(`[auto-invoice] Waiver aktiv für Vertrag ${contract.id} (bis ${contract.base_fee_waived_until}) – alle Positionen 0 €`);
         }
+        const waiverHint = isInWaiverPeriod ? ` (Einführungsaktion – ausgesetzt bis ${waiverUntilFormatted})` : "";
+        const priceOrZero = (v: number) => (isInWaiverPeriod ? 0 : v);
 
         // Build invoice positions
         const taxRate = 19;
-
         const positions: { description: string; quantity: number; unit_price: number }[] = [];
 
-        // Position 1: Grundgebühr
-        if (baseNetAmount > 0) {
+        // ── EBM-spezifischer Aufbau (Variante 2: Module + Grundgebühr + LANR-Aufschlag + Korrektur) ──
+        const isEbm = (contract.product_name || "").includes("HFX EBM");
+
+        if (isEbm) {
+          // Lade HFX EBM Produkt + Module
+          const { data: ebmProduct } = await supabase
+            .from("products")
+            .select("id, monthly_price")
+            .eq("name", "HFX EBM")
+            .maybeSingle();
+
+          const ebmBasePrice = Number(ebmProduct?.monthly_price) || 0;
+
+          let modulesById: Record<string, { name: string; monthly_price: number }> = {};
+          let modulesByName: Record<string, { name: string; monthly_price: number }> = {};
+          if (ebmProduct?.id) {
+            const { data: pm } = await supabase
+              .from("product_modules")
+              .select("id, name, monthly_price")
+              .eq("product_id", ebmProduct.id);
+            for (const m of (pm || [])) {
+              const entry = { name: m.name, monthly_price: Number(m.monthly_price) || 0 };
+              modulesById[m.id] = entry;
+              modulesByName[m.name] = entry;
+            }
+          }
+
+          // 1) Module-Positionen (eine je selected_addon_modules-Eintrag)
+          const selectedModules: string[] = Array.isArray(contract.selected_addon_modules)
+            ? contract.selected_addon_modules
+            : [];
+          let modulesSum = 0;
+          for (const key of selectedModules) {
+            const m = modulesByName[key] || modulesById[key];
+            if (!m) {
+              console.warn(`[auto-invoice] EBM-Modul nicht gefunden: "${key}" (Vertrag ${contract.id})`);
+              continue;
+            }
+            modulesSum += m.monthly_price;
+            positions.push({
+              description: `${m.name} – ${billingPeriod}${waiverHint}`,
+              quantity: 1,
+              unit_price: priceOrZero(m.monthly_price),
+            });
+          }
+
+          // 2) Grundgebühr (aus products.monthly_price, NICHT contract.monthly_price)
           positions.push({
-            description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
-            quantity: contract.license_count || 1,
-            unit_price: baseNetAmount / (contract.license_count || 1),
+            description: `Grundgebühr HFX EBM (1 BSNR + 3 LANR inkl.) – ${billingPeriod}${waiverHint}`,
+            quantity: 1,
+            unit_price: priceOrZero(ebmBasePrice),
           });
-        } else if (isInWaiverPeriod) {
-          positions.push({
-            description: `Grundgebühr ${contract.product_name} – ${billingPeriod} (Einführungsaktion – Grundgebühr ausgesetzt bis ${waiverUntilFormatted})`,
-            quantity: contract.license_count || 1,
-            unit_price: 0,
-          });
+
+          // 3) LANR-Aufschlag falls > 3
+          const lanrCount = Number(contract.lanr_count) || 0;
+          const extraLanr = Math.max(0, lanrCount - 3);
+          const LANR_UNIT_PRICE = 22;
+          if (extraLanr > 0) {
+            positions.push({
+              description: `Zusätzliche LANR (${extraLanr} über inkludiert) – ${billingPeriod}${waiverHint}`,
+              quantity: extraLanr,
+              unit_price: priceOrZero(LANR_UNIT_PRICE),
+            });
+          }
+
+          // 4) Korrektur-Position (Diff zu contract.monthly_price = SSOT)
+          const computedSum = ebmBasePrice + modulesSum + extraLanr * LANR_UNIT_PRICE;
+          const diff = Math.round((contractMonthly - computedSum) * 100) / 100;
+          if (diff !== 0) {
+            const label = diff > 0 ? "Sondervereinbarung Aufschlag" : "Sondervereinbarung Rabatt";
+            positions.push({
+              description: `${label} – ${billingPeriod}${waiverHint}`,
+              quantity: 1,
+              unit_price: priceOrZero(diff),
+            });
+          }
         } else {
-          positions.push({
-            description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
-            quantity: contract.license_count || 1,
-            unit_price: 0,
-          });
+          // ── Bestehender, produkt-agnostischer Pfad (GOÄ, Live-Check, etc.) ──
+          const baseNetAmount = isInWaiverPeriod ? 0 : contractMonthly;
+          if (baseNetAmount > 0) {
+            positions.push({
+              description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
+              quantity: contract.license_count || 1,
+              unit_price: baseNetAmount / (contract.license_count || 1),
+            });
+          } else if (isInWaiverPeriod) {
+            positions.push({
+              description: `Grundgebühr ${contract.product_name} – ${billingPeriod} (Einführungsaktion – Grundgebühr ausgesetzt bis ${waiverUntilFormatted})`,
+              quantity: contract.license_count || 1,
+              unit_price: 0,
+            });
+          } else {
+            positions.push({
+              description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
+              quantity: contract.license_count || 1,
+              unit_price: 0,
+            });
+          }
         }
 
-        // Position 2: Nutzungsgebühren – NUR für den exakten Abrechnungs-Vormonat
+        // Nutzungsgebühren (GOÄ-Verbrauch) – NUR für den exakten Abrechnungs-Vormonat. Unverändert.
         let usageChargeIds: string[] = [];
+        let usageNetAmount = 0;
         if (contract.hfx_customer_number) {
           const { data: usageCharges } = await supabase
             .from("usage_charges")
@@ -231,6 +311,8 @@ Deno.serve(async (req) => {
           if (usageCharges && usageCharges.length > 0) {
             usageChargeIds = usageCharges.map((u: any) => u.id);
             for (const uc of usageCharges) {
+              const lineNet = uc.quantity * Number(uc.unit_price);
+              usageNetAmount += lineNet;
               positions.push({
                 description: uc.unit_description || `Geprüfte GOÄ-Rechnungen (HFX GOÄ) – ${billingPeriod}`,
                 quantity: uc.quantity,
@@ -239,11 +321,6 @@ Deno.serve(async (req) => {
             }
           }
         }
-
-        // Verbrauchsnettobetrag separat
-        const usageNetAmount = positions
-          .slice(1)
-          .reduce((s, p) => s + p.quantity * p.unit_price, 0);
 
         // Recalculate totals
         const netAmount = positions.reduce((s, p) => s + p.quantity * p.unit_price, 0);
