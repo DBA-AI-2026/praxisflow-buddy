@@ -1417,9 +1417,21 @@ export default function Vertraege() {
           bsnr: form.bsnr || null,
           lanr: [form.lanr, form.lanr_2, form.lanr_3].filter(Boolean).join(", ") || null,
           selected_addon_modules: form.selected_modules.length > 0 ? form.selected_modules : [],
+          bsnr_count: form.bsnr_count,
+          lanr_count: form.lanr_count,
           status: "eingegangen",
           created_by: user?.id,
           ...(leadHfxNumber ? { hfx_customer_number: leadHfxNumber } : {}),
+          ...(form.selected_products.includes("HFX EBM")
+            ? (() => {
+                const s = form.start_date ? new Date(form.start_date) : new Date();
+                const qEnd = new Date(s.getFullYear(), Math.floor(s.getMonth() / 3) * 3 + 3, 0);
+                const yyyy = qEnd.getFullYear();
+                const mm = String(qEnd.getMonth() + 1).padStart(2, "0");
+                const dd = String(qEnd.getDate()).padStart(2, "0");
+                return { base_fee_waived: true, base_fee_waived_until: `${yyyy}-${mm}-${dd}` };
+              })()
+            : {}),
         };
         const { data: inserted, error } = await supabase.from("contracts").insert(record).select("id").single();
         if (error) throw error;
