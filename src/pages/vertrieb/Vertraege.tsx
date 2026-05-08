@@ -691,10 +691,22 @@ export default function Vertraege() {
         stundenaufwand_pro_woche: data.stundenaufwand_pro_woche || null,
         rechnungs_email: data.rechnungs_email || null,
         selected_addon_modules: data.selected_modules.length > 0 ? data.selected_modules : [],
+        bsnr_count: data.bsnr_count,
+        lanr_count: data.lanr_count,
         qodia_unit_price: (data as any).qodia_unit_price ?? 0.99,
         ...(data.mandate_accepted && !editId ? { mandate_accepted_at: new Date().toISOString() } : {}),
         ...(documentUrl ? { document_url: documentUrl, document_name: documentName } : {}),
         ...(leadHfxNumber && !editId ? { hfx_customer_number: leadHfxNumber } : {}),
+        ...(data.selected_products.includes("HFX EBM") && !editId
+          ? (() => {
+              const s = data.start_date ? new Date(data.start_date) : new Date();
+              const qEnd = new Date(s.getFullYear(), Math.floor(s.getMonth() / 3) * 3 + 3, 0);
+              const yyyy = qEnd.getFullYear();
+              const mm = String(qEnd.getMonth() + 1).padStart(2, "0");
+              const dd = String(qEnd.getDate()).padStart(2, "0");
+              return { base_fee_waived: true, base_fee_waived_until: `${yyyy}-${mm}-${dd}` };
+            })()
+          : {}),
       };
 
       let contractId = editId;
