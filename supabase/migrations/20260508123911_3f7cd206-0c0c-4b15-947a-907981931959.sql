@@ -1,0 +1,3 @@
+ALTER TABLE public.contracts
+  ADD COLUMN IF NOT EXISTS bsnr_count INTEGER NOT NULL DEFAULT 1 CHECK (bsnr_count >= 0),
+  ADD COLUMN IF NOT EXISTS lanr_count INTEGER NOT NULL DEFAULT 3 CHECK (lanr_count >= 0);
