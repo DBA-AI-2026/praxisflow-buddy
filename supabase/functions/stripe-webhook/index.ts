@@ -513,6 +513,7 @@ Deno.serve(async (req) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // DEMO BOOKING: create contract + praxen entry after successful checkout
 // ─────────────────────────────────────────────────────────────────────────────
+// DEPRECATED — wird seit 08.05.2026 nicht mehr aufgerufen, kann nach 2-3 Wochen Beobachtung entfernt werden
 async function handleDemoBooking(
   supabase: ReturnType<typeof createClient>,
   stripe: Stripe,
