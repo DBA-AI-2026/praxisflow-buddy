@@ -451,6 +451,7 @@ export type Database = {
           base_fee_waived_until: string | null
           bic: string | null
           bsnr: string | null
+          bsnr_count: number
           cancellation_period_months: number
           confirmation_email_sent_at: string | null
           contract_number: string | null
@@ -479,6 +480,7 @@ export type Database = {
           kontoinhaber_plz_ort: string | null
           kontoinhaber_strasse: string | null
           lanr: string | null
+          lanr_count: number
           license_count: number
           mandate_accepted_at: string | null
           modules: string[] | null
@@ -526,6 +528,7 @@ export type Database = {
           base_fee_waived_until?: string | null
           bic?: string | null
           bsnr?: string | null
+          bsnr_count?: number
           cancellation_period_months?: number
           confirmation_email_sent_at?: string | null
           contract_number?: string | null
@@ -554,6 +557,7 @@ export type Database = {
           kontoinhaber_plz_ort?: string | null
           kontoinhaber_strasse?: string | null
           lanr?: string | null
+          lanr_count?: number
           license_count?: number
           mandate_accepted_at?: string | null
           modules?: string[] | null
@@ -601,6 +605,7 @@ export type Database = {
           base_fee_waived_until?: string | null
           bic?: string | null
           bsnr?: string | null
+          bsnr_count?: number
           cancellation_period_months?: number
           confirmation_email_sent_at?: string | null
           contract_number?: string | null
@@ -629,6 +634,7 @@ export type Database = {
           kontoinhaber_plz_ort?: string | null
           kontoinhaber_strasse?: string | null
           lanr?: string | null
+          lanr_count?: number
           license_count?: number
           mandate_accepted_at?: string | null
           modules?: string[] | null
