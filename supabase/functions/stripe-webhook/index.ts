@@ -214,12 +214,24 @@ Deno.serve(async (req) => {
       const source = session.metadata?.source;
       log("checkout.session.completed", { source, sessionId: session.id });
 
+      // DEPRECATED — alte Stripe-Welt, Branch deaktiviert am 08.05.2026 — handleDemoBooking wird nicht mehr aufgerufen
       if (source === "demo_booking") {
-        await handleDemoBooking(supabase, stripe, session, RESEND_API_KEY);
+        console.warn("[DEPRECATED][stripe-webhook][demo_booking] Event received but ignored", {
+          stripeEventId: event.id,
+          sessionId: session.id,
+          customer: session.customer,
+          timestamp: new Date().toISOString(),
+        });
       }
 
+      // DEPRECATED — alte Stripe-Welt, Branch deaktiviert am 08.05.2026
       if (source === "contract_activation") {
-        await handleContractActivation(supabase, stripe, session);
+        console.warn("[DEPRECATED][stripe-webhook][contract_activation] Event received but ignored", {
+          stripeEventId: event.id,
+          sessionId: session.id,
+          customer: session.customer,
+          timestamp: new Date().toISOString(),
+        });
       }
 
       if (source === "sepa_mandate_setup") {
@@ -227,25 +239,17 @@ Deno.serve(async (req) => {
       }
     }
 
+    // DEPRECATED — alte Stripe-Welt, Subscription-Branches deaktiviert am 08.05.2026 — keine aktiven Subscriptions mehr im Live-Mode (verifiziert 08.05.2026)
     if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
       const sub = event.data.object as Stripe.Subscription;
-      const contractId = sub.metadata?.contract_id;
-      if (contractId) {
-        const { error: subErr } = await supabase
-          .from("contracts")
-          .update({
-            stripe_subscription_id: sub.id,
-            stripe_customer_id: sub.customer as string,
-          })
-          .eq("id", contractId);
-
-        if (subErr) {
-          log("WARN: subscription update failed", { contractId, error: subErr.message });
-          await markEventFailed(supabase, event.id, `subscription update failed: ${subErr.message}`);
-        } else {
-          log("Subscription linked to contract", { contractId, subscriptionId: sub.id });
-        }
-      }
+      console.warn("[DEPRECATED][stripe-webhook][customer.subscription.*] Event received but ignored", {
+        stripeEventId: event.id,
+        eventType: event.type,
+        subscriptionId: sub.id,
+        customer: sub.customer,
+        contractId: sub.metadata?.contract_id ?? null,
+        timestamp: new Date().toISOString(),
+      });
     }
 
     // ── invoice.paid / invoice.payment_succeeded: update invoice status, create fibu_event ──
@@ -509,6 +513,7 @@ Deno.serve(async (req) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // DEMO BOOKING: create contract + praxen entry after successful checkout
 // ─────────────────────────────────────────────────────────────────────────────
+// DEPRECATED — wird seit 08.05.2026 nicht mehr aufgerufen, kann nach 2-3 Wochen Beobachtung entfernt werden
 async function handleDemoBooking(
   supabase: ReturnType<typeof createClient>,
   stripe: Stripe,
@@ -649,6 +654,7 @@ async function handleDemoBooking(
 // ─────────────────────────────────────────────────────────────────────────────
 // CONTRACT ACTIVATION
 // ─────────────────────────────────────────────────────────────────────────────
+// DEPRECATED — wird seit 08.05.2026 nicht mehr aufgerufen, kann nach 2-3 Wochen Beobachtung entfernt werden
 async function handleContractActivation(
   supabase: ReturnType<typeof createClient>,
   stripe: Stripe,
