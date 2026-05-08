@@ -308,6 +308,8 @@ const emptyForm: ContractFormData = {
   selected_products: [],
   selected_modules: [],
   license_count: 1,
+  bsnr_count: 1,
+  lanr_count: 3,
   start_date: new Date().toISOString().split("T")[0],
   duration_months: 0, // unbefristet
   cancellation_period_months: 6,
