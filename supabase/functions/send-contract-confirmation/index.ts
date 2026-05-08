@@ -428,59 +428,30 @@ Deno.serve(async (req) => {
     }
 
     // --- Build email ---
-    const buchenUrl = `${APP_URL}/buchen?contract_id=${contract.id}&product=${encodeURIComponent(contract.product_name)}`;
+    // DEPRECATED — alte Stripe-Welt-Buchungslink entfernt am 08.05.2026.
+    // Mail ist nun reine Brücken-Mitteilung; SEPA-Aktivierung erfolgt separat
+    // über mandate-recovery / auto-invoice (NEUE Welt). Template-Override wird
+    // bewusst ignoriert, damit kein alter ${buchenUrl}-Link mehr ausgespielt wird.
+    {
+      // Lese Override nur fürs Logging, ohne ihn anzuwenden
+      const { data: legacyOverride } = await adminClient
+        .from("email_template_overrides")
+        .select("template_key")
+        .eq("template_key", "booking-link")
+        .maybeSingle();
+      if (legacyOverride) {
+        console.log("[send-contract-confirmation] Legacy booking-link override gefunden – ignoriert (alte Stripe-Welt abgeklemmt)");
+      }
+    }
 
-    const startDateFormatted = contract.start_date
-      ? new Date(contract.start_date + "T00:00:00").toLocaleDateString("de-DE", {
-          day: "2-digit", month: "2-digit", year: "numeric",
-        })
-      : "–";
+    const anrede = [contract.vorname, contract.nachname].filter(Boolean).join(" ").trim();
+    const greeting = anrede ? `Sehr geehrte/r ${anrede}` : "Sehr geehrte Damen und Herren";
+    const hfxNr = contract.hfx_customer_number || "–";
 
-    const priceFormatted = contract.monthly_price
-      ? `${Number(contract.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/Monat`
-      : "–";
-
-    // --- Check for custom template override ---
     let html: string;
-    const { data: templateOverride } = await adminClient
-      .from("email_template_overrides")
-      .select("html_content")
-      .eq("template_key", "booking-link")
-      .maybeSingle();
-
-    if (templateOverride?.html_content) {
-      // Replace placeholders in custom template
-      console.log("[send-contract-confirmation] Using custom booking-link template override");
-      html = templateOverride.html_content
-        // Generic placeholders
-        .replace(/\$\{MOCK\.vorname\}|\$\{vorname\}|\$\{contract\.vorname\}/g, contract.vorname || "")
-        .replace(/\$\{MOCK\.nachname\}|\$\{nachname\}|\$\{contract\.nachname\}/g, contract.nachname || "")
-        .replace(/\$\{MOCK\.hfx_customer_number\}|\$\{hfx_customer_number\}|\$\{contract\.hfx_customer_number\}/g, contract.hfx_customer_number || "–")
-        .replace(/\$\{MOCK\.praxis_name\}|\$\{praxis_name\}|\$\{praxis\}|\$\{contract\.praxis\}|\$\{contract\.practiceName\}/g, contract.praxis || "–")
-        .replace(/\$\{MOCK\.email\}|\$\{email\}|\$\{contract\.email\}/g, contract.email || "")
-        .replace(/\$\{product_name\}|\$\{contract\.product_name\}|\$\{contract\.productName\}|\[PRODUCTNAME\]/g, contract.product_name || "–")
-        .replace(/\$\{monthly_price\}|\$\{contract\.monthly_price\}/g, priceFormatted)
-        .replace(/\$\{contract\.priceEur\}/g, String(contract.monthly_price ?? "–"))
-        .replace(/\$\{start_date\}|\$\{contract\.start_date\}/g, startDateFormatted)
-        .replace(/\$\{buchen_url\}|\$\{buchenUrl\}|\$\{contract\.buchen_url\}|\$\{contract\.orderLink\}|\$\{orderLink\}/g, buchenUrl)
-        .replace(/\$\{contract\.downloadLink\}|\$\{downloadLink\}/g, APP_URL)
-        .replace(/\$\{contract\.customerNumber\}/g, contract.hfx_customer_number || "–")
-        .replace(/\$\{contract\.billingMode\}/g, "Monatlich")
-        .replace(/\$\{contract\.cancellationTerm\}/g, "Unbefristet · 6 Monate Frist zum Monatsende")
-        .replace(/\$\{agb_url\}|\$\{agbUrl\}|\$\{contract\.agb_url\}|\$\{contract\.agbUrl\}/g, agbDownloadUrl)
-        // Force-replace old static AGB fallback URLs (absolute + relative) in customized templates
-        .replace(/https?:\/\/[^\s"']*\/templates\/vertrag-honorarfuchs\.pdf/gi, agbDownloadUrl)
-        .replace(/\/templates\/vertrag-honorarfuchs\.pdf/gi, agbDownloadUrl)
-        // Replace mock URLs and demo contract IDs with real values
-        .replace(/contract_id=demo/g, `contract_id=${contract.id}`)
-        .replace(/product=HFX%20EBM/g, `product=${encodeURIComponent(contract.product_name)}`)
-        // Legacy preview hardcoded values
-        .replace(/HFX-I01019/g, contract.hfx_customer_number || "–")
-        .replace(/Testpraxis Dr\. Müller/g, contract.praxis || "–")
-        .replace(/99,00 €\/Monat/g, priceFormatted);
-    } else {
-      // Default hardcoded template
-      console.log("[send-contract-confirmation] Using default booking-link template");
+    {
+      // Default hardcoded template (Brücken-Mitteilung, ohne Buchungs-Link)
+      console.log("[send-contract-confirmation] Using bridge confirmation template (no Stripe link)");
 
       // CTA block is now inlined in the template below
 
