@@ -2403,7 +2403,10 @@ export default function Vertraege() {
                 };
                 const sorted = [...products].sort((a: any, b: any) => (productOrder[a.name] ?? 99) - (productOrder[b.name] ?? 99));
 
-                const recalcPrices = (nextProducts: string[], selectedModules?: string[]) => {
+                const EBM_EXTRA_LANR_FEE = 22;
+                const EBM_INCLUDED_LANR = 3;
+
+                const recalcPrices = (nextProducts: string[], selectedModules?: string[], lanrCount?: number) => {
                   const now = new Date();
                   const totalMonthly = products
                     .filter((pr: any) => nextProducts.includes(pr.name))
@@ -2416,10 +2419,15 @@ export default function Vertraege() {
                   const modulesTotal = ebmModules
                     .filter((m: any) => (selectedModules ?? form.selected_modules).includes(m.name))
                     .reduce((sum: number, m: any) => sum + (Number(m.monthly_price) || 0), 0);
+                  const ebmSelected = nextProducts.includes("HFX EBM");
+                  const effectiveLanrCount = lanrCount ?? form.lanr_count ?? EBM_INCLUDED_LANR;
+                  const lanrSurcharge = ebmSelected
+                    ? Math.max(0, effectiveLanrCount - EBM_INCLUDED_LANR) * EBM_EXTRA_LANR_FEE
+                    : 0;
                   const totalOneTime = products
                     .filter((pr: any) => nextProducts.includes(pr.name))
                     .reduce((sum: number, pr: any) => sum + (Number(pr.one_time_fee) || 0), 0);
-                  return { totalMonthly: totalMonthly + modulesTotal, totalOneTime };
+                  return { totalMonthly: totalMonthly + modulesTotal + lanrSurcharge, totalOneTime };
                 };
 
                 const toggleProduct = (name: string) => {
