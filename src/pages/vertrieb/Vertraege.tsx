@@ -2186,15 +2186,16 @@ export default function Vertraege() {
                                </DropdownMenuItem>
                              </>
                            )}
-                          {(c.status === "aktiv" || c.status === "eingegangen" || c.status === "gezeichnet") && !c.stripe_customer_id && (
-                             <>
-                               <DropdownMenuSeparator />
-                               <DropdownMenuItem onClick={() => handleStripeCheckout(c.id)} className="text-primary">
-                                 <CreditCard className="h-4 w-4 mr-2" />
-                                 Digitale Zahlung starten
-                               </DropdownMenuItem>
-                             </>
-                           )}
+                           {/* DEPRECATED — alte Stripe-Welt, abgeklemmt am 08.05.2026, siehe Aufräum-Plan */}
+                           {false && (c.status === "aktiv" || c.status === "eingegangen" || c.status === "gezeichnet") && !c.stripe_customer_id && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleStripeCheckout(c.id)} className="text-primary">
+                                  <CreditCard className="h-4 w-4 mr-2" />
+                                  Digitale Zahlung starten
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           {isAdmin && c.status === "gezeichnet" && (
                             <>
                               <DropdownMenuSeparator />
