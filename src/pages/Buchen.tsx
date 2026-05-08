@@ -473,6 +473,14 @@ export default function Buchen() {
           </div>
         )}
 
+        {/* DEPRECATED — alte Stripe-Welt, abgeklemmt am 08.05.2026 */}
+        {!isPreview && (
+          <div className="bg-warning/10 border border-warning/30 rounded-lg px-4 py-3 flex items-start gap-2 text-sm text-warning">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>Die digitale Buchung wird derzeit überarbeitet. Bitte kontaktieren Sie Ihren Vertriebspartner für die Aktivierung Ihres Vertrags.</span>
+          </div>
+        )}
+
         {/* Brand header */}
         <div className="text-center flex flex-col items-center gap-2">
           <div className="w-14 h-14 rounded-full bg-white shadow flex items-center justify-center border border-border">
@@ -620,20 +628,14 @@ export default function Buchen() {
             </div>
           )}
 
+          {/* DEPRECATED — alte Stripe-Welt, Submit abgeklemmt am 08.05.2026 */}
           <Button
             type="submit"
             className="w-full"
             size="lg"
-            disabled={!canSubmit || submitting}
+            disabled={true}
           >
-            {submitting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Weiterleitung zu Stripe…
-              </>
-            ) : (
-              "Weiter zur Zahlung →"
-            )}
+            Buchung vorübergehend nicht verfügbar
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">

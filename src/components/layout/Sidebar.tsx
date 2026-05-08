@@ -123,7 +123,8 @@ const adminNavigation: NavItem[] = [
 // ─── DEV-TOOLS: interne Vorschau- und Hilfsseiten ─────────────────────────────
 const devToolsNavigation: NavItem[] = [
   { name: "E-Mail-Vorschau", href: "/admin/email-preview", icon: Eye, roles: ["admin"], adminOnly: true },
-  { name: "Buchungsformular-Vorschau", href: "/buchen?preview=true", icon: Eye, roles: ["admin"], adminOnly: true },
+  // DEPRECATED — Vorschau auf alte /buchen-Seite, abgeklemmt am 08.05.2026
+  // { name: "Buchungsformular-Vorschau", href: "/buchen?preview=true", icon: Eye, roles: ["admin"], adminOnly: true },
 ];
 
 interface NavSectionProps {
