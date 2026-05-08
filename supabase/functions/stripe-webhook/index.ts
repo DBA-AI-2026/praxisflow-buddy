@@ -654,6 +654,7 @@ async function handleDemoBooking(
 // ─────────────────────────────────────────────────────────────────────────────
 // CONTRACT ACTIVATION
 // ─────────────────────────────────────────────────────────────────────────────
+// DEPRECATED — wird seit 08.05.2026 nicht mehr aufgerufen, kann nach 2-3 Wochen Beobachtung entfernt werden
 async function handleContractActivation(
   supabase: ReturnType<typeof createClient>,
   stripe: Stripe,
