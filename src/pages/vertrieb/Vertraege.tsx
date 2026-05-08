@@ -2517,6 +2517,74 @@ export default function Vertraege() {
                           {p.name === "HFX EBM" && isSelected && (
                             <div className="ml-4 pl-4 border-l-2 border-primary/30 space-y-4 mt-1 mb-1">
                               <h5 className="text-xs font-semibold text-primary uppercase tracking-wider">HFX EBM – Details</h5>
+
+                              {/* Lizenz-Mengen (BSNR / LANR-Anzahl) */}
+                              <div className="space-y-2">
+                                <Label className="text-xs font-medium text-muted-foreground">Lizenz-Umfang</Label>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <Label htmlFor="bsnr_count">Anzahl BSNR</Label>
+                                    <Input
+                                      id="bsnr_count"
+                                      type="number"
+                                      min={1}
+                                      step={1}
+                                      value={form.bsnr_count}
+                                      onChange={(e) => {
+                                        const v = Math.max(1, parseInt(e.target.value, 10) || 1);
+                                        set("bsnr_count", v);
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor="lanr_count">Anzahl LANR</Label>
+                                    <Input
+                                      id="lanr_count"
+                                      type="number"
+                                      min={1}
+                                      step={1}
+                                      value={form.lanr_count}
+                                      onChange={(e) => {
+                                        const v = Math.max(1, parseInt(e.target.value, 10) || 1);
+                                        const { totalMonthly, totalOneTime } = recalcPrices(form.selected_products, form.selected_modules, v);
+                                        setForm((prev) => ({ ...prev, lanr_count: v, monthly_price: totalMonthly, one_time_fee: totalOneTime }));
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  1 BSNR + 3 LANR sind im Grundpreis enthalten. Jede weitere LANR kostet +22 €/Monat.
+                                </p>
+                                {(() => {
+                                  const baseMonthly = Number(ebmProduct?.monthly_price ?? ebmProduct?.base_license_price) || 0;
+                                  const moduleCount = form.selected_modules.filter((n) => ebmModules.some((m: any) => m.name === n)).length;
+                                  const moduleSum = ebmModules
+                                    .filter((m: any) => form.selected_modules.includes(m.name))
+                                    .reduce((s: number, m: any) => s + (Number(m.monthly_price) || 0), 0);
+                                  const extraLanr = Math.max(0, (form.lanr_count || 0) - 3);
+                                  const lanrSum = extraLanr * 22;
+                                  const total = baseMonthly + moduleSum + lanrSum;
+                                  const start = form.start_date ? new Date(form.start_date) : new Date();
+                                  const qEnd = new Date(start.getFullYear(), Math.floor(start.getMonth() / 3) * 3 + 3, 0);
+                                  const qEndFmt = qEnd.toLocaleDateString("de-DE");
+                                  return (
+                                    <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-1">
+                                      <div className="text-sm font-semibold text-primary">
+                                        Berechneter Preis: {total.toLocaleString("de-DE", { minimumFractionDigits: 2 })} € / Monat
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {baseMonthly.toLocaleString("de-DE", { minimumFractionDigits: 2 })} € Grundpreis
+                                        {moduleCount > 0 && ` + ${moduleCount} Modul(e) à 16 € (= ${moduleSum.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €)`}
+                                        {extraLanr > 0 && ` + ${extraLanr} zusätzliche LANR à 22 € (= ${lanrSum.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €)`}
+                                      </div>
+                                      <div className="text-xs text-success font-medium">
+                                        🎁 Erstes Quartal (bis {qEndFmt}) ist beitragsfrei (Trial).
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+
                               <div className="space-y-2">
                                 <Label className="text-xs font-medium text-muted-foreground">BSNR &amp; LANR</Label>
                                 <div className="grid grid-cols-2 gap-3">
