@@ -874,18 +874,18 @@ export default function Vertraege() {
         }, contractId);
       }
 
-      // For new contracts with status "eingegangen": send booking email to customer
-      // The customer will open Stripe Checkout themselves via the link in the email
+      // For new contracts with status "eingegangen": trigger SEPA mandate setup (Mail 1)
+      // The customer receives an activation link; status stays "eingegangen" until webhook confirms.
       if (!editId && variables.status === "eingegangen" && contractId && variables.email) {
         try {
-          const { error: mailError } = await supabase.functions.invoke("send-contract-confirmation", {
+          const { error: mailError } = await supabase.functions.invoke("send-mandate-setup", {
             body: { contract_id: contractId },
           });
           if (mailError) throw mailError;
-          toast({ title: "✅ Buchungsmail gesendet", description: `Digitaler Buchungslink an ${variables.email} gesendet. Vertrag steht auf „Eingegangen".` });
+          toast({ title: "✅ Mandat-Mail gesendet", description: `SEPA-Aktivierungslink an ${variables.email} gesendet. Vertrag steht auf „Eingegangen".` });
         } catch (emailErr: any) {
-          console.error("Booking email send error:", emailErr);
-          toast({ title: "E-Mail konnte nicht gesendet werden", description: emailErr.message, variant: "destructive" });
+          console.error("Mandate setup email error:", emailErr);
+          toast({ title: "Mandat-Mail konnte nicht gesendet werden", description: emailErr.message, variant: "destructive" });
         }
       }
 
@@ -1475,14 +1475,14 @@ export default function Vertraege() {
         }
       }
 
-      // Send booking confirmation email
-      const { error: mailError } = await supabase.functions.invoke("send-contract-confirmation", {
+      // Send SEPA mandate setup email (Mail 1) — customer activates contract via link
+      const { error: mailError } = await supabase.functions.invoke("send-mandate-setup", {
         body: { contract_id: contractId },
       });
       if (mailError) throw mailError;
 
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
-      toast({ title: "✅ Buchungsmail gesendet", description: `Digitaler Buchungslink an ${form.email} gesendet. Vertrag steht auf „Eingegangen".` });
+      toast({ title: "✅ Mandat-Mail gesendet", description: `SEPA-Aktivierungslink an ${form.email} gesendet. Vertrag steht auf „Eingegangen".` });
       closeDialog();
     } catch (err: any) {
       toast({ title: "Fehler", description: err.message || "Unbekannter Fehler", variant: "destructive" });
@@ -1642,17 +1642,18 @@ export default function Vertraege() {
   };
 
   const handleResendConfirmation = async (contract: any) => {
+    if (!window.confirm(`Mandat-Setup-Mail erneut an ${contract.customer_name || contract.email} senden?`)) return;
     setResendingConfirmationId(contract.id);
     try {
-      const { error } = await supabase.functions.invoke("send-contract-confirmation", {
+      const { error } = await supabase.functions.invoke("send-mandate-setup", {
         body: { contract_id: contract.id },
       });
       if (error) throw error;
-      toast({ title: "Bestätigungsmail erneut gesendet", description: `An ${contract.email}` });
+      toast({ title: "Mail wurde gesendet", description: `Mandat-Setup-Mail an ${contract.email}` });
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
     } catch (err: any) {
-      console.error("Resend confirmation error:", err);
-      toast({ title: "Fehler beim erneuten Senden", description: err.message, variant: "destructive" });
+      console.error("Resend mandate error:", err);
+      toast({ title: "Fehler beim Senden", description: err.message, variant: "destructive" });
     } finally {
       setResendingConfirmationId(null);
     }
@@ -2105,8 +2106,10 @@ export default function Vertraege() {
                         <div className="flex flex-col gap-1">
                           {/* [Papier] badge removed – paper flow decommissioned */}
                           {/* Confirmation email indicator for paper contracts removed – paper flow decommissioned */}
-                          {/* Resend confirmation email button – available for digital contracts with email */}
-                          {c.email && (
+                          {/* Re-Send Mandat-Setup-Mail – nur wenn Vertrag noch auf Mandat wartet und kein Stripe-Customer hinterlegt ist */}
+                          {c.email
+                            && (c.status === "eingegangen" || c.status === "wartend_auf_mandat")
+                            && !c.stripe_customer_id && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -2122,10 +2125,10 @@ export default function Vertraege() {
                                     ) : (
                                       <Mail className="h-3 w-3" />
                                     )}
-                                    Bestätigungsmail erneut senden
+                                    Mandat-Mail erneut senden
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>Bestätigungs-E-Mail mit Stripe-Buchungslink erneut an {c.email} senden</TooltipContent>
+                                <TooltipContent>SEPA-Mandat-Setup-Link erneut an {c.email} senden</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                           )}
