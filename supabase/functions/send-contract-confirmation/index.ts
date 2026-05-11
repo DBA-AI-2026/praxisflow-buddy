@@ -375,6 +375,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Idempotency: skip if confirmation already sent (webhook retries / double-trigger guard)
+    if ((contract as any).confirmation_email_sent_at) {
+      console.log(`[send-contract-confirmation] Skip — confirmation_email_sent_at already set for ${contract_id}`);
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, reason: "already_sent" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // --- Generate contract summary PDF ---
     let logoBytes: ArrayBuffer | undefined;
     try {
