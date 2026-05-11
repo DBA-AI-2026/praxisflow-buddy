@@ -302,15 +302,15 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
 
       const contract = contracts[0];
 
-      const { data, error } = await supabase.functions.invoke("send-contract-confirmation", {
+      const { data, error } = await supabase.functions.invoke("send-mandate-setup", {
         body: { contract_id: contract.id },
       });
 
       if (error) throw error;
 
       toast({
-        title: "Buchungsmail versendet",
-        description: `Die Buchungs-E-Mail wurde erfolgreich an ${contract.email} gesendet.`,
+        title: "Mandat-Setup-Mail gesendet",
+        description: `Die Mandat-Setup-E-Mail wurde erfolgreich an ${contract.email} gesendet.`,
       });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
@@ -703,7 +703,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
                 onClick={sendBuchungsmail}
               >
                 {sendingBuchungsmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                Buchungslink per Mail versenden (nur bei bestehenden Verträgen)
+                Mandat-Mail senden (nur bei bestehenden Verträgen)
               </Button>
 
             </div>

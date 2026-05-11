@@ -687,20 +687,20 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
   const sendBuchungsmail = async (contract: any, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!contract.email) {
-      toast.error("Keine E-Mail-Adresse hinterlegt – Buchungsmail kann nicht gesendet werden.");
+      toast.error("Keine E-Mail-Adresse hinterlegt – Mandat-Mail kann nicht gesendet werden.");
       return;
     }
     setSendingBuchungsmail(contract.id);
     try {
-      const { error } = await supabase.functions.invoke("send-contract-confirmation", {
+      const { error } = await supabase.functions.invoke("send-mandate-setup", {
         body: { contract_id: contract.id },
       });
       if (error) throw error;
-      toast.success(`Buchungsmail an ${contract.email} gesendet`);
+      toast.success(`Mandat-Setup-Mail an ${contract.email} gesendet`);
       queryClient.invalidateQueries({ queryKey: ["journey-contracts-abschluss"] });
       queryClient.invalidateQueries({ queryKey: ["journey-counts"] });
     } catch (err: any) {
-      toast.error(err.message || "Fehler beim Senden der Buchungsmail");
+      toast.error(err.message || "Fehler beim Senden der Mandat-Mail");
     } finally {
       setSendingBuchungsmail(null);
     }
@@ -804,7 +804,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
         return { label: "Vertrag bearbeiten", icon: <PenLine className="h-3 w-3" />, cls: "bg-muted text-muted-foreground border border-border hover:bg-muted/80", isClickable: true };
       case "eingegangen":
         if (!c.confirmation_email_sent_at) {
-          return { label: "Buchungsmail senden", icon: <Send className="h-3 w-3" />, cls: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm", isClickable: true, isBuchungsmail: true };
+          return { label: "Mandat-Mail senden", icon: <Send className="h-3 w-3" />, cls: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm", isClickable: true, isBuchungsmail: true };
         }
         if (!c.customer_confirmed_at) {
           return { label: "Warten auf Zahlung", icon: <Clock className="h-3 w-3" />, cls: "bg-warning/10 text-warning border border-warning/20", isClickable: false };
@@ -831,7 +831,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
       {/* Attention bar */}
       {(attentionMetrics.missingEmail > 0 || attentionMetrics.waitingPayment > 0 || attentionMetrics.stale7 > 0) && (
         <AttentionBar items={[
-          attentionMetrics.missingEmail > 0 ? { icon: <Send className="h-3 w-3" />, text: `${attentionMetrics.missingEmail} Vertrag${attentionMetrics.missingEmail > 1 ? "e" : ""} ohne Buchungsmail`, cls: "text-destructive" } : { icon: null, text: "" },
+          attentionMetrics.missingEmail > 0 ? { icon: <Send className="h-3 w-3" />, text: `${attentionMetrics.missingEmail} Vertrag${attentionMetrics.missingEmail > 1 ? "e" : ""} ohne Mandat-Mail`, cls: "text-destructive" } : { icon: null, text: "" },
           attentionMetrics.waitingPayment > 0 ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.waitingPayment} warten auf Zahlung`, cls: "text-warning" } : { icon: null, text: "" },
           attentionMetrics.stale7 > 0 ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.stale7} seit >7 Tagen offen`, cls: "text-orange-600 dark:text-orange-400" } : { icon: null, text: "" },
         ]} />
