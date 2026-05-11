@@ -1642,17 +1642,18 @@ export default function Vertraege() {
   };
 
   const handleResendConfirmation = async (contract: any) => {
+    if (!window.confirm(`Mandat-Setup-Mail erneut an ${contract.customer_name || contract.email} senden?`)) return;
     setResendingConfirmationId(contract.id);
     try {
-      const { error } = await supabase.functions.invoke("send-contract-confirmation", {
+      const { error } = await supabase.functions.invoke("send-mandate-setup", {
         body: { contract_id: contract.id },
       });
       if (error) throw error;
-      toast({ title: "Bestätigungsmail erneut gesendet", description: `An ${contract.email}` });
+      toast({ title: "Mail wurde gesendet", description: `Mandat-Setup-Mail an ${contract.email}` });
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
     } catch (err: any) {
-      console.error("Resend confirmation error:", err);
-      toast({ title: "Fehler beim erneuten Senden", description: err.message, variant: "destructive" });
+      console.error("Resend mandate error:", err);
+      toast({ title: "Fehler beim Senden", description: err.message, variant: "destructive" });
     } finally {
       setResendingConfirmationId(null);
     }
