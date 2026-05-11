@@ -1475,14 +1475,14 @@ export default function Vertraege() {
         }
       }
 
-      // Send booking confirmation email
-      const { error: mailError } = await supabase.functions.invoke("send-contract-confirmation", {
+      // Send SEPA mandate setup email (Mail 1) — customer activates contract via link
+      const { error: mailError } = await supabase.functions.invoke("send-mandate-setup", {
         body: { contract_id: contractId },
       });
       if (mailError) throw mailError;
 
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
-      toast({ title: "✅ Buchungsmail gesendet", description: `Digitaler Buchungslink an ${form.email} gesendet. Vertrag steht auf „Eingegangen".` });
+      toast({ title: "✅ Mandat-Mail gesendet", description: `SEPA-Aktivierungslink an ${form.email} gesendet. Vertrag steht auf „Eingegangen".` });
       closeDialog();
     } catch (err: any) {
       toast({ title: "Fehler", description: err.message || "Unbekannter Fehler", variant: "destructive" });
