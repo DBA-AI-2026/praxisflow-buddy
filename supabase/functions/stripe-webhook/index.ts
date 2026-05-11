@@ -861,14 +861,11 @@ async function handleSepaMandateSetup(
   // Idempotenz: stripe_customer_id bereits gesetzt?
   const { data: existing } = await supabase
     .from("contracts")
-    .select("stripe_customer_id")
+    .select("stripe_customer_id, status, email, confirmation_email_sent_at")
     .eq("id", contractId)
     .maybeSingle();
 
-  if (existing?.stripe_customer_id === stripeCustomerId) {
-    log("sepa_mandate_setup: stripe_customer_id already set (idempotent skip)", contractId);
-    return;
-  }
+  const alreadyLinked = existing?.stripe_customer_id === stripeCustomerId;
 
   if (session.setup_intent) {
     const setupIntentId = typeof session.setup_intent === "string"
@@ -890,16 +887,61 @@ async function handleSepaMandateSetup(
     }
   }
 
-  const { error } = await supabase
-    .from("contracts")
-    .update({ stripe_customer_id: stripeCustomerId } as any)
-    .eq("id", contractId);
-
-  if (error) {
-    log("ERROR: failed to save stripe_customer_id after mandate setup", error.message);
+  if (!alreadyLinked) {
+    const { error } = await supabase
+      .from("contracts")
+      .update({ stripe_customer_id: stripeCustomerId } as any)
+      .eq("id", contractId);
+    if (error) {
+      log("ERROR: failed to save stripe_customer_id after mandate setup", error.message);
+    }
   } else {
-    log("SEPA mandate setup completed", { contractId, stripeCustomerId });
+    log("sepa_mandate_setup: stripe_customer_id already set (idempotent)", contractId);
   }
+
+  // Status-Update auf "aktiv" — nur aus eingegangen/wartend_auf_mandat heraus
+  const activatableStatuses = new Set(["eingegangen", "wartend_auf_mandat"]);
+  if (existing && activatableStatuses.has(String(existing.status))) {
+    const { error: statusErr } = await supabase
+      .from("contracts")
+      .update({ status: "aktiv" } as any)
+      .eq("id", contractId)
+      .in("status", Array.from(activatableStatuses));
+    if (statusErr) {
+      log("ERROR: failed to activate contract after mandate", statusErr.message);
+    } else {
+      log("Contract activated after SEPA mandate", { contractId, prev: existing.status });
+    }
+  } else {
+    log("sepa_mandate_setup: status not changed (current)", existing?.status);
+  }
+
+  // Mail 2 (Vertragsbestätigung) — idempotent über confirmation_email_sent_at
+  if (existing && !existing.confirmation_email_sent_at && existing.email) {
+    try {
+      const fnUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-contract-confirmation`;
+      const resp = await fetch(fnUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify({ contract_id: contractId }),
+      });
+      if (!resp.ok) {
+        const t = await resp.text();
+        log("WARN: send-contract-confirmation failed", t);
+      } else {
+        log("send-contract-confirmation triggered", { contractId });
+      }
+    } catch (err) {
+      log("WARN: error triggering send-contract-confirmation", String(err));
+    }
+  } else {
+    log("sepa_mandate_setup: skip Mail 2 (already sent or no email)", contractId);
+  }
+
+  log("SEPA mandate setup completed", { contractId, stripeCustomerId });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
