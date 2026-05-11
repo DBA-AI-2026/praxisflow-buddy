@@ -687,20 +687,20 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
   const sendBuchungsmail = async (contract: any, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!contract.email) {
-      toast.error("Keine E-Mail-Adresse hinterlegt – Buchungsmail kann nicht gesendet werden.");
+      toast.error("Keine E-Mail-Adresse hinterlegt – Mandat-Mail kann nicht gesendet werden.");
       return;
     }
     setSendingBuchungsmail(contract.id);
     try {
-      const { error } = await supabase.functions.invoke("send-contract-confirmation", {
+      const { error } = await supabase.functions.invoke("send-mandate-setup", {
         body: { contract_id: contract.id },
       });
       if (error) throw error;
-      toast.success(`Buchungsmail an ${contract.email} gesendet`);
+      toast.success(`Mandat-Setup-Mail an ${contract.email} gesendet`);
       queryClient.invalidateQueries({ queryKey: ["journey-contracts-abschluss"] });
       queryClient.invalidateQueries({ queryKey: ["journey-counts"] });
     } catch (err: any) {
-      toast.error(err.message || "Fehler beim Senden der Buchungsmail");
+      toast.error(err.message || "Fehler beim Senden der Mandat-Mail");
     } finally {
       setSendingBuchungsmail(null);
     }
