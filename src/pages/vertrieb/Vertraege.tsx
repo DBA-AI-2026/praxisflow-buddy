@@ -2106,8 +2106,10 @@ export default function Vertraege() {
                         <div className="flex flex-col gap-1">
                           {/* [Papier] badge removed – paper flow decommissioned */}
                           {/* Confirmation email indicator for paper contracts removed – paper flow decommissioned */}
-                          {/* Resend confirmation email button – available for digital contracts with email */}
-                          {c.email && (
+                          {/* Re-Send Mandat-Setup-Mail – nur wenn Vertrag noch auf Mandat wartet und kein Stripe-Customer hinterlegt ist */}
+                          {c.email
+                            && (c.status === "eingegangen" || c.status === "wartend_auf_mandat")
+                            && !c.stripe_customer_id && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -2123,10 +2125,10 @@ export default function Vertraege() {
                                     ) : (
                                       <Mail className="h-3 w-3" />
                                     )}
-                                    Bestätigungsmail erneut senden
+                                    Mandat-Mail erneut senden
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>Bestätigungs-E-Mail mit Stripe-Buchungslink erneut an {c.email} senden</TooltipContent>
+                                <TooltipContent>SEPA-Mandat-Setup-Link erneut an {c.email} senden</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                           )}
