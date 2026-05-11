@@ -874,18 +874,18 @@ export default function Vertraege() {
         }, contractId);
       }
 
-      // For new contracts with status "eingegangen": send booking email to customer
-      // The customer will open Stripe Checkout themselves via the link in the email
+      // For new contracts with status "eingegangen": trigger SEPA mandate setup (Mail 1)
+      // The customer receives an activation link; status stays "eingegangen" until webhook confirms.
       if (!editId && variables.status === "eingegangen" && contractId && variables.email) {
         try {
-          const { error: mailError } = await supabase.functions.invoke("send-contract-confirmation", {
+          const { error: mailError } = await supabase.functions.invoke("send-mandate-setup", {
             body: { contract_id: contractId },
           });
           if (mailError) throw mailError;
-          toast({ title: "✅ Buchungsmail gesendet", description: `Digitaler Buchungslink an ${variables.email} gesendet. Vertrag steht auf „Eingegangen".` });
+          toast({ title: "✅ Mandat-Mail gesendet", description: `SEPA-Aktivierungslink an ${variables.email} gesendet. Vertrag steht auf „Eingegangen".` });
         } catch (emailErr: any) {
-          console.error("Booking email send error:", emailErr);
-          toast({ title: "E-Mail konnte nicht gesendet werden", description: emailErr.message, variant: "destructive" });
+          console.error("Mandate setup email error:", emailErr);
+          toast({ title: "Mandat-Mail konnte nicht gesendet werden", description: emailErr.message, variant: "destructive" });
         }
       }
 
