@@ -831,7 +831,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
       {/* Attention bar */}
       {(attentionMetrics.missingEmail > 0 || attentionMetrics.waitingPayment > 0 || attentionMetrics.stale7 > 0) && (
         <AttentionBar items={[
-          attentionMetrics.missingEmail > 0 ? { icon: <Send className="h-3 w-3" />, text: `${attentionMetrics.missingEmail} Vertrag${attentionMetrics.missingEmail > 1 ? "e" : ""} ohne Buchungsmail`, cls: "text-destructive" } : { icon: null, text: "" },
+          attentionMetrics.missingEmail > 0 ? { icon: <Send className="h-3 w-3" />, text: `${attentionMetrics.missingEmail} Vertrag${attentionMetrics.missingEmail > 1 ? "e" : ""} ohne Mandat-Mail`, cls: "text-destructive" } : { icon: null, text: "" },
           attentionMetrics.waitingPayment > 0 ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.waitingPayment} warten auf Zahlung`, cls: "text-warning" } : { icon: null, text: "" },
           attentionMetrics.stale7 > 0 ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.stale7} seit >7 Tagen offen`, cls: "text-orange-600 dark:text-orange-400" } : { icon: null, text: "" },
         ]} />
