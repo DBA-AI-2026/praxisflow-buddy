@@ -157,10 +157,10 @@ Deno.serve(async (req) => {
       console.log(`[qodia-initiate-booking] Created new contract ${contractId}`);
     }
 
-    // 8. Trigger booking email via send-contract-confirmation (internal fetch with service role key)
+    // 8. Trigger Mandat-Setup-Mail (Mail 1) via send-mandate-setup mit Service-Role
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const fnUrl = `${supabaseUrl}/functions/v1/send-contract-confirmation`;
+    const fnUrl = `${supabaseUrl}/functions/v1/send-mandate-setup`;
 
     const emailRes = await fetch(fnUrl, {
       method: "POST",
@@ -173,19 +173,18 @@ Deno.serve(async (req) => {
 
     if (!emailRes.ok) {
       const errBody = await emailRes.text();
-      console.error(`[qodia-initiate-booking] Email function returned ${emailRes.status}: ${errBody}`);
-      // Non-fatal: contract was created, but email failed. Return partial success with warning.
+      console.error(`[qodia-initiate-booking] send-mandate-setup returned ${emailRes.status}: ${errBody}`);
       return new Response(
         JSON.stringify({
           success: true,
           contract_id: contractId,
-          warning: "Contract created but confirmation email could not be sent. Please resend manually.",
+          warning: "Contract created but mandate-setup email could not be sent. Please resend manually.",
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`[qodia-initiate-booking] Booking email sent for contract ${contractId}`);
+    console.log(`[qodia-initiate-booking] Mandat-Setup gestartet für Vertrag ${contractId}`);
 
     // 9. Return success
     return new Response(
