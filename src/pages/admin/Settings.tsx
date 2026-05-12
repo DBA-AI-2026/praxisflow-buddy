@@ -148,7 +148,7 @@ export default function AdminSettings() {
       return;
     }
     if (redDays <= yellowDays) {
-      toast({ title: "Ungültige Werte", description: "„Rot ab Tagen" muss größer als „Gelb ab Tagen" sein.", variant: "destructive" });
+      toast({ title: "Ungültige Werte", description: "Rot ab Tagen muss größer als Gelb ab Tagen sein.", variant: "destructive" });
       return;
     }
     setSavingThresholds(true);
