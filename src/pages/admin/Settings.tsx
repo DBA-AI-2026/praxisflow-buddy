@@ -31,6 +31,19 @@ export default function AdminSettings() {
   });
   const [syncInterval, setSyncInterval] = useState("daily");
   const { toast } = useToast();
+  const { isAdmin } = useUserRole();
+  const qc = useQueryClient();
+  const { data: thresholds } = useActivityThresholds();
+  const [yellowDays, setYellowDays] = useState<number>(30);
+  const [redDays, setRedDays] = useState<number>(60);
+  const [savingThresholds, setSavingThresholds] = useState(false);
+
+  useEffect(() => {
+    if (thresholds) {
+      setYellowDays(thresholds.yellow_days);
+      setRedDays(thresholds.red_days);
+    }
+  }, [thresholds]);
 
   // MFA state
   const [mfaEnabled, setMfaEnabled] = useState(false);
