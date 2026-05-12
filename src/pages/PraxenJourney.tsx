@@ -30,6 +30,11 @@ import {
   QodiaStatusCell, QodiaUsageCell, QodiaLastActivityCell, QodiaWarningIcon,
   type ProviderStatusRow,
 } from "@/components/pipeline/QodiaStatusBadges";
+import {
+  OnboardingCell, ActivityCell, productMiniLabel,
+  type ProductOnboardingInput,
+} from "@/components/pipeline/OnboardingStatus";
+import { useActivityThresholds } from "@/hooks/useAppSettings";
 import { ProductBadges, type ProductBadgeItem } from "@/components/pipeline/ProductBadges";
 import { ProductInterestBadges } from "@/components/products/ProductInterestPicker";
 import { useProviderStatusMap, useProductProviderFlags } from "@/hooks/useProviderStatus";
