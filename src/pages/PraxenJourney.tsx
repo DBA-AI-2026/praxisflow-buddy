@@ -1208,7 +1208,7 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                   <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                     <OnboardingCell
                       products={onboardingProducts}
-                      showMarkReady={isAdmin}
+                      showMarkReady={isAdmin || isSalesLead || isRegionalLead || isSalesPartner || isUser}
                       customerLabel={praxisLabel}
                       onMarkReady={() => qc.invalidateQueries({ queryKey: ["provider-status-map"] })}
                     />
