@@ -941,6 +941,22 @@ async function handleSepaMandateSetup(
     log("sepa_mandate_setup: skip Mail 2 (already sent or no email)", contractId);
   }
 
+  // Fire-and-forget: Provider-Status-Sync triggern (Qodia), idempotent
+  try {
+    const syncUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/qodia-status-sync?contract_id=${contractId}`;
+    fetch(syncUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+      },
+      body: "{}",
+    }).catch((e) => log("WARN: qodia-status-sync trigger failed", String(e)));
+    log("qodia-status-sync triggered (fire-and-forget)", { contractId });
+  } catch (e) {
+    log("WARN: could not trigger qodia-status-sync", String(e));
+  }
+
   log("SEPA mandate setup completed", { contractId, stripeCustomerId });
 }
 

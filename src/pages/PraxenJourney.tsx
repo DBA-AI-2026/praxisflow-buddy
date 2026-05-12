@@ -30,6 +30,11 @@ import {
   QodiaStatusCell, QodiaUsageCell, QodiaLastActivityCell, QodiaWarningIcon,
   type ProviderStatusRow,
 } from "@/components/pipeline/QodiaStatusBadges";
+import {
+  OnboardingCell, ActivityCell, productMiniLabel,
+  type ProductOnboardingInput,
+} from "@/components/pipeline/OnboardingStatus";
+import { useActivityThresholds } from "@/hooks/useAppSettings";
 import { ProductBadges, type ProductBadgeItem } from "@/components/pipeline/ProductBadges";
 import { ProductInterestBadges } from "@/components/products/ProductInterestPicker";
 import { useProviderStatusMap, useProductProviderFlags } from "@/hooks/useProviderStatus";
@@ -68,7 +73,7 @@ function QodiaIcon({ synced, conflict }: { synced: boolean; conflict?: boolean }
               : <XCircle className="h-4 w-4 text-muted-foreground/40 shrink-0" />}
           </TooltipTrigger>
           <TooltipContent>
-            {synced ? "Bei Qodia registriert" : "Noch nicht bei Qodia registriert"}
+            {synced ? "Qodia-Account angelegt" : "Noch kein Qodia-Account"}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -627,7 +632,9 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
                   </td>
                   <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-1">
-                      <QodiaIcon synced={!!lead.qodia_synced} conflict={!!lead.qodia_conflict} />
+                      {lead.status !== "vertrag" && (
+                        <QodiaIcon synced={!!lead.qodia_synced} conflict={!!lead.qodia_conflict} />
+                      )}
                       {!lead.qodia_synced && lead.hfx_customer_number && (
                         <TooltipProvider>
                           <Tooltip>
@@ -1015,21 +1022,30 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
     return allContracts.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
   }, [allContracts, matchesTeamFilter, isSalesPartner, isTippgeber]);
 
-  // Qodia provider status (generic provider model). Only shown for products
-  // whose products.provider_flags.qodia is true.
-  const { data: providerFlags = {} } = useProductProviderFlags("qodia");
+  // Provider statuses (generic). Qodia for GOÄ, HonorarPlus for EBM.
+  const { data: qodiaFlags = {} } = useProductProviderFlags("qodia");
+  const { data: honorarplusFlags = {} } = useProductProviderFlags("honorarplus");
   const qodiaContractIds = useMemo(
-    () => teamContracts.filter((c: any) => providerFlags[c.product_name]).map((c: any) => c.id),
-    [teamContracts, providerFlags],
+    () => teamContracts.filter((c: any) => qodiaFlags[c.product_name]).map((c: any) => c.id),
+    [teamContracts, qodiaFlags],
+  );
+  const honorarplusContractIds = useMemo(
+    () => teamContracts.filter((c: any) => honorarplusFlags[c.product_name]).map((c: any) => c.id),
+    [teamContracts, honorarplusFlags],
   );
   const { data: qodiaStatusMap = {} } = useProviderStatusMap({
-    contractIds: qodiaContractIds,
-    provider: "qodia",
+    contractIds: qodiaContractIds, provider: "qodia",
   });
+  const { data: honorarplusStatusMap = {} } = useProviderStatusMap({
+    contractIds: honorarplusContractIds, provider: "honorarplus",
+  });
+  const { data: thresholds = { yellow_days: 30, red_days: 60 } } = useActivityThresholds();
 
-  // Multi-product display: derive a customer→contracts map from the
-  // already-loaded list (no extra round-trip). See useCustomerContractsMap.
+  // Customer→contracts map (for Mix-products onboarding rows)
   const customerContractsMap = useCustomerContractsMap(allContracts as any);
+
+  // back-compat alias for older code paths in this file
+  const providerFlags = qodiaFlags;
 
   const statusCounts = KUNDEN_STATUSES.reduce((acc, s) => {
     acc[s] = teamContracts.filter((c: any) => c.status === s).length;
@@ -1106,23 +1122,43 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
               <TH>Status</TH>
               <TH>Kunde seit</TH>
               <TH>Vertrieb</TH>
-              <TH>Qodia</TH>
-              <TH>Usage</TH>
-              <TH>Letzte Aktivität</TH>
+              <TH>Onboarding</TH>
+              <TH>Aktivität</TH>
               <TH>{""}</TH>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={10} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              <tr><td colSpan={8} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : filtered.length === 0 ? (
               <EmptyState icon={Building2} title="Keine Kunden gefunden" sub="Aktivierte Verträge erscheinen hier automatisch" />
             ) : (filtered as any[]).map((c) => {
               const praxisLabel = c.praxis || c.customer_name || "–";
               const arztLabel = [c.vorname, c.nachname].filter(Boolean).join(" ");
               const sc = kundenStatusCfg[c.status] ?? kundenStatusCfg.aktiv;
-              const usesQodia = !!providerFlags[c.product_name];
+              const usesQodia = !!qodiaFlags[c.product_name];
               const qodiaRow: ProviderStatusRow | null = usesQodia ? (qodiaStatusMap[c.id] ?? null) : null;
+
+              // Build per-product onboarding inputs covering ALL products this customer has,
+              // so Mix-contracts (GOÄ + EBM) show two rows per cell.
+              const customerProductRows = c.customer_id ? (customerContractsMap[c.customer_id] ?? []) : [];
+              const baseList = customerProductRows.length > 0
+                ? customerProductRows.map((row: any) => ({ id: row.id, product_name: row.product_name }))
+                : [{ id: c.id, product_name: c.product_name }];
+              const onboardingProducts: ProductOnboardingInput[] = baseList
+                .filter((row: any) => qodiaFlags[row.product_name] || honorarplusFlags[row.product_name])
+                .map((row: any) => {
+                  const provider = qodiaFlags[row.product_name] ? "qodia" : "honorarplus";
+                  const status = provider === "qodia"
+                    ? (qodiaStatusMap[row.id] ?? null)
+                    : (honorarplusStatusMap[row.id] ?? null);
+                  return {
+                    productLabel: productMiniLabel(row.product_name),
+                    provider,
+                    status,
+                    hasUsage: provider === "qodia",
+                  };
+                });
               return (
                 <tr
                   key={c.id}
@@ -1166,20 +1202,10 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                   </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground">{c.sales_partner_name || "–"}</td>
                   <td className="py-3 px-4">
-                    {usesQodia ? (
-                      <div className="flex items-center gap-1.5">
-                        <QodiaStatusCell row={qodiaRow} />
-                        <QodiaWarningIcon row={qodiaRow} contractStatus={c.status} />
-                      </div>
-                    ) : (
-                      <span className="text-[10px] text-muted-foreground/40">–</span>
-                    )}
+                    <OnboardingCell products={onboardingProducts} />
                   </td>
                   <td className="py-3 px-4">
-                    {usesQodia ? <QodiaUsageCell row={qodiaRow} /> : <span className="text-[10px] text-muted-foreground/40">–</span>}
-                  </td>
-                  <td className="py-3 px-4">
-                    {usesQodia ? <QodiaLastActivityCell row={qodiaRow} /> : <span className="text-[10px] text-muted-foreground/40">–</span>}
+                    <ActivityCell products={onboardingProducts} thresholds={thresholds} />
                   </td>
                   <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                     <button

@@ -21,6 +21,10 @@ export interface ProviderStatusRow {
   last_usage_at: string | null;
   last_sync_at: string | null;
   sync_error_message: string | null;
+  created_at?: string | null;
+  manual_set_by?: string | null;
+  manual_set_at?: string | null;
+  auto_overridden_at?: string | null;
 }
 
 const syncCfg = {
