@@ -986,8 +986,9 @@ const kundenStatusCfg: Record<string, { label: string; cls: string }> = {
 function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string; highlightId?: string; matchesTeamFilter: (id?: string | null) => boolean }) {
   const navigate = useNavigate();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
-  const { isSalesPartner, isTippgeber, role } = useUserRole();
+  const { isSalesPartner, isTippgeber, isAdmin, role } = useUserRole();
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("aktiv");
 
   useEffect(() => {
