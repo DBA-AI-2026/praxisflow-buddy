@@ -6,12 +6,19 @@
  * - OnboardingCell: pro Vertrag eine oder mehrere Produkt-Zeilen.
  * - ActivityCell: GOÄ → Ampel + Zähler; EBM/sonstige → "—".
  */
+import { useState } from "react";
 import { differenceInDays, format } from "date-fns";
 import { de } from "date-fns/locale";
-import { Info } from "lucide-react";
+import { CircleCheck, Info, Loader2 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { supabase } from "@/lib/supabaseClient";
 import type { ProviderStatusRow } from "@/components/pipeline/QodiaStatusBadges";
 import type { ActivityThresholds } from "@/hooks/useAppSettings";
 
@@ -22,6 +29,9 @@ export interface ProductOnboardingInput {
   provider: "qodia" | "honorarplus" | string;
   status?: ProviderStatusRow | null;
   hasUsage: boolean;             // wenn true: Aktivitätsmessung möglich (qodia)
+  contractId?: string;           // benötigt für Inline-Mark-Ready
+  contractCreatedAt?: string | null; // für Überfällig-Fallback bei brandneuen Verträgen
+  customerLabel?: string;        // Praxis/Name für Confirm-Dialog
 }
 
 const stageCfg: Record<OnboardingStage, { label: string; cls: string }> = {
