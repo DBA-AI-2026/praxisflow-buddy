@@ -1020,21 +1020,30 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
     return allContracts.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
   }, [allContracts, matchesTeamFilter, isSalesPartner, isTippgeber]);
 
-  // Qodia provider status (generic provider model). Only shown for products
-  // whose products.provider_flags.qodia is true.
-  const { data: providerFlags = {} } = useProductProviderFlags("qodia");
+  // Provider statuses (generic). Qodia for GOÄ, HonorarPlus for EBM.
+  const { data: qodiaFlags = {} } = useProductProviderFlags("qodia");
+  const { data: honorarplusFlags = {} } = useProductProviderFlags("honorarplus");
   const qodiaContractIds = useMemo(
-    () => teamContracts.filter((c: any) => providerFlags[c.product_name]).map((c: any) => c.id),
-    [teamContracts, providerFlags],
+    () => teamContracts.filter((c: any) => qodiaFlags[c.product_name]).map((c: any) => c.id),
+    [teamContracts, qodiaFlags],
+  );
+  const honorarplusContractIds = useMemo(
+    () => teamContracts.filter((c: any) => honorarplusFlags[c.product_name]).map((c: any) => c.id),
+    [teamContracts, honorarplusFlags],
   );
   const { data: qodiaStatusMap = {} } = useProviderStatusMap({
-    contractIds: qodiaContractIds,
-    provider: "qodia",
+    contractIds: qodiaContractIds, provider: "qodia",
   });
+  const { data: honorarplusStatusMap = {} } = useProviderStatusMap({
+    contractIds: honorarplusContractIds, provider: "honorarplus",
+  });
+  const { data: thresholds = { yellow_days: 30, red_days: 60 } } = useActivityThresholds();
 
-  // Multi-product display: derive a customer→contracts map from the
-  // already-loaded list (no extra round-trip). See useCustomerContractsMap.
+  // Customer→contracts map (for Mix-products onboarding rows)
   const customerContractsMap = useCustomerContractsMap(allContracts as any);
+
+  // back-compat alias for older code paths in this file
+  const providerFlags = qodiaFlags;
 
   const statusCounts = KUNDEN_STATUSES.reduce((acc, s) => {
     acc[s] = teamContracts.filter((c: any) => c.status === s).length;
