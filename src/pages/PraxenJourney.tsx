@@ -1120,9 +1120,8 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
               <TH>Status</TH>
               <TH>Kunde seit</TH>
               <TH>Vertrieb</TH>
-              <TH>Qodia</TH>
-              <TH>Usage</TH>
-              <TH>Letzte Aktivität</TH>
+              <TH>Onboarding</TH>
+              <TH>Aktivität</TH>
               <TH>{""}</TH>
             </tr>
           </thead>
