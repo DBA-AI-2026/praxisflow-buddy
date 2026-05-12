@@ -1157,6 +1157,9 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                     provider,
                     status,
                     hasUsage: provider === "qodia",
+                    contractId: row.id,
+                    contractCreatedAt: row.created_at ?? c.created_at ?? null,
+                    customerLabel: praxisLabel,
                   };
                 });
               return (
@@ -1201,8 +1204,13 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                     {c.start_date ? format(new Date(c.start_date), "dd.MM.yy", { locale: de }) : "–"}
                   </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground">{c.sales_partner_name || "–"}</td>
-                  <td className="py-3 px-4">
-                    <OnboardingCell products={onboardingProducts} />
+                  <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                    <OnboardingCell
+                      products={onboardingProducts}
+                      showMarkReady={isAdmin}
+                      customerLabel={praxisLabel}
+                      onMarkReady={() => qc.invalidateQueries({ queryKey: ["provider-status-map"] })}
+                    />
                   </td>
                   <td className="py-3 px-4">
                     <ActivityCell products={onboardingProducts} thresholds={thresholds} />
