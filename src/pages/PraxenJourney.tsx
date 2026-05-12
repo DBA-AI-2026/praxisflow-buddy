@@ -1200,20 +1200,10 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                   </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground">{c.sales_partner_name || "–"}</td>
                   <td className="py-3 px-4">
-                    {usesQodia ? (
-                      <div className="flex items-center gap-1.5">
-                        <QodiaStatusCell row={qodiaRow} />
-                        <QodiaWarningIcon row={qodiaRow} contractStatus={c.status} />
-                      </div>
-                    ) : (
-                      <span className="text-[10px] text-muted-foreground/40">–</span>
-                    )}
+                    <OnboardingCell products={onboardingProducts} />
                   </td>
                   <td className="py-3 px-4">
-                    {usesQodia ? <QodiaUsageCell row={qodiaRow} /> : <span className="text-[10px] text-muted-foreground/40">–</span>}
-                  </td>
-                  <td className="py-3 px-4">
-                    {usesQodia ? <QodiaLastActivityCell row={qodiaRow} /> : <span className="text-[10px] text-muted-foreground/40">–</span>}
+                    <ActivityCell products={onboardingProducts} thresholds={thresholds} />
                   </td>
                   <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                     <button
