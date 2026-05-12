@@ -122,6 +122,30 @@ export type Database = {
           },
         ]
       }
+      app_settings: {
+        Row: {
+          created_at: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          created_at?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -370,6 +394,7 @@ export type Database = {
       }
       contract_provider_status: {
         Row: {
+          auto_overridden_at: string | null
           contract_id: string
           created_at: string
           external_customer_id: string | null
@@ -377,6 +402,8 @@ export type Database = {
           id: string
           last_sync_at: string | null
           last_usage_at: string | null
+          manual_set_at: string | null
+          manual_set_by: string | null
           metadata: Json
           provider: string
           registration_status: Database["public"]["Enums"]["provider_registration_status"]
@@ -388,6 +415,7 @@ export type Database = {
           usage_status: Database["public"]["Enums"]["provider_usage_status"]
         }
         Insert: {
+          auto_overridden_at?: string | null
           contract_id: string
           created_at?: string
           external_customer_id?: string | null
@@ -395,6 +423,8 @@ export type Database = {
           id?: string
           last_sync_at?: string | null
           last_usage_at?: string | null
+          manual_set_at?: string | null
+          manual_set_by?: string | null
           metadata?: Json
           provider: string
           registration_status?: Database["public"]["Enums"]["provider_registration_status"]
@@ -406,6 +436,7 @@ export type Database = {
           usage_status?: Database["public"]["Enums"]["provider_usage_status"]
         }
         Update: {
+          auto_overridden_at?: string | null
           contract_id?: string
           created_at?: string
           external_customer_id?: string | null
@@ -413,6 +444,8 @@ export type Database = {
           id?: string
           last_sync_at?: string | null
           last_usage_at?: string | null
+          manual_set_at?: string | null
+          manual_set_by?: string | null
           metadata?: Json
           provider?: string
           registration_status?: Database["public"]["Enums"]["provider_registration_status"]
