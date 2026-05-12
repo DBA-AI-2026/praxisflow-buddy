@@ -1,12 +1,16 @@
 import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useSalesforceConnection } from "@/hooks/useSalesforceConnection";
-import { Save, Bell, Database, CheckCircle2, XCircle, Loader2, ExternalLink, Unplug, ShieldCheck, ShieldOff, Shield } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useActivityThresholds } from "@/hooks/useAppSettings";
+import { useQueryClient } from "@tanstack/react-query";
+import { Save, Bell, Database, CheckCircle2, XCircle, Loader2, ExternalLink, Unplug, ShieldCheck, ShieldOff, Shield, Activity } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabaseClient";
 import { MfaSetup } from "@/pages/MfaSetup";
