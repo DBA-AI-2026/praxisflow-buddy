@@ -1,12 +1,16 @@
 import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useSalesforceConnection } from "@/hooks/useSalesforceConnection";
-import { Save, Bell, Database, CheckCircle2, XCircle, Loader2, ExternalLink, Unplug, ShieldCheck, ShieldOff, Shield } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useActivityThresholds } from "@/hooks/useAppSettings";
+import { useQueryClient } from "@tanstack/react-query";
+import { Save, Bell, Database, CheckCircle2, XCircle, Loader2, ExternalLink, Unplug, ShieldCheck, ShieldOff, Shield, Activity } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabaseClient";
 import { MfaSetup } from "@/pages/MfaSetup";
@@ -27,6 +31,19 @@ export default function AdminSettings() {
   });
   const [syncInterval, setSyncInterval] = useState("daily");
   const { toast } = useToast();
+  const { isAdmin } = useUserRole();
+  const qc = useQueryClient();
+  const { data: thresholds } = useActivityThresholds();
+  const [yellowDays, setYellowDays] = useState<number>(30);
+  const [redDays, setRedDays] = useState<number>(60);
+  const [savingThresholds, setSavingThresholds] = useState(false);
+
+  useEffect(() => {
+    if (thresholds) {
+      setYellowDays(thresholds.yellow_days);
+      setRedDays(thresholds.red_days);
+    }
+  }, [thresholds]);
 
   // MFA state
   const [mfaEnabled, setMfaEnabled] = useState(false);
@@ -125,6 +142,33 @@ export default function AdminSettings() {
     });
   };
 
+  const saveThresholds = async () => {
+    if (!Number.isFinite(yellowDays) || !Number.isFinite(redDays) || yellowDays <= 0 || redDays <= 0) {
+      toast({ title: "Ungültige Werte", description: "Beide Werte müssen größer als 0 sein.", variant: "destructive" });
+      return;
+    }
+    if (redDays <= yellowDays) {
+      toast({ title: "Ungültige Werte", description: "Rot ab Tagen muss größer als Gelb ab Tagen sein.", variant: "destructive" });
+      return;
+    }
+    setSavingThresholds(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const { error } = await supabase.from("app_settings").upsert({
+        key: "activity_thresholds",
+        value: { yellow_days: yellowDays, red_days: redDays },
+        updated_by: userData.user?.id ?? null,
+      }, { onConflict: "key" });
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["app-settings", "activity_thresholds"] });
+      toast({ title: "Schwellen aktualisiert" });
+    } catch (err: any) {
+      toast({ title: "Fehler", description: err?.message ?? "Speichern fehlgeschlagen", variant: "destructive" });
+    } finally {
+      setSavingThresholds(false);
+    }
+  };
+
   return (
     <MainLayout title="Einstellungen" subtitle="System- und Sicherheitseinstellungen">
       <Tabs defaultValue="benachrichtigungen" className="space-y-6">
@@ -137,11 +181,56 @@ export default function AdminSettings() {
             <Shield className="h-4 w-4" />
             Sicherheit
           </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="aktivitaet" className="gap-2">
+              <Activity className="h-4 w-4" />
+              Aktivität
+            </TabsTrigger>
+          )}
           <TabsTrigger value="salesforce" className="gap-2">
             <Database className="h-4 w-4" />
             Salesforce
           </TabsTrigger>
         </TabsList>
+
+        {isAdmin && (
+          <TabsContent value="aktivitaet">
+            <div className="card-elevated p-6 max-w-xl space-y-4">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Aktivitäts-Schwellen für Qodia-Kunden</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Ab wie vielen Tagen ohne neue Rechnung wird ein Kunde gelb bzw. rot markiert?
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="yellow-days">Gelb ab Tagen</Label>
+                  <Input
+                    id="yellow-days"
+                    type="number"
+                    min={1}
+                    value={yellowDays}
+                    onChange={(e) => setYellowDays(parseInt(e.target.value, 10) || 0)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="red-days">Rot ab Tagen</Label>
+                  <Input
+                    id="red-days"
+                    type="number"
+                    min={1}
+                    value={redDays}
+                    onChange={(e) => setRedDays(parseInt(e.target.value, 10) || 0)}
+                  />
+                </div>
+              </div>
+              <Button onClick={saveThresholds} disabled={savingThresholds}>
+                {savingThresholds ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                Schwellen speichern
+              </Button>
+            </div>
+          </TabsContent>
+        )}
 
         <TabsContent value="benachrichtigungen">
           <div className="card-elevated p-6 max-w-xl">
