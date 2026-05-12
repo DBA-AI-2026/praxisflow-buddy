@@ -986,7 +986,7 @@ const kundenStatusCfg: Record<string, { label: string; cls: string }> = {
 function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string; highlightId?: string; matchesTeamFilter: (id?: string | null) => boolean }) {
   const navigate = useNavigate();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
-  const { isSalesPartner, isTippgeber, isAdmin, role } = useUserRole();
+  const { isSalesPartner, isTippgeber, isAdmin, isSalesLead, isRegionalLead, isUser, role } = useUserRole();
   const { user } = useAuth();
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("aktiv");
@@ -1208,7 +1208,7 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                   <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                     <OnboardingCell
                       products={onboardingProducts}
-                      showMarkReady={isAdmin}
+                      showMarkReady={isAdmin || isSalesLead || isRegionalLead || isSalesPartner || isUser}
                       customerLabel={praxisLabel}
                       onMarkReady={() => qc.invalidateQueries({ queryKey: ["provider-status-map"] })}
                     />
