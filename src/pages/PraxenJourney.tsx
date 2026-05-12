@@ -73,7 +73,7 @@ function QodiaIcon({ synced, conflict }: { synced: boolean; conflict?: boolean }
               : <XCircle className="h-4 w-4 text-muted-foreground/40 shrink-0" />}
           </TooltipTrigger>
           <TooltipContent>
-            {synced ? "Bei Qodia registriert" : "Noch nicht bei Qodia registriert"}
+            {synced ? "Qodia-Account angelegt" : "Noch kein Qodia-Account"}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
