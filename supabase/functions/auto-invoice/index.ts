@@ -924,6 +924,7 @@ Deno.serve(async (req) => {
         } catch (fibuErr) {
           console.error(`[auto-invoice] fibu_events block failed for ${invoice.invoice_number} – operative flow unaffected:`, String(fibuErr));
         }
+        } // end if (!stripeChargeFailed) — fibu/commissions block
 
         if (sendResult.error) {
           errors.push(`Invoice email [${invoice.invoice_number}]: ${sendResult.error.message}`);
