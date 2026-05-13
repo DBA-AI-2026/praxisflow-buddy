@@ -147,6 +147,51 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ──────────────────────────────────────────────────────────────────────
+    // B1-B5: Retry-Pfad für zuvor fehlgeschlagene Stripe-Charges
+    // Bedingungen: status='zahlung_fehlgeschlagen', stripe_invoice_id IS NULL,
+    //   retry_attempted_at IS NULL, email_sent_at <= (now - 1 Werktag).
+    // Es erfolgt EIN einmaliger Retry. retry_attempted_at wird VOR dem Stripe-Call
+    // gesetzt, damit ein Crash im Stripe-Pfad nicht zu Doppeleinzügen führt.
+    // Im manuellen Single-Contract-Modus (POST mit contract_id) wird der Retry-Pfad
+    // übersprungen, damit der manuelle Trigger deterministisch nur den Ziel-Vertrag
+    // verarbeitet.
+    // ──────────────────────────────────────────────────────────────────────
+    let retriesAttempted = 0;
+    let retriesSucceeded = 0;
+    let retriesFailed = 0;
+    if (!targetContractId) {
+      try {
+        const oneBdAgo = addBusinessDays(today, -1).toISOString();
+        const { data: retryCandidates, error: retryQueryErr } = await supabase
+          .from("invoices")
+          .select("*")
+          .eq("status", "zahlung_fehlgeschlagen")
+          .is("stripe_invoice_id", null)
+          .is("retry_attempted_at", null)
+          .lte("email_sent_at", oneBdAgo)
+          .limit(100);
+
+        if (retryQueryErr) {
+          console.error("[auto-invoice] Retry query error:", retryQueryErr.message);
+        } else if (retryCandidates && retryCandidates.length > 0) {
+          console.log(`[auto-invoice] Retry candidates: ${retryCandidates.length}`);
+          for (const inv of retryCandidates) {
+            try {
+              await processFailedInvoiceRetry({ supabase, invoice: inv });
+              retriesAttempted++;
+            } catch (rEx) {
+              console.error(`[auto-invoice] Retry exception for invoice ${inv.invoice_number}:`, String(rEx));
+            }
+          }
+        } else {
+          console.log("[auto-invoice] Retry: keine Kandidaten gefunden.");
+        }
+      } catch (retryFatal) {
+        console.error("[auto-invoice] Retry-Sektion fatal:", String(retryFatal));
+      }
+    }
+
     let processed = 0;
     let skipped = 0;
     const errors: string[] = [];
