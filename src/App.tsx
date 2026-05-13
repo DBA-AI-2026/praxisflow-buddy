@@ -78,7 +78,7 @@ const App = () => (
             <Route path="/praxen" element={<Navigate to="/pipeline" replace />} />
             <Route path="/interessenten" element={<Navigate to="/pipeline" replace />} />
             <Route path="/kunden" element={<Navigate to="/pipeline?tab=kunden" replace />} />
-            <Route path="/kunden/:id" element={<ProtectedRoute><Kunden /></ProtectedRoute>} />
+            <Route path="/kunden/:id" element={<ProtectedRoute requiredRoles={["user", "sales_lead", "regional_lead", "admin"]}><Kunden /></ProtectedRoute>} />
             <Route path="/demo-tracking" element={<ProtectedRoute><DemoTracking /></ProtectedRoute>} />
             <Route path="/reservierungen" element={<ProtectedRoute><Reservierungen /></ProtectedRoute>} />
             <Route path="/tickets" element={<ProtectedRoute><Tickets /></ProtectedRoute>} />
@@ -100,8 +100,6 @@ const App = () => (
             <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
             <Route path="/admin/agb" element={<ProtectedRoute><AgbManagement /></ProtectedRoute>} />
             <Route path="/tipp-leads" element={<ProtectedRoute><TippLeadsPage /></ProtectedRoute>} />
-            <Route path="/tippgeber" element={<ProtectedRoute><TippLeadsPage /></ProtectedRoute>} />
-            <Route path="/admin/tipp-leads" element={<ProtectedRoute><TippLeadsPage /></ProtectedRoute>} />
             <Route path="/tools/pdf-coordinates" element={<ProtectedRoute><PdfCoordinateFinder /></ProtectedRoute>} />
             <Route path="/tools/email-preview" element={<ProtectedRoute><EmailPreview /></ProtectedRoute>} />
             <Route path="/admin/email-preview" element={<ProtectedRoute><EmailPreview /></ProtectedRoute>} />
