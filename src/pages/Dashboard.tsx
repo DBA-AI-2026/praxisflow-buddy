@@ -516,8 +516,8 @@ export default function Dashboard() {
                       icon={FileText}
                       iconClass="text-blue-600"
                       bgClass="bg-blue-500/5"
-                      label={`${contractsMissingMandateMail.length} Vertrag/Verträge ohne SEPA-Mandat-Mail (Mail 1)`}
-                      sub="Mail 1 (SEPA-Mandat-Mail mit Stripe-Link) noch nicht versendet"
+                      label={`${contractsMissingMandateMail.length} Vertrag/Verträge ohne SEPA-Mandat-Versand`}
+                      sub="SEPA-Mandat-Mail mit Stripe-Link noch nicht versendet"
                       to="/pipeline?tab=abschlussphase&filter=missing_email"
                       accent="primary"
                     />
@@ -527,8 +527,8 @@ export default function Dashboard() {
                       icon={FileText}
                       iconClass="text-blue-600"
                       bgClass="bg-blue-500/5"
-                      label={`${contractsMissingConfirmationMail.length} Vertrag/Verträge ohne Vertragsbestätigung (Mail 2)`}
-                      sub="Mail 2 (Vertragsdokumente + AGB) noch nicht versendet"
+                      label={`${contractsMissingConfirmationMail.length} Vertrag/Verträge ohne Vertragsunterlagen-Versand`}
+                      sub="Vertragsunterlagen mit AGB noch nicht versendet"
                       to="/pipeline?tab=abschlussphase&filter=missing_confirmation"
                       accent="primary"
                     />
@@ -538,8 +538,8 @@ export default function Dashboard() {
                       icon={Clock}
                       iconClass="text-purple-600"
                       bgClass="bg-purple-500/5"
-                      label={`${contractsWaitingPayment.length} Vertrag/Verträge warten auf Zahlung`}
-                      sub="SEPA-Mandat-Mail versendet, Kundenbestätigung (Zahlung) ausstehend"
+                      label={`${contractsWaitingPayment.length} Vertrag/Verträge warten auf Mandat-Erteilung`}
+                      sub="SEPA-Mandat-Mail versendet, Kunde hat Bankverbindung noch nicht hinterlegt"
                       to="/pipeline?tab=abschlussphase&filter=waiting_payment"
                       accent="primary"
                     />

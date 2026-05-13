@@ -173,7 +173,7 @@ export function AnleitungDialog({ open, onOpenChange }: AnleitungDialogProps) {
                 <Step n={7} title="Kontrolle im Dashboard">
                   <ul className="mt-1 space-y-1 text-sm list-disc list-inside">
                     <li><strong>Verträge in Arbeit</strong> — offene Entwürfe und Genehmigungen</li>
-                    <li><strong>Alerts</strong> — „Vertrag ohne SEPA-Mandat-Mail" oder „wartet auf Zahlung" sofort behandeln</li>
+                    <li><strong>Alerts</strong> — „Vertrag ohne SEPA-Mandat-Versand" oder „wartet auf Mandat-Erteilung" sofort behandeln</li>
                     <li><strong>Pipeline-Tab Verträge</strong> — Vertrag im Vertriebsfluss</li>
                   </ul>
                 </Step>
