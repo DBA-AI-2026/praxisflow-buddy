@@ -193,6 +193,7 @@ Deno.serve(async (req) => {
         } else {
           console.log("[auto-invoice] Retry: keine Kandidaten gefunden.");
         }
+        console.log(`[auto-invoice] Retry summary: ${retriesAttempted} attempted, ${retriesSucceeded} succeeded, ${retriesFailed} still failed`);
       } catch (retryFatal) {
         console.error("[auto-invoice] Retry-Sektion fatal:", String(retryFatal));
       }
@@ -671,7 +672,9 @@ Deno.serve(async (req) => {
               <p style="margin:6px 0 0;font-size:13px;color:#8a4b00;">Bei Rückfragen wenden Sie sich bitte an <a href="mailto:buchhaltung@hfx-honorarfuchs.de" style="color:#8a4b00;">buchhaltung@hfx-honorarfuchs.de</a>.</p>
             </div>`
           : "";
-        const paymentBlockHtml = hasStripeCustomer && grossAmount > 0
+        const paymentBlockHtml = stripeChargeFailed
+          ? ""
+          : hasStripeCustomer && grossAmount > 0
           ? `<div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
               <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug (SEPA via Stripe)</strong></p>
               <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">Der Betrag wird automatisch von Ihrem hinterlegten SEPA-Konto eingezogen.</p>
