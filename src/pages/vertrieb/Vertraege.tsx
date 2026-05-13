@@ -1351,7 +1351,7 @@ export default function Vertraege() {
 
   const handleSaveWithBuchungsmail = async () => {
     if (!form.email) {
-      toast({ title: "E-Mail fehlt", description: "Bitte eine E-Mail-Adresse hinterlegen, damit die Buchungsmail gesendet werden kann.", variant: "destructive" });
+      toast({ title: "E-Mail fehlt", description: "Bitte eine E-Mail-Adresse hinterlegen, damit die SEPA-Mandat-Mail gesendet werden kann.", variant: "destructive" });
       return;
     }
     const hasMinimum = form.praxis.trim() !== "" || form.vorname.trim() !== "" || form.nachname.trim() !== "";
@@ -1874,7 +1874,7 @@ export default function Vertraege() {
         </div>
       )}
 
-      {/* Banner: Eingegangen ohne SEPA-Mandat-Mail (Mail 1) */}
+      {/* Banner: Eingegangen ohne SEPA-Mandat-Versand */}
       {contracts.filter((c: any) => c.status === "eingegangen" && !c.mandate_email_sent_at).length > 0 && (() => {
         const pending = contracts.filter((c: any) => c.status === "eingegangen" && !c.mandate_email_sent_at);
         return (
@@ -1882,12 +1882,12 @@ export default function Vertraege() {
             <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-warning">
-                {pending.length} {pending.length === 1 ? "Vertrag" : "Verträge"} ohne SEPA-Mandat-Mail (Mail 1)
+                {pending.length} {pending.length === 1 ? "Vertrag" : "Verträge"} ohne SEPA-Mandat-Versand
               </p>
               <p className="text-xs text-warning/80 mt-0.5">
                 {pending.length === 1
-                  ? "Folgender Vertrag hat Status \u201eEingegangen\u201c, aber die SEPA-Mandat-Mail mit Stripe-Link (Mail 1) wurde noch nicht gesendet:"
-                  : "Folgende Vertr\u00e4ge haben Status \u201eEingegangen\u201c, aber die SEPA-Mandat-Mail mit Stripe-Link (Mail 1) wurde noch nicht gesendet:"}
+                  ? "Folgender Vertrag hat Status \u201eEingegangen\u201c, aber die SEPA-Mandat-Mail mit Stripe-Link wurde noch nicht gesendet:"
+                  : "Folgende Vertr\u00e4ge haben Status \u201eEingegangen\u201c, aber die SEPA-Mandat-Mail mit Stripe-Link wurde noch nicht gesendet:"}
               </p>
               <ul className="mt-1.5 space-y-0.5">
                 {pending.map((c: any) => (
@@ -1908,7 +1908,7 @@ export default function Vertraege() {
         );
       })()}
 
-      {/* Banner: Eingegangen mit Mandat-Setup-Mail, aber ohne Vertragsbestätigung (Mail 2) */}
+      {/* Banner: Eingegangen mit Mandat-Setup-Mail, aber ohne Vertragsunterlagen-Versand */}
       {contracts.filter((c: any) => c.status === "eingegangen" && c.mandate_email_sent_at && !c.confirmation_email_sent_at).length > 0 && (() => {
         const pending = contracts.filter((c: any) => c.status === "eingegangen" && c.mandate_email_sent_at && !c.confirmation_email_sent_at);
         return (
@@ -1916,10 +1916,10 @@ export default function Vertraege() {
             <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-warning">
-                {pending.length} {pending.length === 1 ? "Vertrag" : "Verträge"} ohne Vertragsbestätigung (Mail 2)
+                {pending.length} {pending.length === 1 ? "Vertrag" : "Verträge"} ohne Vertragsunterlagen-Versand
               </p>
               <p className="text-xs text-warning/80 mt-0.5">
-                Folgende Verträge haben Mail 1 (SEPA-Mandat-Mail) erhalten, aber Mail 2 (Vertragsbestätigung mit AGB) wurde noch nicht versendet.
+                Folgende Verträge haben die SEPA-Mandat-Mail erhalten, aber die Vertragsunterlagen mit AGB wurden noch nicht versendet.
               </p>
               <ul className="mt-1.5 space-y-0.5">
                 {pending.map((c: any) => (

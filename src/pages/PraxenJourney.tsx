@@ -8,7 +8,7 @@ import {
   Search, Users, FileText, Building2, CheckCircle2, XCircle,
   UserPlus, Phone, UserCheck, FilePlus, Upload, Ban, Send,
   Loader2, Globe, PenLine, ArrowRight, RefreshCw, AlertTriangle, Clock,
-  Flame, Eye, ChevronDown, CalendarCheck, Mail,
+  Flame, Eye, ChevronDown, CalendarCheck, Mail, FileCheck,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { de } from "date-fns/locale";
@@ -812,10 +812,10 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
         return { label: "Vertrag bearbeiten", icon: <PenLine className="h-3 w-3" />, cls: "bg-muted text-muted-foreground border border-border hover:bg-muted/80", isClickable: true };
       case "eingegangen":
         if (!c.mandate_email_sent_at) {
-          return { label: "SEPA-Mandat-Mail senden", icon: <Mail className="h-3 w-3" />, cls: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm", isClickable: true, isBuchungsmail: true };
+          return { label: "SEPA-Mandat senden", icon: <Mail className="h-3 w-3" />, cls: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm", isClickable: true, isBuchungsmail: true };
         }
         if (!c.customer_confirmed_at) {
-          return { label: "Warten auf Zahlung", icon: <Clock className="h-3 w-3" />, cls: "bg-warning/10 text-warning border border-warning/20", isClickable: false };
+          return { label: "Wartet auf Mandat-Erteilung", icon: <Clock className="h-3 w-3" />, cls: "bg-warning/10 text-warning border border-warning/20", isClickable: false };
         }
         return { label: "Aktivierung prüfen", icon: <CheckCircle2 className="h-3 w-3" />, cls: "bg-success/10 text-success border border-success/20 hover:bg-success/20", isClickable: true };
       case "gezeichnet":
@@ -839,8 +839,8 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
       {/* Attention bar */}
       {(attentionMetrics.missingEmail > 0 || attentionMetrics.waitingPayment > 0 || attentionMetrics.stale7 > 0) && (
         <AttentionBar items={[
-          attentionMetrics.missingEmail > 0 ? { icon: <Mail className="h-3 w-3" />, text: `${attentionMetrics.missingEmail} Vertrag${attentionMetrics.missingEmail > 1 ? "e" : ""} ohne SEPA-Mandat-Mail`, cls: "text-destructive" } : { icon: null, text: "" },
-          attentionMetrics.waitingPayment > 0 ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.waitingPayment} warten auf Zahlung`, cls: "text-warning" } : { icon: null, text: "" },
+          attentionMetrics.missingEmail > 0 ? { icon: <Mail className="h-3 w-3" />, text: `${attentionMetrics.missingEmail} Vertrag${attentionMetrics.missingEmail > 1 ? "e" : ""} ohne SEPA-Mandat-Versand`, cls: "text-destructive" } : { icon: null, text: "" },
+          attentionMetrics.waitingPayment > 0 ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.waitingPayment} warten auf Mandat-Erteilung`, cls: "text-warning" } : { icon: null, text: "" },
           attentionMetrics.stale7 > 0 ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.stale7} seit >7 Tagen offen`, cls: "text-orange-600 dark:text-orange-400" } : { icon: null, text: "" },
         ]} />
       )}
@@ -938,17 +938,17 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex flex-col gap-1">
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.mandate_email_sent_at ? "text-success" : "text-destructive"}`} title="Mail 1: SEPA-Mandat-Mail (Stripe-Link)">
-                        {c.mandate_email_sent_at ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                        Mail 1
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.mandate_email_sent_at ? "text-success" : "text-muted-foreground/50"}`} title="SEPA-Mandat: Stripe-Link wurde an Kunden versendet">
+                        {c.mandate_email_sent_at ? <CheckCircle2 className="h-3 w-3" /> : <Mail className="h-3 w-3" />}
+                        SEPA-Mandat
                       </span>
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.confirmation_email_sent_at ? "text-success" : "text-muted-foreground/50"}`} title="Mail 2: Vertragsbestätigung mit AGB">
-                        {c.confirmation_email_sent_at ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                        Mail 2
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.confirmation_email_sent_at ? "text-success" : "text-muted-foreground/50"}`} title="Vertragsunterlagen: Vertrags-PDF + AGB an Kunden versendet">
+                        {c.confirmation_email_sent_at ? <CheckCircle2 className="h-3 w-3" /> : <FileCheck className="h-3 w-3" />}
+                        Vertragsunterlagen
                       </span>
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.customer_confirmed_at ? "text-success" : "text-muted-foreground/50"}`}>
-                        {c.customer_confirmed_at ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                        Zahlung
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.customer_confirmed_at ? "text-success" : "text-muted-foreground/50"}`} title="Mandat erteilt: Kunde hat SEPA-Bankverbindung hinterlegt">
+                        {c.customer_confirmed_at ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                        Mandat erteilt
                       </span>
                     </div>
                   </td>
