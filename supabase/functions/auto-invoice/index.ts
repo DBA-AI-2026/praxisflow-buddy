@@ -58,15 +58,18 @@ function getGermanHolidays(year: number): Set<string> {
 
 function addBusinessDays(from: Date, days: number): Date {
   const result = new Date(from);
-  const holidays = getGermanHolidays(from.getFullYear());
+  const holidays = getGermanHolidays(from.getFullYear() - 1);
+  const holidaysNow = getGermanHolidays(from.getFullYear());
   const holidaysNext = getGermanHolidays(from.getFullYear() + 1);
-  const allHolidays = new Set([...holidays, ...holidaysNext]);
-  let added = 0;
-  while (added < days) {
-    result.setDate(result.getDate() + 1);
+  const allHolidays = new Set([...holidays, ...holidaysNow, ...holidaysNext]);
+  const step = days >= 0 ? 1 : -1;
+  let moved = 0;
+  const target = Math.abs(days);
+  while (moved < target) {
+    result.setDate(result.getDate() + step);
     const dow = result.getDay();
     const dateStr = result.toISOString().split("T")[0];
-    if (dow !== 0 && dow !== 6 && !allHolidays.has(dateStr)) added++;
+    if (dow !== 0 && dow !== 6 && !allHolidays.has(dateStr)) moved++;
   }
   return result;
 }
