@@ -937,9 +937,13 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex flex-col gap-1">
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.confirmation_email_sent_at ? "text-success" : "text-destructive"}`}>
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.mandate_email_sent_at ? "text-success" : "text-destructive"}`} title="Mail 1: Mandat-Setup-Mail (Stripe-Link)">
+                        {c.mandate_email_sent_at ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                        Mail 1
+                      </span>
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.confirmation_email_sent_at ? "text-success" : "text-muted-foreground/50"}`} title="Mail 2: Vertragsbestätigung mit AGB">
                         {c.confirmation_email_sent_at ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                        E-Mail
+                        Mail 2
                       </span>
                       <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.customer_confirmed_at ? "text-success" : "text-muted-foreground/50"}`}>
                         {c.customer_confirmed_at ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
