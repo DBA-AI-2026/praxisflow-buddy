@@ -799,8 +799,8 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
 
   // Attention metrics
   const attentionMetrics = useMemo(() => {
-    const missingEmail = teamContracts.filter((c: any) => c.status === "eingegangen" && !c.confirmation_email_sent_at).length;
-    const waitingPayment = teamContracts.filter((c: any) => c.status === "eingegangen" && c.confirmation_email_sent_at && !c.customer_confirmed_at).length;
+    const missingEmail = teamContracts.filter((c: any) => c.status === "eingegangen" && !c.mandate_email_sent_at).length;
+    const waitingPayment = teamContracts.filter((c: any) => c.status === "eingegangen" && c.mandate_email_sent_at && !c.customer_confirmed_at).length;
     const stale7 = teamContracts.filter((c: any) => differenceInDays(new Date(), new Date(c.created_at)) > 7).length;
     return { missingEmail, waitingPayment, stale7 };
   }, [teamContracts]);
