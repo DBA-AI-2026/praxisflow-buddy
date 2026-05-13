@@ -178,10 +178,13 @@ Deno.serve(async (req) => {
           console.log(`[auto-invoice] Retry candidates: ${retryCandidates.length}`);
           for (const inv of retryCandidates) {
             try {
-              await processFailedInvoiceRetry({ supabase, invoice: inv });
+              const result = await processFailedInvoiceRetry({ supabase, invoice: inv });
               retriesAttempted++;
+              if (result === "success") retriesSucceeded++;
+              else if (result === "failed") retriesFailed++;
             } catch (rEx) {
               console.error(`[auto-invoice] Retry exception for invoice ${inv.invoice_number}:`, String(rEx));
+              retriesFailed++;
             }
           }
         } else {
