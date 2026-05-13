@@ -694,7 +694,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
   const sendBuchungsmail = async (contract: any, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!contract.email) {
-      toast.error("Keine E-Mail-Adresse hinterlegt – Mandat-Mail kann nicht gesendet werden.");
+      toast.error("Keine E-Mail-Adresse hinterlegt – SEPA-Mandat-Mail kann nicht gesendet werden.");
       return;
     }
     setSendingBuchungsmail(contract.id);
@@ -703,11 +703,11 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
         body: { contract_id: contract.id },
       });
       if (error) throw error;
-      toast.success(`Mandat-Setup-Mail an ${contract.email} gesendet`);
+      toast.success(`SEPA-Mandat-Mail an ${contract.email} gesendet`);
       queryClient.invalidateQueries({ queryKey: ["journey-contracts-abschluss"] });
       queryClient.invalidateQueries({ queryKey: ["journey-counts"] });
     } catch (err: any) {
-      toast.error(err.message || "Fehler beim Senden der Mandat-Mail");
+      toast.error(err.message || "Fehler beim Senden der SEPA-Mandat-Mail");
     } finally {
       setSendingBuchungsmail(null);
     }
@@ -785,11 +785,11 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
   // Sort: missing email first, then stale, then by created_at
   const sorted = useMemo(() => {
     return [...filteredBase].sort((a, b) => {
-      // Priority 1: eingegangen ohne Mandat-Setup-Mail (Mail 1)
+      // Priority 1: eingegangen ohne SEPA-Mandat-Mail (Mail 1)
       const aMissing = a.status === "eingegangen" && !a.mandate_email_sent_at ? 1 : 0;
       const bMissing = b.status === "eingegangen" && !b.mandate_email_sent_at ? 1 : 0;
       if (aMissing !== bMissing) return bMissing - aMissing;
-      // Priority 2: Mandat-Setup-Mail versendet, Kunde hat noch nicht bezahlt
+      // Priority 2: SEPA-Mandat-Mail versendet, Kunde hat noch nicht bezahlt
       const aWaiting = a.status === "eingegangen" && a.mandate_email_sent_at && !a.customer_confirmed_at ? 1 : 0;
       const bWaiting = b.status === "eingegangen" && b.mandate_email_sent_at && !b.customer_confirmed_at ? 1 : 0;
       if (aWaiting !== bWaiting) return bWaiting - aWaiting;
@@ -812,7 +812,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
         return { label: "Vertrag bearbeiten", icon: <PenLine className="h-3 w-3" />, cls: "bg-muted text-muted-foreground border border-border hover:bg-muted/80", isClickable: true };
       case "eingegangen":
         if (!c.mandate_email_sent_at) {
-          return { label: "Mandat-Mail senden", icon: <Send className="h-3 w-3" />, cls: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm", isClickable: true, isBuchungsmail: true };
+          return { label: "SEPA-Mandat-Mail senden", icon: <Mail className="h-3 w-3" />, cls: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm", isClickable: true, isBuchungsmail: true };
         }
         if (!c.customer_confirmed_at) {
           return { label: "Warten auf Zahlung", icon: <Clock className="h-3 w-3" />, cls: "bg-warning/10 text-warning border border-warning/20", isClickable: false };
@@ -839,7 +839,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
       {/* Attention bar */}
       {(attentionMetrics.missingEmail > 0 || attentionMetrics.waitingPayment > 0 || attentionMetrics.stale7 > 0) && (
         <AttentionBar items={[
-          attentionMetrics.missingEmail > 0 ? { icon: <Send className="h-3 w-3" />, text: `${attentionMetrics.missingEmail} Vertrag${attentionMetrics.missingEmail > 1 ? "e" : ""} ohne Mandat-Mail`, cls: "text-destructive" } : { icon: null, text: "" },
+          attentionMetrics.missingEmail > 0 ? { icon: <Mail className="h-3 w-3" />, text: `${attentionMetrics.missingEmail} Vertrag${attentionMetrics.missingEmail > 1 ? "e" : ""} ohne SEPA-Mandat-Mail`, cls: "text-destructive" } : { icon: null, text: "" },
           attentionMetrics.waitingPayment > 0 ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.waitingPayment} warten auf Zahlung`, cls: "text-warning" } : { icon: null, text: "" },
           attentionMetrics.stale7 > 0 ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.stale7} seit >7 Tagen offen`, cls: "text-orange-600 dark:text-orange-400" } : { icon: null, text: "" },
         ]} />
@@ -938,7 +938,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex flex-col gap-1">
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.mandate_email_sent_at ? "text-success" : "text-destructive"}`} title="Mail 1: Mandat-Setup-Mail (Stripe-Link)">
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.mandate_email_sent_at ? "text-success" : "text-destructive"}`} title="Mail 1: SEPA-Mandat-Mail (Stripe-Link)">
                         {c.mandate_email_sent_at ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
                         Mail 1
                       </span>
