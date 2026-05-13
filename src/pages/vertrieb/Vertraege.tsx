@@ -1908,6 +1908,38 @@ export default function Vertraege() {
         );
       })()}
 
+      {/* Banner: Eingegangen mit Mandat-Setup-Mail, aber ohne Vertragsbestätigung (Mail 2) */}
+      {contracts.filter((c: any) => c.status === "eingegangen" && c.mandate_email_sent_at && !c.confirmation_email_sent_at).length > 0 && (() => {
+        const pending = contracts.filter((c: any) => c.status === "eingegangen" && c.mandate_email_sent_at && !c.confirmation_email_sent_at);
+        return (
+          <div className="mb-4 flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/5 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-warning">
+                {pending.length} {pending.length === 1 ? "Vertrag" : "Verträge"} ohne Vertragsbestätigung (Mail 2)
+              </p>
+              <p className="text-xs text-warning/80 mt-0.5">
+                Folgende Verträge haben Mail 1 (Mandat-Setup) erhalten, aber Mail 2 (Vertragsbestätigung mit AGB) wurde noch nicht versendet.
+              </p>
+              <ul className="mt-1.5 space-y-0.5">
+                {pending.map((c: any) => (
+                  <li key={c.id} className="text-xs text-warning/80 font-medium">
+                    &bull; {c.customer_name || c.praxis || "\u2013"}{c.hfx_customer_number ? ` (${c.hfx_customer_number})` : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("eingegangen")}
+              className="shrink-0 text-xs font-medium text-warning underline underline-offset-2 hover:no-underline whitespace-nowrap"
+            >
+              Anzeigen
+            </button>
+          </div>
+        );
+      })()}
+
       {/* Table */}
       <div className="card-elevated overflow-hidden">
         <div className="overflow-x-auto">
