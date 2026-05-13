@@ -1326,6 +1326,7 @@ export type Database = {
           plz: string | null
           positions: Json
           rechnungs_email: string | null
+          retry_attempted_at: string | null
           revenue_id: string | null
           status: string
           stripe_invoice_id: string | null
@@ -1357,6 +1358,7 @@ export type Database = {
           plz?: string | null
           positions?: Json
           rechnungs_email?: string | null
+          retry_attempted_at?: string | null
           revenue_id?: string | null
           status?: string
           stripe_invoice_id?: string | null
@@ -1388,6 +1390,7 @@ export type Database = {
           plz?: string | null
           positions?: Json
           rechnungs_email?: string | null
+          retry_attempted_at?: string | null
           revenue_id?: string | null
           status?: string
           stripe_invoice_id?: string | null
