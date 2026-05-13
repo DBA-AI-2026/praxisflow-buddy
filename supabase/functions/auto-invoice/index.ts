@@ -692,14 +692,25 @@ Deno.serve(async (req) => {
 
         const nowTs = new Date().toISOString();
 
-        // Update invoice status to 'versendet'
-        await supabase
-          .from("invoices")
-          .update({ status: "versendet", email_sent_at: nowTs })
-          .eq("id", invoice.id);
+        // A4: email_sent_at IMMER setzen (Kunden-Mail wurde versendet, ggf. mit Hinweisblock).
+        // Status nur auf 'versendet' anheben, wenn Stripe nicht fehlgeschlagen ist – sonst bleibt
+        // 'zahlung_fehlgeschlagen' (aus Catch). Status-Schutz verhindert Überschreiben von bezahlt/storniert.
+        if (stripeChargeFailed) {
+          await supabase
+            .from("invoices")
+            .update({ email_sent_at: nowTs })
+            .eq("id", invoice.id);
+        } else {
+          await supabase
+            .from("invoices")
+            .update({ status: "versendet", email_sent_at: nowTs })
+            .eq("id", invoice.id)
+            .not("status", "in", "(bezahlt,storniert)");
+        }
 
+        // A5/A6: Provisionen + fibu_events nur wenn Stripe-Charge erfolgreich war.
         // Auto-generate commission payout
-        if (contract.sales_partner_id) {
+        if (!stripeChargeFailed && contract.sales_partner_id) {
           const isGoae = /GOÄ|GOA/i.test(contract.product_name || "");
 
           if (isGoae) {
