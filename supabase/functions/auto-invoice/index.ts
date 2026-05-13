@@ -193,6 +193,7 @@ Deno.serve(async (req) => {
         } else {
           console.log("[auto-invoice] Retry: keine Kandidaten gefunden.");
         }
+        console.log(`[auto-invoice] Retry summary: ${retriesAttempted} attempted, ${retriesSucceeded} succeeded, ${retriesFailed} still failed`);
       } catch (retryFatal) {
         console.error("[auto-invoice] Retry-Sektion fatal:", String(retryFatal));
       }
