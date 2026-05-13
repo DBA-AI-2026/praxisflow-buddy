@@ -250,19 +250,17 @@ function buildLeadConfirmationHtml() {
 <tr><td>
 <table align="center" border="0" cellpadding="0" cellspacing="0" width="580"><tr>
 <td align="center" valign="top" width="290" style="padding: 10px;">
-<a href="https://download.qodia.de/production/hfx/latest/mac/hfx-desktop.dmg" style="text-decoration:none; display:block;">
-<table border="0" cellpadding="0" cellspacing="0" style="border: 1px solid #6d6d6d; border-radius: 6px; width: 100%;"><tr><td align="center" style="padding: 15px 10px; height: 65px;">
-<table border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-<td style="padding-right:10px;"><img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/apple-100.png" width="25" alt="MacOS" style="display:block; border:0; width:25px;"></td>
-<td align="left" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; line-height:16pt;">Download MacOS</td>
-</tr></table></td></tr></table></a></td>
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border: 1px solid #6d6d6d; border-radius: 6px; width: 100%;"><tr><td align="center" style="padding:0;">
+<a href="https://download.qodia.de/production/hfx/latest/mac/hfx-desktop.dmg" target="_blank" rel="noopener noreferrer" style="display:block; padding:20px 10px; text-decoration:none; color:#444444; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; line-height:16pt;">
+<img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/apple-100.png" width="25" height="25" alt="" style="vertical-align:middle; border:0; margin-right:10px;">Download MacOS
+</a>
+</td></tr></table></td>
 <td align="center" valign="top" width="290" style="padding: 10px;">
-<a href="https://download.qodia.de/production/hfx/latest/windows/hfx-desktop.exe" style="text-decoration:none; display:block;">
-<table border="0" cellpadding="0" cellspacing="0" style="border: 1px solid #6d6d6d; border-radius: 6px; width: 100%;"><tr><td align="center" style="padding: 15px 10px; height: 65px;">
-<table border="0" cellpadding="0" cellspacing="0" align="center"><tr>
-<td style="padding-right:10px;"><img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/Windows.png" width="25" alt="Windows" style="display:block; border:0; width:25px;"></td>
-<td align="left" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; line-height:16pt;">Download Windows</td>
-</tr></table></td></tr></table></a></td>
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border: 1px solid #6d6d6d; border-radius: 6px; width: 100%;"><tr><td align="center" style="padding:0;">
+<a href="https://download.qodia.de/production/hfx/latest/windows/hfx-desktop.exe" target="_blank" rel="noopener noreferrer" style="display:block; padding:20px 10px; text-decoration:none; color:#444444; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; line-height:16pt;">
+<img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/Windows.png" width="25" height="25" alt="" style="vertical-align:middle; border:0; margin-right:10px;">Download Windows
+</a>
+</td></tr></table></td>
 </tr></table>
 </td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="60">&nbsp;</td></tr>
