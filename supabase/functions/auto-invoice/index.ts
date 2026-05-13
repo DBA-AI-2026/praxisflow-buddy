@@ -7,6 +7,30 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
   apiVersion: "2024-06-20",
 });
 
+const BUCHHALTUNG_EMAIL = Deno.env.get("BUCHHALTUNG_EMAIL") || "buchhaltung@hfx-honorarfuchs.de";
+
+// Resolve sales partner email via profiles.email, fallback to auth.admin.getUserById
+async function resolveSalesPartnerEmail(supabase: any, salesPartnerId: string | null | undefined): Promise<string | null> {
+  if (!salesPartnerId) return null;
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("user_id", salesPartnerId)
+      .maybeSingle();
+    if (profile?.email) return profile.email as string;
+  } catch (e) {
+    console.error("[auto-invoice] profiles lookup failed:", String(e));
+  }
+  try {
+    const { data } = await supabase.auth.admin.getUserById(salesPartnerId);
+    return data?.user?.email ?? null;
+  } catch (e) {
+    console.error("[auto-invoice] auth.admin.getUserById failed:", String(e));
+    return null;
+  }
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
