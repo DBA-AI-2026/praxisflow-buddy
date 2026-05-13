@@ -237,14 +237,19 @@ export default function Dashboard() {
     return contractAlerts.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
   }, [contractAlerts, matchesTeamFilter, isRegionalLead]);
 
-  const contractsMissingEmail = filteredContractAlerts.filter(
-    (c: any) => !c.confirmation_email_sent_at
+  // Mail 1 = Mandat-Setup-Mail (mandate_email_sent_at)
+  const contractsMissingMandateMail = filteredContractAlerts.filter(
+    (c: any) => !c.mandate_email_sent_at
+  );
+  // Mail 2 = Vertragsbestätigung mit AGB (confirmation_email_sent_at) — erst nach Mandat-Setup
+  const contractsMissingConfirmationMail = filteredContractAlerts.filter(
+    (c: any) => c.mandate_email_sent_at && !c.confirmation_email_sent_at
   );
   const contractsWaitingPayment = filteredContractAlerts.filter(
     (c: any) => c.confirmation_email_sent_at && !c.customer_confirmed_at
   );
 
-  const totalAlerts = overdueLeads14.length + overdueLeads7.length + contractsMissingEmail.length + contractsWaitingPayment.length;
+  const totalAlerts = overdueLeads14.length + overdueLeads7.length + contractsMissingMandateMail.length + contractsMissingConfirmationMail.length + contractsWaitingPayment.length;
 
   // Filtered pipeline counts
   const leadsCount = useMemo(() => {
