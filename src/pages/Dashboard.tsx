@@ -511,13 +511,24 @@ export default function Dashboard() {
                       accent="warning"
                     />
                   )}
-                  {contractsMissingEmail.length > 0 && (
+                  {contractsMissingMandateMail.length > 0 && (
                     <AlertRow
                       icon={FileText}
                       iconClass="text-blue-600"
                       bgClass="bg-blue-500/5"
-                      label={`${contractsMissingEmail.length} Vertrag/Verträge ohne Buchungsmail`}
-                      sub="Bestätigungsmail noch nicht versendet"
+                      label={`${contractsMissingMandateMail.length} Vertrag/Verträge ohne Mandat-Setup-Mail (Mail 1)`}
+                      sub="Mail 1 (SEPA-Mandat-Link) noch nicht versendet"
+                      to="/pipeline?tab=abschlussphase&filter=missing_email"
+                      accent="primary"
+                    />
+                  )}
+                  {contractsMissingConfirmationMail.length > 0 && (
+                    <AlertRow
+                      icon={FileText}
+                      iconClass="text-blue-600"
+                      bgClass="bg-blue-500/5"
+                      label={`${contractsMissingConfirmationMail.length} Vertrag/Verträge ohne Vertragsbestätigung (Mail 2)`}
+                      sub="Mail 2 (Vertragsdokumente + AGB) noch nicht versendet"
                       to="/pipeline?tab=abschlussphase&filter=missing_email"
                       accent="primary"
                     />
