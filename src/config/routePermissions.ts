@@ -74,6 +74,9 @@ export const routePermissions: RoutePermission[] = [
   // Systemdokumentation
   { path: "/admin/documentation", allowedRoles: ["admin"] },
 
+  // Contract Inspect (Admin-Diagnose-Tool, kein Sidebar-Eintrag)
+  { path: "/admin/contract-inspect", allowedRoles: ["admin"] },
+
   // Buchhaltung
   { path: "/buchhaltung", allowedRoles: ["admin"] },
 
