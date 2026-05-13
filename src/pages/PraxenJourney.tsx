@@ -1326,7 +1326,7 @@ export default function PraxenJourney() {
         supabase.from("leads").select("id", { count: "exact", head: true }).in("status", ACTIVE_LEAD_STATUSES),
         supabase.from("contracts").select("id", { count: "exact", head: true }).in("status", ["entwurf", "eingegangen", "gezeichnet"]),
         supabase.from("contracts").select("id", { count: "exact", head: true }).in("status", ["aktiv", "gekuendigt", "beendet"]),
-        supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "eingegangen").is("confirmation_email_sent_at", null),
+        supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "eingegangen").is("mandate_email_sent_at", null),
       ]);
       return { leads: l.count ?? 0, abschluss: ab.count ?? 0, kunden: k.count ?? 0, missingEmail: me.count ?? 0 };
     },
