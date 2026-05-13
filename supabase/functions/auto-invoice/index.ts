@@ -459,6 +459,9 @@ Deno.serve(async (req) => {
 
         // ── 3. DANACH Stripe-Zahlung auslösen ───────────────────────────────
         let stripeInvoiceId: string | null = null;
+        // A1: Flag, damit nachfolgende Blöcke (Status, fibu_events, Provisionen) reagieren können
+        let stripeChargeFailed = false;
+        let stripeErrorMessage: string | null = null;
         if (hasStripeCustomer && grossAmount > 0) {
           const createdItemIds: string[] = [];
           try {
@@ -503,7 +506,6 @@ Deno.serve(async (req) => {
 
             stripeInvoiceId = stripeInvoice.id;
 
-            // Stripe-ID auf interner Rechnung nachführen
             await supabase
               .from("invoices")
               .update({ stripe_invoice_id: stripeInvoiceId })
@@ -513,9 +515,11 @@ Deno.serve(async (req) => {
           } catch (stripeErr: any) {
             console.error(`[auto-invoice] Stripe error for contract ${contract.id}:`, stripeErr?.message);
             errors.push(`Stripe [${contract.id}]: ${stripeErr?.message}`);
+            // A1: Flag setzen
+            stripeChargeFailed = true;
+            stripeErrorMessage = stripeErr?.message || String(stripeErr);
 
-            // Cleanup: in diesem Lauf erstellte, noch nicht zu einer Invoice gehörige InvoiceItems löschen,
-            // damit sie nicht im nächsten Stripe-Invoice-Zyklus mitgezogen werden.
+            // Cleanup: in diesem Lauf erstellte, noch nicht zu einer Invoice gehörige InvoiceItems löschen.
             for (const itemId of createdItemIds) {
               try {
                 await stripe.invoiceItems.del(itemId);
@@ -524,12 +528,73 @@ Deno.serve(async (req) => {
               }
             }
 
-            // Interne Rechnung als 'zahlung_fehlgeschlagen' markieren, damit Buchhaltung sie sieht
-            // (analog zum Webhook-Pfad bei invoice.payment_failed). Stripe-ID bleibt NULL.
+            // A2: Interne Rechnung als 'zahlung_fehlgeschlagen' markieren – mit Status-Schutz
             await supabase
               .from("invoices")
               .update({ status: "zahlung_fehlgeschlagen" })
-              .eq("id", invoice.id);
+              .eq("id", invoice.id)
+              .not("status", "in", "(bezahlt,storniert)");
+
+            // A7: Audit-Event in fibu_events (idempotent via idx_fibu_events_source_unique)
+            try {
+              const { error: auditErr } = await supabase.from("fibu_events").insert({
+                event_type: "auto_invoice_charge_failed",
+                source_module: "invoices",
+                source_reference_id: invoice.id,
+                contract_id: contract.id,
+                customer_id: contract.customer_id ?? null,
+                product_name: contract.product_name,
+                period_start: periodStart,
+                period_end: periodEnd,
+                amount_net: Number(invoice.net_amount) || 0,
+                tax_amount: Number(invoice.tax_amount) || 0,
+                amount_gross: Number(invoice.gross_amount) || 0,
+                currency: "EUR",
+                status: "draft",
+                export_status: "open",
+                description: `Stripe-Charge fehlgeschlagen für ${invoice.invoice_number} – ${stripeErrorMessage}`,
+                created_by: null,
+                metadata: {
+                  invoice_id: invoice.id,
+                  invoice_number: invoice.invoice_number,
+                  hfx_customer_number: contract.hfx_customer_number ?? null,
+                  stripe_error: stripeErrorMessage,
+                  billing_period: billingPeriod,
+                  period_month: periodMonthStr,
+                  attempt: "initial",
+                },
+              } as any);
+              if (auditErr && (auditErr as any).code !== "23505") {
+                console.error(`[auto-invoice] fibu_events auto_invoice_charge_failed insert failed:`, auditErr.message);
+              }
+            } catch (auditEx) {
+              console.error(`[auto-invoice] fibu_events auto_invoice_charge_failed exception:`, String(auditEx));
+            }
+
+            // A9: Buchhaltungs- + Vertriebs-Mail (Failure-Notification, einmalig)
+            try {
+              const partnerEmail = await resolveSalesPartnerEmail(supabase, contract.sales_partner_id);
+              const recipients = [BUCHHALTUNG_EMAIL];
+              if (partnerEmail && partnerEmail !== BUCHHALTUNG_EMAIL) recipients.push(partnerEmail);
+              await resend.emails.send({
+                from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+                reply_to: "info@hfx-honorarfuchs.de",
+                to: recipients,
+                subject: `[Stripe-Failure] Rechnung ${invoice.invoice_number} – ${contract.customer_name}`,
+                html: `<p>Die automatische Stripe-Abbuchung ist fehlgeschlagen.</p>
+<ul>
+  <li><strong>Rechnung:</strong> ${invoice.invoice_number}</li>
+  <li><strong>Kunde:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</li>
+  <li><strong>Vertrag-ID:</strong> ${contract.id}</li>
+  <li><strong>Abrechnungszeitraum:</strong> ${billingPeriod}</li>
+  <li><strong>Bruttobetrag:</strong> ${Number(invoice.gross_amount).toFixed(2)} €</li>
+  <li><strong>Stripe-Fehler:</strong> ${stripeErrorMessage}</li>
+</ul>
+<p>Interner Status: <strong>zahlung_fehlgeschlagen</strong>. Es erfolgt automatisch <strong>ein einmaliger Retry</strong> frühestens 1 Werktag nach Versand der Rechnung.</p>`,
+              });
+            } catch (mailErr) {
+              console.error(`[auto-invoice] Buchhaltungs-/Vertriebs-Failure-Mail fehlgeschlagen:`, String(mailErr));
+            }
           }
         } else if (grossAmount === 0) {
           console.log(`[auto-invoice] Contract ${contract.id} – Gesamtbetrag 0 €, kein Stripe-Einzug nötig`);
