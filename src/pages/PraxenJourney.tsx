@@ -810,7 +810,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
       case "entwurf":
         return { label: "Vertrag bearbeiten", icon: <PenLine className="h-3 w-3" />, cls: "bg-muted text-muted-foreground border border-border hover:bg-muted/80", isClickable: true };
       case "eingegangen":
-        if (!c.confirmation_email_sent_at) {
+        if (!c.mandate_email_sent_at) {
           return { label: "Mandat-Mail senden", icon: <Send className="h-3 w-3" />, cls: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm", isClickable: true, isBuchungsmail: true };
         }
         if (!c.customer_confirmed_at) {
