@@ -767,6 +767,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
 
     // Deep-link contract filter from Dashboard
     if (contractFilter === "missing_email" && !(c.status === "eingegangen" && !c.mandate_email_sent_at)) return false;
+    if (contractFilter === "missing_confirmation" && !(c.status === "eingegangen" && c.mandate_email_sent_at && !c.confirmation_email_sent_at)) return false;
     if (contractFilter === "waiting_payment" && !(c.status === "eingegangen" && c.mandate_email_sent_at && !c.customer_confirmed_at)) return false;
 
     if (!s) return true;
