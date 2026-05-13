@@ -237,11 +237,11 @@ export default function Dashboard() {
     return contractAlerts.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
   }, [contractAlerts, matchesTeamFilter, isRegionalLead]);
 
-  // Mail 1 = Mandat-Setup-Mail (mandate_email_sent_at)
+  // Mail 1 = SEPA-Mandat-Mail (mandate_email_sent_at)
   const contractsMissingMandateMail = filteredContractAlerts.filter(
     (c: any) => !c.mandate_email_sent_at
   );
-  // Mail 2 = Vertragsbestätigung mit AGB (confirmation_email_sent_at) — erst nach Mandat-Setup
+  // Mail 2 = Vertragsbestätigung mit AGB (confirmation_email_sent_at) — erst nach SEPA-Mandat-Mail
   const contractsMissingConfirmationMail = filteredContractAlerts.filter(
     (c: any) => c.mandate_email_sent_at && !c.confirmation_email_sent_at
   );
@@ -516,8 +516,8 @@ export default function Dashboard() {
                       icon={FileText}
                       iconClass="text-blue-600"
                       bgClass="bg-blue-500/5"
-                      label={`${contractsMissingMandateMail.length} Vertrag/Verträge ohne Mandat-Setup-Mail (Mail 1)`}
-                      sub="Mail 1 (SEPA-Mandat-Link) noch nicht versendet"
+                      label={`${contractsMissingMandateMail.length} Vertrag/Verträge ohne SEPA-Mandat-Mail (Mail 1)`}
+                      sub="Mail 1 (SEPA-Mandat-Mail mit Stripe-Link) noch nicht versendet"
                       to="/pipeline?tab=abschlussphase&filter=missing_email"
                       accent="primary"
                     />
@@ -539,7 +539,7 @@ export default function Dashboard() {
                       iconClass="text-purple-600"
                       bgClass="bg-purple-500/5"
                       label={`${contractsWaitingPayment.length} Vertrag/Verträge warten auf Zahlung`}
-                      sub="Buchungsmail versendet, Kundenbestätigung ausstehend"
+                      sub="SEPA-Mandat-Mail versendet, Kundenbestätigung (Zahlung) ausstehend"
                       to="/pipeline?tab=abschlussphase&filter=waiting_payment"
                       accent="primary"
                     />
