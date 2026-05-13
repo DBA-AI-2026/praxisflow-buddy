@@ -826,7 +826,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
 
   /** Row urgency class */
   const getRowUrgency = (c: any) => {
-    if (c.status === "eingegangen" && !c.confirmation_email_sent_at) return "border-l-2 border-l-primary bg-primary/[0.03]";
+    if (c.status === "eingegangen" && !c.mandate_email_sent_at) return "border-l-2 border-l-primary bg-primary/[0.03]";
     const days = differenceInDays(new Date(), new Date(c.created_at));
     if (days > 14) return "border-l-2 border-l-destructive bg-destructive/[0.03]";
     if (days > 7) return "border-l-2 border-l-warning bg-warning/[0.03]";
