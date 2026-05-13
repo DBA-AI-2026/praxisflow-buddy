@@ -837,6 +837,8 @@ Deno.serve(async (req) => {
         }
 
         // ── FiBu-Vorbereitungs-Events ──────────────────────────────────────────
+        // A5: Bei Stripe-Failure KEINE fibu_events anlegen (Audit-Event wurde im Catch geschrieben).
+        if (!stripeChargeFailed) {
         try {
           const fibuCustomerId: string | null = contract.customer_id ?? null;
 
