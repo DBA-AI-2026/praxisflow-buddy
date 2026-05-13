@@ -7,6 +7,30 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
   apiVersion: "2024-06-20",
 });
 
+const BUCHHALTUNG_EMAIL = Deno.env.get("BUCHHALTUNG_EMAIL") || "buchhaltung@hfx-honorarfuchs.de";
+
+// Resolve sales partner email via profiles.email, fallback to auth.admin.getUserById
+async function resolveSalesPartnerEmail(supabase: any, salesPartnerId: string | null | undefined): Promise<string | null> {
+  if (!salesPartnerId) return null;
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("user_id", salesPartnerId)
+      .maybeSingle();
+    if (profile?.email) return profile.email as string;
+  } catch (e) {
+    console.error("[auto-invoice] profiles lookup failed:", String(e));
+  }
+  try {
+    const { data } = await supabase.auth.admin.getUserById(salesPartnerId);
+    return data?.user?.email ?? null;
+  } catch (e) {
+    console.error("[auto-invoice] auth.admin.getUserById failed:", String(e));
+    return null;
+  }
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
@@ -34,15 +58,18 @@ function getGermanHolidays(year: number): Set<string> {
 
 function addBusinessDays(from: Date, days: number): Date {
   const result = new Date(from);
-  const holidays = getGermanHolidays(from.getFullYear());
+  const holidays = getGermanHolidays(from.getFullYear() - 1);
+  const holidaysNow = getGermanHolidays(from.getFullYear());
   const holidaysNext = getGermanHolidays(from.getFullYear() + 1);
-  const allHolidays = new Set([...holidays, ...holidaysNext]);
-  let added = 0;
-  while (added < days) {
-    result.setDate(result.getDate() + 1);
+  const allHolidays = new Set([...holidays, ...holidaysNow, ...holidaysNext]);
+  const step = days >= 0 ? 1 : -1;
+  let moved = 0;
+  const target = Math.abs(days);
+  while (moved < target) {
+    result.setDate(result.getDate() + step);
     const dow = result.getDay();
     const dateStr = result.toISOString().split("T")[0];
-    if (dow !== 0 && dow !== 6 && !allHolidays.has(dateStr)) added++;
+    if (dow !== 0 && dow !== 6 && !allHolidays.has(dateStr)) moved++;
   }
   return result;
 }
@@ -121,6 +148,54 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: false, error: msg, processed: 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // B1-B5: Retry-Pfad für zuvor fehlgeschlagene Stripe-Charges
+    // Bedingungen: status='zahlung_fehlgeschlagen', stripe_invoice_id IS NULL,
+    //   retry_attempted_at IS NULL, email_sent_at <= (now - 1 Werktag).
+    // Es erfolgt EIN einmaliger Retry. retry_attempted_at wird VOR dem Stripe-Call
+    // gesetzt, damit ein Crash im Stripe-Pfad nicht zu Doppeleinzügen führt.
+    // Im manuellen Single-Contract-Modus (POST mit contract_id) wird der Retry-Pfad
+    // übersprungen, damit der manuelle Trigger deterministisch nur den Ziel-Vertrag
+    // verarbeitet.
+    // ──────────────────────────────────────────────────────────────────────
+    let retriesAttempted = 0;
+    let retriesSucceeded = 0;
+    let retriesFailed = 0;
+    if (!targetContractId) {
+      try {
+        const oneBdAgo = addBusinessDays(today, -1).toISOString();
+        const { data: retryCandidates, error: retryQueryErr } = await supabase
+          .from("invoices")
+          .select("*")
+          .eq("status", "zahlung_fehlgeschlagen")
+          .is("stripe_invoice_id", null)
+          .is("retry_attempted_at", null)
+          .lte("email_sent_at", oneBdAgo)
+          .limit(100);
+
+        if (retryQueryErr) {
+          console.error("[auto-invoice] Retry query error:", retryQueryErr.message);
+        } else if (retryCandidates && retryCandidates.length > 0) {
+          console.log(`[auto-invoice] Retry candidates: ${retryCandidates.length}`);
+          for (const inv of retryCandidates) {
+            try {
+              const result = await processFailedInvoiceRetry({ supabase, invoice: inv });
+              retriesAttempted++;
+              if (result === "success") retriesSucceeded++;
+              else if (result === "failed") retriesFailed++;
+            } catch (rEx) {
+              console.error(`[auto-invoice] Retry exception for invoice ${inv.invoice_number}:`, String(rEx));
+              retriesFailed++;
+            }
+          }
+        } else {
+          console.log("[auto-invoice] Retry: keine Kandidaten gefunden.");
+        }
+      } catch (retryFatal) {
+        console.error("[auto-invoice] Retry-Sektion fatal:", String(retryFatal));
+      }
     }
 
     let processed = 0;
@@ -435,6 +510,9 @@ Deno.serve(async (req) => {
 
         // ── 3. DANACH Stripe-Zahlung auslösen ───────────────────────────────
         let stripeInvoiceId: string | null = null;
+        // A1: Flag, damit nachfolgende Blöcke (Status, fibu_events, Provisionen) reagieren können
+        let stripeChargeFailed = false;
+        let stripeErrorMessage: string | null = null;
         if (hasStripeCustomer && grossAmount > 0) {
           const createdItemIds: string[] = [];
           try {
@@ -479,7 +557,6 @@ Deno.serve(async (req) => {
 
             stripeInvoiceId = stripeInvoice.id;
 
-            // Stripe-ID auf interner Rechnung nachführen
             await supabase
               .from("invoices")
               .update({ stripe_invoice_id: stripeInvoiceId })
@@ -489,9 +566,11 @@ Deno.serve(async (req) => {
           } catch (stripeErr: any) {
             console.error(`[auto-invoice] Stripe error for contract ${contract.id}:`, stripeErr?.message);
             errors.push(`Stripe [${contract.id}]: ${stripeErr?.message}`);
+            // A1: Flag setzen
+            stripeChargeFailed = true;
+            stripeErrorMessage = stripeErr?.message || String(stripeErr);
 
-            // Cleanup: in diesem Lauf erstellte, noch nicht zu einer Invoice gehörige InvoiceItems löschen,
-            // damit sie nicht im nächsten Stripe-Invoice-Zyklus mitgezogen werden.
+            // Cleanup: in diesem Lauf erstellte, noch nicht zu einer Invoice gehörige InvoiceItems löschen.
             for (const itemId of createdItemIds) {
               try {
                 await stripe.invoiceItems.del(itemId);
@@ -500,12 +579,73 @@ Deno.serve(async (req) => {
               }
             }
 
-            // Interne Rechnung als 'zahlung_fehlgeschlagen' markieren, damit Buchhaltung sie sieht
-            // (analog zum Webhook-Pfad bei invoice.payment_failed). Stripe-ID bleibt NULL.
+            // A2: Interne Rechnung als 'zahlung_fehlgeschlagen' markieren – mit Status-Schutz
             await supabase
               .from("invoices")
               .update({ status: "zahlung_fehlgeschlagen" })
-              .eq("id", invoice.id);
+              .eq("id", invoice.id)
+              .not("status", "in", "(bezahlt,storniert)");
+
+            // A7: Audit-Event in fibu_events (idempotent via idx_fibu_events_source_unique)
+            try {
+              const { error: auditErr } = await supabase.from("fibu_events").insert({
+                event_type: "auto_invoice_charge_failed",
+                source_module: "invoices",
+                source_reference_id: invoice.id,
+                contract_id: contract.id,
+                customer_id: contract.customer_id ?? null,
+                product_name: contract.product_name,
+                period_start: periodStart,
+                period_end: periodEnd,
+                amount_net: Number(invoice.net_amount) || 0,
+                tax_amount: Number(invoice.tax_amount) || 0,
+                amount_gross: Number(invoice.gross_amount) || 0,
+                currency: "EUR",
+                status: "draft",
+                export_status: "open",
+                description: `Stripe-Charge fehlgeschlagen für ${invoice.invoice_number} – ${stripeErrorMessage}`,
+                created_by: null,
+                metadata: {
+                  invoice_id: invoice.id,
+                  invoice_number: invoice.invoice_number,
+                  hfx_customer_number: contract.hfx_customer_number ?? null,
+                  stripe_error: stripeErrorMessage,
+                  billing_period: billingPeriod,
+                  period_month: periodMonthStr,
+                  attempt: "initial",
+                },
+              } as any);
+              if (auditErr && (auditErr as any).code !== "23505") {
+                console.error(`[auto-invoice] fibu_events auto_invoice_charge_failed insert failed:`, auditErr.message);
+              }
+            } catch (auditEx) {
+              console.error(`[auto-invoice] fibu_events auto_invoice_charge_failed exception:`, String(auditEx));
+            }
+
+            // A9: Buchhaltungs- + Vertriebs-Mail (Failure-Notification, einmalig)
+            try {
+              const partnerEmail = await resolveSalesPartnerEmail(supabase, contract.sales_partner_id);
+              const recipients = [BUCHHALTUNG_EMAIL];
+              if (partnerEmail && partnerEmail !== BUCHHALTUNG_EMAIL) recipients.push(partnerEmail);
+              await resend.emails.send({
+                from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+                reply_to: "info@hfx-honorarfuchs.de",
+                to: recipients,
+                subject: `[Stripe-Failure] Rechnung ${invoice.invoice_number} – ${contract.customer_name}`,
+                html: `<p>Die automatische Stripe-Abbuchung ist fehlgeschlagen.</p>
+<ul>
+  <li><strong>Rechnung:</strong> ${invoice.invoice_number}</li>
+  <li><strong>Kunde:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</li>
+  <li><strong>Vertrag-ID:</strong> ${contract.id}</li>
+  <li><strong>Abrechnungszeitraum:</strong> ${billingPeriod}</li>
+  <li><strong>Bruttobetrag:</strong> ${Number(invoice.gross_amount).toFixed(2)} €</li>
+  <li><strong>Stripe-Fehler:</strong> ${stripeErrorMessage}</li>
+</ul>
+<p>Interner Status: <strong>zahlung_fehlgeschlagen</strong>. Es erfolgt automatisch <strong>ein einmaliger Retry</strong> frühestens 1 Werktag nach Versand der Rechnung.</p>`,
+              });
+            } catch (mailErr) {
+              console.error(`[auto-invoice] Buchhaltungs-/Vertriebs-Failure-Mail fehlgeschlagen:`, String(mailErr));
+            }
           }
         } else if (grossAmount === 0) {
           console.log(`[auto-invoice] Contract ${contract.id} – Gesamtbetrag 0 €, kein Stripe-Einzug nötig`);
@@ -523,6 +663,14 @@ Deno.serve(async (req) => {
           </tr>`).join("");
 
         // ── Zahlungshinweis ──
+        // A3: Wenn Stripe-Charge fehlgeschlagen ist, oranger Hinweisblock vor dem normalen Block
+        const chargeFailedNoticeHtml = stripeChargeFailed
+          ? `<div style="background:#fff4e5;border:1px solid #ffb74d;border-radius:8px;padding:14px 16px;margin-top:20px;">
+              <p style="margin:0;font-size:14px;color:#8a4b00;"><strong>⚠️ Hinweis: Automatischer Einzug aktuell nicht möglich</strong></p>
+              <p style="margin:6px 0 0;font-size:13px;color:#8a4b00;">Der automatische SEPA-Einzug für diese Rechnung ist beim ersten Versuch fehlgeschlagen. Wir versuchen den Einzug automatisch erneut. Sie müssen aktuell <strong>nichts unternehmen</strong>.</p>
+              <p style="margin:6px 0 0;font-size:13px;color:#8a4b00;">Bei Rückfragen wenden Sie sich bitte an <a href="mailto:buchhaltung@hfx-honorarfuchs.de" style="color:#8a4b00;">buchhaltung@hfx-honorarfuchs.de</a>.</p>
+            </div>`
+          : "";
         const paymentBlockHtml = hasStripeCustomer && grossAmount > 0
           ? `<div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
               <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug (SEPA via Stripe)</strong></p>
@@ -570,6 +718,7 @@ Deno.serve(async (req) => {
       <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#6b7280;"><span>MwSt. (19%):</span><span>${taxAmount.toFixed(2)} €</span></div>
       <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #0b367f;margin-top:8px;font-size:16px;"><span><strong>Gesamtbetrag:</strong></span><strong style="color:#0b367f;">${grossAmount.toFixed(2)} €</strong></div>
     </div>
+    ${chargeFailedNoticeHtml}
     ${paymentBlockHtml}
     <p style="font-size:12px;color:#9ca3af;margin-top:8px;">Diese Rechnung wurde automatisch generiert.</p>
   </div>
@@ -594,14 +743,25 @@ Deno.serve(async (req) => {
 
         const nowTs = new Date().toISOString();
 
-        // Update invoice status to 'versendet'
-        await supabase
-          .from("invoices")
-          .update({ status: "versendet", email_sent_at: nowTs })
-          .eq("id", invoice.id);
+        // A4: email_sent_at IMMER setzen (Kunden-Mail wurde versendet, ggf. mit Hinweisblock).
+        // Status nur auf 'versendet' anheben, wenn Stripe nicht fehlgeschlagen ist – sonst bleibt
+        // 'zahlung_fehlgeschlagen' (aus Catch). Status-Schutz verhindert Überschreiben von bezahlt/storniert.
+        if (stripeChargeFailed) {
+          await supabase
+            .from("invoices")
+            .update({ email_sent_at: nowTs })
+            .eq("id", invoice.id);
+        } else {
+          await supabase
+            .from("invoices")
+            .update({ status: "versendet", email_sent_at: nowTs })
+            .eq("id", invoice.id)
+            .not("status", "in", "(bezahlt,storniert)");
+        }
 
+        // A5/A6: Provisionen + fibu_events nur wenn Stripe-Charge erfolgreich war.
         // Auto-generate commission payout
-        if (contract.sales_partner_id) {
+        if (!stripeChargeFailed && contract.sales_partner_id) {
           const isGoae = /GOÄ|GOA/i.test(contract.product_name || "");
 
           if (isGoae) {
@@ -728,6 +888,8 @@ Deno.serve(async (req) => {
         }
 
         // ── FiBu-Vorbereitungs-Events ──────────────────────────────────────────
+        // A5: Bei Stripe-Failure KEINE fibu_events anlegen (Audit-Event wurde im Catch geschrieben).
+        if (!stripeChargeFailed) {
         try {
           const fibuCustomerId: string | null = contract.customer_id ?? null;
 
@@ -813,6 +975,7 @@ Deno.serve(async (req) => {
         } catch (fibuErr) {
           console.error(`[auto-invoice] fibu_events block failed for ${invoice.invoice_number} – operative flow unaffected:`, String(fibuErr));
         }
+        } // end if (!stripeChargeFailed) — fibu/commissions block
 
         if (sendResult.error) {
           errors.push(`Invoice email [${invoice.invoice_number}]: ${sendResult.error.message}`);
@@ -830,7 +993,7 @@ Deno.serve(async (req) => {
     console.log(`[auto-invoice] Done. Processed: ${processed}, Skipped: ${skipped}, Errors: ${errors.length}`);
 
     return new Response(
-      JSON.stringify({ success: true, processed, skipped, errors, billingPeriod: periodMonthStr }),
+      JSON.stringify({ success: true, processed, skipped, errors, billingPeriod: periodMonthStr, retries: { attempted: retriesAttempted, succeeded: retriesSucceeded, failed: retriesFailed } }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
@@ -1213,4 +1376,335 @@ function buildMandateRequestEmail(params: {
   </div>
 </div>
 </body></html>`;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// B-Sektion: Retry-Logik für fehlgeschlagene Stripe-Charges
+// ────────────────────────────────────────────────────────────────────────────
+async function processFailedInvoiceRetry(params: {
+  supabase: any;
+  invoice: any;
+}): Promise<"success" | "failed" | "skipped"> {
+  const { supabase, invoice } = params;
+
+  // B5: retry_attempted_at SOFORT (vor jedem Stripe-Call) setzen, mit Idempotenz-Schutz.
+  // Nur wenn retry_attempted_at IS NULL noch — verhindert Doppelläufe bei parallelen Crons.
+  const nowTs = new Date().toISOString();
+  const { data: lockedRow, error: lockErr } = await supabase
+    .from("invoices")
+    .update({ retry_attempted_at: nowTs })
+    .eq("id", invoice.id)
+    .is("retry_attempted_at", null)
+    .select("id")
+    .maybeSingle();
+
+  if (lockErr) {
+    console.error(`[auto-invoice][retry] Lock-Update für ${invoice.invoice_number} fehlgeschlagen:`, lockErr.message);
+    return "skipped";
+  }
+  if (!lockedRow) {
+    console.log(`[auto-invoice][retry] ${invoice.invoice_number}: bereits retried (race condition), überspringe.`);
+    return "skipped";
+  }
+
+  // Vertrag laden
+  const { data: contract, error: contractErr } = await supabase
+    .from("contracts")
+    .select("*")
+    .eq("id", invoice.contract_id)
+    .maybeSingle();
+  if (contractErr || !contract) {
+    console.error(`[auto-invoice][retry] Vertrag für Invoice ${invoice.invoice_number} nicht gefunden.`);
+    return "skipped";
+  }
+
+  if (!contract.stripe_customer_id) {
+    console.warn(`[auto-invoice][retry] Vertrag ${contract.id} hat (mehr) kein stripe_customer_id – Retry übersprungen.`);
+    return "skipped";
+  }
+
+  const positions: { description: string; quantity: number; unit_price: number }[] = Array.isArray(invoice.positions) ? invoice.positions : [];
+  const netAmount = Number(invoice.net_amount) || 0;
+  const taxAmount = Number(invoice.tax_amount) || 0;
+  const grossAmount = Number(invoice.gross_amount) || 0;
+  const periodMonthStr: string = invoice.billing_period_month || "";
+
+  if (grossAmount <= 0 || positions.length === 0) {
+    console.warn(`[auto-invoice][retry] Invoice ${invoice.invoice_number} hat keine Positionen / 0 €, kein Retry.`);
+    return "skipped";
+  }
+
+  // Period rekonstruieren
+  const [py, pm] = periodMonthStr.split("-").map((s: string) => Number(s));
+  const periodStart = `${periodMonthStr}-01`;
+  const daysInPeriod = pm && py ? new Date(py, pm, 0).getDate() : 30;
+  const periodEnd = `${periodMonthStr}-${String(daysInPeriod).padStart(2, "0")}`;
+  const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+  const billingPeriod = pm && py ? `${monthNames[pm - 1]} ${py}` : periodMonthStr;
+
+  // Usage-Charges für diese Invoice (für fibu + Provisionen + Erfolgs-Mail-Detail)
+  const { data: usageRows } = await supabase
+    .from("usage_charges")
+    .select("id, net_amount")
+    .eq("invoice_id", invoice.id);
+  const usageChargeIds: string[] = (usageRows || []).map((r: any) => r.id);
+  const usageNetAmount: number = (usageRows || []).reduce((s: number, r: any) => s + Number(r.net_amount || 0), 0);
+  const baseNetAmount = Math.round((netAmount - usageNetAmount) * 100) / 100;
+
+  const isInWaiverPeriod = contract.base_fee_waived === true &&
+    contract.base_fee_waived_until != null &&
+    new Date(periodEnd) <= new Date(contract.base_fee_waived_until);
+
+  // Stripe-Retry
+  const createdItemIds: string[] = [];
+  let stripeInvoiceId: string | null = null;
+  let stripeErrorMessage: string | null = null;
+  try {
+    for (const pos of positions) {
+      if (pos.quantity * pos.unit_price <= 0) continue;
+      const item = await stripe.invoiceItems.create({
+        customer: contract.stripe_customer_id,
+        amount: Math.round(pos.quantity * pos.unit_price * 100),
+        currency: "eur",
+        description: pos.description,
+        tax_rates: [],
+      });
+      createdItemIds.push(item.id);
+    }
+    const taxItem = await stripe.invoiceItems.create({
+      customer: contract.stripe_customer_id,
+      amount: Math.round(taxAmount * 100),
+      currency: "eur",
+      description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
+    });
+    createdItemIds.push(taxItem.id);
+
+    const stripeDescription = `[Retry] ${contract.product_name} – ${billingPeriod}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}`;
+    const stripeInvoice = await stripe.invoices.create({
+      customer: contract.stripe_customer_id,
+      auto_advance: false,
+      collection_method: "charge_automatically",
+      description: stripeDescription,
+      metadata: {
+        hfx_contract_id: contract.id,
+        hfx_customer_number: contract.hfx_customer_number || "",
+        billing_period: periodMonthStr,
+        hfx_invoice_id: invoice.id,
+        hfx_invoice_number: invoice.invoice_number,
+        retry: "true",
+      },
+    });
+    const finalized = await stripe.invoices.finalizeInvoice(stripeInvoice.id);
+    await stripe.invoices.pay(finalized.id);
+    stripeInvoiceId = stripeInvoice.id;
+  } catch (stripeErr: any) {
+    stripeErrorMessage = stripeErr?.message || String(stripeErr);
+    console.error(`[auto-invoice][retry] Stripe-Failure für ${invoice.invoice_number}:`, stripeErrorMessage);
+    // Cleanup
+    for (const itemId of createdItemIds) {
+      try { await stripe.invoiceItems.del(itemId); } catch {}
+    }
+
+    // B3: Eskalations-Mail an Buchhaltung + Vertrieb. KEIN zweites Audit-Event
+    // (idx_fibu_events_source_unique würde es ohnehin blocken). Nur console.log.
+    console.log(`[auto-invoice][retry] Eskalation für ${invoice.invoice_number}: ${stripeErrorMessage}`);
+    try {
+      const partnerEmail = await resolveSalesPartnerEmail(supabase, contract.sales_partner_id);
+      const recipients = [BUCHHALTUNG_EMAIL];
+      if (partnerEmail && partnerEmail !== BUCHHALTUNG_EMAIL) recipients.push(partnerEmail);
+      await resend.emails.send({
+        from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+        reply_to: "info@hfx-honorarfuchs.de",
+        to: recipients,
+        subject: `[ESKALATION] Stripe-Retry fehlgeschlagen – Rechnung ${invoice.invoice_number}`,
+        html: `<p>Der automatische <strong>einmalige Retry</strong> der Stripe-Abbuchung ist ebenfalls fehlgeschlagen. Bitte manuelle Klärung.</p>
+<ul>
+  <li><strong>Rechnung:</strong> ${invoice.invoice_number}</li>
+  <li><strong>Kunde:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</li>
+  <li><strong>Vertrag-ID:</strong> ${contract.id}</li>
+  <li><strong>Abrechnungszeitraum:</strong> ${billingPeriod}</li>
+  <li><strong>Bruttobetrag:</strong> ${grossAmount.toFixed(2)} €</li>
+  <li><strong>Stripe-Fehler (Retry):</strong> ${stripeErrorMessage}</li>
+</ul>
+<p>Status bleibt <strong>zahlung_fehlgeschlagen</strong>. Es wird <strong>kein</strong> weiterer automatischer Retry erfolgen.</p>`,
+      });
+    } catch (mailEx) {
+      console.error(`[auto-invoice][retry] Eskalations-Mail fehlgeschlagen:`, String(mailEx));
+    }
+    return "failed";
+  }
+
+  // Erfolg: Invoice auf bezahlt setzen + Stripe-ID nachführen (Status-Schutz: nicht überschreiben wenn storniert).
+  await supabase
+    .from("invoices")
+    .update({ status: "bezahlt", stripe_invoice_id: stripeInvoiceId })
+    .eq("id", invoice.id)
+    .not("status", "in", "(storniert)");
+
+  console.log(`[auto-invoice][retry] ✓ Erfolgreich: Invoice ${invoice.invoice_number} bezahlt via Stripe ${stripeInvoiceId}`);
+
+  // fibu_events nachholen (idempotent: idx_fibu_events_source_unique blockt Duplikate)
+  try {
+    const baseShare = netAmount > 0 ? baseNetAmount / netAmount : 0;
+    const baseTaxAmount = Math.round(taxAmount * baseShare * 100) / 100;
+    const baseGrossAmount = Math.round((baseNetAmount + baseTaxAmount) * 100) / 100;
+
+    const { error: fibuBaseErr } = await supabase.from("fibu_events").insert({
+      event_type: "invoice_base_fee_created",
+      source_module: "invoices",
+      source_reference_id: invoice.id,
+      contract_id: contract.id,
+      customer_id: contract.customer_id ?? null,
+      product_name: contract.product_name,
+      period_start: periodStart,
+      period_end: periodEnd,
+      amount_net: baseNetAmount,
+      tax_amount: baseTaxAmount,
+      amount_gross: baseGrossAmount,
+      currency: "EUR",
+      status: "approved",
+      export_status: "open",
+      description: `Grundgebühr ${invoice.invoice_number} – ${contract.product_name} – ${billingPeriod}${isInWaiverPeriod ? " (Waiver 0 €)" : ""} [retry]`,
+      created_by: null,
+      metadata: {
+        invoice_number: invoice.invoice_number,
+        invoice_id: invoice.id,
+        stripe_invoice_id: stripeInvoiceId,
+        contract_id: contract.id,
+        hfx_customer_number: contract.hfx_customer_number ?? null,
+        waiver_active: isInWaiverPeriod,
+        billing_period: billingPeriod,
+        period_month: periodMonthStr,
+        via_retry: true,
+      },
+    } as any);
+    if (fibuBaseErr && (fibuBaseErr as any).code !== "23505") {
+      console.error(`[auto-invoice][retry] fibu_events invoice_base_fee_created:`, fibuBaseErr.message);
+    }
+
+    if (usageNetAmount > 0) {
+      const usageShare = netAmount > 0 ? usageNetAmount / netAmount : 0;
+      const usageTaxAmount = Math.round(taxAmount * usageShare * 100) / 100;
+      const usageGrossAmount = Math.round((usageNetAmount + usageTaxAmount) * 100) / 100;
+      const { error: fibuUsageErr } = await supabase.from("fibu_events").insert({
+        event_type: "invoice_usage_created",
+        source_module: "invoices",
+        source_reference_id: `${invoice.id}:usage`,
+        contract_id: contract.id,
+        customer_id: contract.customer_id ?? null,
+        product_name: contract.product_name,
+        period_start: periodStart,
+        period_end: periodEnd,
+        amount_net: usageNetAmount,
+        tax_amount: usageTaxAmount,
+        amount_gross: usageGrossAmount,
+        currency: "EUR",
+        status: "approved",
+        export_status: "open",
+        description: `Nutzungsgebühren ${invoice.invoice_number} – ${billingPeriod} (${usageChargeIds.length} Vorgänge) [retry]`,
+        created_by: null,
+        metadata: {
+          invoice_number: invoice.invoice_number,
+          invoice_id: invoice.id,
+          stripe_invoice_id: stripeInvoiceId,
+          contract_id: contract.id,
+          hfx_customer_number: contract.hfx_customer_number ?? null,
+          usage_charge_ids: usageChargeIds,
+          charge_count: usageChargeIds.length,
+          usage_net_amount: usageNetAmount,
+          billing_period: billingPeriod,
+          period_month: periodMonthStr,
+          via_retry: true,
+        },
+      } as any);
+      if (fibuUsageErr && (fibuUsageErr as any).code !== "23505") {
+        console.error(`[auto-invoice][retry] fibu_events invoice_usage_created:`, fibuUsageErr.message);
+      }
+    }
+  } catch (fibuEx) {
+    console.error(`[auto-invoice][retry] fibu_events block exception:`, String(fibuEx));
+  }
+
+  // Provisionen nachholen (Hold aufheben). Bestehende existing-Checks im Provisionspfad
+  // halten Idempotenz aufrecht; doppelte Inserts werden verhindert.
+  if (contract.sales_partner_id) {
+    try {
+      const isGoae = /GOÄ|GOA/i.test(contract.product_name || "");
+      const today = new Date();
+      if (isGoae) {
+        await createGoaeCommissions({
+          supabase, contract, invoice, netAmount, baseNetAmount,
+          usageChargeIds, periodMonthStr, periodStart, periodEnd, billingPeriod, today,
+        });
+      } else {
+        const [{ data: productCommission }, { data: partnerOverride }] = await Promise.all([
+          supabase.from("product_commissions").select("commission_type, commission_value, is_active")
+            .eq("product_name", contract.product_name).eq("is_active", true).maybeSingle(),
+          supabase.from("partner_commission_overrides").select("commission_type, commission_value")
+            .eq("user_id", contract.sales_partner_id).eq("product_name", contract.product_name).maybeSingle(),
+        ]);
+        const effectiveRule = partnerOverride ?? productCommission;
+        const overrideApplied = !!partnerOverride;
+        if (effectiveRule) {
+          let commissionAmount = 0;
+          if (effectiveRule.commission_type === "prozent") {
+            commissionAmount = Math.round(baseNetAmount * effectiveRule.commission_value) / 100;
+          } else {
+            commissionAmount = Number(effectiveRule.commission_value);
+          }
+          if (commissionAmount > 0) {
+            const { data: existingPayout } = await supabase
+              .from("commission_payouts").select("id").eq("invoice_id", invoice.id).maybeSingle();
+            if (!existingPayout) {
+              const ruleVersion = overrideApplied
+                ? (effectiveRule.commission_type === "prozent"
+                    ? `OVERRIDE-PARTNER-${effectiveRule.commission_value}PCT-v1`
+                    : `OVERRIDE-PARTNER-FIXED-${effectiveRule.commission_value}EUR-v1`)
+                : (effectiveRule.commission_type === "prozent"
+                    ? `STD-PARTNER-${effectiveRule.commission_value}PCT-v1`
+                    : `STD-PARTNER-FIXED-${effectiveRule.commission_value}EUR-v1`);
+              await supabase.from("commission_payouts").insert({
+                sales_partner_id: contract.sales_partner_id,
+                sales_partner_name: contract.sales_partner_name || "Unbekannt",
+                contract_id: contract.id,
+                invoice_id: invoice.id,
+                product_name: contract.product_name,
+                commission_type: effectiveRule.commission_type,
+                commission_rate: effectiveRule.commission_value,
+                commission_amount: commissionAmount,
+                commission_base_amount: baseNetAmount,
+                commission_rule_version: ruleVersion,
+                period_month: periodMonthStr,
+                status: "pending",
+              });
+            }
+          }
+        }
+      }
+    } catch (commEx) {
+      console.error(`[auto-invoice][retry] Provisions-Block exception:`, String(commEx));
+    }
+  }
+
+  // B3: Erfolgs-Mail an Buchhaltung (kurz, kein Vertriebs-CC, keine zweite Kunden-Mail).
+  try {
+    await resend.emails.send({
+      from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+      reply_to: "info@hfx-honorarfuchs.de",
+      to: [BUCHHALTUNG_EMAIL],
+      subject: `Stripe-Retry erfolgreich – Rechnung ${invoice.invoice_number}`,
+      html: `<p>Der automatische Retry der Stripe-Abbuchung war erfolgreich.</p>
+<ul>
+  <li><strong>Rechnung:</strong> ${invoice.invoice_number}</li>
+  <li><strong>Kunde:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</li>
+  <li><strong>Bruttobetrag:</strong> ${grossAmount.toFixed(2)} €</li>
+  <li><strong>Stripe-Invoice:</strong> ${stripeInvoiceId}</li>
+</ul>
+<p>Neuer Status: <strong>bezahlt</strong>.</p>`,
+    });
+  } catch (mailEx) {
+    console.error(`[auto-invoice][retry] Erfolgs-Mail (Buchhaltung) fehlgeschlagen:`, String(mailEx));
+  }
+
+  return "success";
 }
