@@ -1516,7 +1516,7 @@ async function processFailedInvoiceRetry(params: {
         subject: `[ESKALATION] Stripe-Retry fehlgeschlagen – Rechnung ${invoice.invoice_number}`,
         html: `<p>Der automatische <strong>einmalige Retry</strong> der Stripe-Abbuchung ist ebenfalls fehlgeschlagen. Bitte manuelle Klärung.</p>
 <ul>
-  <li><strong>Rechnung:</strong> ${invoice.invoke_number || invoice.invoice_number}</li>
+  <li><strong>Rechnung:</strong> ${invoice.invoice_number}</li>
   <li><strong>Kunde:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</li>
   <li><strong>Vertrag-ID:</strong> ${contract.id}</li>
   <li><strong>Abrechnungszeitraum:</strong> ${billingPeriod}</li>
