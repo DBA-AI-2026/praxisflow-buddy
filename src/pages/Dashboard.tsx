@@ -126,7 +126,7 @@ export default function Dashboard() {
     queryFn: async () => {
       let q = supabase
         .from("contracts")
-        .select("id, customer_name, product_name, status, confirmation_email_sent_at, customer_confirmed_at, created_at, sales_partner_id, created_by")
+        .select("id, customer_name, product_name, status, mandate_email_sent_at, confirmation_email_sent_at, customer_confirmed_at, created_at, sales_partner_id, created_by")
         .eq("status", "eingegangen");
       if (isSalesPartner) q = q.or(`sales_partner_id.eq.${user?.id},created_by.eq.${user?.id}`);
       const { data } = await q;
@@ -237,14 +237,19 @@ export default function Dashboard() {
     return contractAlerts.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
   }, [contractAlerts, matchesTeamFilter, isRegionalLead]);
 
-  const contractsMissingEmail = filteredContractAlerts.filter(
-    (c: any) => !c.confirmation_email_sent_at
+  // Mail 1 = Mandat-Setup-Mail (mandate_email_sent_at)
+  const contractsMissingMandateMail = filteredContractAlerts.filter(
+    (c: any) => !c.mandate_email_sent_at
+  );
+  // Mail 2 = Vertragsbestätigung mit AGB (confirmation_email_sent_at) — erst nach Mandat-Setup
+  const contractsMissingConfirmationMail = filteredContractAlerts.filter(
+    (c: any) => c.mandate_email_sent_at && !c.confirmation_email_sent_at
   );
   const contractsWaitingPayment = filteredContractAlerts.filter(
     (c: any) => c.confirmation_email_sent_at && !c.customer_confirmed_at
   );
 
-  const totalAlerts = overdueLeads14.length + overdueLeads7.length + contractsMissingEmail.length + contractsWaitingPayment.length;
+  const totalAlerts = overdueLeads14.length + overdueLeads7.length + contractsMissingMandateMail.length + contractsMissingConfirmationMail.length + contractsWaitingPayment.length;
 
   // Filtered pipeline counts
   const leadsCount = useMemo(() => {
@@ -506,13 +511,24 @@ export default function Dashboard() {
                       accent="warning"
                     />
                   )}
-                  {contractsMissingEmail.length > 0 && (
+                  {contractsMissingMandateMail.length > 0 && (
                     <AlertRow
                       icon={FileText}
                       iconClass="text-blue-600"
                       bgClass="bg-blue-500/5"
-                      label={`${contractsMissingEmail.length} Vertrag/Verträge ohne Buchungsmail`}
-                      sub="Bestätigungsmail noch nicht versendet"
+                      label={`${contractsMissingMandateMail.length} Vertrag/Verträge ohne Mandat-Setup-Mail (Mail 1)`}
+                      sub="Mail 1 (SEPA-Mandat-Link) noch nicht versendet"
+                      to="/pipeline?tab=abschlussphase&filter=missing_email"
+                      accent="primary"
+                    />
+                  )}
+                  {contractsMissingConfirmationMail.length > 0 && (
+                    <AlertRow
+                      icon={FileText}
+                      iconClass="text-blue-600"
+                      bgClass="bg-blue-500/5"
+                      label={`${contractsMissingConfirmationMail.length} Vertrag/Verträge ohne Vertragsbestätigung (Mail 2)`}
+                      sub="Mail 2 (Vertragsdokumente + AGB) noch nicht versendet"
                       to="/pipeline?tab=abschlussphase&filter=missing_email"
                       accent="primary"
                     />

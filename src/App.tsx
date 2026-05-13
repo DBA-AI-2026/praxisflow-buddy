@@ -50,6 +50,7 @@ import AgbManagement from "./pages/admin/AgbManagement";
 import Kunden from "./pages/Kunden";
 import RollenUebersicht from "./pages/admin/RollenUebersicht";
 import FibuReconciliation from "./pages/admin/FibuReconciliation";
+import ContractInspect from "./pages/admin/ContractInspect";
 
 const queryClient = new QueryClient();
 
@@ -109,6 +110,7 @@ const App = () => (
             <Route path="/mein-konto" element={<ProtectedRoute><MeinKonto /></ProtectedRoute>} />
             <Route path="/admin/documentation" element={<ProtectedRoute><Documentation /></ProtectedRoute>} />
             <Route path="/admin/plz-mapping" element={<ProtectedRoute><PlzMapping /></ProtectedRoute>} />
+            <Route path="/admin/contract-inspect" element={<ProtectedRoute><ContractInspect /></ProtectedRoute>} />
             {/* P1-Fix: /buchhaltung ist die kanonische Route für FiBu/Rechnungen */}
             <Route path="/buchhaltung" element={<ProtectedRoute><Buchhaltung /></ProtectedRoute>} />
             {/* /praxen-journey redirect is handled above */}

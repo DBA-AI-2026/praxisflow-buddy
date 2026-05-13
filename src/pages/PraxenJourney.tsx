@@ -726,7 +726,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
 
       let query = supabase
         .from("contracts")
-        .select("id, customer_name, product_name, status, monthly_price, hfx_customer_number, email, vorname, nachname, praxis, created_at, start_date, confirmation_email_sent_at, customer_confirmed_at, sales_partner_name, sales_partner_id, created_by")
+        .select("id, customer_name, product_name, status, monthly_price, hfx_customer_number, email, vorname, nachname, praxis, created_at, start_date, mandate_email_sent_at, confirmation_email_sent_at, customer_confirmed_at, sales_partner_name, sales_partner_id, created_by")
         .in("status", ABSCHLUSS_STATUSES)
         .order("created_at", { ascending: false });
 
@@ -766,8 +766,8 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
     if (statusFilter !== "alle" && c.status !== statusFilter) return false;
 
     // Deep-link contract filter from Dashboard
-    if (contractFilter === "missing_email" && !(c.status === "eingegangen" && !c.confirmation_email_sent_at)) return false;
-    if (contractFilter === "waiting_payment" && !(c.status === "eingegangen" && c.confirmation_email_sent_at && !c.customer_confirmed_at)) return false;
+    if (contractFilter === "missing_email" && !(c.status === "eingegangen" && !c.mandate_email_sent_at)) return false;
+    if (contractFilter === "waiting_payment" && !(c.status === "eingegangen" && c.mandate_email_sent_at && !c.customer_confirmed_at)) return false;
 
     if (!s) return true;
     return (
@@ -784,13 +784,13 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
   // Sort: missing email first, then stale, then by created_at
   const sorted = useMemo(() => {
     return [...filteredBase].sort((a, b) => {
-      // Priority 1: eingegangen without email
-      const aMissing = a.status === "eingegangen" && !a.confirmation_email_sent_at ? 1 : 0;
-      const bMissing = b.status === "eingegangen" && !b.confirmation_email_sent_at ? 1 : 0;
+      // Priority 1: eingegangen ohne Mandat-Setup-Mail (Mail 1)
+      const aMissing = a.status === "eingegangen" && !a.mandate_email_sent_at ? 1 : 0;
+      const bMissing = b.status === "eingegangen" && !b.mandate_email_sent_at ? 1 : 0;
       if (aMissing !== bMissing) return bMissing - aMissing;
-      // Priority 2: eingegangen with email but no payment
-      const aWaiting = a.status === "eingegangen" && a.confirmation_email_sent_at && !a.customer_confirmed_at ? 1 : 0;
-      const bWaiting = b.status === "eingegangen" && b.confirmation_email_sent_at && !b.customer_confirmed_at ? 1 : 0;
+      // Priority 2: Mandat-Setup-Mail versendet, Kunde hat noch nicht bezahlt
+      const aWaiting = a.status === "eingegangen" && a.mandate_email_sent_at && !a.customer_confirmed_at ? 1 : 0;
+      const bWaiting = b.status === "eingegangen" && b.mandate_email_sent_at && !b.customer_confirmed_at ? 1 : 0;
       if (aWaiting !== bWaiting) return bWaiting - aWaiting;
       // Priority 3: older first (stale)
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -799,8 +799,8 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
 
   // Attention metrics
   const attentionMetrics = useMemo(() => {
-    const missingEmail = teamContracts.filter((c: any) => c.status === "eingegangen" && !c.confirmation_email_sent_at).length;
-    const waitingPayment = teamContracts.filter((c: any) => c.status === "eingegangen" && c.confirmation_email_sent_at && !c.customer_confirmed_at).length;
+    const missingEmail = teamContracts.filter((c: any) => c.status === "eingegangen" && !c.mandate_email_sent_at).length;
+    const waitingPayment = teamContracts.filter((c: any) => c.status === "eingegangen" && c.mandate_email_sent_at && !c.customer_confirmed_at).length;
     const stale7 = teamContracts.filter((c: any) => differenceInDays(new Date(), new Date(c.created_at)) > 7).length;
     return { missingEmail, waitingPayment, stale7 };
   }, [teamContracts]);
@@ -810,7 +810,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
       case "entwurf":
         return { label: "Vertrag bearbeiten", icon: <PenLine className="h-3 w-3" />, cls: "bg-muted text-muted-foreground border border-border hover:bg-muted/80", isClickable: true };
       case "eingegangen":
-        if (!c.confirmation_email_sent_at) {
+        if (!c.mandate_email_sent_at) {
           return { label: "Mandat-Mail senden", icon: <Send className="h-3 w-3" />, cls: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm", isClickable: true, isBuchungsmail: true };
         }
         if (!c.customer_confirmed_at) {
@@ -826,7 +826,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
 
   /** Row urgency class */
   const getRowUrgency = (c: any) => {
-    if (c.status === "eingegangen" && !c.confirmation_email_sent_at) return "border-l-2 border-l-primary bg-primary/[0.03]";
+    if (c.status === "eingegangen" && !c.mandate_email_sent_at) return "border-l-2 border-l-primary bg-primary/[0.03]";
     const days = differenceInDays(new Date(), new Date(c.created_at));
     if (days > 14) return "border-l-2 border-l-destructive bg-destructive/[0.03]";
     if (days > 7) return "border-l-2 border-l-warning bg-warning/[0.03]";
@@ -937,9 +937,13 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex flex-col gap-1">
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.confirmation_email_sent_at ? "text-success" : "text-destructive"}`}>
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.mandate_email_sent_at ? "text-success" : "text-destructive"}`} title="Mail 1: Mandat-Setup-Mail (Stripe-Link)">
+                        {c.mandate_email_sent_at ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                        Mail 1
+                      </span>
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.confirmation_email_sent_at ? "text-success" : "text-muted-foreground/50"}`} title="Mail 2: Vertragsbestätigung mit AGB">
                         {c.confirmation_email_sent_at ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                        E-Mail
+                        Mail 2
                       </span>
                       <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.customer_confirmed_at ? "text-success" : "text-muted-foreground/50"}`}>
                         {c.customer_confirmed_at ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
@@ -1322,7 +1326,7 @@ export default function PraxenJourney() {
         supabase.from("leads").select("id", { count: "exact", head: true }).in("status", ACTIVE_LEAD_STATUSES),
         supabase.from("contracts").select("id", { count: "exact", head: true }).in("status", ["entwurf", "eingegangen", "gezeichnet"]),
         supabase.from("contracts").select("id", { count: "exact", head: true }).in("status", ["aktiv", "gekuendigt", "beendet"]),
-        supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "eingegangen").is("confirmation_email_sent_at", null),
+        supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "eingegangen").is("mandate_email_sent_at", null),
       ]);
       return { leads: l.count ?? 0, abschluss: ab.count ?? 0, kunden: k.count ?? 0, missingEmail: me.count ?? 0 };
     },

@@ -516,6 +516,7 @@ export type Database = {
           lanr_count: number
           license_count: number
           mandate_accepted_at: string | null
+          mandate_email_sent_at: string | null
           modules: string[] | null
           monthly_price: number
           mp_nr: string | null
@@ -593,6 +594,7 @@ export type Database = {
           lanr_count?: number
           license_count?: number
           mandate_accepted_at?: string | null
+          mandate_email_sent_at?: string | null
           modules?: string[] | null
           monthly_price?: number
           mp_nr?: string | null
@@ -670,6 +672,7 @@ export type Database = {
           lanr_count?: number
           license_count?: number
           mandate_accepted_at?: string | null
+          mandate_email_sent_at?: string | null
           modules?: string[] | null
           monthly_price?: number
           mp_nr?: string | null
