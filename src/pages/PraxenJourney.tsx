@@ -726,7 +726,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
 
       let query = supabase
         .from("contracts")
-        .select("id, customer_name, product_name, status, monthly_price, hfx_customer_number, email, vorname, nachname, praxis, created_at, start_date, confirmation_email_sent_at, customer_confirmed_at, sales_partner_name, sales_partner_id, created_by")
+        .select("id, customer_name, product_name, status, monthly_price, hfx_customer_number, email, vorname, nachname, praxis, created_at, start_date, mandate_email_sent_at, confirmation_email_sent_at, customer_confirmed_at, sales_partner_name, sales_partner_id, created_by")
         .in("status", ABSCHLUSS_STATUSES)
         .order("created_at", { ascending: false });
 
