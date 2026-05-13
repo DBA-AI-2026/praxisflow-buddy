@@ -115,7 +115,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { contract_id } = await req.json();
+    const body = await req.json();
+    const { contract_id, force } = body as { contract_id?: string; force?: boolean };
     if (!contract_id) {
       return new Response(JSON.stringify({ error: "contract_id required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -128,6 +129,17 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Contract not found" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Idempotenz: Mail 1 nicht doppelt versenden, außer force=true
+    if ((contract as any).mandate_email_sent_at && !force) {
+      console.log(`[send-mandate-setup] Mail 1 bereits gesendet am ${(contract as any).mandate_email_sent_at} für Vertrag ${contract.id} – Skip (force=false)`);
+      return new Response(JSON.stringify({
+        success: true,
+        skipped: true,
+        reason: "mandate_email_already_sent",
+        mandate_email_sent_at: (contract as any).mandate_email_sent_at,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const recipient = (contract as any).rechnungs_email || contract.email;
