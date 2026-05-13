@@ -529,7 +529,7 @@ export default function Dashboard() {
                       bgClass="bg-blue-500/5"
                       label={`${contractsMissingConfirmationMail.length} Vertrag/Verträge ohne Vertragsbestätigung (Mail 2)`}
                       sub="Mail 2 (Vertragsdokumente + AGB) noch nicht versendet"
-                      to="/pipeline?tab=abschlussphase&filter=missing_email"
+                      to="/pipeline?tab=abschlussphase&filter=missing_confirmation"
                       accent="primary"
                     />
                   )}
