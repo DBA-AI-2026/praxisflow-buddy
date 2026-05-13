@@ -309,8 +309,8 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
       if (error) throw error;
 
       toast({
-        title: "Mandat-Setup-Mail gesendet",
-        description: `Die Mandat-Setup-E-Mail wurde erfolgreich an ${contract.email} gesendet.`,
+        title: "SEPA-Mandat-Mail gesendet",
+        description: `Die SEPA-Mandat-Mail wurde erfolgreich an ${contract.email} gesendet.`,
       });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
@@ -703,7 +703,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
                 onClick={sendBuchungsmail}
               >
                 {sendingBuchungsmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                Mandat-Mail senden (nur bei bestehenden Verträgen)
+                SEPA-Mandat-Mail senden (nur bei bestehenden Verträgen)
               </Button>
 
             </div>
