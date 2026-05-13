@@ -874,7 +874,7 @@ export default function Vertraege() {
         }, contractId);
       }
 
-      // For new contracts with status "eingegangen": trigger SEPA mandate setup (Mail 1)
+      // For new contracts with status "eingegangen": trigger SEPA-Mandat-Mail (Mail 1)
       // The customer receives an activation link; status stays "eingegangen" until webhook confirms.
       if (!editId && variables.status === "eingegangen" && contractId && variables.email) {
         try {
@@ -882,10 +882,10 @@ export default function Vertraege() {
             body: { contract_id: contractId },
           });
           if (mailError) throw mailError;
-          toast({ title: "✅ Mandat-Mail gesendet", description: `SEPA-Aktivierungslink an ${variables.email} gesendet. Vertrag steht auf „Eingegangen".` });
+          toast({ title: "✅ SEPA-Mandat-Mail gesendet", description: `SEPA-Aktivierungslink an ${variables.email} gesendet. Vertrag steht auf „Eingegangen".` });
         } catch (emailErr: any) {
           console.error("Mandate setup email error:", emailErr);
-          toast({ title: "Mandat-Mail konnte nicht gesendet werden", description: emailErr.message, variant: "destructive" });
+          toast({ title: "SEPA-Mandat-Mail konnte nicht gesendet werden", description: emailErr.message, variant: "destructive" });
         }
       }
 
@@ -1475,14 +1475,14 @@ export default function Vertraege() {
         }
       }
 
-      // Send SEPA mandate setup email (Mail 1) — customer activates contract via link
+      // Send SEPA-Mandat-Mail (Mail 1) — customer activates contract via link
       const { error: mailError } = await supabase.functions.invoke("send-mandate-setup", {
         body: { contract_id: contractId },
       });
       if (mailError) throw mailError;
 
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
-      toast({ title: "✅ Mandat-Mail gesendet", description: `SEPA-Aktivierungslink an ${form.email} gesendet. Vertrag steht auf „Eingegangen".` });
+      toast({ title: "✅ SEPA-Mandat-Mail gesendet", description: `SEPA-Aktivierungslink an ${form.email} gesendet. Vertrag steht auf „Eingegangen".` });
       closeDialog();
     } catch (err: any) {
       toast({ title: "Fehler", description: err.message || "Unbekannter Fehler", variant: "destructive" });
@@ -1642,14 +1642,14 @@ export default function Vertraege() {
   };
 
   const handleResendConfirmation = async (contract: any) => {
-    if (!window.confirm(`Mandat-Setup-Mail erneut an ${contract.customer_name || contract.email} senden?`)) return;
+    if (!window.confirm(`SEPA-Mandat-Mail erneut an ${contract.customer_name || contract.email} senden?`)) return;
     setResendingConfirmationId(contract.id);
     try {
       const { error } = await supabase.functions.invoke("send-mandate-setup", {
         body: { contract_id: contract.id, force: true },
       });
       if (error) throw error;
-      toast({ title: "Mail wurde gesendet", description: `Mandat-Setup-Mail an ${contract.email}` });
+      toast({ title: "Mail wurde gesendet", description: `SEPA-Mandat-Mail an ${contract.email}` });
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
     } catch (err: any) {
       console.error("Resend mandate error:", err);
@@ -1874,7 +1874,7 @@ export default function Vertraege() {
         </div>
       )}
 
-      {/* Banner: Eingegangen ohne Mandat-Setup-Mail (Mail 1) */}
+      {/* Banner: Eingegangen ohne SEPA-Mandat-Mail (Mail 1) */}
       {contracts.filter((c: any) => c.status === "eingegangen" && !c.mandate_email_sent_at).length > 0 && (() => {
         const pending = contracts.filter((c: any) => c.status === "eingegangen" && !c.mandate_email_sent_at);
         return (
@@ -1882,12 +1882,12 @@ export default function Vertraege() {
             <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-warning">
-                {pending.length} {pending.length === 1 ? "Vertrag" : "Verträge"} ohne Mandat-Setup-Mail (Mail 1)
+                {pending.length} {pending.length === 1 ? "Vertrag" : "Verträge"} ohne SEPA-Mandat-Mail (Mail 1)
               </p>
               <p className="text-xs text-warning/80 mt-0.5">
                 {pending.length === 1
-                  ? "Folgender Vertrag hat Status \u201eEingegangen\u201c, aber die Mandat-Setup-Mail mit Stripe-Link (Mail 1) wurde noch nicht gesendet:"
-                  : "Folgende Vertr\u00e4ge haben Status \u201eEingegangen\u201c, aber die Mandat-Setup-Mail mit Stripe-Link (Mail 1) wurde noch nicht gesendet:"}
+                  ? "Folgender Vertrag hat Status \u201eEingegangen\u201c, aber die SEPA-Mandat-Mail mit Stripe-Link (Mail 1) wurde noch nicht gesendet:"
+                  : "Folgende Vertr\u00e4ge haben Status \u201eEingegangen\u201c, aber die SEPA-Mandat-Mail mit Stripe-Link (Mail 1) wurde noch nicht gesendet:"}
               </p>
               <ul className="mt-1.5 space-y-0.5">
                 {pending.map((c: any) => (
@@ -1919,7 +1919,7 @@ export default function Vertraege() {
                 {pending.length} {pending.length === 1 ? "Vertrag" : "Verträge"} ohne Vertragsbestätigung (Mail 2)
               </p>
               <p className="text-xs text-warning/80 mt-0.5">
-                Folgende Verträge haben Mail 1 (Mandat-Setup) erhalten, aber Mail 2 (Vertragsbestätigung mit AGB) wurde noch nicht versendet.
+                Folgende Verträge haben Mail 1 (SEPA-Mandat-Mail) erhalten, aber Mail 2 (Vertragsbestätigung mit AGB) wurde noch nicht versendet.
               </p>
               <ul className="mt-1.5 space-y-0.5">
                 {pending.map((c: any) => (
@@ -2138,7 +2138,7 @@ export default function Vertraege() {
                         <div className="flex flex-col gap-1">
                           {/* [Papier] badge removed – paper flow decommissioned */}
                           {/* Confirmation email indicator for paper contracts removed – paper flow decommissioned */}
-                          {/* Re-Send Mandat-Setup-Mail – nur wenn Vertrag noch auf Mandat wartet und kein Stripe-Customer hinterlegt ist */}
+                          {/* Re-Send SEPA-Mandat-Mail – nur wenn Vertrag noch auf Mandat wartet und kein Stripe-Customer hinterlegt ist */}
                           {c.email
                             && (c.status === "eingegangen" || c.status === "wartend_auf_mandat")
                             && !c.stripe_customer_id && (
@@ -2157,10 +2157,10 @@ export default function Vertraege() {
                                     ) : (
                                       <Mail className="h-3 w-3" />
                                     )}
-                                    Mandat-Mail erneut senden
+                                    SEPA-Mandat-Mail erneut senden
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>SEPA-Mandat-Setup-Link erneut an {c.email} senden</TooltipContent>
+                                <TooltipContent>SEPA-Mandat-Mail erneut an {c.email} senden</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                           )}
