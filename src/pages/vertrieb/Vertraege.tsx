@@ -1646,7 +1646,7 @@ export default function Vertraege() {
     setResendingConfirmationId(contract.id);
     try {
       const { error } = await supabase.functions.invoke("send-mandate-setup", {
-        body: { contract_id: contract.id },
+        body: { contract_id: contract.id, force: true },
       });
       if (error) throw error;
       toast({ title: "Mail wurde gesendet", description: `Mandat-Setup-Mail an ${contract.email}` });
