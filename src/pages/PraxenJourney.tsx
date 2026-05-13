@@ -784,13 +784,13 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
   // Sort: missing email first, then stale, then by created_at
   const sorted = useMemo(() => {
     return [...filteredBase].sort((a, b) => {
-      // Priority 1: eingegangen without email
-      const aMissing = a.status === "eingegangen" && !a.confirmation_email_sent_at ? 1 : 0;
-      const bMissing = b.status === "eingegangen" && !b.confirmation_email_sent_at ? 1 : 0;
+      // Priority 1: eingegangen ohne Mandat-Setup-Mail (Mail 1)
+      const aMissing = a.status === "eingegangen" && !a.mandate_email_sent_at ? 1 : 0;
+      const bMissing = b.status === "eingegangen" && !b.mandate_email_sent_at ? 1 : 0;
       if (aMissing !== bMissing) return bMissing - aMissing;
-      // Priority 2: eingegangen with email but no payment
-      const aWaiting = a.status === "eingegangen" && a.confirmation_email_sent_at && !a.customer_confirmed_at ? 1 : 0;
-      const bWaiting = b.status === "eingegangen" && b.confirmation_email_sent_at && !b.customer_confirmed_at ? 1 : 0;
+      // Priority 2: Mandat-Setup-Mail versendet, Kunde hat noch nicht bezahlt
+      const aWaiting = a.status === "eingegangen" && a.mandate_email_sent_at && !a.customer_confirmed_at ? 1 : 0;
+      const bWaiting = b.status === "eingegangen" && b.mandate_email_sent_at && !b.customer_confirmed_at ? 1 : 0;
       if (aWaiting !== bWaiting) return bWaiting - aWaiting;
       // Priority 3: older first (stale)
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
