@@ -126,7 +126,7 @@ export default function Dashboard() {
     queryFn: async () => {
       let q = supabase
         .from("contracts")
-        .select("id, customer_name, product_name, status, confirmation_email_sent_at, customer_confirmed_at, created_at, sales_partner_id, created_by")
+        .select("id, customer_name, product_name, status, mandate_email_sent_at, confirmation_email_sent_at, customer_confirmed_at, created_at, sales_partner_id, created_by")
         .eq("status", "eingegangen");
       if (isSalesPartner) q = q.or(`sales_partner_id.eq.${user?.id},created_by.eq.${user?.id}`);
       const { data } = await q;
