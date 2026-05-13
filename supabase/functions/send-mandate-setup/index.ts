@@ -201,11 +201,21 @@ Deno.serve(async (req) => {
 
     console.log(`[send-mandate-setup] Mail 1 sent to ${recipient} for contract ${contract.id}`);
 
+    // Idempotenz-Marker setzen (auch bei force=true wird der Zeitpunkt aktualisiert)
+    const { error: updErr } = await admin
+      .from("contracts")
+      .update({ mandate_email_sent_at: new Date().toISOString() } as any)
+      .eq("id", contract.id);
+    if (updErr) {
+      console.error(`[send-mandate-setup] Failed to set mandate_email_sent_at for ${contract.id}:`, updErr);
+    }
+
     return new Response(JSON.stringify({
       success: true,
       email: recipient,
       stripe_customer_id: stripeCustomerId,
       setup_url: setupSession.url,
+      forced: !!force,
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     console.error("[send-mandate-setup] Error:", err);
