@@ -517,25 +517,17 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
 
           <span className="h-5 w-px bg-border mx-1" />
 
-          {[
-            { key: "alle" as const, icon: null, label: "Alle Quellen", count: teamLeads.length },
-            { key: "homepage" as const, icon: <Globe className="h-3 w-3" />, label: "Homepage", count: homepageCount },
-            { key: "manuell" as const, icon: <PenLine className="h-3 w-3" />, label: "Manuell", count: manuellCount },
-            { key: "reservierung" as const, icon: <CalendarCheck className="h-3 w-3" />, label: "Reservierung", count: reservierungCount },
-          ].map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setSourceFilter(t.key)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors ${
-                sourceFilter === t.key
-                  ? "border-primary bg-primary/5 text-primary"
-                  : "border-border bg-background text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t.icon}
-              {t.label}
-            </button>
-          ))}
+          <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as LeadSourceFilter)}>
+            <SelectTrigger className="h-8 w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="alle">Alle Quellen ({teamLeads.length})</SelectItem>
+              <SelectItem value="homepage">Homepage ({homepageCount})</SelectItem>
+              <SelectItem value="manuell">Manuell ({manuellCount})</SelectItem>
+              <SelectItem value="reservierung">Reservierung ({reservierungCount})</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {!isTippgeber && (
