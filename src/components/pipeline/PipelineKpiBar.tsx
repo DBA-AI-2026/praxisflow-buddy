@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from "react";
 import {
   Users, TrendingUp, TrendingDown, Target, Clock, Globe, PenLine,
-  ChevronDown, ChevronUp, BarChart3,
+  ChevronDown, ChevronUp, BarChart3, FileText, Mail, ShieldCheck,
+  Building2, Euro, XCircle,
 } from "lucide-react";
 import { differenceInDays } from "date-fns";
+
 interface KpiCardProps {
   label: string;
   value: string | number;
@@ -75,7 +77,9 @@ function SourceRow({ source, leads, conversions, rate }: { source: string; leads
 }
 
 interface PipelineKpiBarProps {
-  /** All leads visible to user (RLS + team filter applied) */
+  /** Active tab — KPI set switches accordingly */
+  tab: "interessenten" | "abschlussphase" | "kunden";
+  /** All leads visible to user (RLS + team filter applied), excluding kunde */
   allLeads: any[];
   /** All contracts visible to user (RLS + team filter applied) — ALL statuses */
   allContracts: any[];
@@ -83,20 +87,17 @@ interface PipelineKpiBarProps {
   kundeLeads: any[];
 }
 
-export function PipelineKpiBar({ allLeads, allContracts, kundeLeads }: PipelineKpiBarProps) {
+export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads }: PipelineKpiBarProps) {
   const [expanded, setExpanded] = useState(false);
 
   const kpis = useMemo(() => {
     const ACTIVE_STATUSES = ["neu", "kontaktiert", "qualifiziert", "vertrag"];
     const CLOSED_LOST = ["kein_abschluss", "abgelehnt"];
 
-    // All leads including kunde for total funnel
     const totalLeads = allLeads.length + kundeLeads.length;
     const activeLeads = allLeads.filter((l: any) => ACTIVE_STATUSES.includes(l.status)).length;
     const lostLeads = allLeads.filter((l: any) => CLOSED_LOST.includes(l.status)).length;
     const kundenCount = kundeLeads.length;
-
-    // Conversion rate: leads that became kunden / total leads
     const conversionRate = totalLeads > 0 ? ((kundenCount / totalLeads) * 100) : 0;
 
     // Funnel stages
@@ -107,12 +108,28 @@ export function PipelineKpiBar({ allLeads, allContracts, kundeLeads }: PipelineK
     const abschlussContracts = allContracts.filter((c: any) => ["entwurf", "eingegangen", "gezeichnet"].includes(c.status)).length;
     const aktivContracts = allContracts.filter((c: any) => c.status === "aktiv").length;
 
-    // Source analysis (3 buckets: homepage, manuell, reservierung)
+    // Abschlussphase-specific
+    const inBearbeitung = allContracts.filter((c: any) => ["entwurf", "eingegangen"].includes(c.status)).length;
+    const wartetSepa = allContracts.filter((c: any) => c.status === "eingegangen" && !c.mandate_email_sent_at).length;
+    const wartetMandat = allContracts.filter((c: any) =>
+      c.status === "eingegangen" && c.mandate_email_sent_at && !c.customer_confirmed_at
+    ).length;
+
+    // Kunden-specific
+    const monthlyRevenue = allContracts
+      .filter((c: any) => c.status === "aktiv")
+      .reduce((sum: number, c: any) => sum + Number(c.monthly_price || 0), 0);
+    const cutoff30 = new Date();
+    cutoff30.setDate(cutoff30.getDate() - 30);
+    const cancelledLast30 = allContracts.filter((c: any) =>
+      c.status === "gekuendigt" && c.updated_at && new Date(c.updated_at) >= cutoff30
+    ).length;
+
+    // Source analysis
     const getSource = (l: any): "homepage" | "manuell" | "reservierung" => {
       if (l.source === "reservation_conversion") return "reservierung";
       if (l.source === "manual") return "manuell";
       if (l.source === "homepage") return "homepage";
-      // Legacy fallback for older rows without explicit source
       if (l.nachricht && l.nachricht.trim().length > 0) return "homepage";
       return "manuell";
     };
@@ -127,11 +144,9 @@ export function PipelineKpiBar({ allLeads, allContracts, kundeLeads }: PipelineK
     const manuellRate = manuellLeads > 0 ? ((manuellKunden / manuellLeads) * 100) : 0;
     const reservierungRate = reservierungLeads > 0 ? ((reservierungKunden / reservierungLeads) * 100) : 0;
 
-    // Time metrics: avg days from lead creation to first contract creation
-    // We approximate using leads that have status "kunde" and find matching contracts
+    // Time metrics
     const leadToContractDays: number[] = [];
     const contractToActiveDays: number[] = [];
-
     for (const contract of allContracts) {
       if (contract.status === "aktiv" && contract.start_date && contract.created_at) {
         const created = new Date(contract.created_at);
@@ -140,8 +155,6 @@ export function PipelineKpiBar({ allLeads, allContracts, kundeLeads }: PipelineK
         if (diff >= 0 && diff < 365) contractToActiveDays.push(diff);
       }
     }
-
-    // For lead→contract: match kunde-leads to contracts by hfx_customer_number
     const contractCreationMap = new Map<string, Date>();
     for (const c of allContracts) {
       if (c.hfx_customer_number) {
@@ -160,7 +173,6 @@ export function PipelineKpiBar({ allLeads, allContracts, kundeLeads }: PipelineK
         if (diff >= 0 && diff < 365) leadToContractDays.push(diff);
       }
     }
-
     const avgLeadToContract = leadToContractDays.length > 0
       ? Math.round(leadToContractDays.reduce((a, b) => a + b, 0) / leadToContractDays.length)
       : null;
@@ -170,6 +182,9 @@ export function PipelineKpiBar({ allLeads, allContracts, kundeLeads }: PipelineK
 
     return {
       activeLeads, kundenCount, conversionRate, lostLeads, totalLeads,
+      neu, qualifiziert,
+      inBearbeitung, wartetSepa, wartetMandat,
+      aktivContracts, monthlyRevenue, cancelledLast30,
       funnel: { neu, kontaktiert, qualifiziert, vertrag, abschlussContracts, aktivContracts },
       sources: {
         homepageLeads, manuellLeads, reservierungLeads,
@@ -180,52 +195,107 @@ export function PipelineKpiBar({ allLeads, allContracts, kundeLeads }: PipelineK
     };
   }, [allLeads, allContracts, kundeLeads]);
 
+  const fmtEur = (n: number) => new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
+
   return (
     <div className="border-b border-border">
-      {/* Compact KPI row — always visible */}
       <div className="px-4 py-3 flex items-center gap-3 flex-wrap bg-card/50">
-        <KpiCard
-          label="Aktive Leads"
-          value={kpis.activeLeads}
-          sub={`von ${kpis.totalLeads} gesamt`}
-          icon={<Users className="h-4 w-4" />}
-          accent="primary"
-        />
-        <KpiCard
-          label="Kunden"
-          value={kpis.kundenCount}
-          icon={<Target className="h-4 w-4" />}
-          accent="success"
-        />
-        <KpiCard
-          label="Conversion"
-          value={`${kpis.conversionRate.toFixed(1)}%`}
-          sub="Lead → Kunde"
-          icon={<TrendingUp className="h-4 w-4" />}
-          accent={kpis.conversionRate >= 20 ? "success" : kpis.conversionRate >= 10 ? "warning" : "destructive"}
-        />
-        <KpiCard
-          label="Verloren"
-          value={kpis.lostLeads}
-          sub={kpis.totalLeads > 0 ? `${((kpis.lostLeads / kpis.totalLeads) * 100).toFixed(0)}% der Leads` : ""}
-          icon={<TrendingDown className="h-4 w-4" />}
-          accent={kpis.lostLeads > 0 ? "destructive" : "muted"}
-        />
-        {kpis.time.avgLeadToContract !== null && (
-          <KpiCard
-            label="⌀ Lead → Vertrag"
-            value={`${kpis.time.avgLeadToContract} T.`}
-            icon={<Clock className="h-4 w-4" />}
-            accent="muted"
-          />
+        {tab === "interessenten" && (
+          <>
+            <KpiCard
+              label="Aktive Leads"
+              value={kpis.activeLeads}
+              sub={`von ${kpis.totalLeads} gesamt`}
+              icon={<Users className="h-4 w-4" />}
+              accent="primary"
+            />
+            <KpiCard
+              label="Neu (ohne Kontakt)"
+              value={kpis.neu}
+              icon={<TrendingUp className="h-4 w-4" />}
+              accent={kpis.neu > 0 ? "warning" : "muted"}
+            />
+            <KpiCard
+              label="Qualifiziert"
+              value={kpis.qualifiziert}
+              sub="bereit für Vertrag"
+              icon={<Target className="h-4 w-4" />}
+              accent="success"
+            />
+            {kpis.time.avgLeadToContract !== null && (
+              <KpiCard
+                label="⌀ Lead → Vertrag"
+                value={`${kpis.time.avgLeadToContract} T.`}
+                icon={<Clock className="h-4 w-4" />}
+                accent="muted"
+              />
+            )}
+          </>
         )}
-        {kpis.time.avgContractToActive !== null && (
-          <KpiCard
-            label="⌀ Vertrag → Aktiv"
-            value={`${kpis.time.avgContractToActive} T.`}
-            icon={<Clock className="h-4 w-4" />}
-            accent="muted"
-          />
+
+        {tab === "abschlussphase" && (
+          <>
+            <KpiCard
+              label="In Bearbeitung"
+              value={kpis.inBearbeitung}
+              sub="Entwurf + Eingegangen"
+              icon={<FileText className="h-4 w-4" />}
+              accent="primary"
+            />
+            <KpiCard
+              label="Wartet auf SEPA-Mandat"
+              value={kpis.wartetSepa}
+              sub="Mail noch nicht raus"
+              icon={<Mail className="h-4 w-4" />}
+              accent={kpis.wartetSepa > 0 ? "warning" : "muted"}
+            />
+            <KpiCard
+              label="Wartet auf Erteilung"
+              value={kpis.wartetMandat}
+              sub="Mail raus, Mandat offen"
+              icon={<ShieldCheck className="h-4 w-4" />}
+              accent={kpis.wartetMandat > 0 ? "warning" : "muted"}
+            />
+            {kpis.time.avgContractToActive !== null && (
+              <KpiCard
+                label="⌀ Vertrag → Aktiv"
+                value={`${kpis.time.avgContractToActive} T.`}
+                icon={<Clock className="h-4 w-4" />}
+                accent="muted"
+              />
+            )}
+          </>
+        )}
+
+        {tab === "kunden" && (
+          <>
+            <KpiCard
+              label="Aktive Kunden"
+              value={kpis.aktivContracts}
+              icon={<Building2 className="h-4 w-4" />}
+              accent="success"
+            />
+            <KpiCard
+              label="Monatlicher Umsatz"
+              value={fmtEur(kpis.monthlyRevenue)}
+              sub="Summe aktiver Verträge"
+              icon={<Euro className="h-4 w-4" />}
+              accent="primary"
+            />
+            <KpiCard
+              label="Gekündigt (30 T.)"
+              value={kpis.cancelledLast30}
+              icon={<XCircle className="h-4 w-4" />}
+              accent={kpis.cancelledLast30 > 0 ? "destructive" : "muted"}
+            />
+            <KpiCard
+              label="Conversion (gesamt)"
+              value={`${kpis.conversionRate.toFixed(1)}%`}
+              sub="Lead → Kunde"
+              icon={<TrendingUp className="h-4 w-4" />}
+              accent={kpis.conversionRate >= 20 ? "success" : kpis.conversionRate >= 10 ? "warning" : "destructive"}
+            />
+          </>
         )}
 
         <button
@@ -238,10 +308,8 @@ export function PipelineKpiBar({ allLeads, allContracts, kundeLeads }: PipelineK
         </button>
       </div>
 
-      {/* Expanded detail section */}
       {expanded && (
         <div className="px-4 pb-4 pt-1 grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/10 border-t border-border/50">
-          {/* Funnel */}
           <div>
             <h4 className="text-xs font-semibold text-foreground mb-3 flex items-center gap-1.5">
               <BarChart3 className="h-3.5 w-3.5 text-primary" />
@@ -251,13 +319,18 @@ export function PipelineKpiBar({ allLeads, allContracts, kundeLeads }: PipelineK
               { label: "Neu", count: kpis.funnel.neu, pct: kpis.totalLeads > 0 ? Math.round((kpis.funnel.neu / kpis.totalLeads) * 100) : 0, cls: "bg-primary/60" },
               { label: "Kontaktiert", count: kpis.funnel.kontaktiert, pct: kpis.totalLeads > 0 ? Math.round((kpis.funnel.kontaktiert / kpis.totalLeads) * 100) : 0, cls: "bg-primary/70" },
               { label: "Qualifiziert", count: kpis.funnel.qualifiziert, pct: kpis.totalLeads > 0 ? Math.round((kpis.funnel.qualifiziert / kpis.totalLeads) * 100) : 0, cls: "bg-warning/70" },
-              { label: "Vertrag läuft", count: kpis.funnel.vertrag, pct: kpis.totalLeads > 0 ? Math.round((kpis.funnel.vertrag / kpis.totalLeads) * 100) : 0, cls: "bg-blue-500/70" },
+              { label: "In Vertragserstellung", count: kpis.funnel.vertrag, pct: kpis.totalLeads > 0 ? Math.round((kpis.funnel.vertrag / kpis.totalLeads) * 100) : 0, cls: "bg-blue-500/70" },
               { label: "Abschlussphase", count: kpis.funnel.abschlussContracts, pct: kpis.totalLeads > 0 ? Math.round((kpis.funnel.abschlussContracts / kpis.totalLeads) * 100) : 0, cls: "bg-blue-600/70" },
               { label: "Kunden", count: kpis.funnel.aktivContracts, pct: kpis.totalLeads > 0 ? Math.round((kpis.funnel.aktivContracts / kpis.totalLeads) * 100) : 0, cls: "bg-success/70" },
             ]} />
+            {kpis.lostLeads > 0 && (
+              <div className="mt-3 flex items-center gap-2 text-[11px] text-muted-foreground">
+                <TrendingDown className="h-3 w-3 text-destructive" />
+                <span><span className="font-semibold text-foreground">{kpis.lostLeads}</span> verlorene Leads ({kpis.totalLeads > 0 ? ((kpis.lostLeads / kpis.totalLeads) * 100).toFixed(0) : 0}%)</span>
+              </div>
+            )}
           </div>
 
-          {/* Sources */}
           <div>
             <h4 className="text-xs font-semibold text-foreground mb-3 flex items-center gap-1.5">
               <Globe className="h-3.5 w-3.5 text-primary" />
@@ -283,7 +356,7 @@ export function PipelineKpiBar({ allLeads, allContracts, kundeLeads }: PipelineK
                 rate={`${kpis.sources.reservierungRate.toFixed(0)}%`}
               />
             </div>
-            {kpis.time.avgLeadToContract !== null && (
+            {(kpis.time.avgLeadToContract !== null || kpis.time.avgContractToActive !== null) && (
               <div className="mt-3 rounded-lg border border-border bg-card p-3">
                 <p className="text-[11px] font-medium text-muted-foreground mb-1">Durchlaufzeiten</p>
                 <div className="flex items-center gap-6">
