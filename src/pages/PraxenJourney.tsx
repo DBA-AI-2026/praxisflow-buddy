@@ -22,6 +22,7 @@ import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { PHASE_TOOLTIPS } from "@/lib/statusGlossary";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -938,18 +939,33 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex flex-col gap-1">
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.mandate_email_sent_at ? "text-success" : "text-muted-foreground/50"}`} title="SEPA-Mandat: Stripe-Link wurde an Kunden versendet">
-                        {c.mandate_email_sent_at ? <CheckCircle2 className="h-3 w-3" /> : <Mail className="h-3 w-3" />}
-                        SEPA-Mandat
-                      </span>
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.confirmation_email_sent_at ? "text-success" : "text-muted-foreground/50"}`} title="Vertragsunterlagen: Vertrags-PDF + AGB an Kunden versendet">
-                        {c.confirmation_email_sent_at ? <CheckCircle2 className="h-3 w-3" /> : <FileCheck className="h-3 w-3" />}
-                        Vertragsunterlagen
-                      </span>
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${c.customer_confirmed_at ? "text-success" : "text-muted-foreground/50"}`} title="Mandat erteilt: Kunde hat SEPA-Bankverbindung hinterlegt">
-                        {c.customer_confirmed_at ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                        Mandat erteilt
-                      </span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-medium cursor-help ${c.mandate_email_sent_at ? "text-success" : "text-muted-foreground/50"}`}>
+                            {c.mandate_email_sent_at ? <CheckCircle2 className="h-3 w-3" /> : <Mail className="h-3 w-3" />}
+                            SEPA-Mandat
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">{PHASE_TOOLTIPS.sepa_mandat}</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-medium cursor-help ${c.confirmation_email_sent_at ? "text-success" : "text-muted-foreground/50"}`}>
+                            {c.confirmation_email_sent_at ? <CheckCircle2 className="h-3 w-3" /> : <FileCheck className="h-3 w-3" />}
+                            Vertragsunterlagen
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">{PHASE_TOOLTIPS.vertragsunterlagen}</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-medium cursor-help ${c.customer_confirmed_at ? "text-success" : "text-muted-foreground/50"}`}>
+                            {c.customer_confirmed_at ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                            Mandat erteilt
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">{PHASE_TOOLTIPS.mandat_erteilt}</TooltipContent>
+                      </Tooltip>
                     </div>
                   </td>
                   <td className="py-3 px-4">
