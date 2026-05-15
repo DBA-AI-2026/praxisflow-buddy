@@ -44,13 +44,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-// Aktive Rollen (vertragsabteilung ist technisch vorhanden, aber aktuell stillgelegt – kein aktiver Frontend-Zugriff)
-// tippgeber nur für explizit freigeschaltete Bereiche
-const allRoles: AppRole[] = ["user", "sales_partner", "sales_lead", "regional_lead", "tippgeber", "admin"];
-// Operative Vertriebsrollen ohne tippgeber
-const operativeRoles: AppRole[] = ["user", "sales_partner", "sales_lead", "regional_lead", "admin"];
-
 import { canAccessRoute } from "@/config/routePermissions";
 
 interface NavItem {
