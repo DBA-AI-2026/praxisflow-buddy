@@ -614,6 +614,59 @@ export default function Vertraege() {
     enabled: !!ebmProduct?.id,
   });
 
+  // ── Dubletten-Prüfung beim Vertrag-Anlegen ───────────────────────────────
+  // Strong criteria (any one match = potential duplicate):
+  //   1. hfx_customer_number exact (top — Lead-Konvertierung gegen Stammvertrag)
+  //   2. email exact (case-insensitive)
+  //   3. praxis exact (case-insensitive, getrimmt)
+  // Weak (only as additional reason): praxis fuzzy substring, plz+adresse exact.
+  // Skip when editing (would self-match).
+  const dupHfx = (leadHfxNumber ?? "").trim();
+  const dupEmail = (form.email ?? "").trim().toLowerCase();
+  const dupPraxis = (form.praxis ?? "").trim().toLowerCase();
+  const dupPlz = (form.plz ?? "").trim();
+  const dupAdresse = (form.adresse ?? "").trim().toLowerCase();
+
+  const { data: contractDuplicates = [] } = useQuery({
+    queryKey: ["contract-duplicates", dupHfx, dupEmail, dupPraxis, dupPlz, dupAdresse, editId],
+    enabled: dialogOpen && !editId && (!!dupHfx || !!dupEmail || !!dupPraxis),
+    queryFn: async () => {
+      const filters: string[] = [];
+      if (dupHfx) filters.push(`hfx_customer_number.eq.${dupHfx}`);
+      if (dupEmail) filters.push(`email.eq.${dupEmail}`);
+      if (dupPlz) filters.push(`plz.eq.${dupPlz}`);
+      if (filters.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from("contracts")
+        .select("id, hfx_customer_number, contract_number, praxis, vorname, nachname, email, plz, adresse, status, created_at, parent_contract_id")
+        .or(filters.join(","))
+        .is("parent_contract_id", null)
+        .limit(50);
+      if (error) throw error;
+
+      const out: Array<{ row: any; reasons: string[] }> = [];
+      for (const row of (data ?? [])) {
+        const reasons: string[] = [];
+        if (dupHfx && row.hfx_customer_number === dupHfx) reasons.push("HFX-Nummer");
+        if (dupEmail && row.email?.toLowerCase() === dupEmail) reasons.push("E-Mail");
+        if (dupPraxis && row.praxis?.trim().toLowerCase() === dupPraxis) reasons.push("Praxisname");
+        if (
+          dupPraxis && !reasons.includes("Praxisname") &&
+          row.praxis && (row.praxis.toLowerCase().includes(dupPraxis) || dupPraxis.includes(row.praxis.toLowerCase()))
+        ) reasons.push("ähnlicher Praxisname");
+        if (
+          dupPlz && dupAdresse && row.plz === dupPlz &&
+          row.adresse?.trim().toLowerCase() === dupAdresse
+        ) reasons.push("PLZ + Adresse");
+        const hasStrong = reasons.some((r) => ["HFX-Nummer", "E-Mail", "Praxisname"].includes(r));
+        if (hasStrong) out.push({ row, reasons });
+      }
+      return out.sort((a, b) => b.reasons.length - a.reasons.length).slice(0, 10);
+    },
+  });
+
+  const hasContractDuplicates = contractDuplicates.length > 0;
   const upsertMutation = useMutation({
     mutationFn: async (data: ContractFormData): Promise<string | null> => {
       if (!user?.id) throw new Error("Nicht authentifiziert – bitte neu einloggen.");
