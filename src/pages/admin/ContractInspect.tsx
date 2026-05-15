@@ -34,6 +34,26 @@ export default function ContractInspect() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<LookupResult | null>(null);
+  const [mergeLoading, setMergeLoading] = useState(false);
+  const [mergeError, setMergeError] = useState<string | null>(null);
+  const [mergePlan, setMergePlan] = useState<any | null>(null);
+
+  const handleMergeDiagnose = async () => {
+    setMergeLoading(true);
+    setMergeError(null);
+    setMergePlan(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("contract-merge-diagnose", {
+        body: { hfx_customer_number: query.trim() },
+      });
+      if (error) throw error;
+      setMergePlan(data);
+    } catch (err: any) {
+      setMergeError(err.message || String(err));
+    } finally {
+      setMergeLoading(false);
+    }
+  };
 
   const handleLookup = async () => {
     const hfx = query.trim();
