@@ -296,7 +296,7 @@ const ACTIVE_LEAD_STATUSES = ["neu", "kontaktiert", "qualifiziert", "vertrag"];
 const CLOSED_LEAD_STATUSES = ["kein_abschluss", "abgelehnt"];
 
 type LeadSourceFilter = "alle" | "homepage" | "manuell" | "reservierung";
-type LeadStatusFilter = "aktiv" | "kein_abschluss" | "abgelehnt" | "alle";
+type LeadStatusFilter = "aktiv" | "kein_abschluss" | "abgelehnt" | "alle" | "qualifiziert";
 
 function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, initialFilter, deepLinkLeadId, onClearDeepLink }: { search: string; highlightId?: string; teamFilter: string; matchesTeamFilter: (id?: string | null) => boolean; initialFilter?: string; deepLinkLeadId?: string; onClearDeepLink?: () => void }) {
   const navigate = useNavigate();
