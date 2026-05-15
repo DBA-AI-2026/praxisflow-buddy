@@ -314,6 +314,21 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
   const [overdueFilter, setOverdueFilter] = useState<"overdue7" | "overdue14" | null>(
     initialFilter === "overdue7" ? "overdue7" : initialFilter === "overdue14" ? "overdue14" : null
   );
+  const [searchParams, setSearchParams] = useSearchParams();
+  const syncUrlFilter = (next: string | null) => {
+    const sp = new URLSearchParams(searchParams);
+    if (next) sp.set("filter", next);
+    else sp.delete("filter");
+    setSearchParams(sp, { replace: true });
+  };
+  const toggleOverdue = (key: "overdue7" | "overdue14") => {
+    const next = overdueFilter === key ? null : key;
+    setOverdueFilter(next);
+    syncUrlFilter(next);
+  };
+  const toggleQualifiziert = () => {
+    setStatusFilter(statusFilter === "qualifiziert" ? "aktiv" : "qualifiziert");
+  };
 
   useEffect(() => {
     if (highlightId && highlightRef.current) {
