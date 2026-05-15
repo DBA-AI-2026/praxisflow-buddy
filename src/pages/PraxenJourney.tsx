@@ -743,6 +743,21 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
   const [contractFilter, setContractFilter] = useState<"missing_email" | "missing_confirmation" | "waiting_payment" | null>(
     initialFilter === "missing_email" ? "missing_email" : initialFilter === "missing_confirmation" ? "missing_confirmation" : initialFilter === "waiting_payment" ? "waiting_payment" : null
   );
+  const [staleFilter, setStaleFilter] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const syncUrlFilter = (next: string | null) => {
+    const sp = new URLSearchParams(searchParams);
+    if (next) sp.set("filter", next);
+    else sp.delete("filter");
+    setSearchParams(sp, { replace: true });
+  };
+  const toggleContractFilter = (key: "missing_email" | "waiting_payment") => {
+    const next = contractFilter === key ? null : key;
+    setContractFilter(next);
+    syncUrlFilter(next);
+    if (next) setStatusFilter("eingegangen");
+  };
+  const toggleStale = () => setStaleFilter((v) => !v);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
