@@ -667,6 +667,8 @@ export default function Vertraege() {
   });
 
   const hasContractDuplicates = contractDuplicates.length > 0;
+  const isProductiveSave = form.status !== "entwurf";
+  const blockOnDuplicate = !editId && hasContractDuplicates && isProductiveSave && !forceCreateDuplicate;
   const upsertMutation = useMutation({
     mutationFn: async (data: ContractFormData): Promise<string | null> => {
       if (!user?.id) throw new Error("Nicht authentifiziert – bitte neu einloggen.");
