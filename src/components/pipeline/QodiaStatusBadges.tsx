@@ -48,7 +48,7 @@ const usageCfg = {
   inactive:    { label: "Inaktiv",       cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400" },
 } as const;
 
-function Pill({ label, cls, title }: { label: string; cls: string; title?: string }) {
+export function Pill({ label, cls, title }: { label: string; cls: string; title?: string }) {
   return (
     <span
       title={title}
@@ -56,6 +56,45 @@ function Pill({ label, cls, title }: { label: string; cls: string; title?: strin
     >
       {label}
     </span>
+  );
+}
+
+/**
+ * Compact pill for Lead Qodia state, fed by the two lead booleans
+ * (qodia_synced, qodia_conflict). Reuses Pill styling for visual
+ * consistency with QodiaStatusCell on the Abschlussphase tab.
+ */
+export function QodiaLeadStatusCell({
+  synced,
+  conflict,
+}: {
+  synced: boolean;
+  conflict?: boolean;
+}) {
+  if (synced) {
+    return (
+      <Pill
+        label="Übergeben"
+        cls={syncCfg.transferred.cls}
+        title="Qodia-Account ist angelegt und übergeben."
+      />
+    );
+  }
+  if (conflict) {
+    return (
+      <Pill
+        label="E-Mail-Konflikt"
+        cls="bg-warning/15 text-warning"
+        title="E-Mail-Adresse kollidiert mit einem bestehenden Qodia-Account."
+      />
+    );
+  }
+  return (
+    <Pill
+      label="Nicht übergeben"
+      cls={syncCfg.not_started.cls}
+      title="Noch kein Qodia-Account für diesen Lead angelegt."
+    />
   );
 }
 
