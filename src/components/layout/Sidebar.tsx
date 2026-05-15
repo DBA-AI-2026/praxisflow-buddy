@@ -2,20 +2,16 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Building2,
-  Ticket,
-  Key,
   Settings,
   Users,
   FileDown,
   UserPlus,
-  Calendar,
   LogOut,
   Menu,
   BookMarked,
   TrendingUp,
   FileText,
   Package,
-  FlaskConical,
   BarChart3,
   ClipboardList,
   ShieldCheck,
@@ -44,106 +40,68 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-// Aktive Rollen (vertragsabteilung ist technisch vorhanden, aber aktuell stillgelegt – kein aktiver Frontend-Zugriff)
-// tippgeber nur für explizit freigeschaltete Bereiche
-const allRoles: AppRole[] = ["user", "sales_partner", "sales_lead", "regional_lead", "tippgeber", "admin"];
-// Operative Vertriebsrollen ohne tippgeber
-const operativeRoles: AppRole[] = ["user", "sales_partner", "sales_lead", "regional_lead", "admin"];
+import { canAccessRoute } from "@/config/routePermissions";
 
 interface NavItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  roles: AppRole[];
-  adminOnly?: boolean;
 }
 
-const dashboardNav: NavItem[] = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: allRoles },
+// ─── BLOCK 1: Operativ ────────────────────────────────────────────────────────
+const operativNav: NavItem[] = [
+  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Pipeline", href: "/pipeline", icon: Building2 },
+  { name: "Provisionen", href: "/vertrieb/provisionen", icon: BarChart3 },
+  { name: "Umsätze", href: "/umsaetze", icon: TrendingUp },
+  { name: "Tipp-Leads", href: "/tipp-leads", icon: Lightbulb },
 ];
 
-// ─── VERTRIEB: Akquise & Pipeline ────────────────────────────────────────────
-const vertriebNavigation: NavItem[] = [
-  { name: "Reservierungen", href: "/reservierungen", icon: BookMarked, roles: ["user", "sales_partner", "regional_lead", "admin"] },
-  { name: "Demo-Tracking", href: "/demo-tracking", icon: FlaskConical, roles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
-  { name: "Tipp-Leads", href: "/tipp-leads", icon: Lightbulb, roles: ["tippgeber", "admin", "sales_lead"] },
+// ─── BLOCK 2: Vertriebssteuerung ──────────────────────────────────────────────
+const vertriebssteuerungNav: NavItem[] = [
+  { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users },
 ];
 
-// ─── PIPELINE & KUNDEN ────────────────────────────────────────────────────────
-// Pipeline = zentraler Arbeitsbereich (Interessenten → Abschlussphase → Kunden)
-// Verträge haben keinen eigenen Nav-Eintrag, nur kontextbezogener Zugriff aus Pipeline
-const kundenVertraegeNavigation: NavItem[] = [
-  { name: "Pipeline", href: "/pipeline", icon: Building2, roles: operativeRoles },
-  { name: "HFX EBM Lizenzen", href: "/lizenzen", icon: Key, roles: operativeRoles },
+// ─── BLOCK 3: Buchhaltung ─────────────────────────────────────────────────────
+const buchhaltungNav: NavItem[] = [
+  { name: "Rechnungen", href: "/rechnungen", icon: Receipt },
+  { name: "Buchhaltung", href: "/buchhaltung", icon: FileSignature },
+  { name: "Qodia-Verbrauch", href: "/qodia-verbrauch", icon: BarChart3 },
 ];
 
-// ─── FINANZEN: operative Finanzmodule (P2: aus Admin herausgelöst) ────────────
-const finanzenNavigation: NavItem[] = [
-  // tippgeber hat keinen Zugriff auf Umsätze (nur eigene Provisionen)
-  { name: "Umsätze", href: "/umsaetze", icon: BarChart3, roles: operativeRoles },
-  { name: "Rechnungen & Usage", href: "/rechnungen", icon: Receipt, roles: ["admin"] },
-  { name: "Buchhaltung / FiBu", href: "/buchhaltung", icon: TrendingUp, roles: ["admin"] },
-  { name: "FiBu Reconciliation", href: "/admin/fibu-reconciliation", icon: ClipboardList, roles: ["admin"] },
-  { name: "Datenexport", href: "/export", icon: FileDown, roles: ["admin", "sales_lead"] },
-  { name: "Qodia-Verbrauch", href: "/qodia-verbrauch", icon: BarChart3, roles: ["admin", "sales_lead"] },
-];
-
-// ─── ALLGEMEIN ────────────────────────────────────────────────────────────────
-const allgemeinNavigation: NavItem[] = [
-  // tippgeber hat keinen Zugriff auf Tickets
-  { name: "Tickets", href: "/tickets", icon: Ticket, roles: operativeRoles },
-  { name: "Kalender", href: "/kalender", icon: Calendar, roles: ["sales_lead", "regional_lead", "admin"] },
-  // Sicherheit (2FA) wurde in den Profil-Bereich (Sidebar-Footer) verschoben
-];
-
-// ─── VERTRIEBS-ADMIN ──────────────────────────────────────────────────────────
-// P3: Tipp-Leads in Vertrieb-Sektion verschoben (fachlich besser dort)
-const vertriebsAdminNavigation: NavItem[] = [
-  { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users, roles: ["sales_lead", "regional_lead", "admin"] },
-  { name: "Provisionen", href: "/vertrieb/provisionen", icon: BarChart3, roles: ["user", "sales_partner", "tippgeber", "sales_lead", "regional_lead", "admin"] },
-  { name: "PLZ-Zuordnung", href: "/admin/plz-mapping", icon: MapPin, roles: ["admin", "sales_lead"] },
-];
-
-// ─── ADMINISTRATION: nur Systemkonfig (P2: operative Module herausgelöst) ─────
-const adminNavigation: NavItem[] = [
-  { name: "Zugangsanfragen", href: "/admin/access-requests", icon: UserPlus, roles: ["admin"], adminOnly: true },
-  { name: "Benutzerverwaltung", href: "/admin/users", icon: Users, roles: ["admin"], adminOnly: true },
-  { name: "Produktverwaltung", href: "/admin/products", icon: Package, roles: ["admin"], adminOnly: true },
-  { name: "AGB-Verwaltung", href: "/admin/agb", icon: FileText, roles: ["admin"], adminOnly: true },
-  // P1: /integrationen zeigt jetzt Integrationen.tsx (Lexware), korrekt unter Administration
-  { name: "Integrationen", href: "/integrationen", icon: Plug, roles: ["admin"], adminOnly: true },
-  { name: "E-Mail-Einstellungen", href: "/admin/email-settings", icon: Mail, roles: ["admin"], adminOnly: true },
-  { name: "Audit-Protokoll", href: "/admin/audit-logs", icon: ClipboardList, roles: ["admin"], adminOnly: true },
-  { name: "Einstellungen", href: "/admin/settings", icon: Settings, roles: ["admin"], adminOnly: true },
-  { name: "Dokumentation", href: "/admin/documentation", icon: FileText, roles: ["admin"], adminOnly: true },
-  { name: "Rollen & Zugriffe", href: "/admin/rollen-uebersicht", icon: ShieldCheck, roles: ["admin"], adminOnly: true },
-];
-
-// ─── DEV-TOOLS: interne Vorschau- und Hilfsseiten ─────────────────────────────
-const devToolsNavigation: NavItem[] = [
-  { name: "E-Mail-Vorschau", href: "/admin/email-preview", icon: Eye, roles: ["admin"], adminOnly: true },
+// ─── BLOCK 4: Verwaltung (Akkordeon, eingeklappt) ─────────────────────────────
+const verwaltungNav: NavItem[] = [
+  { name: "Benutzer", href: "/admin/users", icon: Users },
+  { name: "Zugriffsanfragen", href: "/admin/access-requests", icon: UserPlus },
+  { name: "Audit-Logs", href: "/admin/audit-logs", icon: ClipboardList },
+  { name: "Rollen-Übersicht", href: "/admin/rollen-uebersicht", icon: ShieldCheck },
+  { name: "Produkte", href: "/admin/products", icon: Package },
+  { name: "AGB", href: "/admin/agb", icon: FileText },
+  { name: "PLZ-Zuordnung", href: "/admin/plz-mapping", icon: MapPin },
+  { name: "E-Mail-Einstellungen", href: "/admin/email-settings", icon: Mail },
+  { name: "E-Mail-Vorschau", href: "/admin/email-preview", icon: Eye },
+  { name: "Integrationen", href: "/integrationen", icon: Plug },
+  { name: "Einstellungen", href: "/admin/settings", icon: Settings },
+  { name: "FiBu-Reconciliation", href: "/admin/fibu-reconciliation", icon: FileDown },
+  { name: "Systemdokumentation", href: "/admin/documentation", icon: BookMarked },
 ];
 
 interface NavSectionProps {
   label: string;
   items: NavItem[];
   userRole: AppRole | null;
-  isAdmin: boolean;
   currentPath: string;
   onNavigate?: () => void;
 }
 
-function NavSection({ label, items, userRole, isAdmin, currentPath, onNavigate }: NavSectionProps) {
-  const visibleItems = items.filter(
-    (item) => userRole && item.roles.includes(userRole)
-  );
+function NavSection({ label, items, userRole, currentPath, onNavigate }: NavSectionProps) {
+  const visibleItems = items.filter((item) => canAccessRoute(item.href, userRole));
 
   if (visibleItems.length === 0) return null;
 
   return (
-    <>
-      <div className="mt-6 first:mt-0 mb-2 px-3 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
+    <div className="mt-4 first:mt-0">
+      <div className="mb-1 px-3 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
         {label}
       </div>
       {visibleItems.map((item) => {
@@ -160,7 +118,47 @@ function NavSection({ label, items, userRole, isAdmin, currentPath, onNavigate }
           </Link>
         );
       })}
-    </>
+    </div>
+  );
+}
+
+function VerwaltungSection({
+  items,
+  userRole,
+  currentPath,
+  onNavigate,
+}: Omit<NavSectionProps, "label">) {
+  const visibleItems = items.filter((item) => canAccessRoute(item.href, userRole));
+  const [open, setOpen] = useState(false);
+
+  if (visibleItems.length === 0) return null;
+
+  return (
+    <div className="mt-4">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-3 py-1 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
+      >
+        <span>Verwaltung</span>
+        <ChevronUp className={`h-3.5 w-3.5 transition-transform ${open ? "" : "rotate-180"}`} />
+      </button>
+      {open &&
+        visibleItems.map((item) => {
+          const isActive = currentPath === item.href;
+          return (
+            <Link
+              key={item.name}
+              to={item.href}
+              onClick={onNavigate}
+              className={`sidebar-link ${isActive ? "active" : ""}`}
+            >
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+              <span className="truncate">{item.name}</span>
+            </Link>
+          );
+        })}
+    </div>
   );
 }
 
@@ -168,7 +166,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
-  const { role: userRole, isAdmin, actualRole } = useUserRole();
+  const { role: userRole, actualRole } = useUserRole();
   const { previewRole, setPreviewRole, isPreviewActive } = useRolePreview();
 
   const roleLabels: Record<AppRole, string> = {
@@ -196,7 +194,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   const sectionProps = {
     userRole,
-    isAdmin,
     currentPath: location.pathname,
     onNavigate,
   };
@@ -261,14 +258,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-2 lg:px-3 py-4 overflow-y-auto">
-        <NavSection label="Übersicht" items={dashboardNav} {...sectionProps} />
-        <NavSection label="Vertrieb" items={vertriebNavigation} {...sectionProps} />
-        <NavSection label="Pipeline & Kunden" items={kundenVertraegeNavigation} {...sectionProps} />
-        <NavSection label="Finanzen" items={finanzenNavigation} {...sectionProps} />
-        <NavSection label="Allgemein" items={allgemeinNavigation} {...sectionProps} />
-        <NavSection label="Vertriebs-Admin" items={vertriebsAdminNavigation} {...sectionProps} />
-        <NavSection label="Administration" items={adminNavigation} {...sectionProps} />
-        <NavSection label="Dev-Tools" items={devToolsNavigation} {...sectionProps} />
+        <NavSection label="Operativ" items={operativNav} {...sectionProps} />
+        <NavSection label="Vertriebssteuerung" items={vertriebssteuerungNav} {...sectionProps} />
+        <NavSection label="Buchhaltung" items={buchhaltungNav} {...sectionProps} />
+        <VerwaltungSection items={verwaltungNav} {...sectionProps} />
       </nav>
 
       {/* User / Profil */}

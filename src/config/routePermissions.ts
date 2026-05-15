@@ -12,7 +12,7 @@ export interface RoutePermission {
 // Für eine spätere Reaktivierung einfach wieder in die jeweiligen allowedRoles aufnehmen.
 export const routePermissions: RoutePermission[] = [
   // Base routes
-  { path: "/", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "tippgeber", "admin"] },
+  { path: "/", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
 
   // Pipeline (zentraler Arbeitsbereich – ersetzt Interessenten, Kunden-Journey, Kundenstamm)
   { path: "/pipeline", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
@@ -42,7 +42,7 @@ export const routePermissions: RoutePermission[] = [
   // Vertrieb routes (Vertragsdetail kontextbezogen, kein Nav-Eintrag)
   { path: "/vertrieb/vertriebler", allowedRoles: ["sales_lead", "regional_lead", "admin"] },
   { path: "/vertrieb/vertraege", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
-  { path: "/vertrieb/provisionen", allowedRoles: ["user", "sales_partner", "tippgeber", "sales_lead", "regional_lead", "admin"] },
+  { path: "/vertrieb/provisionen", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
 
   // Rechnungen - Admin only
   { path: "/rechnungen", allowedRoles: ["admin"] },
@@ -66,7 +66,7 @@ export const routePermissions: RoutePermission[] = [
   { path: "/mein-konto", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "tippgeber", "admin"] },
 
   // Tipp-Leads
-  { path: "/tipp-leads", allowedRoles: ["tippgeber", "admin", "sales_lead"] },
+  { path: "/tipp-leads", allowedRoles: ["tippgeber", "user", "sales_lead", "regional_lead", "admin"] },
 
   // PLZ-Mapping Verwaltung
   { path: "/admin/plz-mapping", allowedRoles: ["admin", "sales_lead"] },
