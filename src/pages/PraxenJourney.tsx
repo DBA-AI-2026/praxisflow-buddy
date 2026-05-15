@@ -608,7 +608,21 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
                     <SourceBadge source={src} />
                   </td>
                   <td className="py-3 px-4">
-                    <ProductInterestBadges products={lead.interested_products} />
+                    {lead.interested_products && lead.interested_products.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {(lead.interested_products as string[]).map((p) => (
+                          <span
+                            key={p}
+                            title={p}
+                            className="inline-flex items-center px-1.5 py-0.5 rounded border border-border text-[10px] font-medium text-foreground bg-background whitespace-nowrap"
+                          >
+                            {productMiniLabel(p)}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </td>
                   <td className="py-3 px-4">
                     <VorbezugBadge value={lead.abrechnungszentrum} />
