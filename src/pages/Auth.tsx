@@ -47,10 +47,17 @@ export default function Auth() {
   const [requestCompany, setRequestCompany] = useState("");
   const [requestMessage, setRequestMessage] = useState("");
 
-  // Redirect if already logged in
+  // Redirect if already logged in (role-aware: tippgeber → /tipp-leads)
   useEffect(() => {
     if (user && !authLoading) {
-      navigate("/");
+      (async () => {
+        const { data: roleRow } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        navigate(roleRow?.role === "tippgeber" ? "/tipp-leads" : "/");
+      })();
     }
   }, [user, authLoading, navigate]);
 
