@@ -545,11 +545,17 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
   return (
     <div>
       {/* Attention bar */}
-      {statusFilter === "aktiv" && (attentionMetrics.overdue14 > 0 || attentionMetrics.overdue7 > 0 || attentionMetrics.qualifiziert > 0) && (
+      {(statusFilter === "aktiv" || statusFilter === "qualifiziert") && (attentionMetrics.overdue14 > 0 || attentionMetrics.overdue7 > 0 || attentionMetrics.qualifiziert > 0) && (
         <AttentionBar items={[
-          attentionMetrics.overdue14 > 0 ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.overdue14} Lead${attentionMetrics.overdue14 > 1 ? "s" : ""} über 14 Tage alt`, cls: "text-destructive" } : { icon: null, text: "" },
-          attentionMetrics.overdue7 > 0 ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.overdue7} Lead${attentionMetrics.overdue7 > 1 ? "s" : ""} über 7 Tage alt`, cls: "text-warning" } : { icon: null, text: "" },
-          attentionMetrics.qualifiziert > 0 ? { icon: <FilePlus className="h-3 w-3" />, text: `${attentionMetrics.qualifiziert} qualifiziert — bereit für Vertrag`, cls: "text-success" } : { icon: null, text: "" },
+          attentionMetrics.overdue14 > 0
+            ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.overdue14} Lead${attentionMetrics.overdue14 > 1 ? "s" : ""} über 14 Tage alt`, cls: "text-destructive", onClick: () => toggleOverdue("overdue14"), active: overdueFilter === "overdue14" }
+            : { icon: null, text: "" },
+          attentionMetrics.overdue7 > 0
+            ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.overdue7} Lead${attentionMetrics.overdue7 > 1 ? "s" : ""} über 7 Tage alt`, cls: "text-warning", onClick: () => toggleOverdue("overdue7"), active: overdueFilter === "overdue7" }
+            : { icon: null, text: "" },
+          attentionMetrics.qualifiziert > 0
+            ? { icon: <FilePlus className="h-3 w-3" />, text: `${attentionMetrics.qualifiziert} qualifiziert — bereit für Vertrag`, cls: "text-success", onClick: toggleQualifiziert, active: statusFilter === "qualifiziert" }
+            : { icon: null, text: "" },
         ]} />
       )}
 
