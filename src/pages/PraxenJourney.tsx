@@ -220,18 +220,48 @@ function EmptyState({ icon: Icon, title, sub }: { icon: React.ComponentType<any>
 
 // ─── Attention bar — compact info line above table ────────────────────────────
 
-function AttentionBar({ items }: { items: { icon: React.ReactNode; text: string; cls?: string }[] }) {
+type AttentionItem = {
+  icon: React.ReactNode;
+  text: string;
+  cls?: string;
+  onClick?: () => void;
+  active?: boolean;
+};
+
+function AttentionBar({ items }: { items: AttentionItem[] }) {
   const visible = items.filter((i) => i.text);
   if (visible.length === 0) return null;
   return (
-    <div className="px-4 py-2.5 bg-warning/5 border-b border-warning/20 flex items-center gap-4 flex-wrap">
+    <div className="px-4 py-2.5 bg-warning/5 border-b border-warning/20 flex items-center gap-2 flex-wrap">
       <Flame className="h-3.5 w-3.5 text-warning shrink-0" />
-      {visible.map((item, i) => (
-        <span key={i} className={`inline-flex items-center gap-1.5 text-xs font-medium ${item.cls || "text-warning"}`}>
-          {item.icon}
-          {item.text}
-        </span>
-      ))}
+      {visible.map((item, i) => {
+        const base = `inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md ${item.cls || "text-warning"}`;
+        const interactive = item.onClick
+          ? `cursor-pointer transition-colors hover:bg-warning/10 ${
+              item.active ? "ring-1 ring-warning/40 bg-warning/15" : ""
+            }`
+          : "";
+        if (item.onClick) {
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={item.onClick}
+              aria-pressed={!!item.active}
+              className={`${base} ${interactive}`}
+            >
+              {item.icon}
+              {item.text}
+            </button>
+          );
+        }
+        return (
+          <span key={i} className={base}>
+            {item.icon}
+            {item.text}
+          </span>
+        );
+      })}
     </div>
   );
 }
