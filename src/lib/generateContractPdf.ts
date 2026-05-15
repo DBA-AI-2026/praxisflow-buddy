@@ -24,6 +24,8 @@ interface ContractPdfData {
   vorname?: string;
   nachname?: string;
   adresse?: string;
+  plz?: string;
+  ort?: string;
   telefon?: string;
   email?: string;
   mp_nr?: string;
