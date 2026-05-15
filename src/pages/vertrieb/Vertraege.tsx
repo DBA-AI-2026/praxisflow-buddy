@@ -1393,6 +1393,7 @@ export default function Vertraege() {
   };
 
   const handleSaveDraft = () => {
+    if (upsertMutation.isPending) return; // Doppelklick-Schutz
     const hasMinimum = form.praxis.trim() !== "" || form.vorname.trim() !== "" || form.nachname.trim() !== "";
     if (!hasMinimum) {
       toast({ title: "Mindestangabe fehlt", description: "Bitte mindestens Praxis oder einen Namen angeben.", variant: "destructive" });
