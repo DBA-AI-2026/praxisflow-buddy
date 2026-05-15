@@ -5,17 +5,16 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { supabase } from "@/lib/supabaseClient";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   Users, FileText, Building2, ArrowRight, Clock,
-  PlusCircle, Eye, FileSignature, Lightbulb, MapPin, BarChart3, BookMarked,
-  X, Sparkles, AlertTriangle, Flame, Zap, Target, Rocket, UserPlus,
-  CalendarCheck, CalendarX, UserX, Tag, CheckCircle2, BookOpen,
+  Eye, FileSignature, Lightbulb, MapPin, BarChart3, BookOpen,
+  X, Sparkles, AlertTriangle, Flame, Zap, UserPlus,
 } from "lucide-react";
 import type { AppRole } from "@/hooks/useUserRole";
-import { format, differenceInDays } from "date-fns";
+import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
+import { differenceInDays } from "date-fns";
 import { AnleitungDialog } from "@/components/help/AnleitungDialog";
 import { Button } from "@/components/ui/button";
 import { useRolePreview } from "@/contexts/RolePreviewContext";
@@ -87,18 +86,14 @@ const onboardingConfig: Partial<Record<AppRole, { icon: React.ElementType; title
 
 export default function Dashboard() {
   const { profile, user } = useAuth();
-  const { role, isAdmin, isTippgeber, isSalesPartner, isRegionalLead } = useUserRole();
+  const { role, isTippgeber, isSalesPartner, isUser, isRegionalLead } = useUserRole();
   const { previewRole, isPreviewActive, setPreviewRole } = useRolePreview();
   const { matchesTeamFilter } = useRegionalTeam();
-  const navigate = useNavigate();
   const [bannerDismissed, setBannerDismissed] = useState(false);
-  const [createLeadOpen, setCreateLeadOpen] = useState(false);
   const [anleitungOpen, setAnleitungOpen] = useState(false);
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "Willkommen";
-  const canCreateLead = role !== "tippgeber" && role !== "vertragsabteilung";
   const canSeePipeline = role !== "tippgeber";
-  const canSeeReservations = role !== "tippgeber" && role !== "vertragsabteilung";
 
   // ── BLOCK 1: "Heute wichtig" data ──
   const { data: overdueLeads = [] } = useQuery({
@@ -112,7 +107,9 @@ export default function Dashboard() {
         .select("id, praxis_name, vorname, nachname, status, created_at, assigned_to")
         .in("status", ["neu", "kontaktiert", "qualifiziert", "vertrag"])
         .order("created_at", { ascending: true });
-      if (isSalesPartner) q = q.eq("assigned_to", user?.id ?? "");
+      // sales_partner UND user (Gebietsleiter) sehen nur eigene Leads.
+      // leads hat kein created_by; nur assigned_to + tippgeber_id.
+      if ((isSalesPartner || isUser) && user?.id) q = q.eq("assigned_to", user.id);
       const { data } = await q;
       return data ?? [];
     },
@@ -128,89 +125,42 @@ export default function Dashboard() {
         .from("contracts")
         .select("id, customer_name, product_name, status, mandate_email_sent_at, confirmation_email_sent_at, customer_confirmed_at, created_at, sales_partner_id, created_by")
         .eq("status", "eingegangen");
-      if (isSalesPartner) q = q.or(`sales_partner_id.eq.${user?.id},created_by.eq.${user?.id}`);
+      // sales_partner UND user analog: eigene Verträge (sales_partner_id ODER created_by).
+      if ((isSalesPartner || isUser) && user?.id) {
+        q = q.or(`sales_partner_id.eq.${user.id},created_by.eq.${user.id}`);
+      }
       const { data } = await q;
       return data ?? [];
     },
   });
 
-  // ── BLOCK 2: Pipeline counts ──
-  const { data: pipelineCounts } = useQuery({
-    queryKey: ["dashboard-pipeline-counts", role, user?.id],
+  // ── BLOCK 2: "Seit gestern reingekommen" ──
+  const { data: newSinceYesterday } = useQuery({
+    queryKey: ["dashboard-new-since-yesterday", role, user?.id],
     enabled: canSeePipeline,
     staleTime: 0,
     refetchOnMount: "always",
     queryFn: async () => {
-      const [leadsRes, contractsRes, customersRes] = await Promise.all([
-        (() => {
-          let q = supabase.from("leads").select("id, assigned_to").in("status", ["neu", "kontaktiert", "qualifiziert", "vertrag"]);
-          if (isSalesPartner) q = q.eq("assigned_to", user?.id ?? "");
-          return q;
-        })(),
-        (() => {
-          let q = supabase.from("contracts").select("id, sales_partner_id, created_by").in("status", ["entwurf", "eingegangen", "gezeichnet"]);
-          if (isSalesPartner) q = q.or(`sales_partner_id.eq.${user?.id},created_by.eq.${user?.id}`);
-          return q;
-        })(),
-        (() => {
-          let q = supabase.from("contracts").select("id, sales_partner_id, created_by").in("status", ["aktiv", "gekuendigt", "beendet"]);
-          if (isSalesPartner) q = q.or(`sales_partner_id.eq.${user?.id},created_by.eq.${user?.id}`);
-          return q;
-        })(),
-      ]);
-      return {
-        leadsRaw: leadsRes.data ?? [],
-        contractsRaw: contractsRes.data ?? [],
-        customersRaw: customersRes.data ?? [],
-      };
-    },
-  });
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-  // ── BLOCK 3: Performance ──
-  const { data: performance } = useQuery({
-    queryKey: ["dashboard-performance", role, user?.id],
-    enabled: canSeePipeline,
-    staleTime: 0,
-    refetchOnMount: "always",
-    queryFn: async () => {
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      let leadsQ = supabase
+        .from("leads")
+        .select("id, praxis_name, vorname, nachname, created_at, assigned_to")
+        .gte("created_at", since)
+        .order("created_at", { ascending: false });
+      if ((isSalesPartner || isUser) && user?.id) leadsQ = leadsQ.eq("assigned_to", user.id);
 
-      let cq = supabase
+      let contractsQ = supabase
         .from("contracts")
-        .select("id, sales_partner_id, created_by")
-        .eq("status", "aktiv")
-        .gte("start_date", monthStart.split("T")[0]);
-      if (isSalesPartner) cq = cq.or(`sales_partner_id.eq.${user?.id},created_by.eq.${user?.id}`);
+        .select("id, customer_name, praxis, created_at, sales_partner_id, created_by")
+        .gte("created_at", since)
+        .order("created_at", { ascending: false });
+      if ((isSalesPartner || isUser) && user?.id) {
+        contractsQ = contractsQ.or(`sales_partner_id.eq.${user.id},created_by.eq.${user.id}`);
+      }
 
-      const [contractsRes, payoutsRes] = await Promise.all([
-        cq,
-        supabase
-          .from("commission_payouts")
-          .select("commission_amount")
-          .eq("sales_partner_id", user?.id ?? ""),
-      ]);
-
-      const totalProvision = (payoutsRes.data ?? []).reduce((s: number, r: any) => s + Number(r.commission_amount ?? 0), 0);
-
-      return {
-        contractsThisMonthRaw: contractsRes.data ?? [],
-        totalProvision,
-      };
-    },
-  });
-
-  // ── BLOCK 4: Reservierungen (RLS-gefiltert) ──
-  const { data: reservationsRaw = [] } = useQuery({
-    queryKey: ["dashboard-reservations", role, user?.id],
-    enabled: canSeeReservations,
-    staleTime: 0,
-    refetchOnMount: "always",
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("praxis_reservations")
-        .select("id, status, reserved_until, assigned_ad_id, interested_products, converted_at, reserved_by");
-      return data ?? [];
+      const [l, c] = await Promise.all([leadsQ, contractsQ]);
+      return { leads: l.data ?? [], contracts: c.data ?? [] };
     },
   });
 
@@ -237,11 +187,7 @@ export default function Dashboard() {
     return contractAlerts.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
   }, [contractAlerts, matchesTeamFilter, isRegionalLead]);
 
-  // Mail 1 = SEPA-Mandat-Mail (mandate_email_sent_at)
-  const contractsMissingMandateMail = filteredContractAlerts.filter(
-    (c: any) => !c.mandate_email_sent_at
-  );
-  // Mail 2 = Vertragsbestätigung mit AGB (confirmation_email_sent_at) — erst nach SEPA-Mandat-Mail
+  const contractsMissingMandateMail = filteredContractAlerts.filter((c: any) => !c.mandate_email_sent_at);
   const contractsMissingConfirmationMail = filteredContractAlerts.filter(
     (c: any) => c.mandate_email_sent_at && !c.confirmation_email_sent_at
   );
@@ -251,81 +197,19 @@ export default function Dashboard() {
 
   const totalAlerts = overdueLeads14.length + overdueLeads7.length + contractsMissingMandateMail.length + contractsMissingConfirmationMail.length + contractsWaitingPayment.length;
 
-  // Filtered pipeline counts
-  const leadsCount = useMemo(() => {
-    if (!pipelineCounts) return 0;
-    return applyTeamFilter(pipelineCounts.leadsRaw, "assigned_to").length;
-  }, [pipelineCounts, matchesTeamFilter, isRegionalLead]);
+  // "Seit gestern" — team-filter for regional leads
+  const newLeads = useMemo(() => {
+    const items = newSinceYesterday?.leads ?? [];
+    return applyTeamFilter(items, "assigned_to");
+  }, [newSinceYesterday, matchesTeamFilter, isRegionalLead]);
 
-  const contractsCount = useMemo(() => {
-    if (!pipelineCounts) return 0;
-    if (!isRegionalLead) return pipelineCounts.contractsRaw.length;
-    return pipelineCounts.contractsRaw.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by)).length;
-  }, [pipelineCounts, matchesTeamFilter, isRegionalLead]);
+  const newContracts = useMemo(() => {
+    const items = newSinceYesterday?.contracts ?? [];
+    if (!isRegionalLead) return items;
+    return items.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
+  }, [newSinceYesterday, matchesTeamFilter, isRegionalLead]);
 
-  const customersCount = useMemo(() => {
-    if (!pipelineCounts) return 0;
-    if (!isRegionalLead) return pipelineCounts.customersRaw.length;
-    return pipelineCounts.customersRaw.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by)).length;
-  }, [pipelineCounts, matchesTeamFilter, isRegionalLead]);
-
-  // Filtered performance
-  const closingsThisMonth = useMemo(() => {
-    if (!performance) return 0;
-    if (!isRegionalLead) return performance.contractsThisMonthRaw.length;
-    return performance.contractsThisMonthRaw.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by)).length;
-  }, [performance, matchesTeamFilter, isRegionalLead]);
-
-  // Reservierungen-Kennzahlen (RLS sorgt schon für Sichtbarkeit; Regional Lead zusätzlich Team-Filter
-  // auf reserved_by/assigned_ad_id, damit "andere Teams" definitiv ausgeblendet sind, falls RLS breiter
-  // greifen sollte als das Team-Modell.)
-  const reservationsScoped = useMemo(() => {
-    if (!isRegionalLead) return reservationsRaw;
-    return reservationsRaw.filter(
-      (r: any) => matchesTeamFilter(r.reserved_by) || matchesTeamFilter(r.assigned_ad_id),
-    );
-  }, [reservationsRaw, matchesTeamFilter, isRegionalLead]);
-
-  const reservationStats = useMemo(() => {
-    const now = new Date();
-    const in14d = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-    const back30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-    let active = 0;
-    let expiringSoon = 0;
-    let expired = 0;
-    let withoutAd = 0;
-    let withoutProduct = 0;
-    let convertedRecently = 0;
-
-    for (const r of reservationsScoped as any[]) {
-      const status = r.status ?? "reserviert";
-      const until = r.reserved_until ? new Date(r.reserved_until) : null;
-      const isExpiredByDate = until ? until < now : false;
-      const isActive = status === "reserviert" && !isExpiredByDate;
-
-      if (isActive) {
-        active += 1;
-        if (until && until <= in14d) expiringSoon += 1;
-        if (!r.assigned_ad_id) withoutAd += 1;
-        if (!Array.isArray(r.interested_products) || r.interested_products.length === 0) {
-          withoutProduct += 1;
-        }
-      }
-
-      if (status === "abgelaufen" || (status === "reserviert" && isExpiredByDate)) {
-        expired += 1;
-      }
-
-      if (status === "konvertiert" && r.converted_at && new Date(r.converted_at) >= back30d) {
-        convertedRecently += 1;
-      }
-    }
-
-    return { active, expiringSoon, expired, withoutAd, withoutProduct, convertedRecently };
-  }, [reservationsScoped]);
-
-  const reservationActionItems = reservationStats.expired + reservationStats.expiringSoon + reservationStats.withoutAd;
+  const hasNewSinceYesterday = newLeads.length > 0 || newContracts.length > 0;
 
   const { data: hasOwnData } = useQuery({
     queryKey: ["dashboard-onboarding-check", role],
@@ -400,7 +284,6 @@ export default function Dashboard() {
 
       <AnleitungDialog open={anleitungOpen} onOpenChange={setAnleitungOpen} />
 
-
       {/* === ONBOARDING BANNER === */}
       {showOnboarding && onboarding && (
         <div className="mb-6 relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 p-5">
@@ -439,18 +322,34 @@ export default function Dashboard() {
       {isTippgeber && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
-            <PipelineQuickCard
-              label="Meine Tipp-Leads"
-              icon={Lightbulb}
-              iconClass="bg-amber-500/10 text-amber-600"
+            <Link
               to="/tipp-leads"
-            />
-            <PipelineQuickCard
-              label="Meine Provisionen"
-              icon={BarChart3}
-              iconClass="bg-green-500/10 text-green-600"
+              className="stat-card group block transition-all hover:shadow-md"
+            >
+              <div className="flex items-start justify-between">
+                <p className="text-xs font-medium text-muted-foreground">Meine Tipp-Leads</p>
+                <div className="rounded-lg p-2.5 bg-amber-500/10 text-amber-600">
+                  <Lightbulb className="h-5 w-5" />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-1 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                Öffnen <ArrowRight className="h-3 w-3" />
+              </div>
+            </Link>
+            <Link
               to="/vertrieb/provisionen"
-            />
+              className="stat-card group block transition-all hover:shadow-md"
+            >
+              <div className="flex items-start justify-between">
+                <p className="text-xs font-medium text-muted-foreground">Meine Provisionen</p>
+                <div className="rounded-lg p-2.5 bg-green-500/10 text-green-600">
+                  <BarChart3 className="h-5 w-5" />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-1 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                Öffnen <ArrowRight className="h-3 w-3" />
+              </div>
+            </Link>
           </div>
           <div className="flex gap-3 flex-wrap">
             <Button asChild className="gap-2">
@@ -465,6 +364,9 @@ export default function Dashboard() {
 
       {/* ══════════════════════════════════════════════
           STANDARD ROLLEN: 4-Block Layout
+            1. Heute wichtig
+            2. Seit gestern reingekommen (nur wenn neu)
+            3. Pipeline Schnellzugriff (kompakte Anker)
          ══════════════════════════════════════════════ */}
       {canSeePipeline && (
         <div className="space-y-6">
@@ -497,7 +399,6 @@ export default function Dashboard() {
                       label={`${overdueLeads14.length} Lead${overdueLeads14.length > 1 ? "s" : ""} ohne Kontakt > 14 Tage`}
                       sub="Dringend – diese Leads drohen verloren zu gehen"
                       to="/pipeline?tab=interessenten&filter=overdue14"
-                      accent="destructive"
                     />
                   )}
                   {overdueLeads7.length > 0 && (
@@ -508,7 +409,6 @@ export default function Dashboard() {
                       label={`${overdueLeads7.length} Lead${overdueLeads7.length > 1 ? "s" : ""} ohne Kontakt > 7 Tage`}
                       sub="Bitte zeitnah kontaktieren"
                       to="/pipeline?tab=interessenten&filter=overdue7"
-                      accent="warning"
                     />
                   )}
                   {contractsMissingMandateMail.length > 0 && (
@@ -519,7 +419,6 @@ export default function Dashboard() {
                       label={`${contractsMissingMandateMail.length} Vertrag/Verträge ohne SEPA-Mandat-Versand`}
                       sub="SEPA-Mandat-Mail mit Stripe-Link noch nicht versendet"
                       to="/pipeline?tab=abschlussphase&filter=missing_email"
-                      accent="primary"
                     />
                   )}
                   {contractsMissingConfirmationMail.length > 0 && (
@@ -530,7 +429,6 @@ export default function Dashboard() {
                       label={`${contractsMissingConfirmationMail.length} Vertrag/Verträge ohne Vertragsunterlagen-Versand`}
                       sub="Vertragsunterlagen mit AGB noch nicht versendet"
                       to="/pipeline?tab=abschlussphase&filter=missing_confirmation"
-                      accent="primary"
                     />
                   )}
                   {contractsWaitingPayment.length > 0 && (
@@ -541,7 +439,6 @@ export default function Dashboard() {
                       label={`${contractsWaitingPayment.length} Vertrag/Verträge warten auf Mandat-Erteilung`}
                       sub="SEPA-Mandat-Mail versendet, Kunde hat Bankverbindung noch nicht hinterlegt"
                       to="/pipeline?tab=abschlussphase&filter=waiting_payment"
-                      accent="primary"
                     />
                   )}
                 </>
@@ -549,30 +446,65 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* ── BLOCK 2: ⚡ Pipeline Schnellzugriff ── */}
+          {/* ── BLOCK 2: 🆕 Seit gestern reingekommen ── */}
+          {hasNewSinceYesterday && (
+            <div className="card-elevated">
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <UserPlus className="h-4 w-4 text-primary" />
+                  <h3 className="font-semibold text-foreground">Seit gestern reingekommen</h3>
+                </div>
+              </div>
+              <div className="divide-y divide-border">
+                {newLeads.length > 0 && (
+                  <NewItemsRow
+                    icon={Users}
+                    iconClass="text-purple-600"
+                    countLabel={`${newLeads.length} neue${newLeads.length === 1 ? "r" : ""} Lead${newLeads.length === 1 ? "" : "s"} (24h)`}
+                    items={newLeads.map((l: any) => ({
+                      id: l.id,
+                      label: l.praxis_name || `${l.vorname ?? ""} ${l.nachname ?? ""}`.trim() || "—",
+                      to: `/pipeline?tab=interessenten&lead=${l.id}`,
+                    }))}
+                  />
+                )}
+                {newContracts.length > 0 && (
+                  <NewItemsRow
+                    icon={FileText}
+                    iconClass="text-blue-600"
+                    countLabel={`${newContracts.length} neue${newContracts.length === 1 ? "r" : ""} Vertrag/Verträge (24h)`}
+                    items={newContracts.map((c: any) => ({
+                      id: c.id,
+                      label: c.praxis || c.customer_name || "—",
+                      to: `/vertrieb/vertraege?contractId=${c.id}`,
+                    }))}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── BLOCK 3: ⚡ Pipeline Schnellzugriff (kompakte Anker, ohne Zahlen) ── */}
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Zap className="h-4 w-4 text-primary" />
               <h3 className="font-semibold text-foreground text-sm">Pipeline Schnellzugriff</h3>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <PipelineQuickCard
+            <div className="grid grid-cols-3 gap-3 max-w-2xl">
+              <PipelineAnchor
                 label="Interessenten"
-                count={leadsCount}
                 icon={Users}
                 iconClass="bg-purple-500/10 text-purple-600"
                 to="/pipeline?tab=interessenten"
               />
-              <PipelineQuickCard
+              <PipelineAnchor
                 label="Abschlussphase"
-                count={contractsCount}
                 icon={FileText}
                 iconClass="bg-blue-500/10 text-blue-600"
                 to="/pipeline?tab=abschlussphase"
               />
-              <PipelineQuickCard
+              <PipelineAnchor
                 label="Kunden"
-                count={customersCount}
                 icon={Building2}
                 iconClass="bg-green-500/10 text-green-600"
                 to="/pipeline?tab=kunden"
@@ -580,158 +512,8 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* ── BLOCK 2b: 📅 Reservierungen ── */}
-          {canSeeReservations && (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <BookMarked className="h-4 w-4 text-primary" />
-                  <h3 className="font-semibold text-foreground text-sm">Reservierungen</h3>
-                  {reservationActionItems > 0 && (
-                    <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full text-[10px] font-bold bg-amber-500 text-white">
-                      {reservationActionItems}
-                    </span>
-                  )}
-                </div>
-                <Link
-                  to="/reservierungen"
-                  className="text-xs font-medium text-primary hover:text-primary/80 inline-flex items-center gap-1"
-                >
-                  Alle anzeigen <ArrowRight className="h-3 w-3" />
-                </Link>
-              </div>
-              
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                <ReservationStatCard
-                  label="Aktiv"
-                  count={reservationStats.active}
-                  icon={CalendarCheck}
-                  iconClass="bg-emerald-500/10 text-emerald-600"
-                  to="/reservierungen?filter=active"
-                />
-                <ReservationStatCard
-                  label="Läuft in 14 Tagen ab"
-                  count={reservationStats.expiringSoon}
-                  icon={Clock}
-                  iconClass="bg-amber-500/10 text-amber-600"
-                  highlight={reservationStats.expiringSoon > 0}
-                  to="/reservierungen?filter=expiring"
-                />
-                <ReservationStatCard
-                  label="Abgelaufen"
-                  count={reservationStats.expired}
-                  icon={CalendarX}
-                  iconClass="bg-destructive/10 text-destructive"
-                  highlight={reservationStats.expired > 0}
-                  to="/reservierungen?filter=expired"
-                />
-                <ReservationStatCard
-                  label="Ohne AD"
-                  count={reservationStats.withoutAd}
-                  icon={UserX}
-                  iconClass="bg-orange-500/10 text-orange-600"
-                  highlight={reservationStats.withoutAd > 0}
-                  to="/reservierungen?filter=without_ad"
-                />
-                <ReservationStatCard
-                  label="Ohne Produkt"
-                  count={reservationStats.withoutProduct}
-                  icon={Tag}
-                  iconClass="bg-purple-500/10 text-purple-600"
-                  to="/reservierungen?filter=without_product"
-                />
-                <ReservationStatCard
-                  label="Konvertiert (30 T.)"
-                  count={reservationStats.convertedRecently}
-                  icon={CheckCircle2}
-                  iconClass="bg-green-500/10 text-green-600"
-                  to="/reservierungen?filter=converted_recently"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* ── BLOCK 3: 🎯 Meine Performance ── */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Target className="h-4 w-4 text-primary" />
-              <h3 className="font-semibold text-foreground text-sm">Meine Performance</h3>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="stat-card">
-                <p className="text-xs font-medium text-muted-foreground">Abschlüsse diesen Monat</p>
-                <p className="mt-2 text-2xl font-bold text-foreground">{closingsThisMonth}</p>
-                <p className="mt-1 text-xs text-muted-foreground">Verträge → aktiv</p>
-              </div>
-              {(role === "sales_partner" || role === "regional_lead" || role === "user") && (
-                <Link to="/vertrieb/provisionen" className="stat-card group block hover:shadow-md transition-all">
-                  <p className="text-xs font-medium text-muted-foreground">Gesamtprovision</p>
-                  <p className="mt-2 text-2xl font-bold text-foreground">
-                    {performance?.totalProvision != null
-                      ? performance.totalProvision.toLocaleString("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 })
-                      : "–"}
-                  </p>
-                  <div className="mt-1 flex items-center gap-1 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                    Details <ArrowRight className="h-3 w-3" />
-                  </div>
-                </Link>
-              )}
-              {(role === "admin" || role === "sales_lead" || role === "vertragsabteilung") && (
-                <div className="stat-card">
-                  <p className="text-xs font-medium text-muted-foreground">Offene Alerts</p>
-                  <p className="mt-2 text-2xl font-bold text-foreground">{totalAlerts}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Handlungsbedarfe gesamt</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ── BLOCK 4: 🚀 Quick Actions ── */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Rocket className="h-4 w-4 text-primary" />
-              <h3 className="font-semibold text-foreground text-sm">Schnellaktionen</h3>
-            </div>
-            <div className="flex gap-3 flex-wrap">
-              {canCreateLead && (
-                <Button
-                  size="sm"
-                  onClick={() => setCreateLeadOpen(true)}
-                  className="gap-2"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  Neuer Interessent
-                </Button>
-              )}
-              {(role !== "vertragsabteilung") && (
-                <Button size="sm" variant="outline" asChild className="gap-2">
-                  <Link to="/vertrieb/vertraege">
-                    <PlusCircle className="h-4 w-4" />
-                    Vertrag erstellen
-                  </Link>
-                </Button>
-              )}
-              {(role === "sales_partner" || role === "user" || role === "regional_lead") && (
-                <Button size="sm" variant="outline" asChild className="gap-2">
-                  <Link to="/reservierungen">
-                    <BookMarked className="h-4 w-4" />
-                    Reservierungen
-                  </Link>
-                </Button>
-              )}
-              <Button size="sm" variant="secondary" asChild className="gap-2 font-semibold">
-                <Link to="/pipeline">
-                  <ArrowRight className="h-4 w-4" />
-                  Zur Pipeline
-                </Link>
-              </Button>
-            </div>
-          </div>
-
         </div>
       )}
-
-      <CreateLeadDialog open={createLeadOpen} onOpenChange={setCreateLeadOpen} />
     </MainLayout>
   );
 }
@@ -744,16 +526,15 @@ interface AlertRowProps {
   label: string;
   sub: string;
   to: string;
-  accent: string;
 }
 
-function AlertRow({ icon: Icon, iconClass, bgClass, label, sub, to, accent }: AlertRowProps) {
+function AlertRow({ icon: Icon, iconClass, bgClass, label, sub, to }: AlertRowProps) {
   return (
     <Link
       to={to}
       className={`flex items-center gap-3 p-4 ${bgClass} hover:bg-muted/50 transition-colors group`}
     >
-      <div className={`shrink-0 rounded-lg p-2 bg-background border border-border`}>
+      <div className="shrink-0 rounded-lg p-2 bg-background border border-border">
         <Icon className={`h-4 w-4 ${iconClass}`} />
       </div>
       <div className="min-w-0 flex-1">
@@ -765,66 +546,59 @@ function AlertRow({ icon: Icon, iconClass, bgClass, label, sub, to, accent }: Al
   );
 }
 
-// ── Pipeline Quick Card ──
-interface PipelineQuickCardProps {
+// ── New Items Row (Seit gestern) ──
+interface NewItemsRowProps {
+  icon: React.ElementType;
+  iconClass: string;
+  countLabel: string;
+  items: { id: string; label: string; to: string }[];
+}
+
+function NewItemsRow({ icon: Icon, iconClass, countLabel, items }: NewItemsRowProps) {
+  const visible = items.slice(0, 3);
+  const rest = items.length - visible.length;
+  return (
+    <div className="flex items-start gap-3 p-4 hover:bg-muted/30 transition-colors">
+      <div className="shrink-0 rounded-lg p-2 bg-background border border-border">
+        <Icon className={`h-4 w-4 ${iconClass}`} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-foreground">{countLabel}</p>
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          {visible.map((it, i) => (
+            <span key={it.id} className="inline-flex items-center">
+              <Link to={it.to} className="hover:text-primary hover:underline truncate max-w-[16rem]">
+                {it.label}
+              </Link>
+              {i < visible.length - 1 && <span className="ml-2">·</span>}
+            </span>
+          ))}
+          {rest > 0 && <span className="text-muted-foreground/70">und {rest} weitere</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Pipeline Anchor (kompakt, ohne Zahl) ──
+interface PipelineAnchorProps {
   label: string;
-  count?: number;
   icon: React.ElementType;
   iconClass: string;
   to: string;
 }
 
-function PipelineQuickCard({ label, count, icon: Icon, iconClass, to }: PipelineQuickCardProps) {
+function PipelineAnchor({ label, icon: Icon, iconClass, to }: PipelineAnchorProps) {
   return (
     <Link
       to={to}
-      className="stat-card group block transition-all hover:shadow-md"
+      className="group flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5 transition-all hover:shadow-sm hover:border-primary/30"
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">{label}</p>
-          {count !== undefined && (
-            <p className="mt-2 text-2xl font-bold text-foreground">{count}</p>
-          )}
-        </div>
-        <div className={`rounded-lg p-2.5 ${iconClass}`}>
-          <Icon className="h-5 w-5" />
-        </div>
+      <div className={`shrink-0 rounded-md p-1.5 ${iconClass}`}>
+        <Icon className="h-4 w-4" />
       </div>
-      <div className="mt-3 flex items-center gap-1 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-        Öffnen <ArrowRight className="h-3 w-3" />
-      </div>
-    </Link>
-  );
-}
-
-// ── Reservation Stat Card ──
-interface ReservationStatCardProps {
-  label: string;
-  count: number;
-  icon: React.ElementType;
-  iconClass: string;
-  highlight?: boolean;
-  to?: string;
-}
-
-function ReservationStatCard({ label, count, icon: Icon, iconClass, highlight, to }: ReservationStatCardProps) {
-  return (
-    <Link
-      to={to ?? "/reservierungen"}
-      className={`group block rounded-lg border bg-card p-3 transition-all hover:shadow-md ${
-        highlight ? "border-amber-500/40" : "border-border"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-[11px] font-medium text-muted-foreground leading-tight">{label}</p>
-          <p className="mt-1.5 text-xl font-bold text-foreground">{count}</p>
-        </div>
-        <div className={`shrink-0 rounded-md p-1.5 ${iconClass}`}>
-          <Icon className="h-4 w-4" />
-        </div>
-      </div>
+      <span className="text-sm font-medium text-foreground truncate">{label}</span>
+      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
     </Link>
   );
 }
