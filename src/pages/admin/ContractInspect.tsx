@@ -12,7 +12,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, Search, AlertCircle } from "lucide-react";
+import { Loader2, Search, AlertCircle, GitMerge } from "lucide-react";
 import { format } from "date-fns";
 
 interface LookupResult {
@@ -34,6 +34,26 @@ export default function ContractInspect() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<LookupResult | null>(null);
+  const [mergeLoading, setMergeLoading] = useState(false);
+  const [mergeError, setMergeError] = useState<string | null>(null);
+  const [mergePlan, setMergePlan] = useState<any | null>(null);
+
+  const handleMergeDiagnose = async () => {
+    setMergeLoading(true);
+    setMergeError(null);
+    setMergePlan(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("contract-merge-diagnose", {
+        body: { hfx_customer_number: query.trim() },
+      });
+      if (error) throw error;
+      setMergePlan(data);
+    } catch (err: any) {
+      setMergeError(err.message || String(err));
+    } finally {
+      setMergeLoading(false);
+    }
+  };
 
   const handleLookup = async () => {
     const hfx = query.trim();
@@ -41,6 +61,8 @@ export default function ContractInspect() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setMergePlan(null);
+    setMergeError(null);
     try {
       const [leadRes, contractsRes, customerRes] = await Promise.all([
         supabase.from("leads").select("*").eq("hfx_customer_number", hfx).maybeSingle(),
@@ -133,6 +155,55 @@ export default function ContractInspect() {
                 <span className="ml-2 text-xs font-normal text-warning">⚠ Doublette / mehrere Datensätze</span>
               )}
             </h2>
+            {result.contracts.length > 1 && (
+              <div className="mb-4">
+                <Button size="sm" variant="outline" onClick={handleMergeDiagnose} disabled={mergeLoading}>
+                  {mergeLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <GitMerge className="h-4 w-4 mr-2" />}
+                  Merge-Plan anzeigen
+                </Button>
+                {mergeError && (
+                  <div className="mt-2 flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                    <AlertCircle className="h-4 w-4" /> {mergeError}
+                  </div>
+                )}
+                {mergePlan && (
+                  <div className="mt-3 space-y-3">
+                    {mergePlan.merge_recommendation ? (
+                      <>
+                        <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                          <div><span className="font-semibold">Winner:</span> <span className="font-mono text-xs">{mergePlan.merge_recommendation.winner_id}</span></div>
+                          <div><span className="font-semibold">Loser:</span> <span className="font-mono text-xs">{(mergePlan.merge_recommendation.loser_ids || []).join(", ")}</span></div>
+                          <div className="mt-2"><span className="font-semibold">Begründung:</span></div>
+                          <ul className="list-disc ml-5 text-xs">
+                            {(mergePlan.merge_recommendation.reasons || []).map((r: string, i: number) => <li key={i}>{r}</li>)}
+                          </ul>
+                          {(mergePlan.merge_recommendation.warnings || []).length > 0 && (
+                            <div className="mt-2 text-warning">
+                              <span className="font-semibold">⚠ Warnungen:</span>
+                              <ul className="list-disc ml-5 text-xs">
+                                {mergePlan.merge_recommendation.warnings.map((w: string, i: number) => <li key={i}>{w}</li>)}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold mb-1">SQL-Plan (in dieser Reihenfolge ausführen):</div>
+                          <pre className="text-xs font-mono bg-muted/50 p-3 rounded border overflow-x-auto whitespace-pre-wrap">
+{(mergePlan.merge_recommendation.actions || []).map((a: any) => `-- step ${a.step} (${a.operation} ${a.table}, ${a.row_count} row${a.row_count !== 1 ? "s" : ""})\n${a.sql}`).join("\n\n")}
+                          </pre>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Kein Merge nötig.</p>
+                    )}
+                    <details className="text-xs">
+                      <summary className="cursor-pointer text-muted-foreground">Roh-JSON</summary>
+                      <pre className="mt-2 font-mono bg-muted/30 p-3 rounded border overflow-x-auto">{JSON.stringify(mergePlan, null, 2)}</pre>
+                    </details>
+                  </div>
+                )}
+              </div>
+            )}
             {result.contracts.length === 0 ? (
               <p className="text-sm text-muted-foreground">Keine Verträge.</p>
             ) : (

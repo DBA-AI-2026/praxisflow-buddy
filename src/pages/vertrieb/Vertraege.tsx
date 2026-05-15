@@ -357,6 +357,7 @@ export default function Vertraege() {
   const [bicLoading, setBicLoading] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [leadHfxNumber, setLeadHfxNumber] = useState<string | null>(null);
+  const [forceCreateDuplicate, setForceCreateDuplicate] = useState(false);
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
   const [resendingConfirmationId, setResendingConfirmationId] = useState<string | null>(null);
   const [emailConfirmContract, setEmailConfirmContract] = useState<any | null>(null);
@@ -613,6 +614,61 @@ export default function Vertraege() {
     enabled: !!ebmProduct?.id,
   });
 
+  // ── Dubletten-Prüfung beim Vertrag-Anlegen ───────────────────────────────
+  // Strong criteria (any one match = potential duplicate):
+  //   1. hfx_customer_number exact (top — Lead-Konvertierung gegen Stammvertrag)
+  //   2. email exact (case-insensitive)
+  //   3. praxis exact (case-insensitive, getrimmt)
+  // Weak (only as additional reason): praxis fuzzy substring, plz+adresse exact.
+  // Skip when editing (would self-match).
+  const dupHfx = (leadHfxNumber ?? "").trim();
+  const dupEmail = (form.email ?? "").trim().toLowerCase();
+  const dupPraxis = (form.praxis ?? "").trim().toLowerCase();
+  const dupPlz = (form.plz ?? "").trim();
+  const dupAdresse = (form.adresse ?? "").trim().toLowerCase();
+
+  const { data: contractDuplicates = [] } = useQuery({
+    queryKey: ["contract-duplicates", dupHfx, dupEmail, dupPraxis, dupPlz, dupAdresse, editId],
+    enabled: dialogOpen && !editId && (!!dupHfx || !!dupEmail || !!dupPraxis),
+    queryFn: async () => {
+      const filters: string[] = [];
+      if (dupHfx) filters.push(`hfx_customer_number.eq.${dupHfx}`);
+      if (dupEmail) filters.push(`email.eq.${dupEmail}`);
+      if (dupPlz) filters.push(`plz.eq.${dupPlz}`);
+      if (filters.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from("contracts")
+        .select("id, hfx_customer_number, contract_number, praxis, vorname, nachname, email, plz, adresse, status, created_at, parent_contract_id")
+        .or(filters.join(","))
+        .is("parent_contract_id", null)
+        .limit(50);
+      if (error) throw error;
+
+      const out: Array<{ row: any; reasons: string[] }> = [];
+      for (const row of (data ?? [])) {
+        const reasons: string[] = [];
+        if (dupHfx && row.hfx_customer_number === dupHfx) reasons.push("HFX-Nummer");
+        if (dupEmail && row.email?.toLowerCase() === dupEmail) reasons.push("E-Mail");
+        if (dupPraxis && row.praxis?.trim().toLowerCase() === dupPraxis) reasons.push("Praxisname");
+        if (
+          dupPraxis && !reasons.includes("Praxisname") &&
+          row.praxis && (row.praxis.toLowerCase().includes(dupPraxis) || dupPraxis.includes(row.praxis.toLowerCase()))
+        ) reasons.push("ähnlicher Praxisname");
+        if (
+          dupPlz && dupAdresse && row.plz === dupPlz &&
+          row.adresse?.trim().toLowerCase() === dupAdresse
+        ) reasons.push("PLZ + Adresse");
+        const hasStrong = reasons.some((r) => ["HFX-Nummer", "E-Mail", "Praxisname"].includes(r));
+        if (hasStrong) out.push({ row, reasons });
+      }
+      return out.sort((a, b) => b.reasons.length - a.reasons.length).slice(0, 10);
+    },
+  });
+
+  const hasContractDuplicates = contractDuplicates.length > 0;
+  const isProductiveSave = form.status !== "entwurf";
+  const blockOnDuplicate = !editId && hasContractDuplicates && isProductiveSave && !forceCreateDuplicate;
   const upsertMutation = useMutation({
     mutationFn: async (data: ContractFormData): Promise<string | null> => {
       if (!user?.id) throw new Error("Nicht authentifiziert – bitte neu einloggen.");
@@ -994,6 +1050,7 @@ export default function Vertraege() {
     setEditId(null);
     setEditingContract(null);
     setLeadHfxNumber(null);
+    setForceCreateDuplicate(false);
     setLeadTippgeberName(null);
     setFromLeadId(null);
     setForm(emptyForm);
@@ -1338,6 +1395,7 @@ export default function Vertraege() {
   };
 
   const handleSaveDraft = () => {
+    if (upsertMutation.isPending) return; // Doppelklick-Schutz
     const hasMinimum = form.praxis.trim() !== "" || form.vorname.trim() !== "" || form.nachname.trim() !== "";
     if (!hasMinimum) {
       toast({ title: "Mindestangabe fehlt", description: "Bitte mindestens Praxis oder einen Namen angeben.", variant: "destructive" });
@@ -1350,6 +1408,11 @@ export default function Vertraege() {
   const [sendingBuchungsmailDialog, setSendingBuchungsmailDialog] = useState(false);
 
   const handleSaveWithBuchungsmail = async () => {
+    if (upsertMutation.isPending || sendingBuchungsmailDialog) return; // Doppelklick-Schutz
+    if (blockOnDuplicate) {
+      toast({ title: "Möglicher Vertrags-Dublette gefunden", description: 'Bitte Hinweis im Dialog beachten oder „Trotzdem anlegen" bestätigen.', variant: "destructive" });
+      return;
+    }
     if (!form.email) {
       toast({ title: "E-Mail fehlt", description: "Bitte eine E-Mail-Adresse hinterlegen, damit die SEPA-Mandat-Mail gesendet werden kann.", variant: "destructive" });
       return;
@@ -1514,6 +1577,11 @@ export default function Vertraege() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (upsertMutation.isPending) return; // Doppelklick-Schutz
+    if (blockOnDuplicate) {
+      toast({ title: "Möglicher Vertrags-Dublette gefunden", description: 'Bitte Hinweis im Dialog beachten oder „Trotzdem anlegen" bestätigen.', variant: "destructive" });
+      return;
+    }
     const missing = getMissingFields();
     if (missing.length > 0) {
       setShowErrors(true);
@@ -3121,6 +3189,34 @@ export default function Vertraege() {
               </DialogFooter>
             ) : (
             <DialogFooter className="flex-col gap-2">
+              {!editId && hasContractDuplicates && (
+                <div className={`w-full rounded-lg border p-3 text-sm ${isProductiveSave ? "border-destructive/40 bg-destructive/5" : "border-warning/40 bg-warning/5"}`}>
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <div className="flex-1">
+                      <div className="font-semibold mb-1">
+                        {isProductiveSave ? "Möglicher Vertrags-Dublette gefunden" : "Hinweis: ähnliche Verträge vorhanden"}
+                      </div>
+                      <ul className="list-disc ml-5 space-y-0.5 text-xs">
+                        {contractDuplicates.map((d: any) => (
+                          <li key={d.row.id}>
+                            <span className="font-mono">{d.row.contract_number || d.row.hfx_customer_number || d.row.id.slice(0, 8)}</span>
+                            {" — "}{d.row.praxis || `${d.row.vorname ?? ""} ${d.row.nachname ?? ""}`.trim() || "—"}
+                            {" "}<span className="text-muted-foreground">({d.row.status})</span>
+                            {" — Treffer: "}<span className="text-muted-foreground">{d.reasons.join(", ")}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {isProductiveSave && (
+                        <label className="mt-2 flex items-center gap-2 cursor-pointer">
+                          <Checkbox checked={forceCreateDuplicate} onCheckedChange={(v) => setForceCreateDuplicate(!!v)} />
+                          <span className="text-xs">Trotzdem anlegen (Dublette bewusst akzeptiert)</span>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
               {/* Zeile 1: PDF-Aktionen */}
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => handlePreviewPdf(form)} className="gap-1.5 flex-1 sm:flex-none" disabled={!isFormComplete}>
