@@ -45,7 +45,7 @@ import { useCustomerContractsMap } from "@/hooks/useCustomerContracts";
 
 const leadStatusCfg: Record<string, { label: string; cls: string; priority: number }> = {
   qualifiziert:   { label: "Qualifiziert",   cls: "bg-warning/15 text-warning", priority: 1 },
-  vertrag:        { label: "Vertrag läuft",  cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400", priority: 2 },
+  vertrag:        { label: "In Vertragserstellung", cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400", priority: 2 },
   kontaktiert:    { label: "Kontaktiert",    cls: "bg-secondary text-secondary-foreground", priority: 3 },
   neu:            { label: "Neu",            cls: "bg-primary/10 text-primary", priority: 4 },
   kein_abschluss: { label: "Kein Abschluss", cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400", priority: 10 },
