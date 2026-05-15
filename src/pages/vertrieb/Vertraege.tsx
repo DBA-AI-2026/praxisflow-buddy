@@ -1406,6 +1406,11 @@ export default function Vertraege() {
   const [sendingBuchungsmailDialog, setSendingBuchungsmailDialog] = useState(false);
 
   const handleSaveWithBuchungsmail = async () => {
+    if (upsertMutation.isPending || sendingBuchungsmailDialog) return; // Doppelklick-Schutz
+    if (blockOnDuplicate) {
+      toast({ title: "Möglicher Vertrags-Dublette gefunden", description: "Bitte Hinweis im Dialog beachten oder „Trotzdem anlegen" bestätigen.", variant: "destructive" });
+      return;
+    }
     if (!form.email) {
       toast({ title: "E-Mail fehlt", description: "Bitte eine E-Mail-Adresse hinterlegen, damit die SEPA-Mandat-Mail gesendet werden kann.", variant: "destructive" });
       return;
