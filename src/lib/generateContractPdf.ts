@@ -238,7 +238,7 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
   sectionHeader("VERTRAGSPARTEIEN");
   fieldRow("Praxis", data.praxis || "–", "Fachrichtung", data.fachrichtung || "–");
   fieldRow("Vorname", data.vorname || "–", "Nachname", data.nachname || "–");
-  fieldRow("Adresse", data.adresse || "–");
+  fieldRow("Adresse", data.adresse || "–", "PLZ / Ort", [data.plz, data.ort].filter(Boolean).join(" ") || "–");
   fieldRow("Telefon", data.telefon || "–", "E-Mail", data.email || "–");
   fieldRow("MP-Nummer", data.mp_nr || "–", "Vertriebspartner", data.sales_partner_name || "–");
   y -= 10;
