@@ -24,6 +24,8 @@ interface ContractPdfData {
   vorname?: string;
   nachname?: string;
   adresse?: string;
+  plz?: string;
+  ort?: string;
   telefon?: string;
   email?: string;
   mp_nr?: string;
@@ -160,6 +162,8 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
   if (data.praxis) recipientLines.push(data.praxis);
   if (fullName) recipientLines.push(fullName);
   if (data.adresse) recipientLines.push(data.adresse);
+  const plzOrt = [data.plz, data.ort].filter(Boolean).join(" ");
+  if (plzOrt) recipientLines.push(plzOrt);
   if (data.email) recipientLines.push(data.email);
 
   const recipLineH = 13;
@@ -234,7 +238,7 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
   sectionHeader("VERTRAGSPARTEIEN");
   fieldRow("Praxis", data.praxis || "–", "Fachrichtung", data.fachrichtung || "–");
   fieldRow("Vorname", data.vorname || "–", "Nachname", data.nachname || "–");
-  fieldRow("Adresse", data.adresse || "–");
+  fieldRow("Adresse", data.adresse || "–", "PLZ / Ort", [data.plz, data.ort].filter(Boolean).join(" ") || "–");
   fieldRow("Telefon", data.telefon || "–", "E-Mail", data.email || "–");
   fieldRow("MP-Nummer", data.mp_nr || "–", "Vertriebspartner", data.sales_partner_name || "–");
   y -= 10;
