@@ -64,18 +64,15 @@ export default function ContractInspect() {
     setMergePlan(null);
     setMergeError(null);
     try {
-      const [leadRes, contractsRes, customerRes] = await Promise.all([
-        supabase.from("leads").select("*").eq("hfx_customer_number", hfx).maybeSingle(),
-        supabase.from("contracts").select("*").eq("hfx_customer_number", hfx).order("created_at", { ascending: false }),
-        supabase.from("customers").select("*").eq("hfx_customer_number", hfx).maybeSingle(),
-      ]);
-      if (leadRes.error) throw leadRes.error;
-      if (contractsRes.error) throw contractsRes.error;
-      if (customerRes.error) throw customerRes.error;
+      const { data, error } = await supabase.functions.invoke("contract-inspect-lookup", {
+        body: { hfx_customer_number: hfx },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       setResult({
-        lead: leadRes.data,
-        contracts: contractsRes.data || [],
-        customer: customerRes.data,
+        lead: data?.lead ?? null,
+        contracts: data?.contracts ?? [],
+        customer: data?.customer ?? null,
       });
     } catch (err: any) {
       setError(err.message || String(err));
