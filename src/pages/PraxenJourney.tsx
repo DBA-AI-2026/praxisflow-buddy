@@ -640,7 +640,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
                   <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-1">
                       {lead.status !== "vertrag" && (
-                        <QodiaLeadStatusCell synced={!!lead.qodia_synced} conflict={!!lead.qodia_conflict} />}
+                        <QodiaLeadStatusCell synced={!!lead.qodia_synced} conflict={!!lead.qodia_conflict} />
                       )}
                       {!lead.qodia_synced && lead.hfx_customer_number && (
                         <TooltipProvider>
