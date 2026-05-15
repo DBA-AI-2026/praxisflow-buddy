@@ -3189,6 +3189,34 @@ export default function Vertraege() {
               </DialogFooter>
             ) : (
             <DialogFooter className="flex-col gap-2">
+              {!editId && hasContractDuplicates && (
+                <div className={`w-full rounded-lg border p-3 text-sm ${isProductiveSave ? "border-destructive/40 bg-destructive/5" : "border-warning/40 bg-warning/5"}`}>
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <div className="flex-1">
+                      <div className="font-semibold mb-1">
+                        {isProductiveSave ? "Möglicher Vertrags-Dublette gefunden" : "Hinweis: ähnliche Verträge vorhanden"}
+                      </div>
+                      <ul className="list-disc ml-5 space-y-0.5 text-xs">
+                        {contractDuplicates.map((d: any) => (
+                          <li key={d.row.id}>
+                            <span className="font-mono">{d.row.contract_number || d.row.hfx_customer_number || d.row.id.slice(0, 8)}</span>
+                            {" — "}{d.row.praxis || `${d.row.vorname ?? ""} ${d.row.nachname ?? ""}`.trim() || "—"}
+                            {" "}<span className="text-muted-foreground">({d.row.status})</span>
+                            {" — Treffer: "}<span className="text-muted-foreground">{d.reasons.join(", ")}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {isProductiveSave && (
+                        <label className="mt-2 flex items-center gap-2 cursor-pointer">
+                          <Checkbox checked={forceCreateDuplicate} onCheckedChange={(v) => setForceCreateDuplicate(!!v)} />
+                          <span className="text-xs">Trotzdem anlegen (Dublette bewusst akzeptiert)</span>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
               {/* Zeile 1: PDF-Aktionen */}
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => handlePreviewPdf(form)} className="gap-1.5 flex-1 sm:flex-none" disabled={!isFormComplete}>
