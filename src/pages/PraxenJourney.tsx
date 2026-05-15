@@ -37,7 +37,7 @@ import {
 } from "@/components/pipeline/OnboardingStatus";
 import { useActivityThresholds } from "@/hooks/useAppSettings";
 import { ProductBadges, type ProductBadgeItem } from "@/components/pipeline/ProductBadges";
-import { ProductInterestBadges } from "@/components/products/ProductInterestPicker";
+
 import { useProviderStatusMap, useProductProviderFlags } from "@/hooks/useProviderStatus";
 import { useCustomerContractsMap } from "@/hooks/useCustomerContracts";
 
