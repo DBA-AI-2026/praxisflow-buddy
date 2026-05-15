@@ -7,28 +7,26 @@
  */
 
 export const LEAD_STATUS_TOOLTIPS: Record<string, string> = {
-  neu: "Neuer Lead — wurde noch nicht kontaktiert.",
-  in_kontakt: "Lead wurde kontaktiert, Gespräch läuft.",
-  termin_vereinbart: "Demo-/Beratungstermin ist gebucht.",
-  demo_durchgefuehrt: "Demo wurde gehalten, Entscheidung steht aus.",
-  angebot_versendet: "Angebot/Vertragsentwurf wurde an den Lead geschickt.",
-  verhandlung: "Konditionen werden noch verhandelt.",
-  gewonnen: "Lead hat zugesagt — wird zum Vertrag konvertiert.",
-  verloren: "Lead hat abgesagt oder reagiert nicht mehr.",
-  on_hold: "Lead pausiert auf Wunsch des Interessenten.",
+  neu: "Lead ist frisch eingegangen. Vertriebler hat noch nicht reagiert.",
+  kontaktiert: "Erster Kontakt erfolgt, Vertriebler bleibt dran.",
+  qualifiziert:
+    "Vertriebler hat den Lead geprüft und für ernsthaft befunden. Bereit für Vertragsanlage.",
+  vertrag:
+    "Vertrag ist in Erstellung. Der zugehörige Vertrag erscheint im Abschlussphase-Tab.",
+  kein_abschluss: "Lead ist abgesprungen oder hat keinen Vertrag abgeschlossen.",
+  abgelehnt: "Lead wurde vom Vertrieb als ungeeignet abgelehnt.",
+  kunde: "Lead wurde zu einem aktiven Vertrag konvertiert.",
 };
 
 export const CONTRACT_STATUS_TOOLTIPS: Record<string, string> = {
-  entwurf: "Vertrag wurde angelegt, aber noch nicht final ausgefüllt.",
-  bereit_zur_unterschrift: "Vertrag ist vollständig und kann unterschrieben werden.",
-  unterschrieben: "Vertrag ist digital unterschrieben — Zahlung/Mandat steht aus.",
-  warte_auf_mandat: "SEPA-Mandat-Mail versendet, Kunde muss Bankverbindung hinterlegen.",
-  warte_auf_zahlung: "Erste Zahlung/Setup ausstehend.",
-  aktiv: "Vertrag läuft, Kunde wird abgerechnet.",
-  pausiert: "Vertrag temporär pausiert (z. B. Praxisurlaub).",
-  gekuendigt: "Vertrag wurde gekündigt, läuft bis Vertragsende.",
-  beendet: "Vertrag ist abgelaufen oder vollständig beendet.",
-  storniert: "Vertrag wurde vor Aktivierung storniert.",
+  entwurf:
+    "Vertrag ist angelegt, aber noch nicht aktiviert. Daten können noch ergänzt werden.",
+  eingegangen:
+    "Vertrag ist aktiviert und die SEPA-Mandat-Mail ist versendet. Wartet auf Mandat-Erteilung durch den Kunden.",
+  aktiv: "Vertrag läuft. SEPA-Mandat erteilt, Abrechnung läuft.",
+  gekuendigt:
+    "Vertrag wurde gekündigt. Endedatum gesetzt, läuft bis dahin weiter.",
+  beendet: "Vertrag hat das Endedatum erreicht oder wurde sofort beendet.",
 };
 
 export const PHASE_TOOLTIPS: Record<string, string> = {
