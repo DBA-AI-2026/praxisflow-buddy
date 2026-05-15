@@ -1402,6 +1402,7 @@ export default function PraxenJourney() {
       <div className="card-elevated overflow-hidden">
         {/* KPI Bar */}
         <PipelineKpiBar
+          tab={tab}
           allLeads={kpiLeadsNonKunde}
           allContracts={kpiTeamContracts}
           kundeLeads={kpiLeadsKunde}
