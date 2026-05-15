@@ -162,6 +162,8 @@ export async function generateContractPdf(data: ContractPdfData, logoBytes?: Arr
   if (data.praxis) recipientLines.push(data.praxis);
   if (fullName) recipientLines.push(fullName);
   if (data.adresse) recipientLines.push(data.adresse);
+  const plzOrt = [data.plz, data.ort].filter(Boolean).join(" ");
+  if (plzOrt) recipientLines.push(plzOrt);
   if (data.email) recipientLines.push(data.email);
 
   const recipLineH = 13;
