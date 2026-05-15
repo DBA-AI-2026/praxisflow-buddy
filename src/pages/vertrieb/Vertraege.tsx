@@ -1577,6 +1577,11 @@ export default function Vertraege() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (upsertMutation.isPending) return; // Doppelklick-Schutz
+    if (blockOnDuplicate) {
+      toast({ title: "Möglicher Vertrags-Dublette gefunden", description: 'Bitte Hinweis im Dialog beachten oder „Trotzdem anlegen" bestätigen.', variant: "destructive" });
+      return;
+    }
     const missing = getMissingFields();
     if (missing.length > 0) {
       setShowErrors(true);
