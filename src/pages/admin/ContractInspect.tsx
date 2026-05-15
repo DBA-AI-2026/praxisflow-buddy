@@ -61,6 +61,8 @@ export default function ContractInspect() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setMergePlan(null);
+    setMergeError(null);
     try {
       const [leadRes, contractsRes, customerRes] = await Promise.all([
         supabase.from("leads").select("*").eq("hfx_customer_number", hfx).maybeSingle(),
