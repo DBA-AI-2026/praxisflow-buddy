@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { PipelineKpiBar } from "@/components/pipeline/PipelineKpiBar";
 import {
-  QodiaStatusCell, QodiaUsageCell, QodiaLastActivityCell, QodiaWarningIcon,
+  QodiaStatusCell, QodiaLeadStatusCell, QodiaUsageCell, QodiaLastActivityCell, QodiaWarningIcon,
   type ProviderStatusRow,
 } from "@/components/pipeline/QodiaStatusBadges";
 import {
@@ -37,7 +37,7 @@ import {
 } from "@/components/pipeline/OnboardingStatus";
 import { useActivityThresholds } from "@/hooks/useAppSettings";
 import { ProductBadges, type ProductBadgeItem } from "@/components/pipeline/ProductBadges";
-import { ProductInterestBadges } from "@/components/products/ProductInterestPicker";
+
 import { useProviderStatusMap, useProductProviderFlags } from "@/hooks/useProviderStatus";
 import { useCustomerContractsMap } from "@/hooks/useCustomerContracts";
 
@@ -220,18 +220,48 @@ function EmptyState({ icon: Icon, title, sub }: { icon: React.ComponentType<any>
 
 // ─── Attention bar — compact info line above table ────────────────────────────
 
-function AttentionBar({ items }: { items: { icon: React.ReactNode; text: string; cls?: string }[] }) {
+type AttentionItem = {
+  icon: React.ReactNode;
+  text: string;
+  cls?: string;
+  onClick?: () => void;
+  active?: boolean;
+};
+
+function AttentionBar({ items }: { items: AttentionItem[] }) {
   const visible = items.filter((i) => i.text);
   if (visible.length === 0) return null;
   return (
-    <div className="px-4 py-2.5 bg-warning/5 border-b border-warning/20 flex items-center gap-4 flex-wrap">
+    <div className="px-4 py-2.5 bg-warning/5 border-b border-warning/20 flex items-center gap-2 flex-wrap">
       <Flame className="h-3.5 w-3.5 text-warning shrink-0" />
-      {visible.map((item, i) => (
-        <span key={i} className={`inline-flex items-center gap-1.5 text-xs font-medium ${item.cls || "text-warning"}`}>
-          {item.icon}
-          {item.text}
-        </span>
-      ))}
+      {visible.map((item, i) => {
+        const base = `inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md ${item.cls || "text-warning"}`;
+        const interactive = item.onClick
+          ? `cursor-pointer transition-colors hover:bg-warning/10 ${
+              item.active ? "ring-1 ring-warning/40 bg-warning/15" : ""
+            }`
+          : "";
+        if (item.onClick) {
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={item.onClick}
+              aria-pressed={!!item.active}
+              className={`${base} ${interactive}`}
+            >
+              {item.icon}
+              {item.text}
+            </button>
+          );
+        }
+        return (
+          <span key={i} className={base}>
+            {item.icon}
+            {item.text}
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -266,7 +296,7 @@ const ACTIVE_LEAD_STATUSES = ["neu", "kontaktiert", "qualifiziert", "vertrag"];
 const CLOSED_LEAD_STATUSES = ["kein_abschluss", "abgelehnt"];
 
 type LeadSourceFilter = "alle" | "homepage" | "manuell" | "reservierung";
-type LeadStatusFilter = "aktiv" | "kein_abschluss" | "abgelehnt" | "alle";
+type LeadStatusFilter = "aktiv" | "kein_abschluss" | "abgelehnt" | "alle" | "qualifiziert";
 
 function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, initialFilter, deepLinkLeadId, onClearDeepLink }: { search: string; highlightId?: string; teamFilter: string; matchesTeamFilter: (id?: string | null) => boolean; initialFilter?: string; deepLinkLeadId?: string; onClearDeepLink?: () => void }) {
   const navigate = useNavigate();
@@ -284,6 +314,21 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
   const [overdueFilter, setOverdueFilter] = useState<"overdue7" | "overdue14" | null>(
     initialFilter === "overdue7" ? "overdue7" : initialFilter === "overdue14" ? "overdue14" : null
   );
+  const [searchParams, setSearchParams] = useSearchParams();
+  const syncUrlFilter = (next: string | null) => {
+    const sp = new URLSearchParams(searchParams);
+    if (next) sp.set("filter", next);
+    else sp.delete("filter");
+    setSearchParams(sp, { replace: true });
+  };
+  const toggleOverdue = (key: "overdue7" | "overdue14") => {
+    const next = overdueFilter === key ? null : key;
+    setOverdueFilter(next);
+    syncUrlFilter(next);
+  };
+  const toggleQualifiziert = () => {
+    setStatusFilter(statusFilter === "qualifiziert" ? "aktiv" : "qualifiziert");
+  };
 
   useEffect(() => {
     if (highlightId && highlightRef.current) {
@@ -384,6 +429,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     if (statusFilter === "aktiv" && !ACTIVE_LEAD_STATUSES.includes(l.status)) return false;
     if (statusFilter === "kein_abschluss" && l.status !== "kein_abschluss") return false;
     if (statusFilter === "abgelehnt" && l.status !== "abgelehnt") return false;
+    if (statusFilter === "qualifiziert" && l.status !== "qualifiziert") return false;
 
     // Deep-link overdue filter from Dashboard
     if (overdueFilter) {
@@ -499,11 +545,17 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
   return (
     <div>
       {/* Attention bar */}
-      {statusFilter === "aktiv" && (attentionMetrics.overdue14 > 0 || attentionMetrics.overdue7 > 0 || attentionMetrics.qualifiziert > 0) && (
+      {(statusFilter === "aktiv" || statusFilter === "qualifiziert") && (attentionMetrics.overdue14 > 0 || attentionMetrics.overdue7 > 0 || attentionMetrics.qualifiziert > 0) && (
         <AttentionBar items={[
-          attentionMetrics.overdue14 > 0 ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.overdue14} Lead${attentionMetrics.overdue14 > 1 ? "s" : ""} über 14 Tage alt`, cls: "text-destructive" } : { icon: null, text: "" },
-          attentionMetrics.overdue7 > 0 ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.overdue7} Lead${attentionMetrics.overdue7 > 1 ? "s" : ""} über 7 Tage alt`, cls: "text-warning" } : { icon: null, text: "" },
-          attentionMetrics.qualifiziert > 0 ? { icon: <FilePlus className="h-3 w-3" />, text: `${attentionMetrics.qualifiziert} qualifiziert — bereit für Vertrag`, cls: "text-success" } : { icon: null, text: "" },
+          attentionMetrics.overdue14 > 0
+            ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.overdue14} Lead${attentionMetrics.overdue14 > 1 ? "s" : ""} über 14 Tage alt`, cls: "text-destructive", onClick: () => toggleOverdue("overdue14"), active: overdueFilter === "overdue14" }
+            : { icon: null, text: "" },
+          attentionMetrics.overdue7 > 0
+            ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.overdue7} Lead${attentionMetrics.overdue7 > 1 ? "s" : ""} über 7 Tage alt`, cls: "text-warning", onClick: () => toggleOverdue("overdue7"), active: overdueFilter === "overdue7" }
+            : { icon: null, text: "" },
+          attentionMetrics.qualifiziert > 0
+            ? { icon: <FilePlus className="h-3 w-3" />, text: `${attentionMetrics.qualifiziert} qualifiziert — bereit für Vertrag`, cls: "text-success", onClick: toggleQualifiziert, active: statusFilter === "qualifiziert" }
+            : { icon: null, text: "" },
         ]} />
       )}
 
@@ -608,7 +660,21 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
                     <SourceBadge source={src} />
                   </td>
                   <td className="py-3 px-4">
-                    <ProductInterestBadges products={lead.interested_products} />
+                    {lead.interested_products && lead.interested_products.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {(lead.interested_products as string[]).map((p) => (
+                          <span
+                            key={p}
+                            title={p}
+                            className="inline-flex items-center px-1.5 py-0.5 rounded border border-border text-[10px] font-medium text-foreground bg-background whitespace-nowrap"
+                          >
+                            {productMiniLabel(p)}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </td>
                   <td className="py-3 px-4">
                     <VorbezugBadge value={lead.abrechnungszentrum} />
@@ -626,7 +692,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
                   <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-1">
                       {lead.status !== "vertrag" && (
-                        <QodiaIcon synced={!!lead.qodia_synced} conflict={!!lead.qodia_conflict} />
+                        <QodiaLeadStatusCell synced={!!lead.qodia_synced} conflict={!!lead.qodia_conflict} />
                       )}
                       {!lead.qodia_synced && lead.hfx_customer_number && (
                         <TooltipProvider>
@@ -677,6 +743,21 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
   const [contractFilter, setContractFilter] = useState<"missing_email" | "missing_confirmation" | "waiting_payment" | null>(
     initialFilter === "missing_email" ? "missing_email" : initialFilter === "missing_confirmation" ? "missing_confirmation" : initialFilter === "waiting_payment" ? "waiting_payment" : null
   );
+  const [staleFilter, setStaleFilter] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const syncUrlFilter = (next: string | null) => {
+    const sp = new URLSearchParams(searchParams);
+    if (next) sp.set("filter", next);
+    else sp.delete("filter");
+    setSearchParams(sp, { replace: true });
+  };
+  const toggleContractFilter = (key: "missing_email" | "waiting_payment") => {
+    const next = contractFilter === key ? null : key;
+    setContractFilter(next);
+    syncUrlFilter(next);
+    if (next) setStatusFilter("eingegangen");
+  };
+  const toggleStale = () => setStaleFilter((v) => !v);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
@@ -762,6 +843,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
     if (contractFilter === "missing_email" && !(c.status === "eingegangen" && !c.mandate_email_sent_at)) return false;
     if (contractFilter === "missing_confirmation" && !(c.status === "eingegangen" && c.mandate_email_sent_at && !c.confirmation_email_sent_at)) return false;
     if (contractFilter === "waiting_payment" && !(c.status === "eingegangen" && c.mandate_email_sent_at && !c.customer_confirmed_at)) return false;
+    if (staleFilter && differenceInDays(new Date(), new Date(c.created_at)) <= 7) return false;
 
     if (!s) return true;
     return (
@@ -832,9 +914,15 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
       {/* Attention bar */}
       {(attentionMetrics.missingEmail > 0 || attentionMetrics.waitingPayment > 0 || attentionMetrics.stale7 > 0) && (
         <AttentionBar items={[
-          attentionMetrics.missingEmail > 0 ? { icon: <Mail className="h-3 w-3" />, text: `${attentionMetrics.missingEmail} Vertrag${attentionMetrics.missingEmail > 1 ? "e" : ""} ohne SEPA-Mandat-Versand`, cls: "text-destructive" } : { icon: null, text: "" },
-          attentionMetrics.waitingPayment > 0 ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.waitingPayment} warten auf Mandat-Erteilung`, cls: "text-warning" } : { icon: null, text: "" },
-          attentionMetrics.stale7 > 0 ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.stale7} seit >7 Tagen offen`, cls: "text-orange-600 dark:text-orange-400" } : { icon: null, text: "" },
+          attentionMetrics.missingEmail > 0
+            ? { icon: <Mail className="h-3 w-3" />, text: `${attentionMetrics.missingEmail} Vertrag${attentionMetrics.missingEmail > 1 ? "e" : ""} ohne SEPA-Mandat-Versand`, cls: "text-destructive", onClick: () => toggleContractFilter("missing_email"), active: contractFilter === "missing_email" }
+            : { icon: null, text: "" },
+          attentionMetrics.waitingPayment > 0
+            ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.waitingPayment} warten auf Mandat-Erteilung`, cls: "text-warning", onClick: () => toggleContractFilter("waiting_payment"), active: contractFilter === "waiting_payment" }
+            : { icon: null, text: "" },
+          attentionMetrics.stale7 > 0
+            ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.stale7} seit >7 Tagen offen`, cls: "text-orange-600 dark:text-orange-400", onClick: toggleStale, active: staleFilter }
+            : { icon: null, text: "" },
         ]} />
       )}
 

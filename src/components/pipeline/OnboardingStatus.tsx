@@ -295,10 +295,17 @@ export function ActivityCell({ products, thresholds }: {
   );
 }
 
-/** Mini-Helper: bestimmt Produkt-Label aus Produktname */
+/** Mini-Helper: bestimmt Produkt-Kurzlabel aus Produktname.
+ *  Strippt das HFX-Präfix und mappt bekannte Produktklassen.
+ */
 export function productMiniLabel(productName: string): string {
-  const n = (productName || "").toLowerCase();
+  const raw = productName || "";
+  const n = raw.toLowerCase().replace(/^hfx[\s-]*/i, "").trim();
   if (n.includes("ebm")) return "EBM";
   if (n.includes("goä") || n.includes("goa") || n.includes("goz")) return "GOÄ";
-  return productName.slice(0, 4).toUpperCase();
+  if (n.includes("live")) return "Live-Check";
+  if (n.includes("mio")) return "MIO";
+  // Fallback: HFX-Präfix entfernen, dann auf 8 Zeichen kürzen
+  const stripped = raw.replace(/^HFX[\s-]*/i, "").trim();
+  return stripped.slice(0, 8) || raw.slice(0, 8);
 }
