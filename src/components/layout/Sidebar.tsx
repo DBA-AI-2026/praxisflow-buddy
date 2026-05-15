@@ -52,70 +52,48 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const dashboardNav: NavItem[] = [
+// ─── BLOCK 1: Operativ ────────────────────────────────────────────────────────
+const operativNav: NavItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
-];
-
-// ─── VERTRIEB: Akquise & Pipeline ────────────────────────────────────────────
-const vertriebNavigation: NavItem[] = [
-  { name: "Reservierungen", href: "/reservierungen", icon: BookMarked },
-  { name: "Demo-Tracking", href: "/demo-tracking", icon: FlaskConical },
+  { name: "Pipeline", href: "/pipeline", icon: Building2 },
+  { name: "Provisionen", href: "/vertrieb/provisionen", icon: BarChart3 },
+  { name: "Umsätze", href: "/umsaetze", icon: TrendingUp },
   { name: "Tipp-Leads", href: "/tipp-leads", icon: Lightbulb },
 ];
 
-// ─── PIPELINE & KUNDEN ────────────────────────────────────────────────────────
-const kundenVertraegeNavigation: NavItem[] = [
-  { name: "Pipeline", href: "/pipeline", icon: Building2 },
-  { name: "HFX EBM Lizenzen", href: "/lizenzen", icon: Key },
+// ─── BLOCK 2: Vertriebssteuerung ──────────────────────────────────────────────
+const vertriebssteuerungNav: NavItem[] = [
+  { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users },
 ];
 
-// ─── FINANZEN ─────────────────────────────────────────────────────────────────
-const finanzenNavigation: NavItem[] = [
-  { name: "Umsätze", href: "/umsaetze", icon: BarChart3 },
-  { name: "Rechnungen & Usage", href: "/rechnungen", icon: Receipt },
-  { name: "Buchhaltung / FiBu", href: "/buchhaltung", icon: TrendingUp },
-  { name: "FiBu Reconciliation", href: "/admin/fibu-reconciliation", icon: ClipboardList },
-  { name: "Datenexport", href: "/export", icon: FileDown },
+// ─── BLOCK 3: Buchhaltung ─────────────────────────────────────────────────────
+const buchhaltungNav: NavItem[] = [
+  { name: "Rechnungen", href: "/rechnungen", icon: Receipt },
+  { name: "Buchhaltung", href: "/buchhaltung", icon: FileSignature },
   { name: "Qodia-Verbrauch", href: "/qodia-verbrauch", icon: BarChart3 },
 ];
 
-// ─── ALLGEMEIN ────────────────────────────────────────────────────────────────
-const allgemeinNavigation: NavItem[] = [
-  { name: "Tickets", href: "/tickets", icon: Ticket },
-  { name: "Kalender", href: "/kalender", icon: Calendar },
-];
-
-// ─── VERTRIEBS-ADMIN ──────────────────────────────────────────────────────────
-const vertriebsAdminNavigation: NavItem[] = [
-  { name: "Vertriebler", href: "/vertrieb/vertriebler", icon: Users },
-  { name: "Provisionen", href: "/vertrieb/provisionen", icon: BarChart3 },
+// ─── BLOCK 4: Verwaltung (Akkordeon, eingeklappt) ─────────────────────────────
+const verwaltungNav: NavItem[] = [
+  { name: "Benutzer", href: "/admin/users", icon: Users },
+  { name: "Zugriffsanfragen", href: "/admin/access-requests", icon: UserPlus },
+  { name: "Audit-Logs", href: "/admin/audit-logs", icon: ClipboardList },
+  { name: "Rollen-Übersicht", href: "/admin/rollen-uebersicht", icon: ShieldCheck },
+  { name: "Produkte", href: "/admin/products", icon: Package },
+  { name: "AGB", href: "/admin/agb", icon: FileText },
   { name: "PLZ-Zuordnung", href: "/admin/plz-mapping", icon: MapPin },
-];
-
-// ─── ADMINISTRATION ───────────────────────────────────────────────────────────
-const adminNavigation: NavItem[] = [
-  { name: "Zugangsanfragen", href: "/admin/access-requests", icon: UserPlus },
-  { name: "Benutzerverwaltung", href: "/admin/users", icon: Users },
-  { name: "Produktverwaltung", href: "/admin/products", icon: Package },
-  { name: "AGB-Verwaltung", href: "/admin/agb", icon: FileText },
-  { name: "Integrationen", href: "/integrationen", icon: Plug },
   { name: "E-Mail-Einstellungen", href: "/admin/email-settings", icon: Mail },
-  { name: "Audit-Protokoll", href: "/admin/audit-logs", icon: ClipboardList },
-  { name: "Einstellungen", href: "/admin/settings", icon: Settings },
-  { name: "Dokumentation", href: "/admin/documentation", icon: FileText },
-  { name: "Rollen & Zugriffe", href: "/admin/rollen-uebersicht", icon: ShieldCheck },
-];
-
-// ─── DEV-TOOLS ────────────────────────────────────────────────────────────────
-const devToolsNavigation: NavItem[] = [
   { name: "E-Mail-Vorschau", href: "/admin/email-preview", icon: Eye },
+  { name: "Integrationen", href: "/integrationen", icon: Plug },
+  { name: "Einstellungen", href: "/admin/settings", icon: Settings },
+  { name: "FiBu-Reconciliation", href: "/admin/fibu-reconciliation", icon: FileDown },
+  { name: "Systemdokumentation", href: "/admin/documentation", icon: BookMarked },
 ];
 
 interface NavSectionProps {
   label: string;
   items: NavItem[];
   userRole: AppRole | null;
-  isAdmin: boolean;
   currentPath: string;
   onNavigate?: () => void;
 }
@@ -126,8 +104,8 @@ function NavSection({ label, items, userRole, currentPath, onNavigate }: NavSect
   if (visibleItems.length === 0) return null;
 
   return (
-    <>
-      <div className="mt-6 first:mt-0 mb-2 px-3 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
+    <div className="mt-4 first:mt-0">
+      <div className="mb-1 px-3 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
         {label}
       </div>
       {visibleItems.map((item) => {
@@ -144,7 +122,47 @@ function NavSection({ label, items, userRole, currentPath, onNavigate }: NavSect
           </Link>
         );
       })}
-    </>
+    </div>
+  );
+}
+
+function VerwaltungSection({
+  items,
+  userRole,
+  currentPath,
+  onNavigate,
+}: Omit<NavSectionProps, "label">) {
+  const visibleItems = items.filter((item) => canAccessRoute(item.href, userRole));
+  const [open, setOpen] = useState(false);
+
+  if (visibleItems.length === 0) return null;
+
+  return (
+    <div className="mt-4">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-3 py-1 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
+      >
+        <span>Verwaltung</span>
+        <ChevronUp className={`h-3.5 w-3.5 transition-transform ${open ? "" : "rotate-180"}`} />
+      </button>
+      {open &&
+        visibleItems.map((item) => {
+          const isActive = currentPath === item.href;
+          return (
+            <Link
+              key={item.name}
+              to={item.href}
+              onClick={onNavigate}
+              className={`sidebar-link ${isActive ? "active" : ""}`}
+            >
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+              <span className="truncate">{item.name}</span>
+            </Link>
+          );
+        })}
+    </div>
   );
 }
 
@@ -152,7 +170,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
-  const { role: userRole, isAdmin, actualRole } = useUserRole();
+  const { role: userRole, actualRole } = useUserRole();
   const { previewRole, setPreviewRole, isPreviewActive } = useRolePreview();
 
   const roleLabels: Record<AppRole, string> = {
@@ -180,7 +198,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   const sectionProps = {
     userRole,
-    isAdmin,
     currentPath: location.pathname,
     onNavigate,
   };
@@ -245,14 +262,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-2 lg:px-3 py-4 overflow-y-auto">
-        <NavSection label="Übersicht" items={dashboardNav} {...sectionProps} />
-        <NavSection label="Vertrieb" items={vertriebNavigation} {...sectionProps} />
-        <NavSection label="Pipeline & Kunden" items={kundenVertraegeNavigation} {...sectionProps} />
-        <NavSection label="Finanzen" items={finanzenNavigation} {...sectionProps} />
-        <NavSection label="Allgemein" items={allgemeinNavigation} {...sectionProps} />
-        <NavSection label="Vertriebs-Admin" items={vertriebsAdminNavigation} {...sectionProps} />
-        <NavSection label="Administration" items={adminNavigation} {...sectionProps} />
-        <NavSection label="Dev-Tools" items={devToolsNavigation} {...sectionProps} />
+        <NavSection label="Operativ" items={operativNav} {...sectionProps} />
+        <NavSection label="Vertriebssteuerung" items={vertriebssteuerungNav} {...sectionProps} />
+        <NavSection label="Buchhaltung" items={buchhaltungNav} {...sectionProps} />
+        <VerwaltungSection items={verwaltungNav} {...sectionProps} />
       </nav>
 
       {/* User / Profil */}
