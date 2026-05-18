@@ -5,6 +5,7 @@ import {
   Building2, Euro, XCircle,
 } from "lucide-react";
 import { differenceInDays } from "date-fns";
+import { isWaitingForMandate } from "@/lib/contractLifecycle";
 
 interface KpiCardProps {
   label: string;
@@ -111,9 +112,7 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads }: Pipe
     // Abschlussphase-specific
     const inBearbeitung = allContracts.filter((c: any) => ["entwurf", "eingegangen"].includes(c.status)).length;
     const wartetSepa = allContracts.filter((c: any) => c.status === "eingegangen" && !c.mandate_email_sent_at).length;
-    const wartetMandat = allContracts.filter((c: any) =>
-      c.status === "eingegangen" && c.mandate_email_sent_at && !c.customer_confirmed_at
-    ).length;
+    const wartetMandat = allContracts.filter((c: any) => isWaitingForMandate(c)).length;
 
     // Kunden-specific
     const monthlyRevenue = allContracts

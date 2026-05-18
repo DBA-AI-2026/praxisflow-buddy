@@ -825,7 +825,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
     // Deep-link contract filter from Dashboard
     if (contractFilter === "missing_email" && !(c.status === "eingegangen" && !c.mandate_email_sent_at)) return false;
     if (contractFilter === "missing_confirmation" && !(c.status === "eingegangen" && c.mandate_email_sent_at && !c.confirmation_email_sent_at)) return false;
-    if (contractFilter === "waiting_payment" && !(c.status === "eingegangen" && c.mandate_email_sent_at && !c.customer_confirmed_at)) return false;
+    if (contractFilter === "waiting_payment" && !isWaitingForMandate(c)) return false;
     if (staleFilter && differenceInDays(new Date(), new Date(c.created_at)) <= 7) return false;
 
     if (!s) return true;
@@ -848,8 +848,8 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
       const bMissing = b.status === "eingegangen" && !b.mandate_email_sent_at ? 1 : 0;
       if (aMissing !== bMissing) return bMissing - aMissing;
       // Priority 2: SEPA-Mandat-Mail versendet, Kunde hat noch nicht bezahlt
-      const aWaiting = a.status === "eingegangen" && a.mandate_email_sent_at && !a.customer_confirmed_at ? 1 : 0;
-      const bWaiting = b.status === "eingegangen" && b.mandate_email_sent_at && !b.customer_confirmed_at ? 1 : 0;
+      const aWaiting = isWaitingForMandate(a) ? 1 : 0;
+      const bWaiting = isWaitingForMandate(b) ? 1 : 0;
       if (aWaiting !== bWaiting) return bWaiting - aWaiting;
       // Priority 3: older first (stale)
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -859,7 +859,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
   // Attention metrics
   const attentionMetrics = useMemo(() => {
     const missingEmail = teamContracts.filter((c: any) => c.status === "eingegangen" && !c.mandate_email_sent_at).length;
-    const waitingPayment = teamContracts.filter((c: any) => c.status === "eingegangen" && c.mandate_email_sent_at && !c.customer_confirmed_at).length;
+    const waitingPayment = teamContracts.filter((c: any) => isWaitingForMandate(c)).length;
     const stale7 = teamContracts.filter((c: any) => differenceInDays(new Date(), new Date(c.created_at)) > 7).length;
     return { missingEmail, waitingPayment, stale7 };
   }, [teamContracts]);
