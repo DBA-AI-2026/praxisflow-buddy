@@ -42,6 +42,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { LEAD_STATUS_TOOLTIPS } from "@/lib/statusGlossary";
 import {
   Loader2,
   Save,
@@ -84,7 +86,7 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   neu: { label: "Neu", variant: "default" },
   kontaktiert: { label: "Kontaktiert", variant: "secondary" },
   qualifiziert: { label: "Qualifiziert", variant: "outline" },
-  vertrag: { label: "Vertrag", variant: "outline" },
+  vertrag: { label: "In Vertragserstellung", variant: "outline" },
   kein_abschluss: { label: "Kein Abschluss", variant: "destructive" },
   abgelehnt: { label: "Abgelehnt", variant: "destructive" },
   kunde: { label: "Kunde", variant: "default" },
@@ -401,7 +403,16 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 flex-wrap">
             <span className="font-mono text-primary">{lead.hfx_customer_number}</span>
-            <Badge variant={sc.variant} className="text-xs">{sc.label}</Badge>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant={sc.variant} className="text-xs cursor-help">{sc.label}</Badge>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  {LEAD_STATUS_TOOLTIPS[lead.status] ?? sc.label}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${
               lead.source === "manual"
                 ? "bg-accent/10 text-accent border-accent/30"

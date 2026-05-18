@@ -23,10 +23,14 @@ export const CONTRACT_STATUS_TOOLTIPS: Record<string, string> = {
     "Vertrag ist angelegt, aber noch nicht aktiviert. Daten können noch ergänzt werden.",
   eingegangen:
     "Vertrag ist aktiviert und die SEPA-Mandat-Mail ist versendet. Wartet auf Mandat-Erteilung durch den Kunden.",
+  gezeichnet:
+    "Kunde hat die Buchung über den Buchungslink abgeschlossen. Wartet auf SEPA-Bestätigung über Stripe — wechselt automatisch auf Aktiv.",
   aktiv: "Vertrag läuft. SEPA-Mandat erteilt, Abrechnung läuft.",
   gekuendigt:
     "Vertrag wurde gekündigt. Endedatum gesetzt, läuft bis dahin weiter.",
   beendet: "Vertrag hat das Endedatum erreicht oder wurde sofort beendet.",
+  gesperrt:
+    "Vertrag wurde manuell gesperrt (z. B. wegen Streitfall oder Klärung). Keine automatische Abrechnung.",
 };
 
 export const PHASE_TOOLTIPS: Record<string, string> = {

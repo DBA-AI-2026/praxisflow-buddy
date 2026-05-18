@@ -22,7 +22,7 @@ import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { PHASE_TOOLTIPS } from "@/lib/statusGlossary";
+import { PHASE_TOOLTIPS, LEAD_STATUS_TOOLTIPS, CONTRACT_STATUS_TOOLTIPS } from "@/lib/statusGlossary";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -65,11 +65,20 @@ const contractStatusCfg: Record<string, { label: string; cls: string }> = {
 
 
 
-function StatusPill({ label, cls }: { label: string; cls: string }) {
-  return (
+function StatusPill({ label, cls, tooltip }: { label: string; cls: string; tooltip?: string }) {
+  const pill = (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap ${cls}`}>
       {label}
     </span>
+  );
+  if (!tooltip) return pill;
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>{pill}</TooltipTrigger>
+        <TooltipContent className="max-w-xs">{tooltip}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
@@ -604,7 +613,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
                     </p>
                   </td>
                   <td className="py-3 px-4">
-                    <StatusPill label={sc.label} cls={sc.cls} />
+                    <StatusPill label={sc.label} cls={sc.cls} tooltip={LEAD_STATUS_TOOLTIPS[lead.status] ?? sc.label} />
                   </td>
                   <td className="py-3 px-4">
                     <AgeBadge dateStr={lead.created_at} />
@@ -959,7 +968,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                     />
                   </td>
                   <td className="py-3 px-4">
-                    <StatusPill label={sc.label} cls={sc.cls} />
+                    <StatusPill label={sc.label} cls={sc.cls} tooltip={CONTRACT_STATUS_TOOLTIPS[c.status] ?? sc.label} />
                   </td>
                   <td className="py-3 px-4">
                     <StaleBadge dateStr={c.created_at} label="Erstellt am" />
@@ -1266,7 +1275,7 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                     })()}
                   </td>
                   <td className="py-3 px-4">
-                    <StatusPill label={sc.label} cls={sc.cls} />
+                    <StatusPill label={sc.label} cls={sc.cls} tooltip={CONTRACT_STATUS_TOOLTIPS[c.status] ?? sc.label} />
                   </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
                     {c.start_date ? format(new Date(c.start_date), "dd.MM.yy", { locale: de }) : "–"}
