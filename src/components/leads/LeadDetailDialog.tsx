@@ -283,7 +283,7 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
       // Find the contract with status 'eingegangen' linked to this lead's email or hfx_customer_number
       const { data: contracts, error: contractError } = await supabase
         .from("contracts")
-        .select("id, product_name, email, hfx_customer_number, confirmation_email_sent_at")
+        .select("id, product_name, email, hfx_customer_number")
         .eq("status", "eingegangen")
         .or(`email.eq.${lead.email},hfx_customer_number.eq.${lead.hfx_customer_number}`)
         .order("created_at", { ascending: false })

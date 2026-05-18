@@ -86,7 +86,7 @@ const onboardingConfig: Partial<Record<AppRole, { icon: React.ElementType; title
 
 export default function Dashboard() {
   const { profile, user } = useAuth();
-  const { role, isTippgeber, isSalesPartner, isUser, isRegionalLead } = useUserRole();
+  const { role, isSalesPartner, isUser, isRegionalLead } = useUserRole();
   const { previewRole, isPreviewActive, setPreviewRole } = useRolePreview();
   const { matchesTeamFilter } = useRegionalTeam();
   const [bannerDismissed, setBannerDismissed] = useState(false);
@@ -312,52 +312,6 @@ export default function Dashboard() {
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════
-          TIPPGEBER: Eigene simple Ansicht
-         ══════════════════════════════════════════════ */}
-      {isTippgeber && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <Link
-              to="/tipp-leads"
-              className="stat-card group block transition-all hover:shadow-md"
-            >
-              <div className="flex items-start justify-between">
-                <p className="text-xs font-medium text-muted-foreground">Meine Tipp-Leads</p>
-                <div className="rounded-lg p-2.5 bg-amber-500/10 text-amber-600">
-                  <Lightbulb className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="mt-3 flex items-center gap-1 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                Öffnen <ArrowRight className="h-3 w-3" />
-              </div>
-            </Link>
-            <Link
-              to="/vertrieb/provisionen"
-              className="stat-card group block transition-all hover:shadow-md"
-            >
-              <div className="flex items-start justify-between">
-                <p className="text-xs font-medium text-muted-foreground">Meine Provisionen</p>
-                <div className="rounded-lg p-2.5 bg-green-500/10 text-green-600">
-                  <BarChart3 className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="mt-3 flex items-center gap-1 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                Öffnen <ArrowRight className="h-3 w-3" />
-              </div>
-            </Link>
-          </div>
-          <div className="flex gap-3 flex-wrap">
-            <Button asChild className="gap-2">
-              <Link to="/tipp-leads">
-                <Lightbulb className="h-4 w-4" />
-                Tipp-Lead einreichen
-              </Link>
-            </Button>
           </div>
         </div>
       )}
