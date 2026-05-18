@@ -47,5 +47,3 @@ project_id = "gvsxentbbzuyanqbqvea"
     verify_jwt = false
   [functions.contract-merge-diagnose]
     verify_jwt = false
-  [functions.contract-inspect-lookup]
-    verify_jwt = false
