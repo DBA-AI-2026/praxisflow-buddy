@@ -63,39 +63,7 @@ const contractStatusCfg: Record<string, { label: string; cls: string }> = {
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
-function QodiaIcon({ synced, conflict }: { synced: boolean; conflict?: boolean }) {
-  return (
-    <div className="flex flex-col items-center gap-0.5">
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            {synced
-              ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
-              : <XCircle className="h-4 w-4 text-muted-foreground/40 shrink-0" />}
-          </TooltipTrigger>
-          <TooltipContent>
-            {synced ? "Qodia-Account angelegt" : "Noch kein Qodia-Account"}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      {conflict && !synced && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-orange-600 bg-orange-50 border border-orange-200 rounded-full px-1.5 py-0 leading-4 cursor-default whitespace-nowrap">
-                <AlertTriangle className="h-2.5 w-2.5" />
-                E-Mail Konflikt
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Qodia meldet: E-Mail bereits vorhanden (409).<br />Das Konto existiert in Qodia, der Sync ist fehlgeschlagen.</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )}
-    </div>
-  );
-}
+
 
 function StatusPill({ label, cls }: { label: string; cls: string }) {
   return (
