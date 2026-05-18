@@ -6,6 +6,9 @@
  *
  * Bewusst als LISTE — eine HFX-Nummer kann mehrfach in `contracts` vorkommen
  * (Doubletten bei Schnellklick, Korrektur-Verträge, Addenda).
+ *
+ * Read-Pfade gehen direkt via supabase.from() — Admin-Policies decken
+ * leads/contracts/customers ab. Frühere Edge-Function-Variante entfernt.
  */
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
@@ -64,15 +67,20 @@ export default function ContractInspect() {
     setMergePlan(null);
     setMergeError(null);
     try {
-      const { data, error } = await supabase.functions.invoke("contract-inspect-lookup", {
-        body: { hfx_customer_number: hfx },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const [leadRes, contractsRes, customerRes] = await Promise.all([
+        supabase.from("leads").select("*").eq("hfx_customer_number", hfx).maybeSingle(),
+        supabase.from("contracts").select("*").eq("hfx_customer_number", hfx).order("created_at", { ascending: false }),
+        supabase.from("customers").select("*").eq("hfx_customer_number", hfx).maybeSingle(),
+      ]);
+
+      if (leadRes.error) throw leadRes.error;
+      if (contractsRes.error) throw contractsRes.error;
+      if (customerRes.error) throw customerRes.error;
+
       setResult({
-        lead: data?.lead ?? null,
-        contracts: data?.contracts ?? [],
-        customer: data?.customer ?? null,
+        lead: leadRes.data ?? null,
+        contracts: contractsRes.data ?? [],
+        customer: customerRes.data ?? null,
       });
     } catch (err: any) {
       setError(err.message || String(err));
