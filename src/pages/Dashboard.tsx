@@ -15,6 +15,7 @@ import type { AppRole } from "@/hooks/useUserRole";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { differenceInDays } from "date-fns";
+import { isWaitingForMandate } from "@/lib/contractLifecycle";
 import { AnleitungDialog } from "@/components/help/AnleitungDialog";
 import { Button } from "@/components/ui/button";
 import { useRolePreview } from "@/contexts/RolePreviewContext";
@@ -124,7 +125,7 @@ export default function Dashboard() {
       let q = supabase
         .from("contracts")
         .select("id, customer_name, product_name, status, mandate_email_sent_at, confirmation_email_sent_at, customer_confirmed_at, created_at, sales_partner_id, created_by")
-        .eq("status", "eingegangen");
+        .in("status", ["eingegangen", "gezeichnet"]);
       // sales_partner UND user analog: eigene Verträge (sales_partner_id ODER created_by).
       if ((isSalesPartner || isUser) && user?.id) {
         q = q.or(`sales_partner_id.eq.${user.id},created_by.eq.${user.id}`);
@@ -191,9 +192,7 @@ export default function Dashboard() {
   const contractsMissingConfirmationMail = filteredContractAlerts.filter(
     (c: any) => c.mandate_email_sent_at && !c.confirmation_email_sent_at
   );
-  const contractsWaitingPayment = filteredContractAlerts.filter(
-    (c: any) => c.confirmation_email_sent_at && !c.customer_confirmed_at
-  );
+  const contractsWaitingPayment = filteredContractAlerts.filter((c: any) => isWaitingForMandate(c));
 
   const totalAlerts = overdueLeads14.length + overdueLeads7.length + contractsMissingMandateMail.length + contractsMissingConfirmationMail.length + contractsWaitingPayment.length;
 
