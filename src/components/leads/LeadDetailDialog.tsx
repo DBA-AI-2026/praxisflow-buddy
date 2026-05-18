@@ -84,7 +84,7 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   neu: { label: "Neu", variant: "default" },
   kontaktiert: { label: "Kontaktiert", variant: "secondary" },
   qualifiziert: { label: "Qualifiziert", variant: "outline" },
-  vertrag: { label: "Vertrag", variant: "outline" },
+  vertrag: { label: "In Vertragserstellung", variant: "outline" },
   kein_abschluss: { label: "Kein Abschluss", variant: "destructive" },
   abgelehnt: { label: "Abgelehnt", variant: "destructive" },
   kunde: { label: "Kunde", variant: "default" },
