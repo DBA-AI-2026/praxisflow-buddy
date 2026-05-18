@@ -11,6 +11,7 @@ import {
   Flame, Eye, ChevronDown, CalendarCheck, Mail, FileCheck,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
+import { isWaitingForMandate } from "@/lib/contractLifecycle";
 import { de } from "date-fns/locale";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
