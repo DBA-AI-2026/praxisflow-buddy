@@ -175,15 +175,40 @@ Deno.serve(async (req) => {
       reasons.push(`Loser ${l.id}: completeness_score=${l.completeness_score}`);
     }
 
-    // ── Generic UNIQUE-conflict detection ────────────────────────────────
+    // ── Generic UNIQUE-conflict detection via RPC (pg_constraint + pg_index) ──
+    // The RPC `public.get_fk_unique_columns(table, column)` returns TRUE if the
+    // FK column itself carries a single-column UNIQUE constraint/index (1:1
+    // relation — UPDATE would crash). For composite UNIQUE constraints we still
+    // fall back to value-comparison between winner/loser rows on non-skip
+    // fields, since the RPC only answers about single-column uniqueness.
     const warnings: string[] = [];
     const uniqueDeleteTables = new Set<string>();
     for (const fk of FK_TABLES) {
       const winnerHas = winner.fk_references[fk.table].count > 0;
+      const anyLoserHas = losers.some((l) => l.fk_references[fk.table].count > 0);
+      if (!winnerHas || !anyLoserHas) continue;
+
+      // (1) Ask the DB: is the FK column itself UNIQUE? (1:1 relation)
+      const { data: fkColUnique, error: rpcErr } = await admin.rpc("get_fk_unique_columns", {
+        p_table: fk.table, p_column: fk.column,
+      });
+      if (rpcErr) {
+        warnings.push(`${fk.table}: get_fk_unique_columns RPC fehlgeschlagen (${rpcErr.message}) — falle auf Heuristik zurück.`);
+      }
+      if (fkColUnique === true) {
+        uniqueDeleteTables.add(fk.table);
+        fk_block(diags, fk.table).unique_blocking = true;
+        warnings.push(
+          `${fk.table}: UNIQUE-Constraint/Index direkt auf '${fk.column}' (1:1-Relation). Loser-Row(s) müssen per DELETE entfernt werden statt UPDATE.`,
+        );
+        continue;
+      }
+
+      // (2) Composite UNIQUE / data-level conflict: vergleiche Row-Werte
+      //     paarweise auf gleichlautende Nicht-Skip-Felder.
       for (const l of losers) {
         const loserHas = l.fk_references[fk.table].count > 0;
-        if (!winnerHas || !loserHas) continue;
-
+        if (!loserHas) continue;
         const [{ data: wRows }, { data: lRows }] = await Promise.all([
           admin.from(fk.table).select("*").eq(fk.column, winner.id),
           admin.from(fk.table).select("*").eq(fk.column, l.id),
@@ -209,7 +234,7 @@ Deno.serve(async (req) => {
           uniqueDeleteTables.add(fk.table);
           fk_block(diags, fk.table).unique_blocking = true;
           warnings.push(
-            `${fk.table}: Winner und Loser haben Rows mit identischem Wert in '${conflictKey}' — vermutlich UNIQUE-Constraint (z.B. (${fk.column}, ${conflictKey})). Action wird DELETE auf Loser-Row statt UPDATE.`,
+            `${fk.table}: Winner und Loser haben Rows mit identischem Wert in '${conflictKey}' — vermutlich zusammengesetzter UNIQUE (z.B. (${fk.column}, ${conflictKey})). Action wird DELETE auf Loser-Row statt UPDATE.`,
           );
         }
       }

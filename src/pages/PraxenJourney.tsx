@@ -106,9 +106,17 @@ function SourceBadge({ source }: { source: "homepage" | "manuell" | "reservierun
 
 function VorbezugBadge({ value }: { value?: string | null }) {
   if (!value || value === "nein" || value === "keins") return <span className="text-muted-foreground/30">—</span>;
+  // Bekannte Abrechnungszentren mit Farbcode. `mcc` ist hier bewusst nicht
+  // gelistet — in `leads.abrechnungszentrum` existiert kein Datensatz mit
+  // diesem Wert (Stand: DB-Distinct). Das `MCC` im Footer und im
+  // Tippgeber-`geschaeftsbereich`-Feld ist ein anderer Datenpunkt.
   const known: Record<string, { label: string; cls: string }> = {
-    mcc: { label: "MCC", cls: "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20" },
-    privadis: { label: "Privadis", cls: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20" },
+    carecapital: { label: "CareCapital", cls: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20" },
+    privadis:    { label: "Privadis",    cls: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20" },
+    pvs:         { label: "PVS",         cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20" },
+    zab:         { label: "ZAB",         cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20" },
+    dzr:         { label: "DZR",         cls: "bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-400 border-fuchsia-500/20" },
+    arz:         { label: "ARZ",         cls: "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20" },
   };
   const key = value.toLowerCase().trim();
   const match = known[key];
