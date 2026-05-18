@@ -2682,6 +2682,10 @@ export type Database = {
             }[]
           }
       get_cron_secret: { Args: never; Returns: string }
+      get_fk_unique_columns: {
+        Args: { p_column: string; p_table: string }
+        Returns: boolean
+      }
       get_public_contract_booking: {
         Args: { p_contract_id: string }
         Returns: {
