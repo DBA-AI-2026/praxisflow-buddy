@@ -141,7 +141,23 @@ Deno.serve(async (req) => {
 
     const notesText = `Zwischenabrechnung – manuell ausgelöst am ${nowIso} von ${userEmail} | ${usageChargeIds.length} Positionen | Verbrauch ${periodFrom} bis ${periodTo}`;
 
-    // 1) Internal invoice — billing_period_month stays NULL → partial unique index ignores us
+    // 1) Atomar claimen: pending → invoicing. Conditional update fungiert als Lock.
+    // Bei parallelem Aufruf updated der zweite Request 0 Rows und bricht ab.
+    const { data: claimedCharges, error: claimErr } = await supabase
+      .from("usage_charges")
+      .update({ status: "invoicing" })
+      .in("id", usageChargeIds)
+      .eq("status", "pending")
+      .select("id");
+    if (claimErr) throw claimErr;
+    if (!claimedCharges || claimedCharges.length !== usageChargeIds.length) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: `Race condition: ${claimedCharges?.length ?? 0} von ${usageChargeIds.length} Charges wurden bereits anderweitig in Bearbeitung genommen. Bitte erneut versuchen.`,
+      }), { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // 2) Internal invoice — billing_period_month stays NULL → partial unique index ignores us
     const { data: invoice, error: insErr } = await supabase
       .from("invoices")
       .insert({
