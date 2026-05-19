@@ -1480,35 +1480,20 @@ async function processFailedInvoiceRetry(params: {
     contract.base_fee_waived_until != null &&
     new Date(periodEnd) <= new Date(contract.base_fee_waived_until);
 
-  // Stripe-Retry
+  // Stripe-Retry (V2 flow, vgl. manual-interim-invoice)
   const createdItemIds: string[] = [];
   let stripeInvoiceId: string | null = null;
   let stripeErrorMessage: string | null = null;
+  let stripeInvoice: any = null;
   try {
-    for (const pos of positions) {
-      if (pos.quantity * pos.unit_price <= 0) continue;
-      const item = await stripe.invoiceItems.create({
-        customer: contract.stripe_customer_id,
-        amount: Math.round(pos.quantity * pos.unit_price * 100),
-        currency: "eur",
-        description: pos.description,
-        tax_rates: [],
-      });
-      createdItemIds.push(item.id);
-    }
-    const taxItem = await stripe.invoiceItems.create({
-      customer: contract.stripe_customer_id,
-      amount: Math.round(taxAmount * 100),
-      currency: "eur",
-      description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
-    });
-    createdItemIds.push(taxItem.id);
-
     const stripeDescription = `[Retry] ${contract.product_name} – ${billingPeriod}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}`;
-    const stripeInvoice = await stripe.invoices.create({
+
+    // 1) Draft-Invoice zuerst
+    stripeInvoice = await stripe.invoices.create({
       customer: contract.stripe_customer_id,
       auto_advance: false,
       collection_method: "charge_automatically",
+      pending_invoice_items_behavior: "exclude",
       description: stripeDescription,
       metadata: {
         hfx_contract_id: contract.id,
@@ -1519,15 +1504,56 @@ async function processFailedInvoiceRetry(params: {
         retry: "true",
       },
     });
+
+    // 2) stripe_invoice_id sofort persistieren
+    await supabase
+      .from("invoices")
+      .update({ stripe_invoice_id: stripeInvoice.id })
+      .eq("id", invoice.id);
+
+    // 3) Items explizit attachen
+    for (const pos of positions) {
+      if (pos.quantity * pos.unit_price <= 0) continue;
+      const item = await stripe.invoiceItems.create({
+        customer: contract.stripe_customer_id,
+        invoice: stripeInvoice.id,
+        amount: Math.round(pos.quantity * pos.unit_price * 100),
+        currency: "eur",
+        description: pos.description,
+        tax_rates: [],
+      });
+      createdItemIds.push(item.id);
+    }
+    const taxItem = await stripe.invoiceItems.create({
+      customer: contract.stripe_customer_id,
+      invoice: stripeInvoice.id,
+      amount: Math.round(taxAmount * 100),
+      currency: "eur",
+      description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
+    });
+    createdItemIds.push(taxItem.id);
+
+    // 4) Finalize + Pay
     const finalized = await stripe.invoices.finalizeInvoice(stripeInvoice.id);
     await stripe.invoices.pay(finalized.id);
     stripeInvoiceId = stripeInvoice.id;
   } catch (stripeErr: any) {
     stripeErrorMessage = stripeErr?.message || String(stripeErr);
     console.error(`[auto-invoice][retry] Stripe-Failure für ${invoice.invoice_number}:`, stripeErrorMessage);
-    // Cleanup
+    // Cleanup Items
     for (const itemId of createdItemIds) {
       try { await stripe.invoiceItems.del(itemId); } catch {}
+    }
+    // Cleanup Invoice: draft → del, open → void, sonst noop
+    if (stripeInvoice?.id) {
+      try {
+        const fresh = await stripe.invoices.retrieve(stripeInvoice.id);
+        if (fresh.status === "draft") {
+          try { await stripe.invoices.del(stripeInvoice.id); } catch {}
+        } else if (fresh.status === "open") {
+          try { await stripe.invoices.voidInvoice(stripeInvoice.id); } catch {}
+        }
+      } catch {}
     }
 
     // B3: Eskalations-Mail an Buchhaltung + Vertrieb. KEIN zweites Audit-Event
