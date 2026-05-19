@@ -198,37 +198,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 3) Stripe Invoice + Items + finalize + pay
+    // 3) Stripe Invoice + Items + finalize + pay (V2 flow, see header)
     let stripeInvoiceId: string | null = null;
     let stripeChargeFailed = false;
     let stripeErrorMessage: string | null = null;
+    let stripeInvoice: any = null;
     const createdItemIds: string[] = [];
 
     try {
-      for (const pos of positions) {
-        if (pos.quantity * pos.unit_price <= 0) continue;
-        const item = await stripe.invoiceItems.create({
-          customer: contract.stripe_customer_id,
-          amount: Math.round(pos.quantity * pos.unit_price * 100),
-          currency: "eur",
-          description: pos.description,
-        });
-        createdItemIds.push(item.id);
-      }
-      const taxItem = await stripe.invoiceItems.create({
-        customer: contract.stripe_customer_id,
-        amount: Math.round(taxAmount * 100),
-        currency: "eur",
-        description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
-      });
-      createdItemIds.push(taxItem.id);
-
       const stripeDescription = `Zwischenabrechnung – ${contract.product_name} – Verbrauch ${periodFrom} bis ${periodTo} (${usageChargeIds.length} Positionen)`;
 
-      const stripeInvoice = await stripe.invoices.create({
+      // 1) Leere Draft-Invoice ZUERST anlegen
+      stripeInvoice = await stripe.invoices.create({
         customer: contract.stripe_customer_id,
         auto_advance: false,
         collection_method: "charge_automatically",
+        pending_invoice_items_behavior: "exclude",
         description: stripeDescription,
         metadata: {
           hfx_contract_id: contract.id,
@@ -239,10 +224,39 @@ Deno.serve(async (req) => {
           usage_charge_ids: usageChargeIds.join(","),
         },
       });
+
+      // 2) stripe_invoice_id SOFORT persistieren — egal was danach passiert,
+      //    die Verknüpfung zwischen HFX-Invoice und Stripe-Invoice ist gesichert.
+      await supabase
+        .from("invoices")
+        .update({ stripe_invoice_id: stripeInvoice.id })
+        .eq("id", invoice.id);
+
+      // 3) Items explizit an diese Invoice hängen
+      for (const pos of positions) {
+        if (pos.quantity * pos.unit_price <= 0) continue;
+        const item = await stripe.invoiceItems.create({
+          customer: contract.stripe_customer_id,
+          invoice: stripeInvoice.id,
+          amount: Math.round(pos.quantity * pos.unit_price * 100),
+          currency: "eur",
+          description: pos.description,
+        });
+        createdItemIds.push(item.id);
+      }
+      const taxItem = await stripe.invoiceItems.create({
+        customer: contract.stripe_customer_id,
+        invoice: stripeInvoice.id,
+        amount: Math.round(taxAmount * 100),
+        currency: "eur",
+        description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
+      });
+      createdItemIds.push(taxItem.id);
+
+      // 4) Finalize + Pay
       const finalized = await stripe.invoices.finalizeInvoice(stripeInvoice.id);
       await stripe.invoices.pay(finalized.id);
       stripeInvoiceId = stripeInvoice.id;
-      await supabase.from("invoices").update({ stripe_invoice_id: stripeInvoiceId }).eq("id", invoice.id);
 
       // Erfolg: Charges final markieren invoicing → invoiced + invoice_id
       await supabase
@@ -254,9 +268,24 @@ Deno.serve(async (req) => {
       console.error("[manual-interim-invoice] Stripe error:", stripeErr?.message);
       stripeChargeFailed = true;
       stripeErrorMessage = stripeErr?.message || String(stripeErr);
+
+      // Cleanup Items
       for (const itemId of createdItemIds) {
         try { await stripe.invoiceItems.del(itemId); } catch (_) {}
       }
+      // Cleanup Invoice: draft → del, open → void, sonst noop
+      if (stripeInvoice?.id) {
+        try {
+          const fresh = await stripe.invoices.retrieve(stripeInvoice.id);
+          if (fresh.status === "draft") {
+            try { await stripe.invoices.del(stripeInvoice.id); } catch (_) {}
+          } else if (fresh.status === "open") {
+            try { await stripe.invoices.voidInvoice(stripeInvoice.id); } catch (_) {}
+          }
+          // paid/uncollectible/void → kein Eingriff möglich/sinnvoll
+        } catch (_) { /* swallow cleanup errors */ }
+      }
+
       await supabase
         .from("invoices")
         .update({ status: "zahlung_fehlgeschlagen" })
