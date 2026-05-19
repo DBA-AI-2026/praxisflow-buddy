@@ -400,5 +400,6 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads }: Pipe
         </div>
       )}
     </div>
+    </TooltipProvider>
   );
 }
