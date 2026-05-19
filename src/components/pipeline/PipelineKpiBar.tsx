@@ -206,6 +206,7 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads }: Pipe
   const fmtEur = (n: number) => new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
 
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="border-b border-border">
       <div className="px-4 py-3 flex items-center gap-3 flex-wrap bg-card/50">
         {tab === "interessenten" && (
@@ -216,12 +217,14 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads }: Pipe
               sub={`von ${kpis.totalLeads} gesamt`}
               icon={<Users className="h-4 w-4" />}
               accent="primary"
+              tooltip="Alle Leads in den Status Neu, Kontaktiert, Qualifiziert oder In Vertragserstellung. Kunden zählen nicht mit."
             />
             <KpiCard
               label="Neu (ohne Kontakt)"
               value={kpis.neu}
               icon={<TrendingUp className="h-4 w-4" />}
               accent={kpis.neu > 0 ? "warning" : "muted"}
+              tooltip="Leads mit Status Neu — Vertriebler hat noch nicht reagiert. Ziel: schneller Erstkontakt."
             />
             <KpiCard
               label="Qualifiziert"
@@ -229,6 +232,7 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads }: Pipe
               sub="bereit für Vertrag"
               icon={<Target className="h-4 w-4" />}
               accent="success"
+              tooltip="Vom Vertriebler geprüft und für ernsthaft befunden. Bereit für Vertragsanlage."
             />
             {kpis.time.avgLeadToContract !== null && (
               <KpiCard
@@ -236,6 +240,7 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads }: Pipe
                 value={`${kpis.time.avgLeadToContract} T.`}
                 icon={<Clock className="h-4 w-4" />}
                 accent="muted"
+                tooltip="Durchschnittliche Tage von Lead-Erfassung bis zur Vertragsanlage. Niedriger ist besser."
               />
             )}
           </>
@@ -249,6 +254,7 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads }: Pipe
               sub="Entwurf + Eingegangen"
               icon={<FileText className="h-4 w-4" />}
               accent="primary"
+              tooltip="Verträge in den Status Entwurf oder Eingegangen. Aktiver Bestand der Abschlussphase."
             />
             <KpiCard
               label="Wartet auf SEPA-Mandat"
@@ -256,6 +262,7 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads }: Pipe
               sub="Mail noch nicht raus"
               icon={<Mail className="h-4 w-4" />}
               accent={kpis.wartetSepa > 0 ? "warning" : "muted"}
+              tooltip="Verträge im Status Eingegangen, bei denen die SEPA-Mandat-Mail noch nicht versendet wurde. Aktion durch Vertriebler nötig."
             />
             <KpiCard
               label="Wartet auf Erteilung"
@@ -263,6 +270,7 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads }: Pipe
               sub="Mail raus, Mandat offen"
               icon={<ShieldCheck className="h-4 w-4" />}
               accent={kpis.wartetMandat > 0 ? "warning" : "muted"}
+              tooltip="SEPA-Mandat-Mail wurde versendet (Pfad A) oder der Kunde hat über den Buchungslink gebucht (Pfad B). Wartet jetzt auf SEPA-Bestätigung über Stripe."
             />
             {kpis.time.avgContractToActive !== null && (
               <KpiCard
@@ -270,6 +278,7 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads }: Pipe
                 value={`${kpis.time.avgContractToActive} T.`}
                 icon={<Clock className="h-4 w-4" />}
                 accent="muted"
+                tooltip="Durchschnittliche Tage von Vertragsanlage bis Aktivierung. Misst den Abschluss-Prozess."
               />
             )}
           </>
@@ -282,6 +291,7 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads }: Pipe
               value={kpis.aktivContracts}
               icon={<Building2 className="h-4 w-4" />}
               accent="success"
+              tooltip="Verträge im Status Aktiv. Laufende Abrechnungen."
             />
             <KpiCard
               label="Monatlicher Umsatz"
@@ -289,12 +299,14 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads }: Pipe
               sub="Summe aktiver Verträge"
               icon={<Euro className="h-4 w-4" />}
               accent="primary"
+              tooltip="Summe der monatlichen Beiträge aller aktiven Verträge."
             />
             <KpiCard
               label="Gekündigt (30 T.)"
               value={kpis.cancelledLast30}
               icon={<XCircle className="h-4 w-4" />}
               accent={kpis.cancelledLast30 > 0 ? "destructive" : "muted"}
+              tooltip="Verträge mit Kündigung innerhalb der letzten 30 Tage. Frühwarn-Indikator für Churn."
             />
             <KpiCard
               label="Conversion (gesamt)"
@@ -302,6 +314,7 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads }: Pipe
               sub="Lead → Kunde"
               icon={<TrendingUp className="h-4 w-4" />}
               accent={kpis.conversionRate >= 20 ? "success" : kpis.conversionRate >= 10 ? "warning" : "destructive"}
+              tooltip="Anteil der zu Kunden konvertierten Leads. Berechnung: Kunden / (aktive + verlorene + Kunden) × 100."
             />
           </>
         )}
