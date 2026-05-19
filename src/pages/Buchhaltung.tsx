@@ -62,6 +62,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
 import { useLexwareIntegration } from "@/hooks/useLexwareIntegration";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
@@ -238,6 +239,7 @@ export default function Buchhaltung() {
   const [csvImportOpen, setCsvImportOpen] = useState(false);
   const [includeInternal, setIncludeInternal] = useState(false);
   const { user } = useAuth();
+  const { isAdmin } = useUserRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -293,6 +295,105 @@ export default function Buchhaltung() {
       toast({ title: "Fehler", description: e.message, variant: "destructive" });
     } finally {
       setBillingLoading(false);
+    }
+  };
+
+  // ── Test-Verbrauch (Admin-only, nur Test-Verträge) ──
+  const [seedDialogOpen, setSeedDialogOpen] = useState(false);
+  const [seedContractId, setSeedContractId] = useState("");
+  const [seedQuantity, setSeedQuantity] = useState(20);
+  const [seedLoading, setSeedLoading] = useState(false);
+  const testContracts = activeContracts.filter((c) => /test/i.test(c.customer_name || ""));
+
+  const handleSeedTestUsage = async () => {
+    if (!seedContractId || seedQuantity <= 0) return;
+    setSeedLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("seed-test-usage", {
+        body: { contract_id: seedContractId, quantity: seedQuantity },
+      });
+      if (error) throw error;
+      if (data?.success === false || data?.error) {
+        toast({ title: "Test-Verbrauch fehlgeschlagen", description: data?.error || "Unbekannter Fehler", variant: "destructive" });
+      } else {
+        const c = activeContracts.find((x) => x.id === seedContractId);
+        toast({
+          title: "Test-Verbrauch erzeugt",
+          description: `${data.quantity} Positionen für ${c?.customer_name ?? "Vertrag"} (${Number(data.net_amount).toFixed(2)} € netto).`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["usage-charges"] });
+        setSeedDialogOpen(false);
+      }
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    } finally {
+      setSeedLoading(false);
+    }
+  };
+
+  // ── Zwischenabrechnung (Admin-only) ──
+  const [interimDialogOpen, setInterimDialogOpen] = useState(false);
+  const [interimContractId, setInterimContractId] = useState("");
+  const [interimLoading, setInterimLoading] = useState(false);
+  const [interimPreview, setInterimPreview] = useState<{
+    count: number; net: number; from: string | null; to: string | null;
+  } | null>(null);
+  const [interimPreviewLoading, setInterimPreviewLoading] = useState(false);
+
+  // Preview must use the SAME filter as the function: status='pending' AND net_amount > 0.
+  useEffect(() => {
+    if (!interimContractId) { setInterimPreview(null); return; }
+    let cancelled = false;
+    (async () => {
+      setInterimPreviewLoading(true);
+      const { data } = await supabase
+        .from("usage_charges")
+        .select("net_amount, period_from, period_to")
+        .eq("contract_id", interimContractId)
+        .eq("status", "pending")
+        .gt("net_amount", 0);
+      if (cancelled) return;
+      if (!data || data.length === 0) {
+        setInterimPreview({ count: 0, net: 0, from: null, to: null });
+      } else {
+        const net = data.reduce((s: number, r: any) => s + Number(r.net_amount), 0);
+        const from = data.reduce((m: string, r: any) => !m || r.period_from < m ? r.period_from : m, "");
+        const to = data.reduce((m: string, r: any) => !m || r.period_to > m ? r.period_to : m, "");
+        setInterimPreview({ count: data.length, net, from, to });
+      }
+      setInterimPreviewLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [interimContractId]);
+
+  const handleInterimInvoice = async () => {
+    if (!interimContractId) return;
+    setInterimLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manual-interim-invoice", {
+        body: { contract_id: interimContractId },
+      });
+      if (error) throw error;
+      if (data?.success === false || data?.error) {
+        toast({ title: "Zwischenabrechnung nicht möglich", description: data?.error || "Unbekannter Fehler", variant: "destructive" });
+      } else {
+        const stripeStatus = data.stripe_failed ? "Stripe fehlgeschlagen" : (data.stripe_invoice_id ? "bezahlt/eingezogen" : "kein Stripe");
+        toast({
+          title: "Zwischenabrechnung erstellt",
+          description: `${data.invoice_number} (${Number(data.gross_amount).toFixed(2)} € brutto). Stripe: ${stripeStatus}.`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["accounting"] });
+        queryClient.invalidateQueries({ queryKey: ["accounting-revenues"] });
+        queryClient.invalidateQueries({ queryKey: ["fibu-events"] });
+        queryClient.invalidateQueries({ queryKey: ["invoices"] });
+        queryClient.invalidateQueries({ queryKey: ["usage-charges"] });
+        setInterimDialogOpen(false);
+        setInterimContractId("");
+      }
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    } finally {
+      setInterimLoading(false);
     }
   };
 
@@ -1024,11 +1125,139 @@ export default function Buchhaltung() {
       )}
 
       {/* Action bar */}
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-end gap-2 mb-4 flex-wrap">
+        {isAdmin && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-amber-500/40 text-amber-700 hover:bg-amber-500/10"
+            onClick={() => {
+              loadActiveContracts();
+              setSeedDialogOpen(true);
+            }}
+          >
+            <AlertTriangle className="h-4 w-4 mr-2" />Test-Verbrauch erzeugen
+          </Button>
+        )}
+        {isAdmin && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              loadActiveContracts();
+              setInterimDialogOpen(true);
+            }}
+          >
+            <Receipt className="h-4 w-4 mr-2" />Zwischenabrechnung jetzt
+          </Button>
+        )}
         <Button variant="outline" size="sm" onClick={() => setBillingDialogOpen(true)}>
           <Receipt className="h-4 w-4 mr-2" />Abrechnung auslösen
         </Button>
       </div>
+
+      {/* Test-Verbrauch Dialog (Admin, nur Test-Verträge) */}
+      <Dialog open={seedDialogOpen} onOpenChange={(open) => {
+        setSeedDialogOpen(open);
+        if (open) loadActiveContracts();
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-600" />Test-Verbrauch erzeugen</DialogTitle>
+            <DialogDescription>
+              Legt eine simulierte <strong>usage_charges</strong>-Position (Status <code>pending</code>) für einen Test-Vertrag an.
+              Nur Verträge mit „Test" im Kundennamen sind wählbar.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Test-Vertrag</Label>
+              <Select value={seedContractId} onValueChange={setSeedContractId}>
+                <SelectTrigger><SelectValue placeholder="Test-Vertrag wählen..." /></SelectTrigger>
+                <SelectContent>
+                  {testContracts.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">Keine Test-Verträge gefunden.</div>
+                  ) : testContracts.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.customer_name} ({c.hfx_customer_number}) – {c.product_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Anzahl simulierter GOÄ-Rechnungen</Label>
+              <Input
+                type="number" min={1} max={10000}
+                value={seedQuantity}
+                onChange={(e) => setSeedQuantity(Math.max(1, Number(e.target.value) || 0))}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setSeedDialogOpen(false)}>Abbrechen</Button>
+            <Button onClick={handleSeedTestUsage} disabled={!seedContractId || seedLoading}>
+              {seedLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Wird erzeugt...</> : <>Erzeugen</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Zwischenabrechnung Dialog (Admin) */}
+      <Dialog open={interimDialogOpen} onOpenChange={(open) => {
+        setInterimDialogOpen(open);
+        if (open) loadActiveContracts();
+        if (!open) { setInterimContractId(""); setInterimPreview(null); }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Receipt className="h-5 w-5" />Zwischenabrechnung jetzt</DialogTitle>
+            <DialogDescription>
+              Rechnet <strong>alle offenen Verbrauchspositionen</strong> (Status <code>pending</code>, Netto &gt; 0) eines Vertrages ab –
+              unabhängig vom Kalendermonat. SEPA-Mandat erforderlich. Keine Grundgebühr.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Vertrag auswählen</Label>
+              <Select value={interimContractId} onValueChange={setInterimContractId}>
+                <SelectTrigger><SelectValue placeholder="Vertrag wählen..." /></SelectTrigger>
+                <SelectContent>
+                  {activeContracts.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.customer_name} ({c.hfx_customer_number}) – {c.product_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {interimContractId && (
+              <div className="rounded-md border bg-muted/30 p-3 text-sm">
+                {interimPreviewLoading ? (
+                  <span className="text-muted-foreground flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" />Vorschau wird geladen...</span>
+                ) : interimPreview && interimPreview.count > 0 ? (
+                  <div className="space-y-1">
+                    <div><strong>{interimPreview.count}</strong> offene Position(en) · <strong>{fmtEur(interimPreview.net)}</strong> netto</div>
+                    <div className="text-muted-foreground text-xs">Verbrauchsspanne: {interimPreview.from} – {interimPreview.to}</div>
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground">Kein offener Verbrauch für diesen Vertrag.</span>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setInterimDialogOpen(false)}>Abbrechen</Button>
+            <Button
+              onClick={handleInterimInvoice}
+              disabled={!interimContractId || interimLoading || (interimPreview?.count ?? 0) === 0}
+            >
+              {interimLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Wird abgerechnet...</> : <>Zwischenabrechnung erstellen</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
