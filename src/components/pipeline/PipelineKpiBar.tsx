@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { differenceInDays } from "date-fns";
 import { isWaitingForMandate } from "@/lib/contractLifecycle";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface KpiCardProps {
   label: string;
@@ -13,9 +14,10 @@ interface KpiCardProps {
   sub?: string;
   icon: React.ReactNode;
   accent?: "primary" | "success" | "warning" | "destructive" | "muted";
+  tooltip?: string;
 }
 
-const KpiCard = React.forwardRef<HTMLDivElement, KpiCardProps>(({ label, value, sub, icon, accent = "primary" }, ref) => {
+const KpiCard = React.forwardRef<HTMLDivElement, KpiCardProps>(({ label, value, sub, icon, accent = "primary", tooltip }, ref) => {
   const accentCls: Record<string, string> = {
     primary: "bg-primary/10 text-primary",
     success: "bg-success/10 text-success",
@@ -23,8 +25,8 @@ const KpiCard = React.forwardRef<HTMLDivElement, KpiCardProps>(({ label, value, 
     destructive: "bg-destructive/10 text-destructive",
     muted: "bg-muted text-muted-foreground",
   };
-  return (
-    <div ref={ref} className="flex items-center gap-3 px-4 py-3 rounded-lg border border-border bg-card min-w-[180px]">
+  const card = (
+    <div ref={ref} className="flex items-center gap-3 px-4 py-3 rounded-lg border border-border bg-card min-w-[180px] cursor-help">
       <div className={`flex items-center justify-center h-9 w-9 rounded-lg shrink-0 ${accentCls[accent]}`}>
         {icon}
       </div>
@@ -34,6 +36,13 @@ const KpiCard = React.forwardRef<HTMLDivElement, KpiCardProps>(({ label, value, 
         {sub && <p className="text-[10px] text-muted-foreground/70 mt-0.5 truncate">{sub}</p>}
       </div>
     </div>
+  );
+  if (!tooltip) return card;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{card}</TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-xs text-xs">{tooltip}</TooltipContent>
+    </Tooltip>
   );
 });
 KpiCard.displayName = "KpiCard";
