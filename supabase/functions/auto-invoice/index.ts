@@ -516,33 +516,18 @@ Deno.serve(async (req) => {
         let stripeErrorMessage: string | null = null;
         if (hasStripeCustomer && grossAmount > 0) {
           const createdItemIds: string[] = [];
+          let stripeInvoice: any = null;
           try {
-            for (const pos of positions) {
-              if (pos.quantity * pos.unit_price <= 0) continue;
-              const item = await stripe.invoiceItems.create({
-                customer: contract.stripe_customer_id,
-                amount: Math.round(pos.quantity * pos.unit_price * 100),
-                currency: "eur",
-                description: pos.description,
-                tax_rates: [],
-              });
-              createdItemIds.push(item.id);
-            }
-
-            const taxItem = await stripe.invoiceItems.create({
-              customer: contract.stripe_customer_id,
-              amount: Math.round(taxAmount * 100),
-              currency: "eur",
-              description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
-            });
-            createdItemIds.push(taxItem.id);
-
             const stripeDescription = `${contract.product_name} – ${billingPeriod}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}${usageChargeIds.length > 0 ? ` | Nutzung: ${usageChargeIds.length} geprüfte GOÄ-Rechnungen (${usageNetAmount.toFixed(2)} €)` : ""}`;
 
-            const stripeInvoice = await stripe.invoices.create({
+            // SYNCHRONIZE WITH manual-interim-invoice (V2 flow):
+            // 1) Draft-Invoice zuerst, 2) stripe_invoice_id sofort persistieren,
+            // 3) Items mit invoice:<id> hängen, 4) finalize+pay.
+            stripeInvoice = await stripe.invoices.create({
               customer: contract.stripe_customer_id,
               auto_advance: false,
               collection_method: "charge_automatically",
+              pending_invoice_items_behavior: "exclude",
               description: stripeDescription,
               metadata: {
                 hfx_contract_id: contract.id,
@@ -553,15 +538,39 @@ Deno.serve(async (req) => {
               },
             });
 
+            // Stripe-ID sofort persistieren — sichert Verknüpfung selbst bei
+            // späterem Fehler in Items/finalize/pay.
+            await supabase
+              .from("invoices")
+              .update({ stripe_invoice_id: stripeInvoice.id })
+              .eq("id", invoice.id);
+
+            for (const pos of positions) {
+              if (pos.quantity * pos.unit_price <= 0) continue;
+              const item = await stripe.invoiceItems.create({
+                customer: contract.stripe_customer_id,
+                invoice: stripeInvoice.id,
+                amount: Math.round(pos.quantity * pos.unit_price * 100),
+                currency: "eur",
+                description: pos.description,
+                tax_rates: [],
+              });
+              createdItemIds.push(item.id);
+            }
+
+            const taxItem = await stripe.invoiceItems.create({
+              customer: contract.stripe_customer_id,
+              invoice: stripeInvoice.id,
+              amount: Math.round(taxAmount * 100),
+              currency: "eur",
+              description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
+            });
+            createdItemIds.push(taxItem.id);
+
             const finalizedInvoice = await stripe.invoices.finalizeInvoice(stripeInvoice.id);
             await stripe.invoices.pay(finalizedInvoice.id);
 
             stripeInvoiceId = stripeInvoice.id;
-
-            await supabase
-              .from("invoices")
-              .update({ stripe_invoice_id: stripeInvoiceId })
-              .eq("id", invoice.id);
 
             console.log(`[auto-invoice] Stripe invoice ${stripeInvoice.id} created and payment initiated for contract ${contract.id}`);
           } catch (stripeErr: any) {
