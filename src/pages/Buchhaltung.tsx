@@ -62,6 +62,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
 import { useLexwareIntegration } from "@/hooks/useLexwareIntegration";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
@@ -238,6 +239,7 @@ export default function Buchhaltung() {
   const [csvImportOpen, setCsvImportOpen] = useState(false);
   const [includeInternal, setIncludeInternal] = useState(false);
   const { user } = useAuth();
+  const { isAdmin } = useUserRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -293,6 +295,105 @@ export default function Buchhaltung() {
       toast({ title: "Fehler", description: e.message, variant: "destructive" });
     } finally {
       setBillingLoading(false);
+    }
+  };
+
+  // ── Test-Verbrauch (Admin-only, nur Test-Verträge) ──
+  const [seedDialogOpen, setSeedDialogOpen] = useState(false);
+  const [seedContractId, setSeedContractId] = useState("");
+  const [seedQuantity, setSeedQuantity] = useState(20);
+  const [seedLoading, setSeedLoading] = useState(false);
+  const testContracts = activeContracts.filter((c) => /test/i.test(c.customer_name || ""));
+
+  const handleSeedTestUsage = async () => {
+    if (!seedContractId || seedQuantity <= 0) return;
+    setSeedLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("seed-test-usage", {
+        body: { contract_id: seedContractId, quantity: seedQuantity },
+      });
+      if (error) throw error;
+      if (data?.success === false || data?.error) {
+        toast({ title: "Test-Verbrauch fehlgeschlagen", description: data?.error || "Unbekannter Fehler", variant: "destructive" });
+      } else {
+        const c = activeContracts.find((x) => x.id === seedContractId);
+        toast({
+          title: "Test-Verbrauch erzeugt",
+          description: `${data.quantity} Positionen für ${c?.customer_name ?? "Vertrag"} (${Number(data.net_amount).toFixed(2)} € netto).`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["usage-charges"] });
+        setSeedDialogOpen(false);
+      }
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    } finally {
+      setSeedLoading(false);
+    }
+  };
+
+  // ── Zwischenabrechnung (Admin-only) ──
+  const [interimDialogOpen, setInterimDialogOpen] = useState(false);
+  const [interimContractId, setInterimContractId] = useState("");
+  const [interimLoading, setInterimLoading] = useState(false);
+  const [interimPreview, setInterimPreview] = useState<{
+    count: number; net: number; from: string | null; to: string | null;
+  } | null>(null);
+  const [interimPreviewLoading, setInterimPreviewLoading] = useState(false);
+
+  // Preview must use the SAME filter as the function: status='pending' AND net_amount > 0.
+  useEffect(() => {
+    if (!interimContractId) { setInterimPreview(null); return; }
+    let cancelled = false;
+    (async () => {
+      setInterimPreviewLoading(true);
+      const { data } = await supabase
+        .from("usage_charges")
+        .select("net_amount, period_from, period_to")
+        .eq("contract_id", interimContractId)
+        .eq("status", "pending")
+        .gt("net_amount", 0);
+      if (cancelled) return;
+      if (!data || data.length === 0) {
+        setInterimPreview({ count: 0, net: 0, from: null, to: null });
+      } else {
+        const net = data.reduce((s: number, r: any) => s + Number(r.net_amount), 0);
+        const from = data.reduce((m: string, r: any) => !m || r.period_from < m ? r.period_from : m, "");
+        const to = data.reduce((m: string, r: any) => !m || r.period_to > m ? r.period_to : m, "");
+        setInterimPreview({ count: data.length, net, from, to });
+      }
+      setInterimPreviewLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [interimContractId]);
+
+  const handleInterimInvoice = async () => {
+    if (!interimContractId) return;
+    setInterimLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manual-interim-invoice", {
+        body: { contract_id: interimContractId },
+      });
+      if (error) throw error;
+      if (data?.success === false || data?.error) {
+        toast({ title: "Zwischenabrechnung nicht möglich", description: data?.error || "Unbekannter Fehler", variant: "destructive" });
+      } else {
+        const stripeStatus = data.stripe_failed ? "Stripe fehlgeschlagen" : (data.stripe_invoice_id ? "bezahlt/eingezogen" : "kein Stripe");
+        toast({
+          title: "Zwischenabrechnung erstellt",
+          description: `${data.invoice_number} (${Number(data.gross_amount).toFixed(2)} € brutto). Stripe: ${stripeStatus}.`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["accounting"] });
+        queryClient.invalidateQueries({ queryKey: ["accounting-revenues"] });
+        queryClient.invalidateQueries({ queryKey: ["fibu-events"] });
+        queryClient.invalidateQueries({ queryKey: ["invoices"] });
+        queryClient.invalidateQueries({ queryKey: ["usage-charges"] });
+        setInterimDialogOpen(false);
+        setInterimContractId("");
+      }
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    } finally {
+      setInterimLoading(false);
     }
   };
 
