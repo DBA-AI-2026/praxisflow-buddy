@@ -580,12 +580,25 @@ Deno.serve(async (req) => {
             stripeChargeFailed = true;
             stripeErrorMessage = stripeErr?.message || String(stripeErr);
 
-            // Cleanup: in diesem Lauf erstellte, noch nicht zu einer Invoice gehörige InvoiceItems löschen.
+            // Cleanup Items
             for (const itemId of createdItemIds) {
               try {
                 await stripe.invoiceItems.del(itemId);
               } catch (cleanupErr: any) {
                 console.error(`[auto-invoice] Cleanup failed for invoiceItem ${itemId}:`, cleanupErr?.message);
+              }
+            }
+            // Cleanup Invoice: draft → del, open → void, sonst noop (paid/uncollectible/void)
+            if (stripeInvoice?.id) {
+              try {
+                const fresh = await stripe.invoices.retrieve(stripeInvoice.id);
+                if (fresh.status === "draft") {
+                  try { await stripe.invoices.del(stripeInvoice.id); } catch (_) {}
+                } else if (fresh.status === "open") {
+                  try { await stripe.invoices.voidInvoice(stripeInvoice.id); } catch (_) {}
+                }
+              } catch (cleanupErr: any) {
+                console.error(`[auto-invoice] Invoice cleanup retrieve failed for ${stripeInvoice.id}:`, cleanupErr?.message);
               }
             }
 
