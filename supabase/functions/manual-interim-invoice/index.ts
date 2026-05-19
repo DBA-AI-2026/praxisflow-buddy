@@ -141,7 +141,23 @@ Deno.serve(async (req) => {
 
     const notesText = `Zwischenabrechnung – manuell ausgelöst am ${nowIso} von ${userEmail} | ${usageChargeIds.length} Positionen | Verbrauch ${periodFrom} bis ${periodTo}`;
 
-    // 1) Internal invoice — billing_period_month stays NULL → partial unique index ignores us
+    // 1) Atomar claimen: pending → invoicing. Conditional update fungiert als Lock.
+    // Bei parallelem Aufruf updated der zweite Request 0 Rows und bricht ab.
+    const { data: claimedCharges, error: claimErr } = await supabase
+      .from("usage_charges")
+      .update({ status: "invoicing" })
+      .in("id", usageChargeIds)
+      .eq("status", "pending")
+      .select("id");
+    if (claimErr) throw claimErr;
+    if (!claimedCharges || claimedCharges.length !== usageChargeIds.length) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: `Race condition: ${claimedCharges?.length ?? 0} von ${usageChargeIds.length} Charges wurden bereits anderweitig in Bearbeitung genommen. Bitte erneut versuchen.`,
+      }), { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // 2) Internal invoice — billing_period_month stays NULL → partial unique index ignores us
     const { data: invoice, error: insErr } = await supabase
       .from("invoices")
       .insert({
@@ -166,16 +182,16 @@ Deno.serve(async (req) => {
       .select()
       .single();
     if (insErr || !invoice) {
+      // Release claim so user can retry
+      await supabase
+        .from("usage_charges")
+        .update({ status: "pending" })
+        .in("id", usageChargeIds)
+        .eq("status", "invoicing");
       return new Response(JSON.stringify({ error: insErr?.message || "Invoice insert failed" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    // 2) Mark usage_charges as invoiced
-    await supabase
-      .from("usage_charges")
-      .update({ status: "invoiced", invoice_id: invoice.id })
-      .in("id", usageChargeIds);
 
     // 3) Stripe Invoice + Items + finalize + pay
     let stripeInvoiceId: string | null = null;
@@ -222,6 +238,13 @@ Deno.serve(async (req) => {
       await stripe.invoices.pay(finalized.id);
       stripeInvoiceId = stripeInvoice.id;
       await supabase.from("invoices").update({ stripe_invoice_id: stripeInvoiceId }).eq("id", invoice.id);
+
+      // Erfolg: Charges final markieren invoicing → invoiced + invoice_id
+      await supabase
+        .from("usage_charges")
+        .update({ status: "invoiced", invoice_id: invoice.id })
+        .in("id", usageChargeIds)
+        .eq("status", "invoicing");
     } catch (stripeErr: any) {
       console.error("[manual-interim-invoice] Stripe error:", stripeErr?.message);
       stripeChargeFailed = true;
@@ -234,6 +257,13 @@ Deno.serve(async (req) => {
         .update({ status: "zahlung_fehlgeschlagen" })
         .eq("id", invoice.id)
         .not("status", "in", "(bezahlt,storniert)");
+
+      // Rollback: Charges zurück auf pending, damit erneut abgerechnet werden kann
+      await supabase
+        .from("usage_charges")
+        .update({ status: "pending", invoice_id: null })
+        .in("id", usageChargeIds)
+        .eq("status", "invoicing");
     }
 
     // 4) Send invoice email (same template style as auto-invoice, simplified for interim)
