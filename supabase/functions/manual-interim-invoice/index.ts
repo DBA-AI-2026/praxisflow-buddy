@@ -4,7 +4,12 @@
 //
 // SYNCHRONIZE WITH auto-invoice/index.ts:
 //   - Invoice insert shape (positions, billing_period_month=NULL, status flow)
-//   - Stripe Invoice + InvoiceItems creation + cleanup pattern
+//   - Stripe flow (V2, 2026-05):
+//       1) invoices.create({ pending_invoice_items_behavior: "exclude", ... }) → draft
+//       2) Persist stripe_invoice_id to DB IMMEDIATELY (before any further Stripe call)
+//       3) For each position + tax: invoiceItems.create({ invoice: <id>, ... }) — explicit attach
+//       4) finalizeInvoice → pay
+//       Cleanup on error: del each item; if draft → invoices.del, if open → voidInvoice, else noop.
 //   - Email HTML template
 //   - fibu_events insert pattern (invoice_usage_created)
 // This is a deliberate duplication of the usage-billing slice of auto-invoice. The
