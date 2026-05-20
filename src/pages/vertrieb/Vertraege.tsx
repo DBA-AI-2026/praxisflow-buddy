@@ -767,13 +767,36 @@ export default function Vertraege() {
       };
 
       let contractId = editId;
+      let previousContractStatus: string | null = null;
       if (editId) {
+        // Capture old status BEFORE update for customer_events log (edit only)
+        const { data: before } = await supabase
+          .from("contracts")
+          .select("status")
+          .eq("id", editId)
+          .maybeSingle();
+        previousContractStatus = (before as any)?.status ?? null;
         const { error } = await supabase.from("contracts").update(record).eq("id", editId);
         if (error) throw error;
       } else {
         const { data: inserted, error } = await supabase.from("contracts").insert(record).select("id").single();
         if (error) throw error;
         contractId = inserted.id;
+      }
+
+      // Log status change (edit only, only if status actually changed) — fire-and-forget
+      if (editId && contractId && previousContractStatus && previousContractStatus !== data.status) {
+        logCustomerStatusChange({
+          eventType: "CONTRACT_STATUS_CHANGED",
+          entityType: "contract",
+          entityId: contractId,
+          oldStatus: previousContractStatus,
+          newStatus: data.status,
+          source: "vertraege_save",
+          hfxCustomerNumber: (record as any).hfx_customer_number ?? null,
+          contractId,
+          createdBy: user?.id ?? null,
+        });
       }
 
       // Log signature audit trail for active contracts
