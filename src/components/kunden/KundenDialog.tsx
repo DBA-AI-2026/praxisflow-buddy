@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { useKundenDialogData } from "@/hooks/useKundenDialogData";
+import { StammdatenTab } from "@/components/kunden/StammdatenTab";
 
 export type KundenPhase =
   | "lead"
@@ -74,6 +76,8 @@ export function KundenDialog({
   currentPhase,
   currentStatusLabel,
 }: KundenDialogProps) {
+  const data = useKundenDialogData(hfxNumber, currentPhase, open);
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -137,10 +141,8 @@ export function KundenDialog({
           </TabsList>
 
           <TabsContent value="stammdaten" className="mt-4">
-            <TabPlaceholder
-              label="Stammdaten"
-              hint="Inhalt folgt in Etappe 2b — Praxis-, Person- und Kontaktdaten zum Bearbeiten."
-            />
+            <StammdatenTab data={data} />
+
           </TabsContent>
           <TabsContent value="vertrag" className="mt-4">
             <TabPlaceholder

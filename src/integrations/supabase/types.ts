@@ -862,6 +862,7 @@ export type Database = {
       }
       customers: {
         Row: {
+          abrechnungszentrum: string
           adresse: string | null
           bsnr: string | null
           created_at: string
@@ -881,6 +882,7 @@ export type Database = {
           vorname: string | null
         }
         Insert: {
+          abrechnungszentrum?: string
           adresse?: string | null
           bsnr?: string | null
           created_at?: string
@@ -900,6 +902,7 @@ export type Database = {
           vorname?: string | null
         }
         Update: {
+          abrechnungszentrum?: string
           adresse?: string | null
           bsnr?: string | null
           created_at?: string
