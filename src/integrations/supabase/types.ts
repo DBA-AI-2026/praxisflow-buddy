@@ -732,6 +732,45 @@ export type Database = {
           },
         ]
       }
+      customer_events: {
+        Row: {
+          contract_id: string | null
+          created_at: string
+          created_by: string | null
+          entity_id: string
+          entity_type: string
+          event_data: Json
+          event_type: string
+          hfx_customer_number: string | null
+          id: string
+          lead_id: string | null
+        }
+        Insert: {
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          entity_id: string
+          entity_type: string
+          event_data?: Json
+          event_type: string
+          hfx_customer_number?: string | null
+          id?: string
+          lead_id?: string | null
+        }
+        Update: {
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          entity_id?: string
+          entity_type?: string
+          event_data?: Json
+          event_type?: string
+          hfx_customer_number?: string | null
+          id?: string
+          lead_id?: string | null
+        }
+        Relationships: []
+      }
       customer_revenues: {
         Row: {
           created_at: string

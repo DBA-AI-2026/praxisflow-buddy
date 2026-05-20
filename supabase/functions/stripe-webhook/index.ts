@@ -721,6 +721,32 @@ async function handleContractActivation(
 
   log("Contract activated via Stripe", contractId);
 
+  // ── customer_events: spiegele Status-Wechsel (Business-Event, additiv) ──
+  // Quelle ist immer "eingegangen" → "aktiv" über diesen Flow. Fire-and-forget.
+  try {
+    const { error: ceError } = await supabase.from("customer_events").insert({
+      event_type: "CONTRACT_STATUS_CHANGED",
+      entity_type: "contract",
+      entity_id: contractId,
+      hfx_customer_number: contract?.hfx_customer_number ?? null,
+      contract_id: contractId,
+      event_data: {
+        old_status: "eingegangen",
+        new_status: "aktiv",
+        source: "stripe_webhook",
+        stripe_session_id: session.id,
+        stripe_subscription_id: stripeSubscriptionId,
+      },
+      created_by: null,
+    });
+    if (ceError) {
+      console.warn("[stripe-webhook] customer_events insert failed (non-blocking):", ceError.message);
+    }
+  } catch (ceEx) {
+    console.warn("[stripe-webhook] customer_events exception (non-blocking):", String(ceEx));
+  }
+
+
   // ── Ensure default_payment_method is set on the Stripe customer ──
   if (stripeCustomerId) {
     try {
