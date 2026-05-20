@@ -2112,7 +2112,29 @@ export default function Vertraege() {
               </thead>
               <tbody className="divide-y divide-border/50">
                  {filtered.map((c: any) => (
-                    <tr key={c.id} className="hover:bg-muted/30 transition-colors">
+                    <tr
+                      key={c.id}
+                      className="hover:bg-muted/40 transition-colors cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        // Ignoriere Clicks auf interaktive Kind-Elemente (Buttons, Links, Menu-Items, File-Inputs, Labels)
+                        if ((e.target as HTMLElement).closest("button, a, label, [role='menuitem'], input")) return;
+                        if (isContractLocked(c.status)) {
+                          if (!window.confirm("⚠️ Achtung: Sie bearbeiten einen abgeschlossenen Originalvertrag. Änderungen werden dokumentiert. Fortfahren?")) return;
+                        }
+                        openEdit(c);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter" && e.key !== " ") return;
+                        if ((e.target as HTMLElement) !== e.currentTarget) return;
+                        e.preventDefault();
+                        if (isContractLocked(c.status)) {
+                          if (!window.confirm("⚠️ Achtung: Sie bearbeiten einen abgeschlossenen Originalvertrag. Änderungen werden dokumentiert. Fortfahren?")) return;
+                        }
+                        openEdit(c);
+                      }}
+                    >
                         <td className="py-3.5 px-4 text-xs font-mono font-semibold text-primary whitespace-nowrap">
                           {c.contract_number || "–"}
                         </td>
@@ -2351,25 +2373,20 @@ export default function Vertraege() {
                               />
                             </label>
                           </DropdownMenuItem>
-                          {/* Bearbeiten: nur für nicht-abgeschlossene Verträge oder Admins */}
-                          {(!isContractLocked(c.status)) ? (
+                          {/* Bearbeiten: bei locked Verträgen mit Warnung, sonst direkt */}
+                          {!isContractLocked(c.status) ? (
                             <DropdownMenuItem onClick={() => openEdit(c)}>
                               <Pencil className="h-4 w-4 mr-2" />
                               Bearbeiten
                             </DropdownMenuItem>
-                          ) : isAdmin ? (
+                          ) : (
                             <DropdownMenuItem onClick={() => {
                               if (window.confirm("⚠️ Achtung: Sie bearbeiten einen abgeschlossenen Originalvertrag. Änderungen werden dokumentiert. Fortfahren?")) {
                                 openEdit(c);
                               }
                             }}>
                               <AlertTriangle className="h-4 w-4 mr-2 text-warning" />
-                              <span className="text-warning">Bearbeiten (Admin)</span>
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem onClick={() => { openEdit(c); }} disabled={false}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              Details ansehen
+                              <span className="text-warning">Bearbeiten</span>
                             </DropdownMenuItem>
                           )}
                           {(c.status === "aktiv" || c.status === "gezeichnet") && (
@@ -2465,21 +2482,15 @@ export default function Vertraege() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
-              {editId
-                ? (editingContract && isContractLocked(editingContract.status) && !isAdmin)
-                  ? "Vertragsdetails"
-                  : "Vertrag bearbeiten"
-                : "Neuen Vertrag erfassen"}
+              {editId ? "Vertrag bearbeiten" : "Neuen Vertrag erfassen"}
             </DialogTitle>
             <DialogDescription>
-              {editingContract && isContractLocked(editingContract.status) && !isAdmin
-                ? "Dieser Vertrag ist abgeschlossen und kann nicht mehr bearbeitet werden."
-                : "Erfassen Sie alle relevanten Vertragsdetails."}
+              Erfassen Sie alle relevanten Vertragsdetails.
             </DialogDescription>
           </DialogHeader>
 
-          {/* Admin-Warnung bei abgeschlossenem Vertrag */}
-          {editId && editingContract && isContractLocked(editingContract.status) && isAdmin && (
+          {/* Warnung bei abgeschlossenem Vertrag (für alle Rollen) */}
+          {editId && editingContract && isContractLocked(editingContract.status) && (
             <div className="rounded-lg border border-warning/50 bg-warning/10 p-3 flex items-start gap-2">
               <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
               <div className="text-sm">
@@ -2493,7 +2504,7 @@ export default function Vertraege() {
           )}
 
           <form autoComplete="off" onSubmit={handleSubmit} className="space-y-5">
-           <fieldset disabled={!!(editId && editingContract && isContractLocked(editingContract.status) && !isAdmin)} className="space-y-5">
+           <fieldset className="space-y-5">
             {/* Vertragsparteien */}
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Vertragsparteien</h4>
