@@ -8,7 +8,7 @@
  * TODO Etappe 6: Diese Route + Datei wieder entfernen (samt App.tsx-Eintrag).
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
