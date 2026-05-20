@@ -834,9 +834,28 @@ export default function Vertraege() {
         converted_from_lead_id?: string | null;
         vorname?: string | null; nachname?: string | null; bsnr?: string | null; lanr?: string | null;
       }, cId: string) => {
-        // Convert linked lead to "kunde"
+        // Convert linked lead to "kunde" — capture old status for customer_events log
         if (hfxNr) {
+          const { data: leadBefore } = await supabase
+            .from("leads")
+            .select("id, status")
+            .eq("hfx_customer_number", hfxNr)
+            .maybeSingle();
           await supabase.from("leads").update({ status: "kunde" }).eq("hfx_customer_number", hfxNr);
+          if (leadBefore?.id && leadBefore.status && leadBefore.status !== "kunde") {
+            logCustomerStatusChange({
+              eventType: "LEAD_STATUS_CHANGED",
+              entityType: "lead",
+              entityId: leadBefore.id,
+              oldStatus: leadBefore.status,
+              newStatus: "kunde",
+              source: "vertraege_activate_contract",
+              hfxCustomerNumber: hfxNr,
+              leadId: leadBefore.id,
+              contractId: cId,
+              createdBy: user?.id ?? null,
+            });
+          }
         }
 
         // Upsert customer record
