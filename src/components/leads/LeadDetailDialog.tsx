@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
+import { logCustomerStatusChange } from "@/lib/customerEvents";
 import {
   Dialog,
   DialogContent,
