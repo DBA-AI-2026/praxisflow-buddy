@@ -76,6 +76,8 @@ export function KundenDialog({
   currentPhase,
   currentStatusLabel,
 }: KundenDialogProps) {
+  const data = useKundenDialogData(hfxNumber, currentPhase, open);
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
