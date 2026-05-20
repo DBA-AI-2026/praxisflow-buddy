@@ -141,10 +141,8 @@ export function KundenDialog({
           </TabsList>
 
           <TabsContent value="stammdaten" className="mt-4">
-            <TabPlaceholder
-              label="Stammdaten"
-              hint="Inhalt folgt in Etappe 2b — Praxis-, Person- und Kontaktdaten zum Bearbeiten."
-            />
+            <StammdatenTab data={data} />
+
           </TabsContent>
           <TabsContent value="vertrag" className="mt-4">
             <TabPlaceholder
