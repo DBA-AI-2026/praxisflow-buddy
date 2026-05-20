@@ -2399,6 +2399,18 @@ export default function Vertraege() {
                                 onClick={async () => {
                                   const { error } = await supabase.from("contracts").update({ status: "aktiv", approved_by: user?.id, approved_at: new Date().toISOString() } as any).eq("id", c.id);
                                   if (error) { toast({ title: "Fehler", description: error.message, variant: "destructive" }); return; }
+                                  // Freigabe wird nur auf Verträgen im Status "gezeichnet" angeboten — alter Status ist deterministisch
+                                  logCustomerStatusChange({
+                                    eventType: "CONTRACT_STATUS_CHANGED",
+                                    entityType: "contract",
+                                    entityId: c.id,
+                                    oldStatus: "gezeichnet",
+                                    newStatus: "aktiv",
+                                    source: "vertraege_freigabe",
+                                    hfxCustomerNumber: c.hfx_customer_number ?? null,
+                                    contractId: c.id,
+                                    createdBy: user?.id ?? null,
+                                  });
                                   queryClient.invalidateQueries({ queryKey: ["contracts"] });
                                   toast({ title: "Vertrag freigegeben", description: "Status auf Aktiv gesetzt." });
                                 }}
