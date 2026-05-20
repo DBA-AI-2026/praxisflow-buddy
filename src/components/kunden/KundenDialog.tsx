@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { useKundenDialogData } from "@/hooks/useKundenDialogData";
+import { StammdatenTab } from "@/components/kunden/StammdatenTab";
 
 export type KundenPhase =
   | "lead"
