@@ -1362,8 +1362,27 @@ export default function Vertraege() {
       const hfxNr = contract?.hfx_customer_number || contract?.mp_nr || null;
 
       if (hfxNr) {
-        // Convert linked lead to "kunde"
+        // Convert linked lead to "kunde" — capture old status for customer_events log
+        const { data: leadBefore } = await supabase
+          .from("leads")
+          .select("id, status")
+          .eq("hfx_customer_number", hfxNr)
+          .maybeSingle();
         await supabase.from("leads").update({ status: "kunde" }).eq("hfx_customer_number", hfxNr);
+        if (leadBefore?.id && leadBefore.status && leadBefore.status !== "kunde") {
+          logCustomerStatusChange({
+            eventType: "LEAD_STATUS_CHANGED",
+            entityType: "lead",
+            entityId: leadBefore.id,
+            oldStatus: leadBefore.status,
+            newStatus: "kunde",
+            source: "vertraege_handle_status_change",
+            hfxCustomerNumber: hfxNr,
+            leadId: leadBefore.id,
+            contractId,
+            createdBy: user?.id ?? null,
+          });
+        }
         queryClient.invalidateQueries({ queryKey: ["leads"] });
       }
 
