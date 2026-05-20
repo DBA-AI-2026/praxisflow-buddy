@@ -8,7 +8,7 @@
  * TODO Etappe 6: Diese Route + Datei wieder entfernen (samt App.tsx-Eintrag).
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -61,12 +61,82 @@ const DEMOS: DemoCase[] = [
 
 const PHASE_OPTIONS: KundenPhase[] = ["lead", "qualifiziert", "vertrag", "aktiv", "service"];
 
+interface SearchResult {
+  hfx_customer_number: string;
+  praxis_name: string;
+  vorname: string | null;
+  nachname: string | null;
+  source: "lead" | "customer";
+}
+
 export default function KundenDialogPreview() {
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [hfxInput, setHfxInput] = useState("");
   const [livePhase, setLivePhase] = useState<KundenPhase>("vertrag");
   const [liveOpen, setLiveOpen] = useState(false);
   const [liveHfx, setLiveHfx] = useState<string | null>(null);
+  const [nameSearch, setNameSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Debounced Name-/Praxis-Suche über leads + customers
+  useEffect(() => {
+    if (nameSearch.trim().length < 2) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    const handler = setTimeout(async () => {
+      setIsSearching(true);
+      const q = nameSearch.trim().replace(/[%,]/g, "");
+      const filter = `praxis_name.ilike.%${q}%,nachname.ilike.%${q}%,vorname.ilike.%${q}%,email.ilike.%${q}%`;
+
+      const [leadsRes, customersRes] = await Promise.all([
+        supabase
+          .from("leads")
+          .select("hfx_customer_number, praxis_name, vorname, nachname")
+          .or(filter)
+          .not("hfx_customer_number", "is", null)
+          .limit(10),
+        supabase
+          .from("customers")
+          .select("hfx_customer_number, praxis_name, vorname, nachname")
+          .or(filter)
+          .limit(10),
+      ]);
+
+      // Customer hat Vorrang über Lead bei gleicher HFX-Nummer
+      const merged = new Map<string, SearchResult>();
+      (leadsRes.data ?? []).forEach((l: any) => {
+        if (l.hfx_customer_number) {
+          merged.set(l.hfx_customer_number, {
+            hfx_customer_number: l.hfx_customer_number,
+            praxis_name: l.praxis_name ?? "(unbekannt)",
+            vorname: l.vorname,
+            nachname: l.nachname,
+            source: "lead",
+          });
+        }
+      });
+      (customersRes.data ?? []).forEach((c: any) => {
+        if (c.hfx_customer_number) {
+          merged.set(c.hfx_customer_number, {
+            hfx_customer_number: c.hfx_customer_number,
+            praxis_name: c.praxis_name ?? "(unbekannt)",
+            vorname: c.vorname,
+            nachname: c.nachname,
+            source: "customer",
+          });
+        }
+      });
+
+      setSearchResults(Array.from(merged.values()).slice(0, 10));
+      setIsSearching(false);
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [nameSearch]);
 
   // Header-Daten für Live-Dialog aus DB ziehen (lead-fallback → customer)
   const headerQ = useQuery({
@@ -106,6 +176,44 @@ export default function KundenDialogPreview() {
         <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
           Nur über <code>/dev/kunden-dialog-preview</code> erreichbar.
         </div>
+
+        {/* Name-/Praxis-Suche (Wegwerf, mit Preview-Route in Etappe 6 entfernt) */}
+        <section className="rounded-lg border p-4 space-y-3">
+          <div className="font-medium">Suche per Name oder Praxis</div>
+          <Input
+            placeholder="z.B. 'Hegelmaier' oder 'Orthopädie Waiblingen'"
+            value={nameSearch}
+            onChange={(e) => setNameSearch(e.target.value)}
+          />
+          {searchResults.length > 0 && (
+            <div className="border rounded-md divide-y max-h-72 overflow-y-auto">
+              {searchResults.map((r) => (
+                <button
+                  key={r.hfx_customer_number}
+                  onClick={() => {
+                    setHfxInput(r.hfx_customer_number);
+                    setNameSearch("");
+                    setSearchResults([]);
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-muted/40 text-sm space-y-0.5"
+                >
+                  <div className="font-medium">{r.praxis_name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {r.vorname} {r.nachname}
+                    <span className="ml-2 font-mono">{r.hfx_customer_number}</span>
+                    <span className="ml-2 text-muted-foreground/70">
+                      {r.source === "lead" ? "Lead" : "Customer"}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          {nameSearch.trim().length >= 2 && searchResults.length === 0 && !isSearching && (
+            <div className="text-xs text-muted-foreground">Keine Treffer.</div>
+          )}
+          {isSearching && <div className="text-xs text-muted-foreground">Suche…</div>}
+        </section>
 
         {/* Live-Lookup */}
         <section className="rounded-lg border p-4 space-y-4">
