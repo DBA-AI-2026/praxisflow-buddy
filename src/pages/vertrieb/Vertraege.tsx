@@ -40,6 +40,7 @@ import { validateIban } from "@/lib/validateIban";
 import { validateBic } from "@/lib/validateBic";
 import { lookupBicFromIban } from "@/lib/lookupBic";
 import { buildStripeLineItems, hasStripeProducts } from "@/lib/stripeProducts";
+import { logCustomerStatusChange } from "@/lib/customerEvents";
 import { CreditCard } from "lucide-react"; // CreditCard used for payment section
 import foxLogoUrl from "@/assets/logo.png";
 import { useAuth } from "@/hooks/useAuth";
