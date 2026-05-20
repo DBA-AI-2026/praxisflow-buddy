@@ -3267,12 +3267,7 @@ export default function Vertraege() {
 
            </fieldset>
 
-            {/* Footer: read-only for non-admins on locked contracts */}
-            {editId && editingContract && isContractLocked(editingContract.status) && !isAdmin ? (
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={closeDialog}>Schließen</Button>
-              </DialogFooter>
-            ) : (
+            {/* Footer: voller Speichern-Footer für alle Rollen (auch bei locked Verträgen) */}
             <DialogFooter className="flex-col gap-2">
               {!editId && hasContractDuplicates && (
                 <div className={`w-full rounded-lg border p-3 text-sm ${isProductiveSave ? "border-destructive/40 bg-destructive/5" : "border-warning/40 bg-warning/5"}`}>
@@ -3340,7 +3335,6 @@ export default function Vertraege() {
                 </TooltipProvider>
               </div>
             </DialogFooter>
-            )}
           </form>
         </DialogContent>
       </Dialog>
