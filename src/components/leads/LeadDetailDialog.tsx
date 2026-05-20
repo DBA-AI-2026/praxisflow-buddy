@@ -173,6 +173,14 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
   const onSave = async (values: EditValues) => {
     setSaving(true);
     try {
+      // Capture old status BEFORE update for customer_events log
+      const { data: before } = await supabase
+        .from("leads")
+        .select("status")
+        .eq("id", lead.id)
+        .maybeSingle();
+      const previousStatus = (before as any)?.status ?? null;
+
       const { error } = await supabase
         .from("leads")
         .update({
@@ -192,6 +200,19 @@ export function LeadDetailDialog({ lead, onClose, gebietsleiter = [], canAssign 
         .eq("id", lead.id);
 
       if (error) throw error;
+
+      if (previousStatus && previousStatus !== values.status) {
+        logCustomerStatusChange({
+          eventType: "LEAD_STATUS_CHANGED",
+          entityType: "lead",
+          entityId: lead.id,
+          oldStatus: previousStatus,
+          newStatus: values.status,
+          source: "lead_detail_dialog",
+          hfxCustomerNumber: (lead as any).hfx_customer_number ?? null,
+          leadId: lead.id,
+        });
+      }
 
       toast({ title: "Gespeichert", description: "Interessent wurde aktualisiert." });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
