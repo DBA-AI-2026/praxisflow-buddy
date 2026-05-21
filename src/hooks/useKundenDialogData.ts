@@ -116,7 +116,7 @@ export interface UseKundenDialogDataResult {
   hfxNumber: string | null;
   lead: LeadRow | null;
   customer: CustomerRow | null;
-  contracts: ContractOwnership[];
+  contracts: ContractRow[];
   ssot: "lead" | "customer";
   derivedPhase: KundenPhase;
   currentStatusLabel: string | null;
