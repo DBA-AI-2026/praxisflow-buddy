@@ -227,10 +227,7 @@ function DialogShell({
           <StammdatenTab data={data} />
         </TabsContent>
         <TabsContent value="vertrag" className="mt-4">
-          <TabPlaceholder
-            label="Vertrag & Aktionen"
-            hint="Inhalt folgt in Etappe 3 — Vertragsdetails, Status-Aktionen, Buchungslink, SEPA-Mandat. Vorübergehend erreichbar über /vertrieb/vertraege."
-          />
+          <VertragTab data={data} />
         </TabsContent>
         <TabsContent value="verlauf" className="mt-4">
           <TabPlaceholder
