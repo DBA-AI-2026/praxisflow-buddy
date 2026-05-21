@@ -27,6 +27,7 @@ import {
   type UseKundenDialogDataResult,
 } from "@/hooks/useKundenDialogData";
 import { StammdatenTab } from "@/components/kunden/StammdatenTab";
+import { VertragTab } from "@/components/kunden/VertragTab";
 
 export type KundenPhase =
   | "lead"
