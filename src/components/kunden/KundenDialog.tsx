@@ -1,15 +1,15 @@
 /**
- * KundenDialog — Einheits-Dialog Grundgerüst (Etappe 2a).
+ * KundenDialog — Einheits-Dialog (Etappe 2b-ii).
  *
- * Rein deklarativ: alle Daten kommen über Props vom Aufrufer.
- * Kein Daten-Laden, kein Permission-Check, keine Edge-Cases (Lost/Beendet)
- * — das kommt in Etappe 2b und später.
+ * Zwei Modi:
+ *  - Static-Mode: alle Header-/Phase-Werte als Props (Preview-Demos).
+ *  - Hook-Mode: `input` (HFX/Lead-ID/Customer-ID) → Hook lädt Header + Phase.
  *
  * Struktur:
  *  - Identifikations-Kopf (HFX-Nummer, Person, Praxis, Kontakt)
  *  - Phasen-Stufenleiste (5 Stufen)
  *  - optionale Status-Pille mit Mini-Hinweis
- *  - 3 Tabs (Stammdaten / Vertrag & Aktionen / Verlauf) als Platzhalter
+ *  - 3 Tabs (Stammdaten / Vertrag & Aktionen / Verlauf) — Tab 2/3 Platzhalter
  */
 
 import { Check } from "lucide-react";
@@ -21,7 +21,11 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { useKundenDialogData } from "@/hooks/useKundenDialogData";
+import {
+  useKundenDialogData,
+  type KundenDialogInput,
+  type UseKundenDialogDataResult,
+} from "@/hooks/useKundenDialogData";
 import { StammdatenTab } from "@/components/kunden/StammdatenTab";
 
 export type KundenPhase =
@@ -31,22 +35,28 @@ export type KundenPhase =
   | "aktiv"
   | "service";
 
-export interface KundenDialogProps {
+interface CommonProps {
   open: boolean;
   onClose: () => void;
+}
 
-  // Identifikations-Block (in 2a vom Aufrufer geliefert; in 2b aus Hook)
+interface StaticProps extends CommonProps {
+  input?: undefined;
   hfxNumber: string;
   praxisName: string;
   personName: string;
   email?: string;
   phone?: string;
   ort?: string;
-
-  // Phasen-Stufenleiste
   currentPhase: KundenPhase;
   currentStatusLabel?: string;
 }
+
+interface HookProps extends CommonProps {
+  input: KundenDialogInput;
+}
+
+export type KundenDialogProps = StaticProps | HookProps;
 
 const PHASE_ORDER: KundenPhase[] = [
   "lead",
@@ -64,7 +74,48 @@ const PHASE_LABELS: Record<KundenPhase, string> = {
   service: "Service",
 };
 
-export function KundenDialog({
+export function KundenDialog(props: KundenDialogProps) {
+  if ("input" in props && props.input) {
+    return <KundenDialogHookMode {...props} />;
+  }
+  return <KundenDialogStaticMode {...(props as StaticProps)} />;
+}
+
+/* ---------------------------- Hook-Mode ---------------------------- */
+
+function KundenDialogHookMode({ open, onClose, input }: HookProps) {
+  const data = useKundenDialogData(input, open);
+  const header = data.header;
+  const phase = data.derivedPhase;
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        {!header || data.isLoading ? (
+          <div className="py-10 text-center text-sm text-muted-foreground">
+            Lade Daten…
+          </div>
+        ) : (
+          <DialogShell
+            hfxNumber={header.hfxNumber}
+            praxisName={header.praxisName}
+            personName={header.personName}
+            email={header.email}
+            phone={header.phone}
+            ort={header.ort}
+            currentPhase={phase}
+            currentStatusLabel={data.currentStatusLabel ?? undefined}
+            data={data}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ---------------------------- Static-Mode -------------------------- */
+
+function KundenDialogStaticMode({
   open,
   onClose,
   hfxNumber,
@@ -75,100 +126,124 @@ export function KundenDialog({
   ort,
   currentPhase,
   currentStatusLabel,
-}: KundenDialogProps) {
-  const data = useKundenDialogData(hfxNumber, currentPhase, open);
+}: StaticProps) {
+  const data = useKundenDialogData(
+    open && hfxNumber ? { type: "hfx", hfxNumber, forcePhase: currentPhase } : null,
+    open,
+  );
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          {/* Identifikations-Block */}
-          <div className="space-y-2">
-            <DialogTitle className="flex items-baseline gap-3 flex-wrap">
-              <span className="font-mono text-primary text-base">
-                {hfxNumber}
-              </span>
-              <span className="text-foreground">{personName}</span>
-              <span className="text-muted-foreground font-normal text-sm">
-                · {praxisName}
-              </span>
-            </DialogTitle>
-
-            <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
-              {email && <span>{email}</span>}
-              {phone && (
-                <>
-                  <span>·</span>
-                  <span>{phone}</span>
-                </>
-              )}
-              {ort && (
-                <>
-                  <span>·</span>
-                  <span>{ort}</span>
-                </>
-              )}
-            </div>
-          </div>
-        </DialogHeader>
-
-        {/* Phasen-Stufenleiste */}
-        <div className="pt-2">
-          <PhasenStufenleiste currentPhase={currentPhase} />
-        </div>
-
-        {/* Optional: Status-Pille mit Mini-Erklärung */}
-        {currentStatusLabel && (
-          <div className="flex justify-center">
-            <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
-              {currentStatusLabel}
-            </span>
-          </div>
-        )}
-
-        {/* Tabs */}
-        <Tabs defaultValue="stammdaten" className="mt-2">
-          <TabsList className="w-full">
-            <TabsTrigger value="stammdaten" className="flex-1">
-              Stammdaten
-            </TabsTrigger>
-            <TabsTrigger value="vertrag" className="flex-1">
-              Vertrag & Aktionen
-            </TabsTrigger>
-            <TabsTrigger value="verlauf" className="flex-1">
-              Verlauf
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="stammdaten" className="mt-4">
-            <StammdatenTab data={data} />
-
-          </TabsContent>
-          <TabsContent value="vertrag" className="mt-4">
-            <TabPlaceholder
-              label="Vertrag & Aktionen"
-              hint="Inhalt folgt in Etappe 3 — Vertragsdetails, Status-Aktionen, Buchungslink, SEPA-Mandat."
-            />
-          </TabsContent>
-          <TabsContent value="verlauf" className="mt-4">
-            <TabPlaceholder
-              label="Verlauf"
-              hint="Inhalt folgt in Etappe 4 — chronologische customer_events-Liste."
-            />
-          </TabsContent>
-        </Tabs>
+        <DialogShell
+          hfxNumber={hfxNumber}
+          praxisName={praxisName}
+          personName={personName}
+          email={email}
+          phone={phone}
+          ort={ort}
+          currentPhase={currentPhase}
+          currentStatusLabel={currentStatusLabel}
+          data={data}
+        />
       </DialogContent>
     </Dialog>
   );
 }
 
+/* ---------------------------- Shared shell ------------------------- */
+
+function DialogShell({
+  hfxNumber,
+  praxisName,
+  personName,
+  email,
+  phone,
+  ort,
+  currentPhase,
+  currentStatusLabel,
+  data,
+}: {
+  hfxNumber: string;
+  praxisName: string;
+  personName: string;
+  email?: string;
+  phone?: string;
+  ort?: string;
+  currentPhase: KundenPhase;
+  currentStatusLabel?: string;
+  data: UseKundenDialogDataResult;
+}) {
+  return (
+    <>
+      <DialogHeader>
+        <div className="space-y-2">
+          <DialogTitle className="flex items-baseline gap-3 flex-wrap">
+            <span className="font-mono text-primary text-base">{hfxNumber}</span>
+            <span className="text-foreground">{personName}</span>
+            <span className="text-muted-foreground font-normal text-sm">
+              · {praxisName}
+            </span>
+          </DialogTitle>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            {email && <span>{email}</span>}
+            {phone && (
+              <>
+                <span>·</span>
+                <span>{phone}</span>
+              </>
+            )}
+            {ort && (
+              <>
+                <span>·</span>
+                <span>{ort}</span>
+              </>
+            )}
+          </div>
+        </div>
+      </DialogHeader>
+
+      <div className="pt-2">
+        <PhasenStufenleiste currentPhase={currentPhase} />
+      </div>
+
+      {currentStatusLabel && (
+        <div className="flex justify-center">
+          <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+            {currentStatusLabel}
+          </span>
+        </div>
+      )}
+
+      <Tabs defaultValue="stammdaten" className="mt-2">
+        <TabsList className="w-full">
+          <TabsTrigger value="stammdaten" className="flex-1">Stammdaten</TabsTrigger>
+          <TabsTrigger value="vertrag" className="flex-1">Vertrag & Aktionen</TabsTrigger>
+          <TabsTrigger value="verlauf" className="flex-1">Verlauf</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="stammdaten" className="mt-4">
+          <StammdatenTab data={data} />
+        </TabsContent>
+        <TabsContent value="vertrag" className="mt-4">
+          <TabPlaceholder
+            label="Vertrag & Aktionen"
+            hint="Inhalt folgt in Etappe 3 — Vertragsdetails, Status-Aktionen, Buchungslink, SEPA-Mandat. Vorübergehend erreichbar über /vertrieb/vertraege."
+          />
+        </TabsContent>
+        <TabsContent value="verlauf" className="mt-4">
+          <TabPlaceholder
+            label="Verlauf"
+            hint="Inhalt folgt in Etappe 4 — chronologische customer_events-Liste."
+          />
+        </TabsContent>
+      </Tabs>
+    </>
+  );
+}
+
 /* ----------------------------- Sub-Components ----------------------------- */
 
-/**
- * PhasenStufenleiste — horizontale 5-Stufen-Anzeige mit Verbindungslinien.
- * Visuelle Zustände: erfüllt (vorher), aktiv (current), leer (folgend).
- * Auf schmalen Screens horizontal scrollbar.
- */
 function PhasenStufenleiste({ currentPhase }: { currentPhase: KundenPhase }) {
   const currentIdx = PHASE_ORDER.indexOf(currentPhase);
 
@@ -181,11 +256,7 @@ function PhasenStufenleiste({ currentPhase }: { currentPhase: KundenPhase }) {
           const isLast = idx === PHASE_ORDER.length - 1;
 
           return (
-            <li
-              key={phase}
-              className="flex-1 flex flex-col items-center relative"
-            >
-              {/* Verbindungslinie zur nächsten Stufe */}
+            <li key={phase} className="flex-1 flex flex-col items-center relative">
               {!isLast && (
                 <div
                   className={cn(
@@ -195,13 +266,10 @@ function PhasenStufenleiste({ currentPhase }: { currentPhase: KundenPhase }) {
                   aria-hidden
                 />
               )}
-
-              {/* Kreissymbol */}
               <div
                 className={cn(
                   "relative z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors",
-                  isActive &&
-                    "border-primary bg-primary text-primary-foreground",
+                  isActive && "border-primary bg-primary text-primary-foreground",
                   isDone && "border-primary bg-primary/70 text-primary-foreground",
                   !isActive && !isDone && "border-border bg-background",
                 )}
@@ -217,8 +285,6 @@ function PhasenStufenleiste({ currentPhase }: { currentPhase: KundenPhase }) {
                   />
                 )}
               </div>
-
-              {/* Label */}
               <span
                 className={cn(
                   "mt-2 text-xs text-center px-1",
@@ -237,9 +303,6 @@ function PhasenStufenleiste({ currentPhase }: { currentPhase: KundenPhase }) {
   );
 }
 
-/**
- * TabPlaceholder — neutraler Platzhalter für noch nicht implementierte Tabs.
- */
 function TabPlaceholder({ label, hint }: { label: string; hint: string }) {
   return (
     <div className="rounded-lg border border-dashed bg-muted/30 p-8 text-center">
