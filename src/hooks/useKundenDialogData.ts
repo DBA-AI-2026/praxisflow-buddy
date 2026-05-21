@@ -249,10 +249,10 @@ export function useKundenDialogData(
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contracts")
-        .select("id,sales_partner_id,created_by,status,created_at")
+        .select("*")
         .eq("customer_id", customerQ.data!.id);
       if (error) throw error;
-      return (data ?? []) as ContractOwnership[];
+      return (data ?? []) as ContractRow[];
     },
   });
 
