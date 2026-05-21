@@ -1,9 +1,9 @@
 /**
- * useKundenDialogData — Daten-Hook für KundenDialog (Etappe 2b-i).
+ * useKundenDialogData — Daten-Hook für KundenDialog (Etappe 2b-ii).
  *
- * Lädt Lead und/oder Kunde anhand `hfx_customer_number` und ermittelt
- * `canEditStammdaten` gespiegelt aus den RLS-Policies. Speichert in die
- * korrekte SSOT-Tabelle abhängig von der Phase mit Mirror-Write auf leads.
+ * Akzeptiert eine Union-Input (HFX-Nummer | Lead-ID | Kunden-ID), löst nach
+ * `hfx_customer_number` auf und liefert Header-Block, abgeleitete Phase,
+ * Status-Label sowie Stammdaten-CRUD inkl. RLS-gespiegeltem canEdit.
  *
  * SSOT-Logik:
  *  - Phase lead/qualifiziert → leads ist SSOT
@@ -20,6 +20,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
 import type { KundenPhase } from "@/components/kunden/KundenDialog";
+import { LEAD_STATUS_TOOLTIPS, CONTRACT_STATUS_TOOLTIPS } from "@/lib/statusGlossary";
+
+export type KundenDialogInput =
+  | { type: "hfx"; hfxNumber: string; forcePhase?: KundenPhase }
+  | { type: "lead"; leadId: string }
+  | { type: "customer"; customerId: string };
 
 export interface StammdatenFormValues {
   praxis_name: string;
@@ -50,6 +56,7 @@ type LeadRow = {
   mp_nummer: string | null;
   nachricht: string | null;
   assigned_to: string | null;
+  status: string | null;
 };
 
 type CustomerRow = {
@@ -72,16 +79,31 @@ type ContractOwnership = {
   id: string;
   sales_partner_id: string | null;
   created_by: string | null;
+  status: string | null;
+  created_at: string | null;
 };
+
+export interface KundenDialogHeader {
+  hfxNumber: string;
+  praxisName: string;
+  personName: string;
+  email?: string;
+  phone?: string;
+  ort?: string;
+}
 
 const isLeadPhase = (p: KundenPhase) => p === "lead" || p === "qualifiziert";
 
 export interface UseKundenDialogDataResult {
   isLoading: boolean;
+  hfxNumber: string | null;
   lead: LeadRow | null;
   customer: CustomerRow | null;
   contracts: ContractOwnership[];
   ssot: "lead" | "customer";
+  derivedPhase: KundenPhase;
+  currentStatusLabel: string | null;
+  header: KundenDialogHeader | null;
   canEditStammdaten: boolean;
   canEditReason: string | null;
   initialValues: StammdatenFormValues;
@@ -89,9 +111,50 @@ export interface UseKundenDialogDataResult {
   isSaving: boolean;
 }
 
-export function useKundenDialogData(
-  hfxNumber: string | null,
+/* ---------------------- Phase-/Status-Ableitung ---------------------- */
+
+function derivePhaseFromData(
+  lead: LeadRow | null,
+  customer: CustomerRow | null,
+  contracts: ContractOwnership[],
+): KundenPhase {
+  if (customer) {
+    const statuses = contracts.map((c) => (c.status ?? "").toLowerCase());
+    if (statuses.some((s) => s === "aktiv")) return "aktiv";
+    if (statuses.some((s) => ["entwurf", "eingegangen", "gezeichnet"].includes(s)))
+      return "vertrag";
+    if (statuses.some((s) => ["gekuendigt", "beendet", "gesperrt"].includes(s)))
+      return "service";
+    return "vertrag";
+  }
+  const s = (lead?.status ?? "").toLowerCase();
+  if (s === "qualifiziert") return "qualifiziert";
+  if (s === "vertrag") return "vertrag";
+  return "lead";
+}
+
+function deriveStatusLabel(
   phase: KundenPhase,
+  lead: LeadRow | null,
+  contracts: ContractOwnership[],
+): string | null {
+  if (phase === "lead" || phase === "qualifiziert") {
+    const s = (lead?.status ?? "").toLowerCase();
+    return LEAD_STATUS_TOOLTIPS[s] ?? null;
+  }
+  // Vertrag/aktiv/service: jüngsten Vertrag heranziehen
+  const sorted = [...contracts].sort((a, b) =>
+    (b.created_at ?? "").localeCompare(a.created_at ?? ""),
+  );
+  const top = sorted[0];
+  const s = (top?.status ?? "").toLowerCase();
+  return CONTRACT_STATUS_TOOLTIPS[s] ?? null;
+}
+
+/* ---------------------------------------------------------------- */
+
+export function useKundenDialogData(
+  input: KundenDialogInput | null,
   enabled: boolean,
 ): UseKundenDialogDataResult {
   const { user } = useAuth();
@@ -99,9 +162,37 @@ export function useKundenDialogData(
     useUserRole();
   const { toast } = useToast();
   const qc = useQueryClient();
-  const ssot: "lead" | "customer" = isLeadPhase(phase) ? "lead" : "customer";
 
-  // Lead laden (immer versuchen — kann auch in Customer-Phase noch existieren)
+  /* ---- Schritt 1: Input → HFX-Nummer auflösen ---- */
+  const resolveQ = useQuery({
+    queryKey: ["kunden-dialog-resolve", input],
+    enabled: enabled && !!input,
+    queryFn: async (): Promise<{ hfxNumber: string | null }> => {
+      if (!input) return { hfxNumber: null };
+      if (input.type === "hfx") return { hfxNumber: input.hfxNumber };
+      if (input.type === "lead") {
+        const { data, error } = await supabase
+          .from("leads")
+          .select("hfx_customer_number")
+          .eq("id", input.leadId)
+          .maybeSingle();
+        if (error) throw error;
+        return { hfxNumber: data?.hfx_customer_number ?? null };
+      }
+      // customer
+      const { data, error } = await supabase
+        .from("customers")
+        .select("hfx_customer_number")
+        .eq("id", input.customerId)
+        .maybeSingle();
+      if (error) throw error;
+      return { hfxNumber: data?.hfx_customer_number ?? null };
+    },
+  });
+
+  const hfxNumber = resolveQ.data?.hfxNumber ?? null;
+
+  /* ---- Schritt 2: Lead + Customer parallel laden ---- */
   const leadQ = useQuery({
     queryKey: ["kunden-dialog-lead", hfxNumber],
     enabled: enabled && !!hfxNumber,
@@ -109,7 +200,7 @@ export function useKundenDialogData(
       const { data, error } = await supabase
         .from("leads")
         .select(
-          "id,hfx_customer_number,praxis_name,vorname,nachname,email,mobilnummer,plz,ort,adresse,abrechnungszentrum,mp_nummer,nachricht,assigned_to",
+          "id,hfx_customer_number,praxis_name,vorname,nachname,email,mobilnummer,plz,ort,adresse,abrechnungszentrum,mp_nummer,nachricht,assigned_to,status",
         )
         .eq("hfx_customer_number", hfxNumber!)
         .maybeSingle();
@@ -118,7 +209,6 @@ export function useKundenDialogData(
     },
   });
 
-  // Customer laden (in Lead-Phase i.d.R. null)
   const customerQ = useQuery({
     queryKey: ["kunden-dialog-customer", hfxNumber],
     enabled: enabled && !!hfxNumber,
@@ -135,27 +225,52 @@ export function useKundenDialogData(
     },
   });
 
-  // Verträge für Customer-Ownership-Check (nur wenn Customer-Phase + Customer da)
+  /* ---- Schritt 3: Verträge (für Ownership + derivedPhase) ---- */
   const contractsQ = useQuery({
     queryKey: ["kunden-dialog-contracts", customerQ.data?.id],
-    enabled:
-      enabled &&
-      ssot === "customer" &&
-      !!customerQ.data?.id &&
-      !isAdmin &&
-      !isSalesLead &&
-      !isVertragsabteilung,
+    enabled: enabled && !!customerQ.data?.id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contracts")
-        .select("id,sales_partner_id,created_by")
+        .select("id,sales_partner_id,created_by,status,created_at")
         .eq("customer_id", customerQ.data!.id);
       if (error) throw error;
       return (data ?? []) as ContractOwnership[];
     },
   });
 
-  // Regional-Team-Check via RPC (Lead-Phase mit Regionalleiter)
+  /* ---- Phase / SSOT / Status-Label ---- */
+  const derivedPhase: KundenPhase = useMemo(() => {
+    if (input?.type === "hfx" && input.forcePhase) return input.forcePhase;
+    return derivePhaseFromData(leadQ.data ?? null, customerQ.data ?? null, contractsQ.data ?? []);
+  }, [input, leadQ.data, customerQ.data, contractsQ.data]);
+
+  const ssot: "lead" | "customer" = isLeadPhase(derivedPhase) ? "lead" : "customer";
+
+  const currentStatusLabel = useMemo(
+    () => deriveStatusLabel(derivedPhase, leadQ.data ?? null, contractsQ.data ?? []),
+    [derivedPhase, leadQ.data, contractsQ.data],
+  );
+
+  /* ---- Header-Block ---- */
+  const header: KundenDialogHeader | null = useMemo(() => {
+    if (!hfxNumber) return null;
+    const c = customerQ.data;
+    const l = leadQ.data;
+    const personName =
+      `${c?.vorname ?? l?.vorname ?? ""} ${c?.nachname ?? l?.nachname ?? ""}`.trim() ||
+      "(unbekannt)";
+    return {
+      hfxNumber,
+      praxisName: c?.praxis_name ?? l?.praxis_name ?? "(unbekannt)",
+      personName,
+      email: c?.email ?? l?.email ?? undefined,
+      phone: c?.telefon ?? l?.mobilnummer ?? undefined,
+      ort: c?.ort ?? l?.ort ?? undefined,
+    };
+  }, [hfxNumber, customerQ.data, leadQ.data]);
+
+  /* ---- canEdit via Regional-Team-RPC (gespiegelt aus RLS) ---- */
   const [regionalLeadTeamOk, setRegionalLeadTeamOk] = useState<boolean | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -176,7 +291,6 @@ export function useKundenDialogData(
           if (!cancelled) setRegionalLeadTeamOk(Boolean(data));
         });
     } else if (ssot === "customer" && contractsQ.data) {
-      // Für jeden Vertrag prüfen, ob sales_partner_id ODER created_by im Team
       const ids = Array.from(
         new Set(
           contractsQ.data
@@ -266,7 +380,7 @@ export function useKundenDialogData(
     contractsQ.data,
   ]);
 
-  // Initialwerte — Customer-SSOT bevorzugt, sonst Lead
+  /* ---- Initialwerte ---- */
   const initialValues: StammdatenFormValues = useMemo(() => {
     if (ssot === "customer" && customerQ.data) {
       const c = customerQ.data;
@@ -300,6 +414,7 @@ export function useKundenDialogData(
     };
   }, [ssot, customerQ.data, leadQ.data]);
 
+  /* ---- Save mit Mirror-Write ---- */
   const saveMutation = useMutation({
     mutationFn: async (values: StammdatenFormValues) => {
       if (ssot === "lead") {
@@ -324,7 +439,6 @@ export function useKundenDialogData(
         return { mirrorWarning: false as const };
       }
 
-      // ssot === customer
       if (!customerQ.data?.id) throw new Error("Kunden-ID fehlt.");
       const { error } = await supabase
         .from("customers")
@@ -344,7 +458,6 @@ export function useKundenDialogData(
         .eq("id", customerQ.data.id);
       if (error) throw error;
 
-      // Mirror-Write auf leads, falls Lead noch existiert
       let mirrorWarning = false;
       if (leadQ.data?.id) {
         const { error: mErr } = await supabase
@@ -398,11 +511,15 @@ export function useKundenDialogData(
   );
 
   return {
-    isLoading: leadQ.isLoading || customerQ.isLoading,
+    isLoading: resolveQ.isLoading || leadQ.isLoading || customerQ.isLoading,
+    hfxNumber,
     lead: leadQ.data ?? null,
     customer: customerQ.data ?? null,
     contracts: contractsQ.data ?? [],
     ssot,
+    derivedPhase,
+    currentStatusLabel,
+    header,
     canEditStammdaten,
     canEditReason,
     initialValues,

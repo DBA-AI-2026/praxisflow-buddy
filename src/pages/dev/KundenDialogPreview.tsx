@@ -1,15 +1,15 @@
 /**
- * KundenDialogPreview — temporäre Admin-only Preview-Seite (Etappe 2a + 2b-i).
+ * KundenDialogPreview — temporäre Admin-only Preview-Seite (Etappe 2b-ii).
  *
  * Zweck:
- *  - Etappe 2a: visuelle Verifikation des Grundgerüsts via Demo-Props.
- *  - Etappe 2b-i: Live-Lookup über HFX-Nummer + Debug-Anzeige von SSOT/canEdit.
+ *  - Etappe 2a: visuelle Verifikation des Grundgerüsts via statische Demos.
+ *  - Etappe 2b-i: Live-Lookup über HFX-Nummer + Debug-Anzeige.
+ *  - Etappe 2b-ii: Hook-Modus (Union-Input, derivedPhase, Header aus Hook).
  *
  * TODO Etappe 6: Diese Route + Datei wieder entfernen (samt App.tsx-Eintrag).
  */
 
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,14 +17,14 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabaseClient";
 import {
   KundenDialog,
-  type KundenDialogProps,
   type KundenPhase,
 } from "@/components/kunden/KundenDialog";
 import { useKundenDialogData } from "@/hooks/useKundenDialogData";
 
 type DemoCase = {
   label: string;
-  props: Omit<KundenDialogProps, "open" | "onClose">;
+  phase: KundenPhase;
+  statusLabel: string;
 };
 
 const BASE = {
@@ -37,26 +37,11 @@ const BASE = {
 };
 
 const DEMOS: DemoCase[] = [
-  {
-    label: "Lead-Phase",
-    props: { ...BASE, currentPhase: "lead", currentStatusLabel: "Neu — Vertriebler hat noch nicht reagiert." },
-  },
-  {
-    label: "Qualifiziert-Phase",
-    props: { ...BASE, currentPhase: "qualifiziert", currentStatusLabel: "Qualifiziert — bereit für Vertragsanlage." },
-  },
-  {
-    label: "Vertrag-Phase",
-    props: { ...BASE, currentPhase: "vertrag", currentStatusLabel: "Eingegangen — wartet auf Mandat." },
-  },
-  {
-    label: "Aktiv-Phase",
-    props: { ...BASE, currentPhase: "aktiv", currentStatusLabel: "Aktiv — Abrechnung läuft." },
-  },
-  {
-    label: "Service-Phase",
-    props: { ...BASE, currentPhase: "service", currentStatusLabel: "Service — laufende Betreuung." },
-  },
+  { label: "Lead-Phase", phase: "lead", statusLabel: "Neu — Vertriebler hat noch nicht reagiert." },
+  { label: "Qualifiziert-Phase", phase: "qualifiziert", statusLabel: "Qualifiziert — bereit für Vertragsanlage." },
+  { label: "Vertrag-Phase", phase: "vertrag", statusLabel: "Eingegangen — wartet auf Mandat." },
+  { label: "Aktiv-Phase", phase: "aktiv", statusLabel: "Aktiv — Abrechnung läuft." },
+  { label: "Service-Phase", phase: "service", statusLabel: "Service — laufende Betreuung." },
 ];
 
 const PHASE_OPTIONS: KundenPhase[] = ["lead", "qualifiziert", "vertrag", "aktiv", "service"];
@@ -106,7 +91,6 @@ export default function KundenDialogPreview() {
           .limit(10),
       ]);
 
-      // Customer hat Vorrang über Lead bei gleicher HFX-Nummer
       const merged = new Map<string, SearchResult>();
       (leadsRes.data ?? []).forEach((l: any) => {
         if (l.hfx_customer_number) {
@@ -138,38 +122,9 @@ export default function KundenDialogPreview() {
     return () => clearTimeout(handler);
   }, [nameSearch]);
 
-  // Header-Daten für Live-Dialog aus DB ziehen (lead-fallback → customer)
-  const headerQ = useQuery({
-    queryKey: ["preview-header", liveHfx],
-    enabled: !!liveHfx,
-    queryFn: async () => {
-      const [{ data: lead }, { data: customer }] = await Promise.all([
-        supabase
-          .from("leads")
-          .select("praxis_name,vorname,nachname,email,mobilnummer,ort")
-          .eq("hfx_customer_number", liveHfx!)
-          .maybeSingle(),
-        supabase
-          .from("customers")
-          .select("praxis_name,vorname,nachname,email,telefon,ort")
-          .eq("hfx_customer_number", liveHfx!)
-          .maybeSingle(),
-      ]);
-      const c = customer ?? null;
-      const l = lead ?? null;
-      return {
-        praxisName: c?.praxis_name ?? l?.praxis_name ?? "(unbekannt)",
-        personName: `${c?.vorname ?? l?.vorname ?? ""} ${c?.nachname ?? l?.nachname ?? ""}`.trim() || "(unbekannt)",
-        email: c?.email ?? l?.email ?? undefined,
-        phone: c?.telefon ?? l?.mobilnummer ?? undefined,
-        ort: c?.ort ?? l?.ort ?? undefined,
-      };
-    },
-  });
-
   return (
     <MainLayout
-      title="KundenDialog — Preview (Etappe 2b-i)"
+      title="KundenDialog — Preview (Etappe 2b-ii)"
       subtitle="Temporäre Verifikations-Seite. Wird in Etappe 6 wieder entfernt."
     >
       <div className="space-y-8">
@@ -177,7 +132,7 @@ export default function KundenDialogPreview() {
           Nur über <code>/dev/kunden-dialog-preview</code> erreichbar.
         </div>
 
-        {/* Name-/Praxis-Suche (Wegwerf, mit Preview-Route in Etappe 6 entfernt) */}
+        {/* Name-/Praxis-Suche */}
         <section className="rounded-lg border p-4 space-y-3">
           <div className="font-medium">Suche per Name oder Praxis</div>
           <Input
@@ -215,9 +170,9 @@ export default function KundenDialogPreview() {
           {isSearching && <div className="text-xs text-muted-foreground">Suche…</div>}
         </section>
 
-        {/* Live-Lookup */}
+        {/* Live-Lookup (Hook-Mode) */}
         <section className="rounded-lg border p-4 space-y-4">
-          <div className="font-medium">Live-Lookup (echte HFX-Nummer)</div>
+          <div className="font-medium">Live-Lookup (Hook-Mode, echte HFX-Nummer)</div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="space-y-1">
               <Label htmlFor="hfx">HFX-Nummer</Label>
@@ -229,7 +184,7 @@ export default function KundenDialogPreview() {
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="phase">Phase</Label>
+              <Label htmlFor="phase">Phase-Override (optional)</Label>
               <select
                 id="phase"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -259,9 +214,9 @@ export default function KundenDialogPreview() {
           {liveHfx && <DebugPanel hfxNumber={liveHfx} phase={livePhase} />}
         </section>
 
-        {/* Demo-Buttons */}
+        {/* Demo-Buttons (Static-Mode) */}
         <section className="space-y-3">
-          <div className="font-medium">Demo-Varianten (statische Props)</div>
+          <div className="font-medium">Demo-Varianten (Static-Mode, forced phase)</div>
           <div className="flex flex-wrap gap-2">
             {DEMOS.map((demo, idx) => (
               <Button key={demo.label} variant="outline" onClick={() => setActiveIdx(idx)}>
@@ -275,21 +230,22 @@ export default function KundenDialogPreview() {
           <KundenDialog
             open={activeIdx !== null}
             onClose={() => setActiveIdx(null)}
-            {...DEMOS[activeIdx].props}
+            hfxNumber={BASE.hfxNumber}
+            praxisName={BASE.praxisName}
+            personName={BASE.personName}
+            email={BASE.email}
+            phone={BASE.phone}
+            ort={BASE.ort}
+            currentPhase={DEMOS[activeIdx].phase}
+            currentStatusLabel={DEMOS[activeIdx].statusLabel}
           />
         )}
 
-        {liveOpen && liveHfx && headerQ.data && (
+        {liveOpen && liveHfx && (
           <KundenDialog
             open={liveOpen}
             onClose={() => setLiveOpen(false)}
-            hfxNumber={liveHfx}
-            praxisName={headerQ.data.praxisName}
-            personName={headerQ.data.personName}
-            email={headerQ.data.email}
-            phone={headerQ.data.phone}
-            ort={headerQ.data.ort}
-            currentPhase={livePhase}
+            input={{ type: "hfx", hfxNumber: liveHfx, forcePhase: livePhase }}
           />
         )}
       </div>
@@ -297,14 +253,22 @@ export default function KundenDialogPreview() {
   );
 }
 
-/* Debug-Anzeige: zeigt SSOT, Lead-/Customer-Existenz und canEdit-Status */
+/* Debug-Anzeige: zeigt SSOT, derivedPhase, Header und canEdit-Status */
 function DebugPanel({ hfxNumber, phase }: { hfxNumber: string; phase: KundenPhase }) {
-  const data = useKundenDialogData(hfxNumber, phase, true);
+  const data = useKundenDialogData(
+    { type: "hfx", hfxNumber, forcePhase: phase },
+    true,
+  );
   return (
     <div className="rounded-md bg-muted/40 p-3 text-xs font-mono space-y-1">
       <div>isLoading: {String(data.isLoading)}</div>
+      <div>hfxNumber: {data.hfxNumber ?? "—"}</div>
       <div>ssot: {data.ssot}</div>
-      <div>lead: {data.lead ? `id=${data.lead.id.slice(0, 8)}… assigned_to=${data.lead.assigned_to ?? "—"}` : "—"}</div>
+      <div>derivedPhase: {data.derivedPhase}</div>
+      <div>statusLabel: {data.currentStatusLabel ?? "—"}</div>
+      <div>header.person: {data.header?.personName ?? "—"}</div>
+      <div>header.praxis: {data.header?.praxisName ?? "—"}</div>
+      <div>lead: {data.lead ? `id=${data.lead.id.slice(0, 8)}… status=${data.lead.status ?? "—"} assigned_to=${data.lead.assigned_to ?? "—"}` : "—"}</div>
       <div>customer: {data.customer ? `id=${data.customer.id.slice(0, 8)}…` : "—"}</div>
       <div>contracts: {data.contracts.length}</div>
       <div>

@@ -19,7 +19,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useAuth } from "@/hooks/useAuth";
 import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
-import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
+import { KundenDialog } from "@/components/kunden/KundenDialog";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -706,9 +706,10 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
       </div>
 
       {selectedLead && (
-        <LeadDetailDialog
-          lead={selectedLead}
+        <KundenDialog
+          open={!!selectedLead}
           onClose={() => { setSelectedLead(null); onClearDeepLink?.(); queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); }}
+          input={{ type: "lead", leadId: selectedLead.id }}
         />
       )}
       <CreateLeadDialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) queryClient.invalidateQueries({ queryKey: ["journey-leads"] }); }} />
