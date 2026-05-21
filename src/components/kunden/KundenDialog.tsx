@@ -76,7 +76,7 @@ const PHASE_LABELS: Record<KundenPhase, string> = {
 
 export function KundenDialog(props: KundenDialogProps) {
   if ("input" in props && props.input) {
-    return <KundenDialogHookMode {...props} />;
+    return <KundenDialogHookMode open={props.open} onClose={props.onClose} input={props.input} />;
   }
   return <KundenDialogStaticMode {...(props as StaticProps)} />;
 }
