@@ -75,13 +75,30 @@ type CustomerRow = {
   notes: string | null;
 };
 
-type ContractOwnership = {
+/**
+ * Vollständiger Vertrags-Datensatz (für VertragTab + Ownership-Check).
+ * Wir selektieren `*`, weil VertragTab viele Felder für PDF-Generierung
+ * und Anzeige benötigt; Phase-/Ownership-Logik nutzt nur das Subset.
+ */
+export type ContractRow = Record<string, any> & {
   id: string;
   sales_partner_id: string | null;
   created_by: string | null;
   status: string | null;
   created_at: string | null;
+  product_name?: string | null;
+  modules?: string[] | null;
+  monthly_price?: number | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  duration_months?: number | null;
+  document_url?: string | null;
+  document_name?: string | null;
+  contract_number?: string | null;
 };
+
+// Backwards-compatible alias
+type ContractOwnership = ContractRow;
 
 export interface KundenDialogHeader {
   hfxNumber: string;
@@ -99,7 +116,7 @@ export interface UseKundenDialogDataResult {
   hfxNumber: string | null;
   lead: LeadRow | null;
   customer: CustomerRow | null;
-  contracts: ContractOwnership[];
+  contracts: ContractRow[];
   ssot: "lead" | "customer";
   derivedPhase: KundenPhase;
   currentStatusLabel: string | null;
@@ -232,10 +249,10 @@ export function useKundenDialogData(
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contracts")
-        .select("id,sales_partner_id,created_by,status,created_at")
+        .select("*")
         .eq("customer_id", customerQ.data!.id);
       if (error) throw error;
-      return (data ?? []) as ContractOwnership[];
+      return (data ?? []) as ContractRow[];
     },
   });
 
