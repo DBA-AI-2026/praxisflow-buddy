@@ -19,7 +19,6 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useAuth } from "@/hooks/useAuth";
 import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { CreateLeadDialog } from "@/components/leads/CreateLeadDialog";
-import { LeadDetailDialog } from "@/components/leads/LeadDetailDialog";
 import { KundenDialog } from "@/components/kunden/KundenDialog";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
