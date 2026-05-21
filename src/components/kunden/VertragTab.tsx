@@ -11,12 +11,23 @@
  * Schreibende Aktionen (Status-Wechsel, SEPA-Mandat-Mail, Stornierung) folgen
  * in Etappe 3b — TODO im Code unten.
  */
-import { useState } from "react";
-import { Eye, FileText, Upload, ExternalLink, Loader2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import {
+  Eye,
+  FileText,
+  Upload,
+  ExternalLink,
+  Loader2,
+  Plus,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import type { UseKundenDialogDataResult, ContractRow } from "@/hooks/useKundenDialogData";
+import { cn } from "@/lib/utils";
+import type {
+  UseKundenDialogDataResult,
+  ContractRow,
+} from "@/hooks/useKundenDialogData";
 import {
   previewContractPdf,
   templateContractPdf,
@@ -27,7 +38,11 @@ interface VertragTabProps {
   data: UseKundenDialogDataResult;
 }
 
+const FINAL_STATUSES = ["beendet", "gekuendigt", "gesperrt"];
+
 export function VertragTab({ data }: VertragTabProps) {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const { contracts, isLoading, ssot } = data;
 
   if (isLoading) {
@@ -39,6 +54,8 @@ export function VertragTab({ data }: VertragTabProps) {
   }
 
   if (ssot === "lead" || contracts.length === 0) {
+    const leadId = data.lead?.id;
+
     return (
       <div className="rounded-lg border border-dashed bg-muted/30 p-8 text-center">
         <div className="text-sm font-medium text-foreground">Noch kein Vertrag</div>
@@ -46,19 +63,55 @@ export function VertragTab({ data }: VertragTabProps) {
           Für diesen Datensatz existiert noch kein Vertrag.
           Anlage erfolgt aktuell über das Vertrags-Modul.
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-4 gap-1.5"
+          onClick={() => {
+            if (leadId) {
+              navigate(`/vertrieb/vertraege?leadId=${leadId}`);
+            } else {
+              toast({
+                title: "Kein verknüpfter Lead",
+                description:
+                  "Bitte Vertragsdaten manuell im Vertrags-Modul eingeben.",
+              });
+              navigate("/vertrieb/vertraege");
+            }
+          }}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Vertrag erstellen
+        </Button>
       </div>
     );
   }
 
-  const sorted = [...contracts].sort((a, b) =>
-    (b.created_at ?? "").localeCompare(a.created_at ?? ""),
-  );
+  const sorted = useMemo(() => {
+    const active = contracts.filter(
+      (c) => !FINAL_STATUSES.includes((c.status ?? "").toLowerCase()),
+    );
+    const finished = contracts.filter((c) =>
+      FINAL_STATUSES.includes((c.status ?? "").toLowerCase()),
+    );
+
+    const byDateDesc = (a: ContractRow, b: ContractRow) =>
+      (b.created_at ?? "").localeCompare(a.created_at ?? "");
+
+    active.sort(byDateDesc);
+    finished.sort(byDateDesc);
+
+    return [...active, ...finished];
+  }, [contracts]);
 
   return (
     <div className="space-y-4">
-      {sorted.map((c) => (
-        <ContractCard key={c.id} contract={c} />
-      ))}
+      {sorted.map((c) => {
+        const isFinal = FINAL_STATUSES.includes(
+          (c.status ?? "").toLowerCase(),
+        );
+        return <ContractCard key={c.id} contract={c} dimmed={isFinal} />;
+      })}
       {/* TODO Etappe 3b: hier folgen Aktions-Buttons
           (Status setzen, SEPA-Mandat-Mail erneut senden, Stornierung,
            Kündigung, Verlängerung). Aktuell nur Lese-Modus + Navigation. */}
@@ -69,10 +122,18 @@ export function VertragTab({ data }: VertragTabProps) {
   );
 }
 
-function ContractCard({ contract }: { contract: ContractRow }) {
+function ContractCard({
+  contract,
+  dimmed,
+}: {
+  contract: ContractRow;
+  dimmed?: boolean;
+}) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [busy, setBusy] = useState<"preview" | "template" | "storage" | null>(null);
+  const [busy, setBusy] = useState<"preview" | "template" | "storage" | null>(
+    null,
+  );
 
   const status = contract.status ?? "—";
   const product = contract.product_name ?? "—";
@@ -120,7 +181,12 @@ function ContractCard({ contract }: { contract: ContractRow }) {
   };
 
   return (
-    <div className="rounded-lg border bg-card p-4 space-y-3">
+    <div
+      className={cn(
+        "rounded-lg border bg-card p-4 space-y-3 transition-opacity",
+        dimmed && "opacity-60 hover:opacity-100",
+      )}
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <div className="font-medium text-foreground">{product}</div>
@@ -145,7 +211,11 @@ function ContractCard({ contract }: { contract: ContractRow }) {
           disabled={busy !== null}
           onClick={() => runAction("preview", () => previewContractPdf(contract))}
         >
-          {busy === "preview" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
+          {busy === "preview" ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Eye className="h-3.5 w-3.5" />
+          )}
           Vorschau
         </Button>
         <Button
@@ -155,7 +225,11 @@ function ContractCard({ contract }: { contract: ContractRow }) {
           disabled={busy !== null}
           onClick={() => runAction("template", () => templateContractPdf(contract))}
         >
-          {busy === "template" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+          {busy === "template" ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <FileText className="h-3.5 w-3.5" />
+          )}
           Vertragsdaten als PDF
         </Button>
         {contract.document_url && (
@@ -166,12 +240,18 @@ function ContractCard({ contract }: { contract: ContractRow }) {
             disabled={busy !== null}
             onClick={() =>
               runAction("storage", async () => {
-                const url = await getContractStorageSignedUrl(contract.document_url!);
+                const url = await getContractStorageSignedUrl(
+                  contract.document_url!,
+                );
                 window.open(url, "_blank");
               })
             }
           >
-            {busy === "storage" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            {busy === "storage" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Upload className="h-3.5 w-3.5" />
+            )}
             Manuell hochgeladenes Original
           </Button>
         )}
