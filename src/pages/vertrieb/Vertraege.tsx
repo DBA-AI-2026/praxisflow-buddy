@@ -217,15 +217,8 @@ function SalesPartnerCombobox({
   );
 }
 
-const statusConfig: Record<string, { label: string; class: string; icon: typeof FileText }> = {
-  entwurf: { label: "Entwurf", class: "bg-muted text-muted-foreground", icon: FilePen },
-  eingegangen: { label: "Eingegangen", class: "bg-warning/10 text-warning", icon: Upload },
-  gezeichnet: { label: "Gezeichnet", class: "bg-primary/10 text-primary", icon: FileSignature },
-  aktiv: { label: "Aktiv", class: "bg-success/10 text-success", icon: CircleCheck },
-  gekuendigt: { label: "Gekündigt", class: "bg-warning/10 text-warning", icon: CircleOff },
-  beendet: { label: "Beendet", class: "bg-destructive/10 text-destructive", icon: ArchiveX },
-  gesperrt: { label: "Gesperrt", class: "bg-destructive/20 text-destructive", icon: ShieldBan },
-};
+import { CONTRACT_STATUS_CONFIG as statusConfig } from "@/lib/statusConfig";
+import { changeContractStatus } from "@/lib/contractStatusActions";
 
 const LOCKED_STATUSES = ["aktiv", "eingegangen", "gekuendigt", "beendet", "gesperrt", "gezeichnet"];
 const isContractLocked = (status: string) => LOCKED_STATUSES.includes(status);
@@ -1285,138 +1278,39 @@ export default function Vertraege() {
     });
 
   const handleStatusChange = async (contractId: string, newStatus: string) => {
-    // Stripe-Mandat-Prüfung: Vertrag kann nur aktiviert werden wenn stripe_customer_id vorhanden
-    if (newStatus === "aktiv") {
-      const contract = contracts.find((c: any) => c.id === contractId);
-      if (!contract?.stripe_customer_id) {
-        toast({
-          title: "⚠️ SEPA-Mandat fehlt",
-          description: "Dieser Vertrag kann nicht aktiviert werden, da noch kein SEPA-Zahlungsmandat (Stripe) hinterlegt ist. Der Kunde erhält beim nächsten Abrechnungslauf automatisch einen Einrichtungslink.",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
-    const updateData: Record<string, any> = { status: newStatus };
-    if (newStatus === "aktiv") {
-      updateData.approved_by = user?.id;
-      updateData.approved_at = new Date().toISOString();
-    }
-    const { error } = await supabase.from("contracts").update(updateData).eq("id", contractId);
-    if (error) {
-      toast({ title: "Fehler beim Statuswechsel", description: error.message, variant: "destructive" });
+    const c = contracts.find((ct: any) => ct.id === contractId);
+    if (!c) return;
+    const result = await changeContractStatus({
+      contractId,
+      newStatus,
+      oldStatus: c.status ?? null,
+      hfxCustomerNumber: c.hfx_customer_number ?? null,
+      userId: user?.id ?? null,
+      queryClient,
+      contract: c as any,
+      source: "vertraege_page",
+    });
+    if (!result.success) {
+      const isMandate = /SEPA|Mandat/i.test(result.error ?? "");
+      toast({
+        title: isMandate ? "⚠️ SEPA-Mandat fehlt" : "Fehler beim Statuswechsel",
+        description: result.error,
+        variant: "destructive",
+      });
       return;
     }
-
-    // ── FiBu: cancellation_created event when contract is cancelled/terminated (additive) ──
-    // RP-3: Idempotenz-Schutz – kein Doppel-Event bei wiederholtem Statuswechsel auf denselben Endstatus
-    if (newStatus === "gekuendigt" || newStatus === "beendet") {
-      try {
-        const contract = contracts.find((c: any) => c.id === contractId);
-        if (contract) {
-          // Prüfen ob für diesen Vertrag + Status bereits ein Event existiert
-          const { data: existingEvent } = await (supabase as any)
-            .from("fibu_events")
-            .select("id")
-            .eq("event_type", "cancellation_created")
-            .eq("source_reference_id", contractId)
-            .eq("metadata->>new_status", newStatus)
-            .maybeSingle();
-
-          if (!existingEvent) {
-            await (supabase as any).from("fibu_events").insert({
-              event_type: "cancellation_created",
-              source_module: "contracts",
-              source_reference_id: contractId,
-              contract_id: contractId,
-              customer_id: contract.customer_id ?? null,
-              product_name: contract.product_name ?? null,
-              amount_net: 0,
-              tax_amount: 0,
-              amount_gross: 0,
-              currency: "EUR",
-              status: "draft",
-              export_status: "open",
-              occurred_at: new Date().toISOString(),
-              description: `Vertrag ${newStatus === "gekuendigt" ? "gekündigt" : "beendet"} – ${contract.praxis || contract.customer_name} – ${contract.product_name}${contract.contract_number ? ` (${contract.contract_number})` : ""}`,
-              created_by: user?.id ?? null,
-              metadata: {
-                contract_id: contractId,
-                contract_number: contract.contract_number ?? null,
-                product_name: contract.product_name ?? null,
-                hfx_customer_number: contract.hfx_customer_number ?? null,
-                new_status: newStatus,
-                changed_by: user?.id ?? null,
-              },
-            });
-          }
-        }
-      } catch (fibuEx) {
-        console.error("[Vertraege] fibu_events cancellation_created exception:", String(fibuEx));
-      }
+    if (result.praxenCreated) {
+      toast({
+        title: "✅ Kunde angelegt",
+        description: `${c.praxis || c.customer_name} wurde erfolgreich als Kunden hinterlegt.`,
+      });
     }
-
-    // When contract is signed/activated: convert linked lead to "kunde" and add to Kunden
-    if (newStatus === "aktiv" || newStatus === "gezeichnet") {
-      const contract = contracts.find((c: any) => c.id === contractId);
-      const hfxNr = contract?.hfx_customer_number || contract?.mp_nr || null;
-
-      if (hfxNr) {
-        // Convert linked lead to "kunde" — capture old status for customer_events log
-        const { data: leadBefore } = await supabase
-          .from("leads")
-          .select("id, status")
-          .eq("hfx_customer_number", hfxNr)
-          .maybeSingle();
-        await supabase.from("leads").update({ status: "kunde" }).eq("hfx_customer_number", hfxNr);
-        if (leadBefore?.id && leadBefore.status && leadBefore.status !== "kunde") {
-          logCustomerStatusChange({
-            eventType: "LEAD_STATUS_CHANGED",
-            entityType: "lead",
-            entityId: leadBefore.id,
-            oldStatus: leadBefore.status,
-            newStatus: "kunde",
-            source: "vertraege_handle_status_change",
-            hfxCustomerNumber: hfxNr,
-            leadId: leadBefore.id,
-            contractId,
-            createdBy: user?.id ?? null,
-          });
-        }
-        queryClient.invalidateQueries({ queryKey: ["leads"] });
-      }
-
-      // Create Praxen entry only on "aktiv"
-      if (newStatus === "aktiv" && contract) {
-        const existingCheck = hfxNr
-          ? await supabase.from("praxen").select("id").eq("mp_nr", hfxNr).maybeSingle()
-          : { data: null };
-
-        if (!existingCheck.data) {
-          await supabase.from("praxen").insert({
-            name: contract.praxis || contract.customer_name,
-            adresse: contract.praxisanschrift || contract.adresse || null,
-            plz: contract.plz || null,
-            ort: contract.ort || null,
-            telefon: contract.telefon || null,
-            email: contract.email || null,
-            mp_nr: contract.mp_nr || null,
-            produkt: contract.product_name || null,
-            module: contract.modules || [],
-            preis: contract.monthly_price || 0,
-            buchungs_datum: new Date().toISOString().split("T")[0],
-            status: "aktiv",
-            converted_from_lead_id: (contract as any).converted_from_lead_id || null,
-          });
-          queryClient.invalidateQueries({ queryKey: ["praxen"] });
-          toast({ title: "✅ Kunde angelegt", description: `${contract.praxis || contract.customer_name} wurde erfolgreich als Kunden hinterlegt.` });
-        }
-      }
-    }
-
-    queryClient.invalidateQueries({ queryKey: ["contracts"] });
-    toast({ title: "Status aktualisiert", description: `Status auf „${statusConfig[newStatus]?.label ?? newStatus}" gesetzt.` });
+    toast({
+      title: "Status aktualisiert",
+      description: `Status auf „${statusConfig[newStatus as keyof typeof statusConfig]?.label ?? newStatus}" gesetzt.`,
+    });
   };
+
 
   const baseRequiredFieldLabels: Record<string, string> = {
     praxis: "Praxis",

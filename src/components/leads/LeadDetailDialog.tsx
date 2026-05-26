@@ -83,15 +83,7 @@ const editSchema = z.object({
 
 type EditValues = z.infer<typeof editSchema>;
 
-const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  neu: { label: "Neu", variant: "default" },
-  kontaktiert: { label: "Kontaktiert", variant: "secondary" },
-  qualifiziert: { label: "Qualifiziert", variant: "outline" },
-  vertrag: { label: "In Vertragserstellung", variant: "outline" },
-  kein_abschluss: { label: "Kein Abschluss", variant: "destructive" },
-  abgelehnt: { label: "Abgelehnt", variant: "destructive" },
-  kunde: { label: "Kunde", variant: "default" },
-};
+import { LEAD_STATUS_CONFIG as statusConfig } from "@/lib/statusConfig";
 
 interface Props {
   lead: any;
