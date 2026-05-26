@@ -284,7 +284,7 @@ export function useKundenDialogData(
         .eq("customer_id", customerQ.data!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as CaseRow[];
+      return ((data ?? []) as unknown as CaseRow[]);
     },
   });
 
