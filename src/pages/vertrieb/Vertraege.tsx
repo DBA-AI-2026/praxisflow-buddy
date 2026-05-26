@@ -412,6 +412,7 @@ export default function Vertraege() {
   const [fromLeadId, setFromLeadId] = useState<string | null>(null);
   const [sendingBuchungsmail, setSendingBuchungsmail] = useState<string | null>(null);
   const [autoOpenContractId, setAutoOpenContractId] = useState<string | null>(null);
+  const [kundenDialogHfx, setKundenDialogHfx] = useState<string | null>(null);
 
   // ── Read URL params on mount: auto-open dialog with lead prefill ──────────
   useEffect(() => {
