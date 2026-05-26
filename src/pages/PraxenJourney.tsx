@@ -747,6 +747,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
   const queryClient = useQueryClient();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
   const [sendingBuchungsmail, setSendingBuchungsmail] = useState<string | null>(null);
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
   const { isSalesPartner, isTippgeber, role } = useUserRole();
   const { user } = useAuth();
 
