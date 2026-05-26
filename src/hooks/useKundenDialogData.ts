@@ -25,7 +25,8 @@ import { LEAD_STATUS_TOOLTIPS, CONTRACT_STATUS_TOOLTIPS } from "@/lib/statusGlos
 export type KundenDialogInput =
   | { type: "hfx"; hfxNumber: string; forcePhase?: KundenPhase }
   | { type: "lead"; leadId: string }
-  | { type: "customer"; customerId: string };
+  | { type: "customer"; customerId: string }
+  | { type: "contract"; contractId: string };
 
 export interface StammdatenFormValues {
   praxis_name: string;
