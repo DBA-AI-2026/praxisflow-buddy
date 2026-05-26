@@ -1,15 +1,12 @@
 /**
- * VertragTab — Tab 2 im KundenDialog (Etappe 3a + 3b-i).
+ * VertragTab — Tab 2 im KundenDialog (Etappe 3a + 3b-i + 3b-ii).
  *
- * Lese-Modus für Verträge mit drei PDF-Buttons (3a) und klickbarer
- * Status-Pille mit echtem Status-Wechsel (3b-i, via changeContractStatus).
+ * Lese-Modus mit drei PDF-Buttons, klickbarer Status-Pille, phasen-
+ * abhängigen Mail-/Link-Aktionen pro Vertrag, Lead-Aktionen-Karte und
+ * „Vorgang anlegen"-Dialog.
  *
- * Lead-Phase (kein Vertrag): zusätzlich Lead-Status-Karte oben mit
- * klickbarer Pille (changeLeadStatus). `kunde` wird ausgefiltert —
- * konsistent zu LeadDetailDialog Z. 477.
- *
- * TODO Etappe 3b-ii: Mail-Aktionen (Mandat-Mail, Buchungslink, Bestätigung),
- * Qodia-Registrierung, Vertragsanlage-Trigger, Vorgang/Case anlegen.
+ * TODO Folge-Etappen: Inline-Vertragsanlage, Konditions-Anpassungen,
+ * RLS-Erweiterung für Lead-only Cases (über customer_id).
  */
 import { useState, useMemo } from "react";
 import {
@@ -21,6 +18,11 @@ import {
   Plus,
   Check,
   ChevronDown,
+  Mail,
+  Link2,
+  RefreshCw,
+  Cloud,
+  KeyRound,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -38,6 +40,33 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -61,6 +90,19 @@ import {
 } from "@/lib/statusConfig";
 import { changeContractStatus } from "@/lib/contractStatusActions";
 import { changeLeadStatus } from "@/lib/leadStatusActions";
+import {
+  sendMandateMail,
+  resendConfirmationMail,
+  copyBuchungslink,
+} from "@/lib/contractMailActions";
+import {
+  registerLeadAtQodia,
+  sendQodiaCredentials,
+} from "@/lib/leadActions";
+import {
+  createContractCase,
+  CASE_TYPE_LABELS,
+} from "@/lib/contractCaseActions";
 
 interface VertragTabProps {
   data: UseKundenDialogDataResult;
@@ -71,7 +113,8 @@ const FINAL_STATUSES = ["beendet", "gekuendigt", "gesperrt"];
 export function VertragTab({ data }: VertragTabProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { contracts, isLoading, ssot, lead } = data;
+  const { contracts, isLoading, ssot, lead, customer, derivedPhase } = data;
+  const [newCaseOpen, setNewCaseOpen] = useState(false);
 
   const sorted = useMemo(() => {
     const active = contracts.filter(
@@ -96,11 +139,53 @@ export function VertragTab({ data }: VertragTabProps) {
   }
 
   const showLeadStatusCard = ssot === "lead" && !!lead;
+  const showLeadActionsCard =
+    ssot === "lead" && !!lead && derivedPhase === "qualifiziert";
   const hasContracts = contracts.length > 0;
+  const hasOwner = !!lead?.id || !!customer?.id;
+  const canCreateCase = hasContracts; // RLS: nur mit contract_id für Nicht-Admins
 
   return (
     <div className="space-y-4">
+      {hasOwner && (
+        <div className="flex justify-end">
+          <TooltipProvider delayDuration={150}>
+            {canCreateCase ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setNewCaseOpen(true)}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Vorgang anlegen
+              </Button>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      disabled
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Vorgang anlegen
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Vorgänge können erst nach Vertragsanlage erfasst werden.
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </TooltipProvider>
+        </div>
+      )}
+
       {showLeadStatusCard && <LeadStatusCard lead={lead!} />}
+      {showLeadActionsCard && <LeadActionsCard lead={lead!} />}
 
       {!hasContracts && (
         <div className="rounded-lg border border-dashed bg-muted/30 p-8 text-center">
@@ -137,11 +222,12 @@ export function VertragTab({ data }: VertragTabProps) {
           return <ContractCard key={c.id} contract={c} dimmed={isFinal} />;
         })}
 
-      {hasContracts && (
-        <div className="text-xs text-muted-foreground text-center pt-2">
-          Weitere Aktionen folgen in Kürze. Vorübergehend erreichbar über das Vertrags-Modul.
-        </div>
-      )}
+      <NewCaseDialog
+        open={newCaseOpen}
+        onOpenChange={setNewCaseOpen}
+        contracts={contracts}
+        customerId={customer?.id ?? null}
+      />
     </div>
   );
 }
@@ -192,7 +278,6 @@ function LeadStatusCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult[
           </div>
         </div>
         {isKunde ? (
-          // `kunde` ist System-gesetzt → reine Anzeige, kein Dropdown
           <TooltipProvider delayDuration={150}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -211,9 +296,7 @@ function LeadStatusCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult[
                 className="inline-flex items-center gap-1 disabled:opacity-50"
               >
                 <Badge variant={cfg.variant} className="cursor-pointer hover:opacity-80">
-                  {busy ? (
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  ) : null}
+                  {busy ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
                   {cfg.label}
                   <ChevronDown className="h-3 w-3 ml-1" />
                 </Badge>
@@ -238,6 +321,118 @@ function LeadStatusCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult[
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+      </div>
+    </div>
+  );
+}
+
+/* ────────────────────── Lead-Aktionen-Karte (3b-ii) ────────────────────── */
+
+function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult["lead"]> }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [registering, setRegistering] = useState(false);
+  const [sendingCreds, setSendingCreds] = useState(false);
+
+  const qodiaSynced = !!lead.qodia_synced;
+
+  const handleRegister = async () => {
+    setRegistering(true);
+    const res = await registerLeadAtQodia({ leadId: lead.id, queryClient });
+    setRegistering(false);
+    if (res.success) {
+      toast({
+        title: res.alreadySynced ? "Bereits registriert" : "Bei Qodia registriert",
+        description: res.alreadySynced
+          ? "Lead war schon bei Qodia angelegt."
+          : "Lead wurde erfolgreich übermittelt.",
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: res.conflict ? "Konflikt" : "Fehler",
+        description: res.error,
+      });
+    }
+  };
+
+  const handleSendCreds = async () => {
+    setSendingCreds(true);
+    const res = await sendQodiaCredentials({ leadId: lead.id, queryClient });
+    setSendingCreds(false);
+    if (res.success) {
+      toast({
+        title: "Zugangsdaten gesendet",
+        description: `E-Mail an ${lead.email} verschickt.`,
+      });
+    } else {
+      toast({ variant: "destructive", title: "Fehler", description: res.error });
+    }
+  };
+
+  return (
+    <div className="rounded-lg border bg-card p-4 space-y-2">
+      <div className="text-sm font-medium text-foreground">Lead-Aktionen</div>
+      <div className="flex flex-wrap gap-2">
+        <TooltipProvider delayDuration={150}>
+          {qodiaSynced ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button variant="outline" size="sm" className="gap-1.5" disabled>
+                    <Cloud className="h-3.5 w-3.5" />
+                    Bei Qodia registriert
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Bereits bei Qodia registriert</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={registering}
+              onClick={handleRegister}
+            >
+              {registering ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Cloud className="h-3.5 w-3.5" />
+              )}
+              Bei Qodia registrieren
+            </Button>
+          )}
+
+          {!qodiaSynced ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button variant="outline" size="sm" className="gap-1.5" disabled>
+                    <KeyRound className="h-3.5 w-3.5" />
+                    Zugangsdaten zusenden
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Erst bei Qodia registrieren</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={sendingCreds}
+              onClick={handleSendCreds}
+            >
+              {sendingCreds ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <KeyRound className="h-3.5 w-3.5" />
+              )}
+              Zugangsdaten zusenden
+            </Button>
+          )}
+        </TooltipProvider>
       </div>
     </div>
   );
@@ -272,11 +467,7 @@ function ContractStatusPill({
             cfg.class,
           )}
         >
-          {busy ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <Icon className="h-3 w-3" />
-          )}
+          {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Icon className="h-3 w-3" />}
           {cfg.label}
           <ChevronDown className="h-3 w-3" />
         </button>
@@ -347,9 +538,7 @@ function ContractCard({
           maximumFractionDigits: 2,
         })} €/Monat`
       : "—";
-  const laufzeit = contract.duration_months
-    ? `${contract.duration_months} Monate`
-    : "—";
+  const laufzeit = contract.duration_months ? `${contract.duration_months} Monate` : "—";
   const start = contract.start_date
     ? new Date(contract.start_date).toLocaleDateString("de-DE")
     : "—";
@@ -426,11 +615,7 @@ function ContractCard({
           <div className="font-medium text-foreground">{product}</div>
           <div className="text-xs text-muted-foreground font-mono">{number}</div>
         </div>
-        <ContractStatusPill
-          contract={contract}
-          onChange={onStatusChange}
-          busy={statusBusy}
-        />
+        <ContractStatusPill contract={contract} onChange={onStatusChange} busy={statusBusy} />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
@@ -499,7 +684,401 @@ function ContractCard({
           Im Vertrags-Modul öffnen
         </Button>
       </div>
+
+      <div className="border-t pt-3 mt-1">
+        <ContractActions contract={contract} />
+      </div>
     </div>
+  );
+}
+
+/* ────────────────────── ContractActions (3b-ii) ────────────────────── */
+
+function ContractActions({ contract }: { contract: ContractRow }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [pending, setPending] = useState<"mandate" | "resend-mandate" | "link" | "confirm" | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState<"resend-mandate" | "confirm" | null>(null);
+
+  const status = (contract.status ?? "entwurf").toLowerCase();
+  const mandateSent = !!contract.mandate_email_sent_at;
+
+  const phase: "entwurf" | "eingegangen" | "gezeichnet" | "aktiv" | "final" | "other" =
+    status === "entwurf"
+      ? "entwurf"
+      : status === "eingegangen"
+        ? "eingegangen"
+        : status === "gezeichnet"
+          ? "gezeichnet"
+          : status === "aktiv"
+            ? "aktiv"
+            : FINAL_STATUSES.includes(status)
+              ? "final"
+              : "other";
+
+  if (phase === "entwurf" || phase === "final" || phase === "other") {
+    return (
+      <div className="text-xs text-muted-foreground">
+        Keine Aktionen in diesem Status verfügbar.
+      </div>
+    );
+  }
+
+  const runMandateInitial = async () => {
+    setPending("mandate");
+    const res = await sendMandateMail({
+      contractId: contract.id,
+      force: false,
+      queryClient,
+    });
+    setPending(null);
+    if (res.success) {
+      toast({
+        title: res.skipped ? "Bereits gesendet" : "SEPA-Mandat-Mail gesendet",
+        description: res.skipped
+          ? "Die Mandat-Mail wurde bereits versendet."
+          : "E-Mail wurde an den Kunden verschickt.",
+      });
+    } else {
+      toast({ variant: "destructive", title: "Fehler", description: res.error });
+    }
+  };
+
+  const runMandateResend = async () => {
+    setPending("resend-mandate");
+    const res = await sendMandateMail({
+      contractId: contract.id,
+      force: true,
+      queryClient,
+    });
+    setPending(null);
+    if (res.success) {
+      toast({
+        title: "Mandat-Mail erneut gesendet",
+        description: "E-Mail wurde an den Kunden verschickt.",
+      });
+    } else {
+      toast({ variant: "destructive", title: "Fehler", description: res.error });
+    }
+  };
+
+  const runCopyLink = async () => {
+    setPending("link");
+    const res = await copyBuchungslink({ contractId: contract.id });
+    setPending(null);
+    if (res.success) {
+      toast({ title: "Link kopiert", description: res.url });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Konnte nicht kopieren",
+        description: `${res.error ?? "Fehler"} — ${res.url}`,
+      });
+    }
+  };
+
+  const runResendConfirm = async () => {
+    setPending("confirm");
+    const res = await resendConfirmationMail({
+      contractId: contract.id,
+      queryClient,
+    });
+    setPending(null);
+    if (res.success) {
+      toast({
+        title: "Bestätigungs-Mail erneut gesendet",
+        description: "E-Mail wurde an den Kunden verschickt.",
+      });
+    } else {
+      toast({ variant: "destructive", title: "Fehler", description: res.error });
+    }
+  };
+
+  const anyPending = pending !== null;
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-2">
+        {(phase === "eingegangen" || phase === "gezeichnet") && (
+          <>
+            {phase === "eingegangen" && !mandateSent && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                disabled={anyPending}
+                onClick={runMandateInitial}
+              >
+                {pending === "mandate" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Mail className="h-3.5 w-3.5" />
+                )}
+                SEPA-Mandat-Mail senden
+              </Button>
+            )}
+            {phase === "eingegangen" && mandateSent && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                disabled={anyPending}
+                onClick={() => setConfirmOpen("resend-mandate")}
+              >
+                {pending === "resend-mandate" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+                Mandat-Mail erneut senden
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={anyPending}
+              onClick={runCopyLink}
+            >
+              {pending === "link" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Link2 className="h-3.5 w-3.5" />
+              )}
+              Buchungslink kopieren
+            </Button>
+          </>
+        )}
+
+        {phase === "aktiv" && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            disabled={anyPending}
+            onClick={() => setConfirmOpen("confirm")}
+          >
+            {pending === "confirm" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            Bestätigungs-Mail erneut senden
+          </Button>
+        )}
+      </div>
+
+      <AlertDialog
+        open={confirmOpen !== null}
+        onOpenChange={(o) => !o && setConfirmOpen(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmOpen === "resend-mandate"
+                ? "Mandat-Mail erneut senden?"
+                : "Bestätigungs-Mail erneut senden?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmOpen === "resend-mandate"
+                ? "Der Kunde erhält die SEPA-Mandat-Mail noch einmal. Vorherige Links bleiben gültig."
+                : "Der Kunde erhält die Vertragsbestätigung inklusive Anhängen erneut."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const mode = confirmOpen;
+                setConfirmOpen(null);
+                if (mode === "resend-mandate") runMandateResend();
+                if (mode === "confirm") runResendConfirm();
+              }}
+            >
+              Erneut senden
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+/* ────────────────────── NewCaseDialog (3b-ii) ────────────────────── */
+
+function NewCaseDialog({
+  open,
+  onOpenChange,
+  contracts,
+  customerId,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  contracts: ContractRow[];
+  customerId: string | null;
+}) {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const activeFirst = useMemo(() => {
+    const active = contracts.filter(
+      (c) => !FINAL_STATUSES.includes((c.status ?? "").toLowerCase()),
+    );
+    const finished = contracts.filter((c) =>
+      FINAL_STATUSES.includes((c.status ?? "").toLowerCase()),
+    );
+    return [...active, ...finished];
+  }, [contracts]);
+
+  const defaultContractId = activeFirst[0]?.id ?? "";
+
+  const [caseType, setCaseType] = useState("support");
+  const [contractId, setContractId] = useState<string>(defaultContractId);
+  const [title, setTitle] = useState("");
+  const [notes, setNotes] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  // Reset on open
+  const resetForm = () => {
+    setCaseType("support");
+    setContractId(activeFirst[0]?.id ?? "");
+    setTitle("");
+    setNotes("");
+  };
+
+  const allFinal =
+    contracts.length > 0 &&
+    contracts.every((c) => FINAL_STATUSES.includes((c.status ?? "").toLowerCase()));
+
+  const handleSubmit = async () => {
+    if (!contractId) {
+      toast({
+        variant: "destructive",
+        title: "Vertrag fehlt",
+        description: "Bitte wählen Sie einen Vertrag aus.",
+      });
+      return;
+    }
+    if (!title.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Titel fehlt",
+        description: "Bitte geben Sie einen Titel ein.",
+      });
+      return;
+    }
+    setCreating(true);
+    const res = await createContractCase({
+      customerId,
+      contractId,
+      caseType,
+      title: title.trim(),
+      notes: notes.trim() || undefined,
+      userId: user?.id ?? null,
+      queryClient,
+    });
+    setCreating(false);
+    if (res.success) {
+      toast({ title: "Vorgang angelegt", description: title.trim() });
+      resetForm();
+      onOpenChange(false);
+    } else {
+      toast({ variant: "destructive", title: "Fehler", description: res.error });
+    }
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        onOpenChange(o);
+        if (!o) resetForm();
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Vorgang anlegen</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {allFinal && (
+            <div className="rounded-md border border-warning/40 bg-warning/10 p-2 text-xs text-warning-foreground">
+              Hinweis: Alle Verträge sind in einem End-Status.
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label>Typ</Label>
+            <Select value={caseType} onValueChange={setCaseType}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(CASE_TYPE_LABELS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>
+                    {v}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Vertrag</Label>
+            <Select value={contractId} onValueChange={setContractId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Vertrag wählen…" />
+              </SelectTrigger>
+              <SelectContent>
+                {activeFirst.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {(c.contract_number ?? c.id.slice(0, 8)) +
+                      " — " +
+                      (c.product_name ?? "—")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Titel</Label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="z. B. Frage zu HFX EBM"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Notiz</Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Optional"
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={creating}>
+            Abbrechen
+          </Button>
+          <Button onClick={handleSubmit} disabled={creating}>
+            {creating ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                Anlegen…
+              </>
+            ) : (
+              "Anlegen"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
