@@ -25,7 +25,8 @@ import { LEAD_STATUS_TOOLTIPS, CONTRACT_STATUS_TOOLTIPS } from "@/lib/statusGlos
 export type KundenDialogInput =
   | { type: "hfx"; hfxNumber: string; forcePhase?: KundenPhase }
   | { type: "lead"; leadId: string }
-  | { type: "customer"; customerId: string };
+  | { type: "customer"; customerId: string }
+  | { type: "contract"; contractId: string };
 
 export interface StammdatenFormValues {
   praxis_name: string;
@@ -212,11 +213,20 @@ export function useKundenDialogData(
         if (error) throw error;
         return { hfxNumber: data?.hfx_customer_number ?? null };
       }
-      // customer
+      if (input.type === "customer") {
+        const { data, error } = await supabase
+          .from("customers")
+          .select("hfx_customer_number")
+          .eq("id", input.customerId)
+          .maybeSingle();
+        if (error) throw error;
+        return { hfxNumber: data?.hfx_customer_number ?? null };
+      }
+      // contract
       const { data, error } = await supabase
-        .from("customers")
+        .from("contracts")
         .select("hfx_customer_number")
-        .eq("id", input.customerId)
+        .eq("id", input.contractId)
         .maybeSingle();
       if (error) throw error;
       return { hfxNumber: data?.hfx_customer_number ?? null };

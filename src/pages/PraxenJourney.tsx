@@ -747,6 +747,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
   const queryClient = useQueryClient();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
   const [sendingBuchungsmail, setSendingBuchungsmail] = useState<string | null>(null);
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
   const { isSalesPartner, isTippgeber, role } = useUserRole();
   const { user } = useAuth();
 
@@ -960,9 +961,21 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                 <tr
                   key={c.id}
                   ref={highlightId === c.id ? (highlightRef as any) : null}
-                  onClick={() => navigate(`/vertrieb/vertraege?contractId=${c.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest("button, a, label, [role='menuitem'], input")) return;
+                    setSelectedContractId(c.id);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter" && e.key !== " ") return;
+                    if ((e.target as HTMLElement) !== e.currentTarget) return;
+                    e.preventDefault();
+                    setSelectedContractId(c.id);
+                  }}
                   className={`hover:bg-muted/30 transition-colors cursor-pointer group ${urgencyCls} ${highlightId === c.id ? "bg-primary/5 ring-1 ring-primary/30" : ""}`}
                 >
+
                   <td className="py-3 px-4">
                     <p className="font-semibold text-foreground leading-tight">{praxisLabel}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -1055,6 +1068,17 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
           </tbody>
         </table>
       </div>
+      {selectedContractId && (
+        <KundenDialog
+          open={!!selectedContractId}
+          onClose={() => {
+            setSelectedContractId(null);
+            queryClient.invalidateQueries({ queryKey: ["journey-contracts-abschluss"] });
+            queryClient.invalidateQueries({ queryKey: ["journey-counts"] });
+          }}
+          input={{ type: "contract", contractId: selectedContractId }}
+        />
+      )}
     </div>
   );
 }
@@ -1076,6 +1100,7 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
   const { user } = useAuth();
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("aktiv");
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
 
   useEffect(() => {
     if (highlightId && highlightRef.current) {
@@ -1253,9 +1278,21 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                 <tr
                   key={c.id}
                   ref={highlightId === c.id ? highlightRef : null}
-                  onClick={() => navigate(`/vertrieb/vertraege?contractId=${c.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest("button, a, label, [role='menuitem'], input")) return;
+                    setSelectedContractId(c.id);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter" && e.key !== " ") return;
+                    if ((e.target as HTMLElement) !== e.currentTarget) return;
+                    e.preventDefault();
+                    setSelectedContractId(c.id);
+                  }}
                   className={`hover:bg-muted/30 transition-colors cursor-pointer group ${highlightId === c.id ? "bg-primary/5 ring-1 ring-primary/30" : ""}`}
                 >
+
                   <td className="py-3 px-4">
                     <p className="font-semibold text-foreground leading-tight">{praxisLabel}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -1317,6 +1354,16 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
           </tbody>
         </table>
       </div>
+      {selectedContractId && (
+        <KundenDialog
+          open={!!selectedContractId}
+          onClose={() => {
+            setSelectedContractId(null);
+            qc.invalidateQueries({ queryKey: ["journey-kunden"] });
+          }}
+          input={{ type: "contract", contractId: selectedContractId }}
+        />
+      )}
     </div>
   );
 }

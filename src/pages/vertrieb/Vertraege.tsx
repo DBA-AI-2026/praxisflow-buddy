@@ -66,6 +66,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabaseClient";
+import { KundenDialog } from "@/components/kunden/KundenDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -412,6 +413,7 @@ export default function Vertraege() {
   const [fromLeadId, setFromLeadId] = useState<string | null>(null);
   const [sendingBuchungsmail, setSendingBuchungsmail] = useState<string | null>(null);
   const [autoOpenContractId, setAutoOpenContractId] = useState<string | null>(null);
+  const [kundenDialogHfx, setKundenDialogHfx] = useState<string | null>(null);
 
   // ── Read URL params on mount: auto-open dialog with lead prefill ──────────
   useEffect(() => {
@@ -2032,9 +2034,23 @@ export default function Vertraege() {
                         <td className="py-3.5 px-4 text-xs font-mono font-semibold text-primary whitespace-nowrap">
                           {c.contract_number || "–"}
                         </td>
-                        <td className="py-3.5 px-4 text-xs text-muted-foreground font-mono whitespace-nowrap">
+                        <td
+                          className="py-3.5 px-4 text-xs text-muted-foreground font-mono whitespace-nowrap"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                          <div className="flex items-center gap-1.5">
-                           <span>{c.hfx_customer_number || "–"}</span>
+                           {c.hfx_customer_number ? (
+                             <button
+                               type="button"
+                               onClick={() => setKundenDialogHfx(c.hfx_customer_number)}
+                               className="hover:text-primary hover:underline transition-colors"
+                               title="Kunden-Übersicht öffnen"
+                             >
+                               {c.hfx_customer_number}
+                             </button>
+                           ) : (
+                             <span>–</span>
+                           )}
                            {c.hfx_customer_number && (
                              <TooltipProvider>
                                <Tooltip>
@@ -2057,6 +2073,7 @@ export default function Vertraege() {
                            )}
                          </div>
                        </td>
+
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         <p className="font-medium text-foreground leading-tight">{c.praxis || c.customer_name}</p>
                         {c.praxis && (c.vorname || c.nachname) && (
@@ -3416,6 +3433,16 @@ export default function Vertraege() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {kundenDialogHfx && (
+        <KundenDialog
+          open={!!kundenDialogHfx}
+          onClose={() => {
+            setKundenDialogHfx(null);
+            queryClient.invalidateQueries({ queryKey: ["contracts"] });
+          }}
+          input={{ type: "hfx", hfxNumber: kundenDialogHfx }}
+        />
+      )}
     </MainLayout>
   );
 }
