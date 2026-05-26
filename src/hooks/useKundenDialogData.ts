@@ -213,11 +213,20 @@ export function useKundenDialogData(
         if (error) throw error;
         return { hfxNumber: data?.hfx_customer_number ?? null };
       }
-      // customer
+      if (input.type === "customer") {
+        const { data, error } = await supabase
+          .from("customers")
+          .select("hfx_customer_number")
+          .eq("id", input.customerId)
+          .maybeSingle();
+        if (error) throw error;
+        return { hfxNumber: data?.hfx_customer_number ?? null };
+      }
+      // contract
       const { data, error } = await supabase
-        .from("customers")
+        .from("contracts")
         .select("hfx_customer_number")
-        .eq("id", input.customerId)
+        .eq("id", input.contractId)
         .maybeSingle();
       if (error) throw error;
       return { hfxNumber: data?.hfx_customer_number ?? null };
