@@ -3433,6 +3433,16 @@ export default function Vertraege() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {kundenDialogHfx && (
+        <KundenDialog
+          open={!!kundenDialogHfx}
+          onClose={() => {
+            setKundenDialogHfx(null);
+            queryClient.invalidateQueries({ queryKey: ["contracts"] });
+          }}
+          input={{ type: "hfx", hfxNumber: kundenDialogHfx }}
+        />
+      )}
     </MainLayout>
   );
 }
