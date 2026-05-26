@@ -220,10 +220,11 @@ export function useKundenDialogData(
       const { data, error } = await supabase
         .from("leads")
         .select(
-          "id,hfx_customer_number,praxis_name,vorname,nachname,email,mobilnummer,plz,ort,adresse,abrechnungszentrum,mp_nummer,nachricht,assigned_to,status",
+          "id,hfx_customer_number,praxis_name,vorname,nachname,email,mobilnummer,plz,ort,adresse,abrechnungszentrum,mp_nummer,nachricht,assigned_to,status,qodia_synced,credentials_sent_at",
         )
         .eq("hfx_customer_number", hfxNumber!)
         .maybeSingle();
+
       if (error) throw error;
       return (data as LeadRow | null) ?? null;
     },
