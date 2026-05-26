@@ -1354,6 +1354,16 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
           </tbody>
         </table>
       </div>
+      {selectedContractId && (
+        <KundenDialog
+          open={!!selectedContractId}
+          onClose={() => {
+            setSelectedContractId(null);
+            qc.invalidateQueries({ queryKey: ["journey-kunden"] });
+          }}
+          input={{ type: "contract", contractId: selectedContractId }}
+        />
+      )}
     </div>
   );
 }
