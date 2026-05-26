@@ -1100,6 +1100,7 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
   const { user } = useAuth();
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("aktiv");
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
 
   useEffect(() => {
     if (highlightId && highlightRef.current) {
