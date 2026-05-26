@@ -57,7 +57,10 @@ type LeadRow = {
   nachricht: string | null;
   assigned_to: string | null;
   status: string | null;
+  qodia_synced: boolean | null;
+  credentials_sent_at: string | null;
 };
+
 
 type CustomerRow = {
   id: string;
