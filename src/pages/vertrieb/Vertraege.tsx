@@ -217,15 +217,8 @@ function SalesPartnerCombobox({
   );
 }
 
-const statusConfig: Record<string, { label: string; class: string; icon: typeof FileText }> = {
-  entwurf: { label: "Entwurf", class: "bg-muted text-muted-foreground", icon: FilePen },
-  eingegangen: { label: "Eingegangen", class: "bg-warning/10 text-warning", icon: Upload },
-  gezeichnet: { label: "Gezeichnet", class: "bg-primary/10 text-primary", icon: FileSignature },
-  aktiv: { label: "Aktiv", class: "bg-success/10 text-success", icon: CircleCheck },
-  gekuendigt: { label: "Gekündigt", class: "bg-warning/10 text-warning", icon: CircleOff },
-  beendet: { label: "Beendet", class: "bg-destructive/10 text-destructive", icon: ArchiveX },
-  gesperrt: { label: "Gesperrt", class: "bg-destructive/20 text-destructive", icon: ShieldBan },
-};
+import { CONTRACT_STATUS_CONFIG as statusConfig } from "@/lib/statusConfig";
+import { changeContractStatus } from "@/lib/contractStatusActions";
 
 const LOCKED_STATUSES = ["aktiv", "eingegangen", "gekuendigt", "beendet", "gesperrt", "gezeichnet"];
 const isContractLocked = (status: string) => LOCKED_STATUSES.includes(status);
