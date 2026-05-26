@@ -100,7 +100,19 @@ export type ContractRow = Record<string, any> & {
   contract_number?: string | null;
 };
 
+export type CaseRow = {
+  id: string;
+  case_type: string;
+  title: string;
+  status: string;
+  contract_id: string | null;
+  customer_id: string | null;
+  created_at: string;
+  notes: string | null;
+};
+
 // Backwards-compatible alias
+
 type ContractOwnership = ContractRow;
 
 export interface KundenDialogHeader {
@@ -120,6 +132,7 @@ export interface UseKundenDialogDataResult {
   lead: LeadRow | null;
   customer: CustomerRow | null;
   contracts: ContractRow[];
+  cases: CaseRow[];
   ssot: "lead" | "customer";
   derivedPhase: KundenPhase;
   currentStatusLabel: string | null;
@@ -257,6 +270,21 @@ export function useKundenDialogData(
         .eq("customer_id", customerQ.data!.id);
       if (error) throw error;
       return (data ?? []) as ContractRow[];
+    },
+  });
+
+  /* ---- Schritt 4: Vorgänge (cases) laden ---- */
+  const casesQ = useQuery({
+    queryKey: ["kunden-dialog-cases", customerQ.data?.id],
+    enabled: enabled && !!customerQ.data?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contract_cases" as any)
+        .select("id, case_type, title, status, contract_id, customer_id, created_at, notes")
+        .eq("customer_id", customerQ.data!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as CaseRow[];
     },
   });
 
@@ -532,11 +560,12 @@ export function useKundenDialogData(
   );
 
   return {
-    isLoading: resolveQ.isLoading || leadQ.isLoading || customerQ.isLoading,
+    isLoading: resolveQ.isLoading || leadQ.isLoading || customerQ.isLoading || casesQ.isLoading,
     hfxNumber,
     lead: leadQ.data ?? null,
     customer: customerQ.data ?? null,
     contracts: contractsQ.data ?? [],
+    cases: casesQ.data ?? [],
     ssot,
     derivedPhase,
     currentStatusLabel,
