@@ -74,6 +74,7 @@ import { cn } from "@/lib/utils";
 import type {
   UseKundenDialogDataResult,
   ContractRow,
+  CaseRow,
 } from "@/hooks/useKundenDialogData";
 import {
   previewContractPdf,
@@ -113,7 +114,7 @@ const FINAL_STATUSES = ["beendet", "gekuendigt", "gesperrt"];
 export function VertragTab({ data }: VertragTabProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { contracts, isLoading, ssot, lead, customer, derivedPhase } = data;
+  const { contracts, isLoading, ssot, lead, customer, derivedPhase, cases } = data;
   const [newCaseOpen, setNewCaseOpen] = useState(false);
 
   const sorted = useMemo(() => {
@@ -182,6 +183,10 @@ export function VertragTab({ data }: VertragTabProps) {
             )}
           </TooltipProvider>
         </div>
+      )}
+
+      {cases.length > 0 && (
+        <CasesMiniList cases={cases} contracts={contracts} />
       )}
 
       {showLeadStatusCard && <LeadStatusCard lead={lead!} />}
@@ -1087,6 +1092,87 @@ function Field({ label, value }: { label: string; value: string }) {
     <div>
       <div className="text-muted-foreground">{label}</div>
       <div className="font-medium text-foreground">{value}</div>
+    </div>
+  );
+}
+
+/* ────────────────────── CasesMiniList (3b-ii Nachschlag) ────────────────────── */
+
+function CasesMiniList({
+  cases,
+  contracts,
+}: {
+  cases: CaseRow[];
+  contracts: ContractRow[];
+}) {
+  const openCases = cases.filter((c) => c.status === "offen");
+  const closedCases = cases.filter((c) => c.status !== "offen");
+
+  return (
+    <div className="rounded-lg border bg-card">
+      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-foreground">Vorgänge</span>
+          <span className="text-xs text-muted-foreground">
+            {openCases.length} offen
+            {closedCases.length > 0 && ` · ${closedCases.length} erledigt`}
+          </span>
+        </div>
+      </div>
+
+      {openCases.length > 0 && (
+        <div className="divide-y">
+          {openCases.slice(0, 5).map((c) => (
+            <CaseRowItem key={c.id} caseItem={c} contracts={contracts} />
+          ))}
+          {openCases.length > 5 && (
+            <div className="px-4 py-2 text-xs text-muted-foreground">
+              + {openCases.length - 5} weitere offene Vorgänge — vollständig in Tab „Verlauf" (folgt in Etappe 4)
+            </div>
+          )}
+        </div>
+      )}
+
+      {openCases.length === 0 && closedCases.length > 0 && (
+        <div className="px-4 py-3 text-sm text-muted-foreground">
+          Keine offenen Vorgänge — {closedCases.length} erledigt
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CaseRowItem({
+  caseItem,
+  contracts,
+}: {
+  caseItem: CaseRow;
+  contracts: ContractRow[];
+}) {
+  const contract = caseItem.contract_id
+    ? contracts.find((c) => c.id === caseItem.contract_id)
+    : null;
+  const typeLabel = CASE_TYPE_LABELS[caseItem.case_type] ?? caseItem.case_type;
+  const dateStr = caseItem.created_at
+    ? new Date(caseItem.created_at).toLocaleDateString("de-DE")
+    : "";
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50">
+      <Badge variant="outline" className="shrink-0 text-[10px]">
+        {typeLabel}
+      </Badge>
+      <span className="text-sm text-foreground truncate min-w-0 flex-1">
+        {caseItem.title}
+      </span>
+      {contract && (
+        <span className="text-xs text-muted-foreground font-mono shrink-0 hidden sm:inline">
+          {contract.contract_number ?? contract.id.slice(0, 8)}
+        </span>
+      )}
+      <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">
+        {dateStr}
+      </span>
     </div>
   );
 }

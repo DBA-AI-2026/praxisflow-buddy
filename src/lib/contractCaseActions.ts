@@ -51,6 +51,7 @@ export async function createContractCase(
     if (error) return { success: false, error: error.message };
 
     queryClient.invalidateQueries({ queryKey: ["customer-cases"] });
+    queryClient.invalidateQueries({ queryKey: ["kunden-dialog-cases"] });
     queryClient.invalidateQueries({ queryKey: ["kundenDialogData"] });
     queryClient.invalidateQueries({ queryKey: ["contract_cases"] });
 
