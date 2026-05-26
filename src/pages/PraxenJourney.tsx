@@ -1068,6 +1068,17 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
           </tbody>
         </table>
       </div>
+      {selectedContractId && (
+        <KundenDialog
+          open={!!selectedContractId}
+          onClose={() => {
+            setSelectedContractId(null);
+            queryClient.invalidateQueries({ queryKey: ["journey-contracts-abschluss"] });
+            queryClient.invalidateQueries({ queryKey: ["journey-counts"] });
+          }}
+          input={{ type: "contract", contractId: selectedContractId }}
+        />
+      )}
     </div>
   );
 }
