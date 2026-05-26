@@ -2040,14 +2040,17 @@ export default function Vertraege() {
                         >
                          <div className="flex items-center gap-1.5">
                            {c.hfx_customer_number ? (
-                             <button
-                               type="button"
-                               onClick={() => setKundenDialogHfx(c.hfx_customer_number)}
-                               className="hover:text-primary hover:underline transition-colors"
-                               title="Kunden-Übersicht öffnen"
-                             >
-                               {c.hfx_customer_number}
-                             </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setKundenDialogHfx(c.hfx_customer_number);
+                                }}
+                                className="hover:text-primary hover:underline transition-colors"
+                                title="Kunden-Übersicht öffnen"
+                              >
+                                {c.hfx_customer_number}
+                              </button>
                            ) : (
                              <span>–</span>
                            )}
