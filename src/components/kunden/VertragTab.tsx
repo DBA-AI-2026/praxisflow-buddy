@@ -555,7 +555,12 @@ function ContractCard({
           maximumFractionDigits: 2,
         })} €/Monat`
       : "—";
-  const laufzeit = contract.duration_months ? `${contract.duration_months} Monate` : "—";
+  const laufzeit = (() => {
+    const m = contract.duration_months;
+    if (m === null || m === undefined) return "—";
+    if (m === 0) return "Unbefristet";
+    return `${m} Monate`;
+  })();
   const start = contract.start_date
     ? new Date(contract.start_date).toLocaleDateString("de-DE")
     : "—";
