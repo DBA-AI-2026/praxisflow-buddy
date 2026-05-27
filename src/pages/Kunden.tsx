@@ -45,9 +45,10 @@ import {
   ClipboardList,
 } from "lucide-react";
 
+// TODO Etappe 6 Cleanup: Duplikat von CONTRACT_STATUS_CONFIG aus @/lib/statusConfig — konsolidieren.
 const contractStatusConfig: Record<string, { label: string; color: string }> = {
   entwurf: { label: "Entwurf", color: "bg-muted text-muted-foreground" },
-  eingegangen: { label: "Eingegangen", color: "bg-warning/10 text-warning" },
+  eingegangen: { label: "Versendet, wartet auf Mandat", color: "bg-warning/10 text-warning" },
   gezeichnet: { label: "Gezeichnet", color: "bg-primary/10 text-primary" },
   aktiv: { label: "Aktiv", color: "bg-success/10 text-success" },
   gekuendigt: { label: "Gekündigt", color: "bg-warning/10 text-warning" },
