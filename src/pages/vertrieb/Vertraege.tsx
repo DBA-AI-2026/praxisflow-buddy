@@ -1503,7 +1503,7 @@ export default function Vertraege() {
       if (mailError) throw mailError;
 
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
-      toast({ title: "✅ SEPA-Mandat-Mail gesendet", description: `SEPA-Aktivierungslink an ${form.email} gesendet. Vertrag steht auf „Eingegangen".` });
+      toast({ title: "✅ SEPA-Mandat-Mail gesendet", description: `SEPA-Aktivierungslink an ${form.email} gesendet. Vertrag steht auf „Versendet, wartet auf Mandat".` });
       closeDialog();
     } catch (err: any) {
       toast({ title: "Fehler", description: err.message || "Unbekannter Fehler", variant: "destructive" });
