@@ -990,7 +990,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                     />
                   </td>
                   <td className="py-3 px-4">
-                    <StatusPill label={sc.label} cls={sc.cls} tooltip={CONTRACT_STATUS_TOOLTIPS[c.status] ?? sc.label} />
+                    <StatusPill label={sc.label} cls={sc.class} tooltip={CONTRACT_STATUS_TOOLTIPS[c.status] ?? sc.label} />
                   </td>
                   <td className="py-3 px-4">
                     <StaleBadge dateStr={c.created_at} label="Erstellt am" />

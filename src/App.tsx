@@ -51,8 +51,6 @@ import Kunden from "./pages/Kunden";
 import RollenUebersicht from "./pages/admin/RollenUebersicht";
 import FibuReconciliation from "./pages/admin/FibuReconciliation";
 import ContractInspect from "./pages/admin/ContractInspect";
-// TODO Etappe 6: Preview-Route wieder entfernen (temporäre Verifikations-Seite für KundenDialog-Grundgerüst).
-import KundenDialogPreview from "./pages/dev/KundenDialogPreview";
 
 const queryClient = new QueryClient();
 
