@@ -25,6 +25,7 @@ import {
   Cloud,
   KeyRound,
   ListChecks,
+  AlertTriangle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -640,6 +641,16 @@ function ContractCard({
         <ContractStatusPill contract={contract} onChange={onStatusChange} busy={statusBusy} />
       </div>
 
+      {/* Pre-System-Hinweis: aktiv ohne Stripe-Customer (= kein SEPA-Mandat hinterlegt) */}
+      {(contract.status ?? "").toLowerCase() === "aktiv" && !contract.stripe_customer_id && (
+        <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-2.5 py-2 text-xs text-warning-foreground">
+          <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
+          <span>
+            Pre-System-Vertrag: aktiv, aber kein SEPA-Mandat hinterlegt. Mandat-Mail kann unten ausgelöst werden.
+          </span>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
         <Field label="Preis" value={price} />
         <Field label="Laufzeit" value={laufzeit} />
@@ -740,6 +751,8 @@ function ContractActions({ contract }: { contract: ContractRow }) {
             : FINAL_STATUSES.includes(status)
               ? "final"
               : "other";
+
+  const isPreSystemAktiv = phase === "aktiv" && !contract.stripe_customer_id;
 
   if (phase === "entwurf" || phase === "final" || phase === "other") {
     return (
@@ -903,6 +916,29 @@ function ContractActions({ contract }: { contract: ContractRow }) {
               <RefreshCw className="h-3.5 w-3.5" />
             )}
             Bestätigungs-Mail erneut senden
+          </Button>
+        )}
+
+        {/* Pre-System-Vertrag: aktiv ohne Stripe-Customer → Mandat-Mail nachträglich auslösen.
+            Erst-Versand (kein mandate_email_sent_at): direkt mit force=false.
+            Erneut-Versand (mandate_email_sent_at gesetzt, Stripe-ID aber weiterhin NULL):
+            force=true mit Confirm-Dialog (analog zur eingegangen-Phase). */}
+        {isPreSystemAktiv && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            disabled={anyPending}
+            onClick={() => (mandateSent ? setConfirmOpen("resend-mandate") : runMandateInitial())}
+          >
+            {pending === "mandate" || pending === "resend-mandate" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : mandateSent ? (
+              <RefreshCw className="h-3.5 w-3.5" />
+            ) : (
+              <Mail className="h-3.5 w-3.5" />
+            )}
+            {mandateSent ? "SEPA-Mandat-Mail erneut senden" : "SEPA-Mandat-Mail senden"}
           </Button>
         )}
       </div>
