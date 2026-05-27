@@ -66,9 +66,10 @@ const statusColors: Record<string, string> = {
   gekündigt: "badge-error",
 };
 
+// TODO Etappe 6 Cleanup: Duplikat von CONTRACT_STATUS_CONFIG aus @/lib/statusConfig — konsolidieren.
 const contractStatusConfig: Record<string, { label: string; class: string; icon: typeof FileText }> = {
   entwurf: { label: "Entwurf", class: "bg-muted text-muted-foreground", icon: FilePen },
-  eingegangen: { label: "Eingegangen", class: "bg-warning/10 text-warning", icon: Upload },
+  eingegangen: { label: "Versendet, wartet auf Mandat", class: "bg-warning/10 text-warning", icon: Upload },
   gezeichnet: { label: "Gezeichnet", class: "bg-primary/10 text-primary", icon: FileSignature },
   aktiv: { label: "Aktiv", class: "bg-success/10 text-success", icon: CircleCheck },
   gekuendigt: { label: "Gekündigt", class: "bg-warning/10 text-warning", icon: CircleOff },

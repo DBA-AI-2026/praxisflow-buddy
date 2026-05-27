@@ -976,7 +976,7 @@ export default function Vertraege() {
             body: { contract_id: contractId },
           });
           if (mailError) throw mailError;
-          toast({ title: "✅ SEPA-Mandat-Mail gesendet", description: `SEPA-Aktivierungslink an ${variables.email} gesendet. Vertrag steht auf „Eingegangen".` });
+          toast({ title: "✅ SEPA-Mandat-Mail gesendet", description: `SEPA-Aktivierungslink an ${variables.email} gesendet. Vertrag steht auf „Versendet, wartet auf Mandat".` });
         } catch (emailErr: any) {
           console.error("Mandate setup email error:", emailErr);
           toast({ title: "SEPA-Mandat-Mail konnte nicht gesendet werden", description: emailErr.message, variant: "destructive" });
@@ -1503,7 +1503,7 @@ export default function Vertraege() {
       if (mailError) throw mailError;
 
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
-      toast({ title: "✅ SEPA-Mandat-Mail gesendet", description: `SEPA-Aktivierungslink an ${form.email} gesendet. Vertrag steht auf „Eingegangen".` });
+      toast({ title: "✅ SEPA-Mandat-Mail gesendet", description: `SEPA-Aktivierungslink an ${form.email} gesendet. Vertrag steht auf „Versendet, wartet auf Mandat".` });
       closeDialog();
     } catch (err: any) {
       toast({ title: "Fehler", description: err.message || "Unbekannter Fehler", variant: "destructive" });
@@ -1912,8 +1912,8 @@ export default function Vertraege() {
               </p>
               <p className="text-xs text-warning/80 mt-0.5">
                 {pending.length === 1
-                  ? "Folgender Vertrag hat Status \u201eEingegangen\u201c, aber die SEPA-Mandat-Mail mit Stripe-Link wurde noch nicht gesendet:"
-                  : "Folgende Vertr\u00e4ge haben Status \u201eEingegangen\u201c, aber die SEPA-Mandat-Mail mit Stripe-Link wurde noch nicht gesendet:"}
+                  ? "Folgender Vertrag hat Status \u201eVersendet, wartet auf Mandat\u201c, aber die SEPA-Mandat-Mail mit Stripe-Link wurde noch nicht gesendet:"
+                  : "Folgende Vertr\u00e4ge haben Status \u201eVersendet, wartet auf Mandat\u201c, aber die SEPA-Mandat-Mail mit Stripe-Link wurde noch nicht gesendet:"}
               </p>
               <ul className="mt-1.5 space-y-0.5">
                 {pending.map((c: any) => (

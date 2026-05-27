@@ -39,7 +39,7 @@ const BASE = {
 const DEMOS: DemoCase[] = [
   { label: "Lead-Phase", phase: "lead", statusLabel: "Neu — Vertriebler hat noch nicht reagiert." },
   { label: "Qualifiziert-Phase", phase: "qualifiziert", statusLabel: "Qualifiziert — bereit für Vertragsanlage." },
-  { label: "Vertrag-Phase", phase: "vertrag", statusLabel: "Eingegangen — wartet auf Mandat." },
+  { label: "Vertrag-Phase", phase: "vertrag", statusLabel: "Versendet, wartet auf Mandat." },
   { label: "Aktiv-Phase", phase: "aktiv", statusLabel: "Aktiv — Abrechnung läuft." },
   { label: "Service-Phase", phase: "service", statusLabel: "Service — laufende Betreuung." },
 ];

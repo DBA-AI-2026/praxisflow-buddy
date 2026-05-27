@@ -53,9 +53,10 @@ const leadStatusCfg: Record<string, { label: string; cls: string; priority: numb
   abgelehnt:      { label: "Abgelehnt",      cls: "bg-destructive/10 text-destructive", priority: 11 },
 };
 
+// TODO Etappe 6 Cleanup: Duplikat von CONTRACT_STATUS_CONFIG aus @/lib/statusConfig — konsolidieren.
 const contractStatusCfg: Record<string, { label: string; cls: string }> = {
   entwurf:     { label: "Entwurf",     cls: "bg-muted text-muted-foreground" },
-  eingegangen: { label: "Eingegangen", cls: "bg-warning/15 text-warning" },
+  eingegangen: { label: "Versendet, wartet auf Mandat", cls: "bg-warning/15 text-warning" },
   gezeichnet:  { label: "Gezeichnet",  cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400" },
   aktiv:       { label: "Aktiv",       cls: "bg-success/10 text-success" },
   gekuendigt:  { label: "Gekündigt",   cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400" },
@@ -106,7 +107,12 @@ function SourceBadge({ source }: { source: "homepage" | "manuell" | "reservierun
 }
 
 function VorbezugBadge({ value }: { value?: string | null }) {
-  if (!value || value === "nein" || value === "keins") return <span className="text-muted-foreground/30">—</span>;
+  if (value === undefined || value === null || value === "") {
+    return <span className="text-xs text-muted-foreground/60 italic">keine Angabe</span>;
+  }
+  if (value === "nein" || value === "keins") {
+    return <span className="text-xs text-muted-foreground">keins</span>;
+  }
   // Bekannte Abrechnungszentren mit Farbcode. `mcc` ist hier bewusst nicht
   // gelistet — in `leads.abrechnungszentrum` existiert kein Datensatz mit
   // diesem Wert (Stand: DB-Distinct). Das `MCC` im Footer und im
@@ -587,7 +593,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
               <TH>Nächster Schritt</TH>
               <TH>Quelle</TH>
               <TH>Interesse an</TH>
-              <TH>Aktuelle Lösung</TH>
+              <TH>Abrechnungszentrum</TH>
               <TH>PLZ / Ort</TH>
               <TH>Betreuer</TH>
               <TH right>Qodia</TH>
