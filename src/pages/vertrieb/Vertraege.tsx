@@ -1912,8 +1912,8 @@ export default function Vertraege() {
               </p>
               <p className="text-xs text-warning/80 mt-0.5">
                 {pending.length === 1
-                  ? "Folgender Vertrag hat Status \u201eEingegangen\u201c, aber die SEPA-Mandat-Mail mit Stripe-Link wurde noch nicht gesendet:"
-                  : "Folgende Vertr\u00e4ge haben Status \u201eEingegangen\u201c, aber die SEPA-Mandat-Mail mit Stripe-Link wurde noch nicht gesendet:"}
+                  ? "Folgender Vertrag hat Status \u201eVersendet, wartet auf Mandat\u201c, aber die SEPA-Mandat-Mail mit Stripe-Link wurde noch nicht gesendet:"
+                  : "Folgende Vertr\u00e4ge haben Status \u201eVersendet, wartet auf Mandat\u201c, aber die SEPA-Mandat-Mail mit Stripe-Link wurde noch nicht gesendet:"}
               </p>
               <ul className="mt-1.5 space-y-0.5">
                 {pending.map((c: any) => (
