@@ -1890,6 +1890,44 @@ export default function Vertraege() {
           );
         })}
       </div>
+
+      {/* Admin-only Filter-Chip: Pre-System-Verträge (aktiv ohne Stripe-Customer) */}
+      {isAdmin && (() => {
+        const preSystemCount = contracts.filter(
+          (c: any) => c.status === "aktiv" && !c.stripe_customer_id,
+        ).length;
+        if (preSystemCount === 0 && !preSystemFilter) return null;
+        return (
+          <div className="mb-4 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPreSystemFilter((v) => !v)}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                preSystemFilter
+                  ? "border-warning bg-warning/15 text-warning-foreground"
+                  : "border-warning/40 bg-warning/5 text-warning hover:bg-warning/10"
+              }`}
+              title="Verträge mit Status aktiv, aber ohne hinterlegtes SEPA-Mandat (stripe_customer_id IS NULL)"
+            >
+              <AlertTriangle className="h-3 w-3" />
+              Pre-System (kein SEPA)
+              <span className="ml-1 rounded-full bg-warning/20 px-1.5 py-0.5 tabular-nums">
+                {preSystemCount}
+              </span>
+            </button>
+            {preSystemFilter && (
+              <button
+                type="button"
+                onClick={() => setPreSystemFilter(false)}
+                className="text-xs text-muted-foreground hover:text-foreground underline"
+              >
+                Filter aufheben
+              </button>
+            )}
+          </div>
+        );
+      })()}
+
       {statusFilter && (
         <div className="mb-4 flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Filter:</span>
