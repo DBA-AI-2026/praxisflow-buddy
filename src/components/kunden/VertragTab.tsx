@@ -752,6 +752,8 @@ function ContractActions({ contract }: { contract: ContractRow }) {
               ? "final"
               : "other";
 
+  const isPreSystemAktiv = phase === "aktiv" && !contract.stripe_customer_id;
+
   if (phase === "entwurf" || phase === "final" || phase === "other") {
     return (
       <div className="text-xs text-muted-foreground">
