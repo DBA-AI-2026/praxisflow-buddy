@@ -107,7 +107,12 @@ function SourceBadge({ source }: { source: "homepage" | "manuell" | "reservierun
 }
 
 function VorbezugBadge({ value }: { value?: string | null }) {
-  if (!value || value === "nein" || value === "keins") return <span className="text-muted-foreground/30">—</span>;
+  if (value === undefined || value === null || value === "") {
+    return <span className="text-xs text-muted-foreground/60 italic">keine Angabe</span>;
+  }
+  if (value === "nein" || value === "keins") {
+    return <span className="text-xs text-muted-foreground">keins</span>;
+  }
   // Bekannte Abrechnungszentren mit Farbcode. `mcc` ist hier bewusst nicht
   // gelistet — in `leads.abrechnungszentrum` existiert kein Datensatz mit
   // diesem Wert (Stand: DB-Distinct). Das `MCC` im Footer und im
