@@ -341,6 +341,7 @@ function LeadStatusCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult[
 
 function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult["lead"]> }) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [registering, setRegistering] = useState(false);
   const [sendingCreds, setSendingCreds] = useState(false);
@@ -369,7 +370,12 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
 
   const handleSendCreds = async () => {
     setSendingCreds(true);
-    const res = await sendQodiaCredentials({ leadId: lead.id, queryClient });
+    const res = await sendQodiaCredentials({
+      leadId: lead.id,
+      queryClient,
+      hfxCustomerNumber: lead.hfx_customer_number ?? null,
+      userId: user?.id ?? null,
+    });
     setSendingCreds(false);
     if (res.success) {
       toast({
@@ -707,12 +713,15 @@ function ContractCard({
 
 function ContractActions({ contract }: { contract: ContractRow }) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [pending, setPending] = useState<"mandate" | "resend-mandate" | "link" | "confirm" | null>(null);
   const [confirmOpen, setConfirmOpen] = useState<"resend-mandate" | "confirm" | null>(null);
 
   const status = (contract.status ?? "entwurf").toLowerCase();
   const mandateSent = !!contract.mandate_email_sent_at;
+  const hfxNum = (contract.hfx_customer_number as string | null | undefined) ?? null;
+  const userId = user?.id ?? null;
 
   const phase: "entwurf" | "eingegangen" | "gezeichnet" | "aktiv" | "final" | "other" =
     status === "entwurf"
@@ -741,6 +750,8 @@ function ContractActions({ contract }: { contract: ContractRow }) {
       contractId: contract.id,
       force: false,
       queryClient,
+      hfxCustomerNumber: hfxNum,
+      userId,
     });
     setPending(null);
     if (res.success) {
@@ -761,6 +772,8 @@ function ContractActions({ contract }: { contract: ContractRow }) {
       contractId: contract.id,
       force: true,
       queryClient,
+      hfxCustomerNumber: hfxNum,
+      userId,
     });
     setPending(null);
     if (res.success) {
@@ -793,6 +806,8 @@ function ContractActions({ contract }: { contract: ContractRow }) {
     const res = await resendConfirmationMail({
       contractId: contract.id,
       queryClient,
+      hfxCustomerNumber: hfxNum,
+      userId,
     });
     setPending(null);
     if (res.success) {
