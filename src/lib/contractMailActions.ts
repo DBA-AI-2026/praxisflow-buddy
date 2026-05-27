@@ -1,13 +1,16 @@
 /**
  * contractMailActions — Helper für Mail-/Link-Aktionen rund um Verträge
- * (Etappe 3b-ii). Fire-and-toast pattern: Aufrufer zeigt Toast.
+ * (Etappe 3b-ii + 4). Fire-and-toast pattern: Aufrufer zeigt Toast.
  *
  * - sendMandateMail: invoked `send-mandate-setup` Edge Function
+ *   + customer_events MAIL_SENT_MANDATE (force differenziert)
  * - resendConfirmationMail: invoked `send-contract-confirmation`
+ *   + customer_events MAIL_SENT_CONFIRMATION
  * - copyBuchungslink: kopiert /buchen?contract_id=... in die Zwischenablage
  */
 import type { QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
+import { logCustomerEvent } from "@/lib/customerEvents";
 
 export interface MailActionResult {
   success: boolean;
@@ -19,14 +22,17 @@ function invalidateAfterMail(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: ["contracts"] });
   qc.invalidateQueries({ queryKey: ["kundenDialogData"] });
   qc.invalidateQueries({ queryKey: ["kunden-dialog-contracts"] });
+  qc.invalidateQueries({ queryKey: ["kunden-dialog-events"] });
 }
 
 export async function sendMandateMail(params: {
   contractId: string;
   force?: boolean;
   queryClient: QueryClient;
+  hfxCustomerNumber?: string | null;
+  userId?: string | null;
 }): Promise<MailActionResult> {
-  const { contractId, force = false, queryClient } = params;
+  const { contractId, force = false, queryClient, hfxCustomerNumber, userId } = params;
   try {
     const { data, error } = await supabase.functions.invoke("send-mandate-setup", {
       body: { contract_id: contractId, force },
@@ -35,6 +41,18 @@ export async function sendMandateMail(params: {
     if (data && typeof data === "object" && (data as any).skipped) {
       return { success: true, skipped: true };
     }
+    await logCustomerEvent({
+      eventType: "MAIL_SENT_MANDATE",
+      entityType: "contract",
+      entityId: contractId,
+      hfxCustomerNumber: hfxCustomerNumber ?? null,
+      contractId,
+      createdBy: userId ?? null,
+      eventData: {
+        force: force === true,
+        source: "kunden_dialog_vertrag_tab",
+      },
+    });
     invalidateAfterMail(queryClient);
     return { success: true };
   } catch (err: any) {
@@ -45,13 +63,24 @@ export async function sendMandateMail(params: {
 export async function resendConfirmationMail(params: {
   contractId: string;
   queryClient: QueryClient;
+  hfxCustomerNumber?: string | null;
+  userId?: string | null;
 }): Promise<MailActionResult> {
-  const { contractId, queryClient } = params;
+  const { contractId, queryClient, hfxCustomerNumber, userId } = params;
   try {
     const { error } = await supabase.functions.invoke("send-contract-confirmation", {
       body: { contract_id: contractId },
     });
     if (error) return { success: false, error: error.message };
+    await logCustomerEvent({
+      eventType: "MAIL_SENT_CONFIRMATION",
+      entityType: "contract",
+      entityId: contractId,
+      hfxCustomerNumber: hfxCustomerNumber ?? null,
+      contractId,
+      createdBy: userId ?? null,
+      eventData: { source: "kunden_dialog_vertrag_tab" },
+    });
     invalidateAfterMail(queryClient);
     return { success: true };
   } catch (err: any) {

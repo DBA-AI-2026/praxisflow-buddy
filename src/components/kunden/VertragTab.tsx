@@ -18,11 +18,13 @@ import {
   Plus,
   Check,
   ChevronDown,
+  ChevronRight,
   Mail,
   Link2,
   RefreshCw,
   Cloud,
   KeyRound,
+  ListChecks,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -107,14 +109,15 @@ import {
 
 interface VertragTabProps {
   data: UseKundenDialogDataResult;
+  onSwitchToTab?: (tab: string) => void;
 }
 
 const FINAL_STATUSES = ["beendet", "gekuendigt", "gesperrt"];
 
-export function VertragTab({ data }: VertragTabProps) {
+export function VertragTab({ data, onSwitchToTab }: VertragTabProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { contracts, isLoading, ssot, lead, customer, derivedPhase, cases } = data;
+  const { contracts, isLoading, ssot, lead, customer, derivedPhase, cases, hfxNumber } = data;
   const [newCaseOpen, setNewCaseOpen] = useState(false);
 
   const sorted = useMemo(() => {
@@ -186,7 +189,10 @@ export function VertragTab({ data }: VertragTabProps) {
       )}
 
       {cases.length > 0 && (
-        <CasesMiniList cases={cases} contracts={contracts} />
+        <CasesCounterLink
+          cases={cases}
+          onSwitchToVerlauf={() => onSwitchToTab?.("verlauf")}
+        />
       )}
 
       {showLeadStatusCard && <LeadStatusCard lead={lead!} />}
@@ -335,6 +341,7 @@ function LeadStatusCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult[
 
 function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult["lead"]> }) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [registering, setRegistering] = useState(false);
   const [sendingCreds, setSendingCreds] = useState(false);
@@ -363,7 +370,12 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
 
   const handleSendCreds = async () => {
     setSendingCreds(true);
-    const res = await sendQodiaCredentials({ leadId: lead.id, queryClient });
+    const res = await sendQodiaCredentials({
+      leadId: lead.id,
+      queryClient,
+      hfxCustomerNumber: lead.hfx_customer_number ?? null,
+      userId: user?.id ?? null,
+    });
     setSendingCreds(false);
     if (res.success) {
       toast({
@@ -701,12 +713,15 @@ function ContractCard({
 
 function ContractActions({ contract }: { contract: ContractRow }) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [pending, setPending] = useState<"mandate" | "resend-mandate" | "link" | "confirm" | null>(null);
   const [confirmOpen, setConfirmOpen] = useState<"resend-mandate" | "confirm" | null>(null);
 
   const status = (contract.status ?? "entwurf").toLowerCase();
   const mandateSent = !!contract.mandate_email_sent_at;
+  const hfxNum = (contract.hfx_customer_number as string | null | undefined) ?? null;
+  const userId = user?.id ?? null;
 
   const phase: "entwurf" | "eingegangen" | "gezeichnet" | "aktiv" | "final" | "other" =
     status === "entwurf"
@@ -735,6 +750,8 @@ function ContractActions({ contract }: { contract: ContractRow }) {
       contractId: contract.id,
       force: false,
       queryClient,
+      hfxCustomerNumber: hfxNum,
+      userId,
     });
     setPending(null);
     if (res.success) {
@@ -755,6 +772,8 @@ function ContractActions({ contract }: { contract: ContractRow }) {
       contractId: contract.id,
       force: true,
       queryClient,
+      hfxCustomerNumber: hfxNum,
+      userId,
     });
     setPending(null);
     if (res.success) {
@@ -787,6 +806,8 @@ function ContractActions({ contract }: { contract: ContractRow }) {
     const res = await resendConfirmationMail({
       contractId: contract.id,
       queryClient,
+      hfxCustomerNumber: hfxNum,
+      userId,
     });
     setPending(null);
     if (res.success) {
@@ -1096,83 +1117,35 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-/* ────────────────────── CasesMiniList (3b-ii Nachschlag) ────────────────────── */
+/* ────────────────────── CasesCounterLink (Etappe 4) ────────────────────── */
 
-function CasesMiniList({
+function CasesCounterLink({
   cases,
-  contracts,
+  onSwitchToVerlauf,
 }: {
   cases: CaseRow[];
-  contracts: ContractRow[];
+  onSwitchToVerlauf: () => void;
 }) {
-  const openCases = cases.filter((c) => c.status === "offen");
-  const closedCases = cases.filter((c) => c.status !== "offen");
+  const openCount = cases.filter((c) => c.status === "offen").length;
+  const closedCount = cases.filter((c) => c.status !== "offen").length;
 
   return (
-    <div className="rounded-lg border bg-card">
-      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-foreground">Vorgänge</span>
-          <span className="text-xs text-muted-foreground">
-            {openCases.length} offen
-            {closedCases.length > 0 && ` · ${closedCases.length} erledigt`}
-          </span>
+    <button
+      type="button"
+      onClick={onSwitchToVerlauf}
+      className="w-full rounded-lg border bg-card p-3 text-left hover:bg-muted/30 transition-colors flex items-center gap-3"
+    >
+      <ListChecks className="h-4 w-4 text-muted-foreground shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium">Vorgänge</div>
+        <div className="text-xs text-muted-foreground">
+          {openCount} offen
+          {closedCount > 0 && ` · ${closedCount} erledigt`}
+          {" — im Verlauf-Tab anzeigen"}
         </div>
       </div>
-
-      {openCases.length > 0 && (
-        <div className="divide-y">
-          {openCases.slice(0, 5).map((c) => (
-            <CaseRowItem key={c.id} caseItem={c} contracts={contracts} />
-          ))}
-          {openCases.length > 5 && (
-            <div className="px-4 py-2 text-xs text-muted-foreground">
-              + {openCases.length - 5} weitere offene Vorgänge — vollständig in Tab „Verlauf" (folgt in Etappe 4)
-            </div>
-          )}
-        </div>
-      )}
-
-      {openCases.length === 0 && closedCases.length > 0 && (
-        <div className="px-4 py-3 text-sm text-muted-foreground">
-          Keine offenen Vorgänge — {closedCases.length} erledigt
-        </div>
-      )}
-    </div>
+      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+    </button>
   );
 }
 
-function CaseRowItem({
-  caseItem,
-  contracts,
-}: {
-  caseItem: CaseRow;
-  contracts: ContractRow[];
-}) {
-  const contract = caseItem.contract_id
-    ? contracts.find((c) => c.id === caseItem.contract_id)
-    : null;
-  const typeLabel = CASE_TYPE_LABELS[caseItem.case_type] ?? caseItem.case_type;
-  const dateStr = caseItem.created_at
-    ? new Date(caseItem.created_at).toLocaleDateString("de-DE")
-    : "";
-
-  return (
-    <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50">
-      <Badge variant="outline" className="shrink-0 text-[10px]">
-        {typeLabel}
-      </Badge>
-      <span className="text-sm text-foreground truncate min-w-0 flex-1">
-        {caseItem.title}
-      </span>
-      {contract && (
-        <span className="text-xs text-muted-foreground font-mono shrink-0 hidden sm:inline">
-          {contract.contract_number ?? contract.id.slice(0, 8)}
-        </span>
-      )}
-      <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">
-        {dateStr}
-      </span>
-    </div>
-  );
-}

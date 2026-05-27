@@ -112,6 +112,19 @@ export type CaseRow = {
   notes: string | null;
 };
 
+export type EventRow = {
+  id: string;
+  event_type: string;
+  entity_type: "lead" | "contract";
+  entity_id: string;
+  hfx_customer_number: string | null;
+  lead_id: string | null;
+  contract_id: string | null;
+  event_data: Record<string, any>;
+  created_by: string | null;
+  created_at: string;
+};
+
 // Backwards-compatible alias
 
 type ContractOwnership = ContractRow;
@@ -134,6 +147,7 @@ export interface UseKundenDialogDataResult {
   customer: CustomerRow | null;
   contracts: ContractRow[];
   cases: CaseRow[];
+  events: EventRow[];
   ssot: "lead" | "customer";
   derivedPhase: KundenPhase;
   currentStatusLabel: string | null;
@@ -295,6 +309,33 @@ export function useKundenDialogData(
         .order("created_at", { ascending: false });
       if (error) throw error;
       return ((data ?? []) as unknown as CaseRow[]);
+    },
+  });
+
+  /* ---- Schritt 5: Events (customer_events) laden ---- */
+  const eventsQ = useQuery({
+    queryKey: [
+      "kunden-dialog-events",
+      leadQ.data?.id ?? null,
+      (contractsQ.data ?? []).map((c) => c.id).join(","),
+    ],
+    enabled:
+      enabled && (!!leadQ.data?.id || (contractsQ.data?.length ?? 0) > 0),
+    queryFn: async () => {
+      const orParts: string[] = [];
+      if (leadQ.data?.id) orParts.push(`lead_id.eq.${leadQ.data.id}`);
+      const contractIds = (contractsQ.data ?? []).map((c) => c.id);
+      if (contractIds.length) {
+        orParts.push(`contract_id.in.(${contractIds.join(",")})`);
+      }
+      if (orParts.length === 0) return [];
+      const { data, error } = await supabase
+        .from("customer_events" as any)
+        .select("*")
+        .or(orParts.join(","))
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return ((data ?? []) as unknown as EventRow[]);
     },
   });
 
@@ -576,6 +617,7 @@ export function useKundenDialogData(
     customer: customerQ.data ?? null,
     contracts: contractsQ.data ?? [],
     cases: casesQ.data ?? [],
+    events: eventsQ.data ?? [],
     ssot,
     derivedPhase,
     currentStatusLabel,

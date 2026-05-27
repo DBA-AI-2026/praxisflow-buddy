@@ -13,6 +13,7 @@
  */
 
 import { Check } from "lucide-react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ import {
 } from "@/hooks/useKundenDialogData";
 import { StammdatenTab } from "@/components/kunden/StammdatenTab";
 import { VertragTab } from "@/components/kunden/VertragTab";
+import { VerlaufTab } from "@/components/kunden/VerlaufTab";
 
 export type KundenPhase =
   | "lead"
@@ -216,27 +218,31 @@ function DialogShell({
         </div>
       )}
 
-      <Tabs defaultValue="stammdaten" className="mt-2">
-        <TabsList className="w-full">
-          <TabsTrigger value="stammdaten" className="flex-1">Stammdaten</TabsTrigger>
-          <TabsTrigger value="vertrag" className="flex-1">Vertrag & Aktionen</TabsTrigger>
-          <TabsTrigger value="verlauf" className="flex-1">Verlauf</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="stammdaten" className="mt-4">
-          <StammdatenTab data={data} />
-        </TabsContent>
-        <TabsContent value="vertrag" className="mt-4">
-          <VertragTab data={data} />
-        </TabsContent>
-        <TabsContent value="verlauf" className="mt-4">
-          <TabPlaceholder
-            label="Verlauf"
-            hint="Inhalt folgt in Etappe 4 — chronologische customer_events-Liste."
-          />
-        </TabsContent>
-      </Tabs>
+      <ControlledTabs data={data} />
     </>
+  );
+}
+
+function ControlledTabs({ data }: { data: UseKundenDialogDataResult }) {
+  const [activeTab, setActiveTab] = useState("stammdaten");
+  return (
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
+      <TabsList className="w-full">
+        <TabsTrigger value="stammdaten" className="flex-1">Stammdaten</TabsTrigger>
+        <TabsTrigger value="vertrag" className="flex-1">Vertrag & Aktionen</TabsTrigger>
+        <TabsTrigger value="verlauf" className="flex-1">Verlauf</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="stammdaten" className="mt-4">
+        <StammdatenTab data={data} />
+      </TabsContent>
+      <TabsContent value="vertrag" className="mt-4">
+        <VertragTab data={data} onSwitchToTab={setActiveTab} />
+      </TabsContent>
+      <TabsContent value="verlauf" className="mt-4">
+        <VerlaufTab data={data} />
+      </TabsContent>
+    </Tabs>
   );
 }
 
@@ -301,11 +307,3 @@ function PhasenStufenleiste({ currentPhase }: { currentPhase: KundenPhase }) {
   );
 }
 
-function TabPlaceholder({ label, hint }: { label: string; hint: string }) {
-  return (
-    <div className="rounded-lg border border-dashed bg-muted/30 p-8 text-center">
-      <div className="text-sm font-medium text-foreground">{label}</div>
-      <div className="mt-1 text-xs text-muted-foreground">{hint}</div>
-    </div>
-  );
-}
