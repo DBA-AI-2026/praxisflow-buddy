@@ -1,11 +1,13 @@
 /**
- * leadActions — Helper für Lead-bezogene externe Aktionen (Etappe 3b-ii).
+ * leadActions — Helper für Lead-bezogene externe Aktionen (Etappe 3b-ii + 4).
  *
  * - registerLeadAtQodia: Edge Function `sync-lead-qodia`
  * - sendQodiaCredentials: Edge Function `resend-lead-credentials`
+ *   + customer_events MAIL_SENT_CREDENTIALS
  */
 import type { QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
+import { logCustomerEvent } from "@/lib/customerEvents";
 
 export interface LeadActionResult {
   success: boolean;
@@ -18,6 +20,7 @@ function invalidateAfterLead(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: ["leads"] });
   qc.invalidateQueries({ queryKey: ["kundenDialogData"] });
   qc.invalidateQueries({ queryKey: ["kunden-dialog-lead"] });
+  qc.invalidateQueries({ queryKey: ["kunden-dialog-events"] });
 }
 
 export async function registerLeadAtQodia(params: {
@@ -48,8 +51,10 @@ export async function registerLeadAtQodia(params: {
 export async function sendQodiaCredentials(params: {
   leadId: string;
   queryClient: QueryClient;
+  hfxCustomerNumber?: string | null;
+  userId?: string | null;
 }): Promise<LeadActionResult> {
-  const { leadId, queryClient } = params;
+  const { leadId, queryClient, hfxCustomerNumber, userId } = params;
   try {
     const { data, error } = await supabase.functions.invoke("resend-lead-credentials", {
       body: { leadId },
@@ -57,6 +62,15 @@ export async function sendQodiaCredentials(params: {
     if (error) return { success: false, error: error.message };
     const r = (data ?? {}) as any;
     if (r.error) return { success: false, error: r.error };
+    await logCustomerEvent({
+      eventType: "MAIL_SENT_CREDENTIALS",
+      entityType: "lead",
+      entityId: leadId,
+      hfxCustomerNumber: hfxCustomerNumber ?? null,
+      leadId,
+      createdBy: userId ?? null,
+      eventData: { source: "kunden_dialog_vertrag_tab" },
+    });
     invalidateAfterLead(queryClient);
     return { success: true };
   } catch (err: any) {
