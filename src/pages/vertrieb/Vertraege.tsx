@@ -1158,6 +1158,9 @@ export default function Vertraege() {
   };
 
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  // Pre-System-Filter: aktiv && stripe_customer_id IS NULL. Bewusst scharf — eingegangen/gezeichnet
+  // ohne Stripe-ID ist Normalzustand in der Mandat-Phase und kein Pre-System-Bug.
+  const [preSystemFilter, setPreSystemFilter] = useState(false);
   const [sortField, setSortField] = useState<"created_at" | "updated_at">("created_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
