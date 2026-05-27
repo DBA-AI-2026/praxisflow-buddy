@@ -148,7 +148,7 @@ export function AnleitungDialog({ open, onOpenChange }: AnleitungDialogProps) {
                         <li>Digitale Unterschrift Vertriebler (Tablet/Gerät)</li>
                         <li>Digitale Unterschrift Kunde vor Ort</li>
                         <li>PDF wird automatisch generiert + Audit-Log</li>
-                        <li>Status: <em>Eingegangen</em> → Admin-Prüfung → <em>Aktiv</em></li>
+                        <li>Status: <em>Versendet, wartet auf Mandat</em> → Admin-Prüfung → <em>Aktiv</em></li>
                         <li>Vertrag + Begrüßungsmail gehen automatisch raus</li>
                       </ol>
                     </div>
