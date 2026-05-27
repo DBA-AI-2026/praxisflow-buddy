@@ -312,6 +312,33 @@ export function useKundenDialogData(
     },
   });
 
+  /* ---- Schritt 5: Events (customer_events) laden ---- */
+  const eventsQ = useQuery({
+    queryKey: [
+      "kunden-dialog-events",
+      leadQ.data?.id ?? null,
+      (contractsQ.data ?? []).map((c) => c.id).join(","),
+    ],
+    enabled:
+      enabled && (!!leadQ.data?.id || (contractsQ.data?.length ?? 0) > 0),
+    queryFn: async () => {
+      const orParts: string[] = [];
+      if (leadQ.data?.id) orParts.push(`lead_id.eq.${leadQ.data.id}`);
+      const contractIds = (contractsQ.data ?? []).map((c) => c.id);
+      if (contractIds.length) {
+        orParts.push(`contract_id.in.(${contractIds.join(",")})`);
+      }
+      if (orParts.length === 0) return [];
+      const { data, error } = await supabase
+        .from("customer_events" as any)
+        .select("*")
+        .or(orParts.join(","))
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return ((data ?? []) as unknown as EventRow[]);
+    },
+  });
+
   /* ---- Phase / SSOT / Status-Label ---- */
   const derivedPhase: KundenPhase = useMemo(() => {
     if (input?.type === "hfx" && input.forcePhase) return input.forcePhase;
@@ -590,6 +617,7 @@ export function useKundenDialogData(
     customer: customerQ.data ?? null,
     contracts: contractsQ.data ?? [],
     cases: casesQ.data ?? [],
+    events: eventsQ.data ?? [],
     ssot,
     derivedPhase,
     currentStatusLabel,
