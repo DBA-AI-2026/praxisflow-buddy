@@ -250,7 +250,7 @@ function renderEvent(event: EventRow): {
     case "MAIL_SENT_CONFIRMATION":
       return {
         icon: <Mail className="h-4 w-4 text-green-500" />,
-        label: "Bestätigungs-Mail gesendet",
+        label: d.force === true ? "Bestätigungs-Mail erneut gesendet" : "Bestätigungs-Mail gesendet",
       };
     case "MAIL_SENT_CREDENTIALS":
       return {

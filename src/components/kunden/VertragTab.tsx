@@ -805,16 +805,24 @@ function ContractActions({ contract }: { contract: ContractRow }) {
     setPending("confirm");
     const res = await resendConfirmationMail({
       contractId: contract.id,
+      force: true,
       queryClient,
       hfxCustomerNumber: hfxNum,
       userId,
     });
     setPending(null);
     if (res.success) {
-      toast({
-        title: "Bestätigungs-Mail erneut gesendet",
-        description: "E-Mail wurde an den Kunden verschickt.",
-      });
+      if (res.skipped) {
+        toast({
+          title: "Mail nicht erneut gesendet",
+          description: "Aus unbekanntem Grund übersprungen.",
+        });
+      } else {
+        toast({
+          title: "Bestätigungs-Mail erneut gesendet",
+          description: "E-Mail wurde an den Kunden verschickt.",
+        });
+      }
     } else {
       toast({ variant: "destructive", title: "Fehler", description: res.error });
     }
