@@ -307,11 +307,3 @@ function PhasenStufenleiste({ currentPhase }: { currentPhase: KundenPhase }) {
   );
 }
 
-function TabPlaceholder({ label, hint }: { label: string; hint: string }) {
-  return (
-    <div className="rounded-lg border border-dashed bg-muted/30 p-8 text-center">
-      <div className="text-sm font-medium text-foreground">{label}</div>
-      <div className="mt-1 text-xs text-muted-foreground">{hint}</div>
-    </div>
-  );
-}
