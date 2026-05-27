@@ -976,7 +976,7 @@ export default function Vertraege() {
             body: { contract_id: contractId },
           });
           if (mailError) throw mailError;
-          toast({ title: "✅ SEPA-Mandat-Mail gesendet", description: `SEPA-Aktivierungslink an ${variables.email} gesendet. Vertrag steht auf „Eingegangen".` });
+          toast({ title: "✅ SEPA-Mandat-Mail gesendet", description: `SEPA-Aktivierungslink an ${variables.email} gesendet. Vertrag steht auf „Versendet, wartet auf Mandat".` });
         } catch (emailErr: any) {
           console.error("Mandate setup email error:", emailErr);
           toast({ title: "SEPA-Mandat-Mail konnte nicht gesendet werden", description: emailErr.message, variant: "destructive" });
