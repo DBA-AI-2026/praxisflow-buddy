@@ -13,6 +13,7 @@
  */
 
 import { Check } from "lucide-react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ import {
 } from "@/hooks/useKundenDialogData";
 import { StammdatenTab } from "@/components/kunden/StammdatenTab";
 import { VertragTab } from "@/components/kunden/VertragTab";
+import { VerlaufTab } from "@/components/kunden/VerlaufTab";
 
 export type KundenPhase =
   | "lead"
