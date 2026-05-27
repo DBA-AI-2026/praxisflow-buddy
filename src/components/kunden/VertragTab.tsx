@@ -641,6 +641,16 @@ function ContractCard({
         <ContractStatusPill contract={contract} onChange={onStatusChange} busy={statusBusy} />
       </div>
 
+      {/* Pre-System-Hinweis: aktiv ohne Stripe-Customer (= kein SEPA-Mandat hinterlegt) */}
+      {(contract.status ?? "").toLowerCase() === "aktiv" && !contract.stripe_customer_id && (
+        <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-2.5 py-2 text-xs text-warning-foreground">
+          <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
+          <span>
+            Pre-System-Vertrag: aktiv, aber kein SEPA-Mandat hinterlegt. Mandat-Mail kann unten ausgelöst werden.
+          </span>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
         <Field label="Preis" value={price} />
         <Field label="Laufzeit" value={laufzeit} />
