@@ -218,27 +218,31 @@ function DialogShell({
         </div>
       )}
 
-      <Tabs defaultValue="stammdaten" className="mt-2">
-        <TabsList className="w-full">
-          <TabsTrigger value="stammdaten" className="flex-1">Stammdaten</TabsTrigger>
-          <TabsTrigger value="vertrag" className="flex-1">Vertrag & Aktionen</TabsTrigger>
-          <TabsTrigger value="verlauf" className="flex-1">Verlauf</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="stammdaten" className="mt-4">
-          <StammdatenTab data={data} />
-        </TabsContent>
-        <TabsContent value="vertrag" className="mt-4">
-          <VertragTab data={data} />
-        </TabsContent>
-        <TabsContent value="verlauf" className="mt-4">
-          <TabPlaceholder
-            label="Verlauf"
-            hint="Inhalt folgt in Etappe 4 — chronologische customer_events-Liste."
-          />
-        </TabsContent>
-      </Tabs>
+      <ControlledTabs data={data} />
     </>
+  );
+}
+
+function ControlledTabs({ data }: { data: UseKundenDialogDataResult }) {
+  const [activeTab, setActiveTab] = useState("stammdaten");
+  return (
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
+      <TabsList className="w-full">
+        <TabsTrigger value="stammdaten" className="flex-1">Stammdaten</TabsTrigger>
+        <TabsTrigger value="vertrag" className="flex-1">Vertrag & Aktionen</TabsTrigger>
+        <TabsTrigger value="verlauf" className="flex-1">Verlauf</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="stammdaten" className="mt-4">
+        <StammdatenTab data={data} />
+      </TabsContent>
+      <TabsContent value="vertrag" className="mt-4">
+        <VertragTab data={data} onSwitchToTab={setActiveTab} />
+      </TabsContent>
+      <TabsContent value="verlauf" className="mt-4">
+        <VerlaufTab data={data} />
+      </TabsContent>
+    </Tabs>
   );
 }
 
