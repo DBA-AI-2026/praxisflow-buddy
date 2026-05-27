@@ -347,7 +347,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { contract_id } = await req.json();
+    const { contract_id, force } = await req.json();
     if (!contract_id) {
       return new Response(JSON.stringify({ error: "contract_id required" }), {
         status: 400,
@@ -376,10 +376,16 @@ Deno.serve(async (req) => {
     }
 
     // Idempotency: skip if confirmation already sent (webhook retries / double-trigger guard)
-    if ((contract as any).confirmation_email_sent_at) {
-      console.log(`[send-contract-confirmation] Skip — confirmation_email_sent_at already set for ${contract_id}`);
+    // Override with force=true for explicit manual resends from the UI.
+    if ((contract as any).confirmation_email_sent_at && !force) {
+      console.log(`[send-contract-confirmation] Skip — confirmation_email_sent_at already set for ${contract_id} (force=false)`);
       return new Response(
-        JSON.stringify({ success: true, skipped: true, reason: "already_sent" }),
+        JSON.stringify({
+          success: true,
+          skipped: true,
+          reason: "already_sent",
+          confirmation_email_sent_at: (contract as any).confirmation_email_sent_at,
+        }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
