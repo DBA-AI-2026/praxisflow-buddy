@@ -918,6 +918,29 @@ function ContractActions({ contract }: { contract: ContractRow }) {
             Bestätigungs-Mail erneut senden
           </Button>
         )}
+
+        {/* Pre-System-Vertrag: aktiv ohne Stripe-Customer → Mandat-Mail nachträglich auslösen.
+            Erst-Versand (kein mandate_email_sent_at): direkt mit force=false.
+            Erneut-Versand (mandate_email_sent_at gesetzt, Stripe-ID aber weiterhin NULL):
+            force=true mit Confirm-Dialog (analog zur eingegangen-Phase). */}
+        {isPreSystemAktiv && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            disabled={anyPending}
+            onClick={() => (mandateSent ? setConfirmOpen("resend-mandate") : runMandateInitial())}
+          >
+            {pending === "mandate" || pending === "resend-mandate" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : mandateSent ? (
+              <RefreshCw className="h-3.5 w-3.5" />
+            ) : (
+              <Mail className="h-3.5 w-3.5" />
+            )}
+            {mandateSent ? "SEPA-Mandat-Mail erneut senden" : "SEPA-Mandat-Mail senden"}
+          </Button>
+        )}
       </div>
 
       <AlertDialog
