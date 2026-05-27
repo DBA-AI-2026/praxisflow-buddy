@@ -22,7 +22,7 @@ export const CONTRACT_STATUS_TOOLTIPS: Record<string, string> = {
   entwurf:
     "Vertrag ist angelegt, aber noch nicht aktiviert. Daten können noch ergänzt werden.",
   eingegangen:
-    "Vertrag ist aktiviert und die SEPA-Mandat-Mail ist versendet. Wartet auf Mandat-Erteilung durch den Kunden.",
+    "Vertragsdokumente sind beim Kunden, SEPA-Mandat steht noch aus.",
   gezeichnet:
     "Kunde hat die Buchung über den Buchungslink abgeschlossen. Wartet auf SEPA-Bestätigung über Stripe — wechselt automatisch auf Aktiv.",
   aktiv: "Vertrag läuft. SEPA-Mandat erteilt, Abrechnung läuft.",
