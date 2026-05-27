@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CONTRACT_STATUS_CONFIG } from "@/lib/statusConfig";
 import {
   Search,
   Building2,
@@ -45,16 +46,7 @@ import {
   ClipboardList,
 } from "lucide-react";
 
-// TODO Etappe 6 Cleanup: Duplikat von CONTRACT_STATUS_CONFIG aus @/lib/statusConfig — konsolidieren.
-const contractStatusConfig: Record<string, { label: string; color: string }> = {
-  entwurf: { label: "Entwurf", color: "bg-muted text-muted-foreground" },
-  eingegangen: { label: "Versendet, wartet auf Mandat", color: "bg-warning/10 text-warning" },
-  gezeichnet: { label: "Gezeichnet", color: "bg-primary/10 text-primary" },
-  aktiv: { label: "Aktiv", color: "bg-success/10 text-success" },
-  gekuendigt: { label: "Gekündigt", color: "bg-warning/10 text-warning" },
-  beendet: { label: "Beendet", color: "bg-destructive/10 text-destructive" },
-  gesperrt: { label: "Gesperrt", color: "bg-destructive/20 text-destructive" },
-};
+// Status-Config: SSOT in @/lib/statusConfig (CONTRACT_STATUS_CONFIG).
 
 const caseTypeLabels: Record<string, string> = {
   neuabschluss: "Neuabschluss",
@@ -426,14 +418,14 @@ function CustomerDetail({ customerId }: { customerId: string }) {
                     </thead>
                     <tbody className="divide-y divide-border/50">
                       {(contracts as any[]).map((ct) => {
-                        const sc = contractStatusConfig[ct.status] ?? { label: ct.status, color: "bg-muted text-muted-foreground" };
+                        const sc = CONTRACT_STATUS_CONFIG[ct.status as keyof typeof CONTRACT_STATUS_CONFIG] ?? { label: ct.status, class: "bg-muted text-muted-foreground" };
                         return (
                           <tr key={ct.id} className="hover:bg-muted/30 transition-colors">
                             <td className="py-2.5 pr-4 font-mono text-xs text-primary font-semibold whitespace-nowrap">{ct.contract_number || "–"}</td>
                             <td className="py-2.5 pr-4 font-medium">{ct.product_name}</td>
                             <td className="py-2.5 pr-4 text-right font-mono">{Number(ct.monthly_price).toFixed(2)} €</td>
                             <td className="py-2.5 pr-4">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${sc.color}`}>{sc.label}</span>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${sc.class}`}>{sc.label}</span>
                             </td>
                             <td className="py-2.5 text-muted-foreground text-xs">{ct.start_date ? format(new Date(ct.start_date), "dd.MM.yyyy", { locale: de }) : "–"}</td>
                           </tr>

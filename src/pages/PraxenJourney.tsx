@@ -41,6 +41,7 @@ import { ProductBadges, type ProductBadgeItem } from "@/components/pipeline/Prod
 
 import { useProviderStatusMap, useProductProviderFlags } from "@/hooks/useProviderStatus";
 import { useCustomerContractsMap } from "@/hooks/useCustomerContracts";
+import { CONTRACT_STATUS_CONFIG } from "@/lib/statusConfig";
 
 // ─── Status configs ──────────────────────────────────────────────────────────
 
@@ -53,15 +54,7 @@ const leadStatusCfg: Record<string, { label: string; cls: string; priority: numb
   abgelehnt:      { label: "Abgelehnt",      cls: "bg-destructive/10 text-destructive", priority: 11 },
 };
 
-// TODO Etappe 6 Cleanup: Duplikat von CONTRACT_STATUS_CONFIG aus @/lib/statusConfig — konsolidieren.
-const contractStatusCfg: Record<string, { label: string; cls: string }> = {
-  entwurf:     { label: "Entwurf",     cls: "bg-muted text-muted-foreground" },
-  eingegangen: { label: "Versendet, wartet auf Mandat", cls: "bg-warning/15 text-warning" },
-  gezeichnet:  { label: "Gezeichnet",  cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400" },
-  aktiv:       { label: "Aktiv",       cls: "bg-success/10 text-success" },
-  gekuendigt:  { label: "Gekündigt",   cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400" },
-  beendet:     { label: "Beendet",     cls: "bg-destructive/10 text-destructive" },
-};
+// Status-Config: SSOT in @/lib/statusConfig (CONTRACT_STATUS_CONFIG).
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -922,7 +915,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
       <div className="p-4 border-b border-border flex flex-wrap gap-2 items-center">
         <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={teamContracts.length} />
         {ABSCHLUSS_STATUSES.map((st) => {
-          const cfg = contractStatusCfg[st];
+          const cfg = CONTRACT_STATUS_CONFIG[st as keyof typeof CONTRACT_STATUS_CONFIG];
           if (!cfg) return null;
           return (
             <FilterPill
@@ -958,7 +951,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
             ) : sorted.length === 0 ? (
               <EmptyState icon={FileText} title="Keine Verträge in der Abschlussphase" sub="Neue Verträge erscheinen hier sobald ein Lead qualifiziert wird" />
             ) : sorted.map((c: any) => {
-              const sc = contractStatusCfg[c.status] ?? contractStatusCfg.entwurf;
+              const sc = CONTRACT_STATUS_CONFIG[c.status as keyof typeof CONTRACT_STATUS_CONFIG] ?? CONTRACT_STATUS_CONFIG.entwurf;
               const praxisLabel = c.praxis || c.customer_name || "–";
               const arztLabel = [c.vorname, c.nachname].filter(Boolean).join(" ") || null;
               const nextAction = getNextAction(c);

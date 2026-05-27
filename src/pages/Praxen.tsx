@@ -22,9 +22,9 @@ import { Separator } from "@/components/ui/separator";
 import {
   Plus, Search, Download, MoreHorizontal, Pencil, Trash2, RefreshCw,
   Loader2, UserCheck, FileText, Eye, Building2, Mail, Phone, MapPin,
-  Calendar, Euro, Package, GitMerge, CircleCheck, CircleOff, ArchiveX,
-  ShieldBan, FilePen, Upload, FileSignature, CheckCircle2, XCircle, Send,
+  Calendar, Euro, Package, GitMerge, CheckCircle2, XCircle, Send,
 } from "lucide-react";
+import { CONTRACT_STATUS_CONFIG } from "@/lib/statusConfig";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -66,16 +66,7 @@ const statusColors: Record<string, string> = {
   gekündigt: "badge-error",
 };
 
-// TODO Etappe 6 Cleanup: Duplikat von CONTRACT_STATUS_CONFIG aus @/lib/statusConfig — konsolidieren.
-const contractStatusConfig: Record<string, { label: string; class: string; icon: typeof FileText }> = {
-  entwurf: { label: "Entwurf", class: "bg-muted text-muted-foreground", icon: FilePen },
-  eingegangen: { label: "Versendet, wartet auf Mandat", class: "bg-warning/10 text-warning", icon: Upload },
-  gezeichnet: { label: "Gezeichnet", class: "bg-primary/10 text-primary", icon: FileSignature },
-  aktiv: { label: "Aktiv", class: "bg-success/10 text-success", icon: CircleCheck },
-  gekuendigt: { label: "Gekündigt", class: "bg-warning/10 text-warning", icon: CircleOff },
-  beendet: { label: "Beendet", class: "bg-destructive/10 text-destructive", icon: ArchiveX },
-  gesperrt: { label: "Gesperrt", class: "bg-destructive/20 text-destructive", icon: ShieldBan },
-};
+// Status-Config: SSOT in @/lib/statusConfig (CONTRACT_STATUS_CONFIG).
 
 export default function Praxen() {
   const [praxen, setPraxen] = useState<Praxis[]>([]);
@@ -723,7 +714,7 @@ export default function Praxen() {
                 ) : (
                   <div className="space-y-2">
                     {praxisContracts.map((contract) => {
-                      const cfg = contractStatusConfig[contract.status] || contractStatusConfig.entwurf;
+                      const cfg = CONTRACT_STATUS_CONFIG[contract.status as keyof typeof CONTRACT_STATUS_CONFIG] || CONTRACT_STATUS_CONFIG.entwurf;
                       const StatusIcon = cfg.icon;
                       const isNachtrag = !!contract.parent_contract_id;
                       return (
