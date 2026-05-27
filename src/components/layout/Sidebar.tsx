@@ -52,6 +52,7 @@ interface NavItem {
 const operativNav: NavItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Pipeline", href: "/pipeline", icon: Building2 },
+  { name: "Verträge", href: "/vertrieb/vertraege", icon: FileText },
   { name: "Provisionen", href: "/vertrieb/provisionen", icon: BarChart3 },
   { name: "Umsätze", href: "/umsaetze", icon: TrendingUp },
   { name: "Tipp-Leads", href: "/tipp-leads", icon: Lightbulb },
