@@ -18,11 +18,13 @@ import {
   Plus,
   Check,
   ChevronDown,
+  ChevronRight,
   Mail,
   Link2,
   RefreshCw,
   Cloud,
   KeyRound,
+  ListChecks,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -107,14 +109,15 @@ import {
 
 interface VertragTabProps {
   data: UseKundenDialogDataResult;
+  onSwitchToTab?: (tab: string) => void;
 }
 
 const FINAL_STATUSES = ["beendet", "gekuendigt", "gesperrt"];
 
-export function VertragTab({ data }: VertragTabProps) {
+export function VertragTab({ data, onSwitchToTab }: VertragTabProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { contracts, isLoading, ssot, lead, customer, derivedPhase, cases } = data;
+  const { contracts, isLoading, ssot, lead, customer, derivedPhase, cases, hfxNumber } = data;
   const [newCaseOpen, setNewCaseOpen] = useState(false);
 
   const sorted = useMemo(() => {
@@ -186,7 +189,10 @@ export function VertragTab({ data }: VertragTabProps) {
       )}
 
       {cases.length > 0 && (
-        <CasesMiniList cases={cases} contracts={contracts} />
+        <CasesCounterLink
+          cases={cases}
+          onSwitchToVerlauf={() => onSwitchToTab?.("verlauf")}
+        />
       )}
 
       {showLeadStatusCard && <LeadStatusCard lead={lead!} />}
