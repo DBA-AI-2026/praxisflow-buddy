@@ -1271,10 +1271,13 @@ export default function Vertraege() {
         c.email?.toLowerCase().includes(q) ||
         c.rechnungs_email?.toLowerCase().includes(q);
       const matchesStatus = statusFilter ? c.status === statusFilter : true;
+      const matchesPreSystem = preSystemFilter
+        ? c.status === "aktiv" && !c.stripe_customer_id
+        : true;
       const matchesTeam = isRegionalLead
         ? matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by)
         : true;
-      return matchesSearch && matchesStatus && matchesTeam;
+      return matchesSearch && matchesStatus && matchesPreSystem && matchesTeam;
     })
     .sort((a: any, b: any) => {
       const aVal = new Date(a[sortField] || 0).getTime();
