@@ -1117,83 +1117,35 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-/* ────────────────────── CasesMiniList (3b-ii Nachschlag) ────────────────────── */
+/* ────────────────────── CasesCounterLink (Etappe 4) ────────────────────── */
 
-function CasesMiniList({
+function CasesCounterLink({
   cases,
-  contracts,
+  onSwitchToVerlauf,
 }: {
   cases: CaseRow[];
-  contracts: ContractRow[];
+  onSwitchToVerlauf: () => void;
 }) {
-  const openCases = cases.filter((c) => c.status === "offen");
-  const closedCases = cases.filter((c) => c.status !== "offen");
+  const openCount = cases.filter((c) => c.status === "offen").length;
+  const closedCount = cases.filter((c) => c.status !== "offen").length;
 
   return (
-    <div className="rounded-lg border bg-card">
-      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-foreground">Vorgänge</span>
-          <span className="text-xs text-muted-foreground">
-            {openCases.length} offen
-            {closedCases.length > 0 && ` · ${closedCases.length} erledigt`}
-          </span>
+    <button
+      type="button"
+      onClick={onSwitchToVerlauf}
+      className="w-full rounded-lg border bg-card p-3 text-left hover:bg-muted/30 transition-colors flex items-center gap-3"
+    >
+      <ListChecks className="h-4 w-4 text-muted-foreground shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium">Vorgänge</div>
+        <div className="text-xs text-muted-foreground">
+          {openCount} offen
+          {closedCount > 0 && ` · ${closedCount} erledigt`}
+          {" — im Verlauf-Tab anzeigen"}
         </div>
       </div>
-
-      {openCases.length > 0 && (
-        <div className="divide-y">
-          {openCases.slice(0, 5).map((c) => (
-            <CaseRowItem key={c.id} caseItem={c} contracts={contracts} />
-          ))}
-          {openCases.length > 5 && (
-            <div className="px-4 py-2 text-xs text-muted-foreground">
-              + {openCases.length - 5} weitere offene Vorgänge — vollständig in Tab „Verlauf" (folgt in Etappe 4)
-            </div>
-          )}
-        </div>
-      )}
-
-      {openCases.length === 0 && closedCases.length > 0 && (
-        <div className="px-4 py-3 text-sm text-muted-foreground">
-          Keine offenen Vorgänge — {closedCases.length} erledigt
-        </div>
-      )}
-    </div>
+      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+    </button>
   );
 }
 
-function CaseRowItem({
-  caseItem,
-  contracts,
-}: {
-  caseItem: CaseRow;
-  contracts: ContractRow[];
-}) {
-  const contract = caseItem.contract_id
-    ? contracts.find((c) => c.id === caseItem.contract_id)
-    : null;
-  const typeLabel = CASE_TYPE_LABELS[caseItem.case_type] ?? caseItem.case_type;
-  const dateStr = caseItem.created_at
-    ? new Date(caseItem.created_at).toLocaleDateString("de-DE")
-    : "";
-
-  return (
-    <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50">
-      <Badge variant="outline" className="shrink-0 text-[10px]">
-        {typeLabel}
-      </Badge>
-      <span className="text-sm text-foreground truncate min-w-0 flex-1">
-        {caseItem.title}
-      </span>
-      {contract && (
-        <span className="text-xs text-muted-foreground font-mono shrink-0 hidden sm:inline">
-          {contract.contract_number ?? contract.id.slice(0, 8)}
-        </span>
-      )}
-      <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">
-        {dateStr}
-      </span>
-    </div>
-  );
-}
