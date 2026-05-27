@@ -53,9 +53,10 @@ const leadStatusCfg: Record<string, { label: string; cls: string; priority: numb
   abgelehnt:      { label: "Abgelehnt",      cls: "bg-destructive/10 text-destructive", priority: 11 },
 };
 
+// TODO Etappe 6 Cleanup: Duplikat von CONTRACT_STATUS_CONFIG aus @/lib/statusConfig — konsolidieren.
 const contractStatusCfg: Record<string, { label: string; cls: string }> = {
   entwurf:     { label: "Entwurf",     cls: "bg-muted text-muted-foreground" },
-  eingegangen: { label: "Eingegangen", cls: "bg-warning/15 text-warning" },
+  eingegangen: { label: "Versendet, wartet auf Mandat", cls: "bg-warning/15 text-warning" },
   gezeichnet:  { label: "Gezeichnet",  cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400" },
   aktiv:       { label: "Aktiv",       cls: "bg-success/10 text-success" },
   gekuendigt:  { label: "Gekündigt",   cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400" },
