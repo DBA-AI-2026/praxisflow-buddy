@@ -112,6 +112,19 @@ export type CaseRow = {
   notes: string | null;
 };
 
+export type EventRow = {
+  id: string;
+  event_type: string;
+  entity_type: "lead" | "contract";
+  entity_id: string;
+  hfx_customer_number: string | null;
+  lead_id: string | null;
+  contract_id: string | null;
+  event_data: Record<string, any>;
+  created_by: string | null;
+  created_at: string;
+};
+
 // Backwards-compatible alias
 
 type ContractOwnership = ContractRow;
@@ -134,6 +147,7 @@ export interface UseKundenDialogDataResult {
   customer: CustomerRow | null;
   contracts: ContractRow[];
   cases: CaseRow[];
+  events: EventRow[];
   ssot: "lead" | "customer";
   derivedPhase: KundenPhase;
   currentStatusLabel: string | null;
