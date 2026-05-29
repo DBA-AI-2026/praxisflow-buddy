@@ -297,16 +297,46 @@ export default function LeadCleanup() {
                   Vor dem Löschen wird automatisch ein JSON-Recovery-Export aller ausgewählten Datensätze heruntergeladen.
                   Schlägt der Download fehl, wird nichts gelöscht.
                 </p>
-                <p className="text-warning">
-                  Hinweis: Verknüpfte Audit-Einträge in <code>plz_assignment_log</code> und <code>customer_events</code>{" "}
-                  bleiben bewusst als historische Spur erhalten und werden nicht mitgelöscht.
-                </p>
-                {selectedRows.some((l) => l.hfx_customer_number && contractHfx.has(l.hfx_customer_number)) && (
-                  <p className="text-destructive">
-                    Achtung: Mindestens ein ausgewählter Lead hat einen verknüpften Vertrag. Verträge werden NICHT mitgelöscht
-                    und bleiben mit ihrer HFX-Nummer bestehen.
-                  </p>
-                )}
+                {(() => {
+                  const contractRows = selectedRows.filter((l) => l.hfx_customer_number && contractHfx.has(l.hfx_customer_number));
+                  const customerRows = selectedRows.filter((l) => l.status === "kunde" || convertedLeadIds.has(l.id));
+                  const escalate = contractRows.length > 0 || customerRows.length > 0;
+                  if (!escalate) {
+                    return (
+                      <p className="text-warning">
+                        Hinweis: Verknüpfte Audit-Einträge in <code>plz_assignment_log</code> und <code>customer_events</code>{" "}
+                        bleiben bewusst als historische Spur erhalten und werden nicht mitgelöscht.
+                      </p>
+                    );
+                  }
+                  return (
+                    <div className="space-y-2 rounded-md border border-destructive bg-destructive/10 p-3">
+                      <p className="font-semibold text-destructive">
+                        ⚠ Eskalations-Warnung: echte Geschäftsobjekte in der Auswahl
+                      </p>
+                      <ul className="list-disc pl-5 text-sm text-destructive">
+                        {customerRows.length > 0 && (
+                          <li>
+                            {customerRows.length} Lead(s) sind <strong>bereits Kunde</strong>{" "}
+                            (status=&apos;kunde&apos; oder zu einer Praxis konvertiert).
+                          </li>
+                        )}
+                        {contractRows.length > 0 && (
+                          <li>
+                            {contractRows.length} Lead(s) haben einen <strong>verknüpften Vertrag</strong>.
+                            Verträge werden NICHT mitgelöscht und bleiben mit ihrer HFX-Nummer als Waisen bestehen.
+                          </li>
+                        )}
+                      </ul>
+                      <p className="text-xs text-muted-foreground">
+                        Vor dem Bestätigen prüfen, ob diese Datensätze wirklich Test-Daten sind. Produktivkunden bitte nicht löschen.
+                      </p>
+                      <p className="text-warning text-xs">
+                        Hinweis: <code>plz_assignment_log</code> und <code>customer_events</code> bleiben als Audit-Spur erhalten.
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
