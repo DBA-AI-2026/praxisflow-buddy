@@ -42,6 +42,7 @@ export default function LeadCleanup() {
   const [loading, setLoading] = useState(true);
   const [leads, setLeads] = useState<LeadRow[]>([]);
   const [contractHfx, setContractHfx] = useState<Set<string>>(new Set());
+  const [convertedLeadIds, setConvertedLeadIds] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
