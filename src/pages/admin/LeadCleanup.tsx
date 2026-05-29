@@ -42,6 +42,7 @@ export default function LeadCleanup() {
   const [loading, setLoading] = useState(true);
   const [leads, setLeads] = useState<LeadRow[]>([]);
   const [contractHfx, setContractHfx] = useState<Set<string>>(new Set());
+  const [convertedLeadIds, setConvertedLeadIds] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -66,6 +67,7 @@ export default function LeadCleanup() {
     const rows = (data ?? []) as LeadRow[];
     setLeads(rows);
     const hfxNumbers = rows.map((l) => l.hfx_customer_number).filter(Boolean) as string[];
+    const ids = rows.map((l) => l.id);
     if (hfxNumbers.length > 0) {
       const { data: contracts } = await supabase
         .from("contracts")
@@ -74,6 +76,15 @@ export default function LeadCleanup() {
       setContractHfx(new Set((contracts ?? []).map((c) => c.hfx_customer_number).filter(Boolean) as string[]));
     } else {
       setContractHfx(new Set());
+    }
+    if (ids.length > 0) {
+      const { data: praxen } = await supabase
+        .from("praxen")
+        .select("converted_from_lead_id")
+        .in("converted_from_lead_id", ids);
+      setConvertedLeadIds(new Set((praxen ?? []).map((p) => p.converted_from_lead_id).filter(Boolean) as string[]));
+    } else {
+      setConvertedLeadIds(new Set());
     }
     setLoading(false);
   };
@@ -243,6 +254,7 @@ export default function LeadCleanup() {
             ) : (
               filtered.map((l) => {
                 const hasContract = !!(l.hfx_customer_number && contractHfx.has(l.hfx_customer_number));
+                const isCustomer = l.status === "kunde" || convertedLeadIds.has(l.id);
                 return (
                   <TableRow key={l.id} data-state={selected.has(l.id) ? "selected" : undefined}>
                     <TableCell>
@@ -260,6 +272,7 @@ export default function LeadCleanup() {
                     <TableCell><Badge variant="outline">{l.status ?? "—"}</Badge></TableCell>
                     <TableCell className="text-xs">{l.source ?? "—"}</TableCell>
                     <TableCell className="space-x-1">
+                      {isCustomer && <Badge variant="destructive">bereits Kunde</Badge>}
                       {hasContract && <Badge variant="destructive">hat Vertrag</Badge>}
                       {l.qodia_synced && <Badge variant="secondary">Qodia</Badge>}
                     </TableCell>
@@ -284,16 +297,46 @@ export default function LeadCleanup() {
                   Vor dem Löschen wird automatisch ein JSON-Recovery-Export aller ausgewählten Datensätze heruntergeladen.
                   Schlägt der Download fehl, wird nichts gelöscht.
                 </p>
-                <p className="text-warning">
-                  Hinweis: Verknüpfte Audit-Einträge in <code>plz_assignment_log</code> und <code>customer_events</code>{" "}
-                  bleiben bewusst als historische Spur erhalten und werden nicht mitgelöscht.
-                </p>
-                {selectedRows.some((l) => l.hfx_customer_number && contractHfx.has(l.hfx_customer_number)) && (
-                  <p className="text-destructive">
-                    Achtung: Mindestens ein ausgewählter Lead hat einen verknüpften Vertrag. Verträge werden NICHT mitgelöscht
-                    und bleiben mit ihrer HFX-Nummer bestehen.
-                  </p>
-                )}
+                {(() => {
+                  const contractRows = selectedRows.filter((l) => l.hfx_customer_number && contractHfx.has(l.hfx_customer_number));
+                  const customerRows = selectedRows.filter((l) => l.status === "kunde" || convertedLeadIds.has(l.id));
+                  const escalate = contractRows.length > 0 || customerRows.length > 0;
+                  if (!escalate) {
+                    return (
+                      <p className="text-warning">
+                        Hinweis: Verknüpfte Audit-Einträge in <code>plz_assignment_log</code> und <code>customer_events</code>{" "}
+                        bleiben bewusst als historische Spur erhalten und werden nicht mitgelöscht.
+                      </p>
+                    );
+                  }
+                  return (
+                    <div className="space-y-2 rounded-md border border-destructive bg-destructive/10 p-3">
+                      <p className="font-semibold text-destructive">
+                        ⚠ Eskalations-Warnung: echte Geschäftsobjekte in der Auswahl
+                      </p>
+                      <ul className="list-disc pl-5 text-sm text-destructive">
+                        {customerRows.length > 0 && (
+                          <li>
+                            {customerRows.length} Lead(s) sind <strong>bereits Kunde</strong>{" "}
+                            (status=&apos;kunde&apos; oder zu einer Praxis konvertiert).
+                          </li>
+                        )}
+                        {contractRows.length > 0 && (
+                          <li>
+                            {contractRows.length} Lead(s) haben einen <strong>verknüpften Vertrag</strong>.
+                            Verträge werden NICHT mitgelöscht und bleiben mit ihrer HFX-Nummer als Waisen bestehen.
+                          </li>
+                        )}
+                      </ul>
+                      <p className="text-xs text-muted-foreground">
+                        Vor dem Bestätigen prüfen, ob diese Datensätze wirklich Test-Daten sind. Produktivkunden bitte nicht löschen.
+                      </p>
+                      <p className="text-warning text-xs">
+                        Hinweis: <code>plz_assignment_log</code> und <code>customer_events</code> bleiben als Audit-Spur erhalten.
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
