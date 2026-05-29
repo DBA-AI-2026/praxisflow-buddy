@@ -67,6 +67,7 @@ export default function LeadCleanup() {
     const rows = (data ?? []) as LeadRow[];
     setLeads(rows);
     const hfxNumbers = rows.map((l) => l.hfx_customer_number).filter(Boolean) as string[];
+    const ids = rows.map((l) => l.id);
     if (hfxNumbers.length > 0) {
       const { data: contracts } = await supabase
         .from("contracts")
@@ -75,6 +76,15 @@ export default function LeadCleanup() {
       setContractHfx(new Set((contracts ?? []).map((c) => c.hfx_customer_number).filter(Boolean) as string[]));
     } else {
       setContractHfx(new Set());
+    }
+    if (ids.length > 0) {
+      const { data: praxen } = await supabase
+        .from("praxen")
+        .select("converted_from_lead_id")
+        .in("converted_from_lead_id", ids);
+      setConvertedLeadIds(new Set((praxen ?? []).map((p) => p.converted_from_lead_id).filter(Boolean) as string[]));
+    } else {
+      setConvertedLeadIds(new Set());
     }
     setLoading(false);
   };
