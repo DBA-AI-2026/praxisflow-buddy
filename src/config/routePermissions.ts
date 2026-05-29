@@ -89,6 +89,9 @@ export const routePermissions: RoutePermission[] = [
   // FiBu Reconciliation (Phase 1 Monitoring)
   { path: "/admin/fibu-reconciliation", allowedRoles: ["admin"] },
 
+  // Temporäres Admin-Tool: Test-Leads aufräumen
+  { path: "/admin/lead-cleanup", allowedRoles: ["admin"] },
+
 ];
 
 export function getRoutePermission(path: string): RoutePermission | undefined {

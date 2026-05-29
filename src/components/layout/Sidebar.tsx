@@ -25,6 +25,7 @@ import {
   FileSignature,
   ChevronUp,
   User,
+  AlertTriangle,
 } from "lucide-react";
 import logo from "@/assets/fuchs-bildmarke.png";
 import { useState } from "react";
@@ -85,6 +86,7 @@ const verwaltungNav: NavItem[] = [
   { name: "Einstellungen", href: "/admin/settings", icon: Settings },
   { name: "FiBu-Reconciliation", href: "/admin/fibu-reconciliation", icon: FileDown },
   { name: "Systemdokumentation", href: "/admin/documentation", icon: BookMarked },
+  { name: "Test-Leads aufräumen", href: "/admin/lead-cleanup", icon: AlertTriangle },
 ];
 
 interface NavSectionProps {
