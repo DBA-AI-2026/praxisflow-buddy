@@ -254,6 +254,7 @@ export default function LeadCleanup() {
             ) : (
               filtered.map((l) => {
                 const hasContract = !!(l.hfx_customer_number && contractHfx.has(l.hfx_customer_number));
+                const isCustomer = l.status === "kunde" || convertedLeadIds.has(l.id);
                 return (
                   <TableRow key={l.id} data-state={selected.has(l.id) ? "selected" : undefined}>
                     <TableCell>
@@ -271,6 +272,7 @@ export default function LeadCleanup() {
                     <TableCell><Badge variant="outline">{l.status ?? "—"}</Badge></TableCell>
                     <TableCell className="text-xs">{l.source ?? "—"}</TableCell>
                     <TableCell className="space-x-1">
+                      {isCustomer && <Badge variant="destructive">bereits Kunde</Badge>}
                       {hasContract && <Badge variant="destructive">hat Vertrag</Badge>}
                       {l.qodia_synced && <Badge variant="secondary">Qodia</Badge>}
                     </TableCell>
