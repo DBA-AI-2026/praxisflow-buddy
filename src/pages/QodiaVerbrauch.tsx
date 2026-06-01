@@ -44,6 +44,11 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/lib/supabaseClient";
 import { useProviderStatusMap } from "@/hooks/useProviderStatus";
+// SYNCHRONIZE: isPromo wird über isContractPromoActive aus src/lib/promoStatus.ts
+// berechnet. Nicht durch qodia_unit_price === 0 heuristisch raten — siehe JSDoc
+// dort für die Begründung.
+import { isContractPromoActive } from "@/lib/promoStatus";
+import { useQodiaProducts } from "@/hooks/useQodiaProducts";
 import {
   QodiaVerbrauchDetailSheet,
   type DashboardContract,
@@ -122,6 +127,13 @@ export default function QodiaVerbrauch() {
     provider: "qodia",
     enabled: contractIds.length > 0,
   });
+
+  // 2b) Produkt-Promo-Daten (echte Promo-Erkennung)
+  const productNames = useMemo(
+    () => (contracts ?? []).map((c) => c.product_name).filter(Boolean) as string[],
+    [contracts],
+  );
+  const { productMap } = useQodiaProducts(productNames);
 
   // 3) Current month aggregate
   const { data: currentAgg, isLoading: currentLoading } = useQuery({
@@ -341,7 +353,8 @@ export default function QodiaVerbrauch() {
                   </TableRow>
                 ) : (
                   filtered.map((r) => {
-                    const isPromo = Number(r.qodia_unit_price ?? 0) === 0;
+                    const product = productMap.get(r.product_name) ?? null;
+                    const isPromo = isContractPromoActive(r, product);
                     return (
                       <TableRow
                         key={r.id}
@@ -494,11 +507,22 @@ function SummaryCard({
 
 function QtyCell({ qty, net, isPromo }: { qty: number; net: number; isPromo: boolean }) {
   if (qty === 0 && net === 0) return <span className="text-muted-foreground">—</span>;
+  // Datenfehler: Verbrauch vorhanden, aber kein Stückpreis hinterlegt
+  // und es liegt KEINE aktive Produkt-Promo vor.
+  const isDataError = !isPromo && qty > 0 && net === 0;
+  if (isDataError) {
+    return (
+      <span>
+        <span className="font-medium">{qty}</span>
+        <span className="text-xs text-warning ml-1">(⚠ Datenfehler)</span>
+      </span>
+    );
+  }
   return (
     <span>
       <span className="font-medium">{qty}</span>
       <span className="text-xs text-muted-foreground ml-1">
-        ({isPromo ? "0,00 € — Promo" : `${net.toFixed(2)} €`})
+        ({net.toFixed(2)} €{isPromo ? " · Aktion" : ""})
       </span>
     </span>
   );

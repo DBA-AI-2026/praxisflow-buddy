@@ -25,6 +25,12 @@ import { format } from "date-fns";
 import { AlertTriangle, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+// SYNCHRONIZE: isPromo wird über isContractPromoActive aus src/lib/promoStatus.ts
+// berechnet. Nicht durch qodia_unit_price === 0 heuristisch raten — siehe JSDoc
+// dort für die Begründung.
+import { isContractPromoActive } from "@/lib/promoStatus";
+import { useQodiaProducts } from "@/hooks/useQodiaProducts";
+
 import { supabase } from "@/lib/supabaseClient";
 import {
   Sheet,
@@ -116,7 +122,16 @@ export function QodiaVerbrauchDetailSheet({
 }: Props) {
   const navigate = useNavigate();
   const contractId = contract?.id ?? null;
-  const isPromo = contract ? Number(contract.qodia_unit_price ?? 0) === 0 : false;
+
+  // Echte Promo-Erkennung über Produktdaten (siehe src/lib/promoStatus.ts).
+  const { productMap } = useQodiaProducts(
+    contract?.product_name ? [contract.product_name] : [],
+  );
+  const product = contract?.product_name
+    ? productMap.get(contract.product_name) ?? null
+    : null;
+  const isPromo = contract ? isContractPromoActive(contract, product) : false;
+  const promoTooltip = product?.promo_price_label ?? undefined;
 
   const { data: charges, isLoading } = useQuery({
     queryKey: ["qodia-detail-charges", contractId],
@@ -154,9 +169,10 @@ export function QodiaVerbrauchDetailSheet({
             {isPromo && (
               <Badge
                 variant="outline"
+                title={promoTooltip}
                 className="ml-2 bg-primary/10 text-primary border-primary/40 text-[10px]"
               >
-                Promo
+                Aktionspreis
               </Badge>
             )}
           </SheetDescription>
@@ -251,7 +267,10 @@ function ChargesSection({
             className: "bg-muted text-muted-foreground border-border",
           };
           const isUngeklaert = c.status === "ungeklaert";
-          const isPromoRow = isPromo && Number(c.net_amount) === 0 && c.quantity > 0;
+          // Datenfehler: Verbrauch vorhanden, aber kein Stückpreis hinterlegt
+          // und es liegt KEINE aktive Produkt-Promo vor.
+          const isDataError =
+            !isPromo && c.quantity > 0 && Number(c.net_amount) === 0;
           const invoiceNo = c.invoices?.invoice_number ?? null;
           const invoiceDate = c.invoices?.invoice_date
             ? format(new Date(c.invoices.invoice_date), "dd.MM.yyyy")
@@ -274,12 +293,13 @@ function ChargesSection({
                   </div>
                   <div className="mt-1 text-xs tabular-nums">
                     {c.quantity} Stk · {Number(c.net_amount).toFixed(2)} €
-                    {isPromoRow && (
-                      <span className="ml-2 text-muted-foreground italic">
-                        Promo (kein Verbrauchsentgelt)
-                      </span>
-                    )}
                   </div>
+                  {isDataError && (
+                    <div className="mt-1.5 flex items-start gap-1.5 text-xs text-warning">
+                      <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                      <span>Stückpreis fehlt — Datenfehler.</span>
+                    </div>
+                  )}
                   {invoiceNo && (
                     <button
                       type="button"
