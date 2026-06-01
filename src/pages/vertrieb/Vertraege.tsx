@@ -1059,8 +1059,17 @@ export default function Vertraege() {
       }
       closeDialog();
     },
-    onError: (err: Error) => {
+    onError: (err: any) => {
       console.error("upsertMutation error:", err);
+      if (err?.__statusGuardFail) {
+        const isMandate = /SEPA|Mandat/i.test(err.message ?? "");
+        toast({
+          title: isMandate ? "⚠️ SEPA-Mandat fehlt" : "Statuswechsel nicht möglich",
+          description: err.message,
+          variant: "destructive",
+        });
+        return;
+      }
       if (err.message === "SEPA_MANDATE_MISSING") {
         toast({
           title: "⚠️ SEPA-Mandat fehlt",
