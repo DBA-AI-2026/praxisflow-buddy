@@ -218,7 +218,7 @@ function SalesPartnerCombobox({
   );
 }
 
-import { CONTRACT_STATUS_CONFIG as statusConfig } from "@/lib/statusConfig";
+import { CONTRACT_STATUS_CONFIG as statusConfig, CONTRACT_STATUS_ORDER } from "@/lib/statusConfig";
 import { changeContractStatus } from "@/lib/contractStatusActions";
 
 const LOCKED_STATUSES = ["aktiv", "eingegangen", "gekuendigt", "beendet", "gesperrt", "gezeichnet"];
@@ -763,15 +763,42 @@ export default function Vertraege() {
 
       let contractId = editId;
       let previousContractStatus: string | null = null;
+      let statusRoutedThroughGuard = false;
       if (editId) {
-        // Capture old status BEFORE update for customer_events log (edit only)
+        // Lade vollständige DB-Row für Status-Guard (Mandat-Check, Side-Effects)
         const { data: before } = await supabase
           .from("contracts")
-          .select("status")
+          .select("*")
           .eq("id", editId)
           .maybeSingle();
         previousContractStatus = (before as any)?.status ?? null;
-        const { error } = await supabase.from("contracts").update(record).eq("id", editId);
+
+        // Wenn Status sich ändert → zwingend durch changeContractStatus (Mandat-Guard, customer_events, leads→kunde, praxen, fibu)
+        if (previousContractStatus && previousContractStatus !== data.status) {
+          const result = await changeContractStatus({
+            contractId: editId,
+            newStatus: data.status,
+            oldStatus: previousContractStatus,
+            hfxCustomerNumber: (before as any)?.hfx_customer_number ?? null,
+            userId: user?.id ?? null,
+            queryClient,
+            contract: before as any,
+            source: "vertraege_edit_modal",
+          });
+          if (!result.success) {
+            // Hartstopp: kein Teilerfolg. Modal bleibt offen, restliche Felder werden NICHT gespeichert.
+            const err: any = new Error(result.error ?? "Statuswechsel fehlgeschlagen");
+            err.__statusGuardFail = true;
+            throw err;
+          }
+          statusRoutedThroughGuard = true;
+        }
+
+        // Restliche Felder speichern. Status-Feld bei Guard-Route entfernen (changeContractStatus hat es bereits gesetzt
+        // inkl. approved_by/approved_at — kein doppeltes Überschreiben).
+        const restRecord = { ...record };
+        if (statusRoutedThroughGuard) delete (restRecord as any).status;
+        const { error } = await supabase.from("contracts").update(restRecord).eq("id", editId);
         if (error) throw error;
       } else {
         const { data: inserted, error } = await supabase.from("contracts").insert(record).select("id").single();
@@ -779,8 +806,9 @@ export default function Vertraege() {
         contractId = inserted.id;
       }
 
-      // Log status change (edit only, only if status actually changed) — fire-and-forget
-      if (editId && contractId && previousContractStatus && previousContractStatus !== data.status) {
+      // Audit-Event nur noch nötig, wenn der Statuswechsel NICHT durch changeContractStatus lief
+      // (z. B. Insert mit status=aktiv — separater Pfad). Bei Edit + Status-Change ist das Event bereits gesetzt.
+      if (editId && contractId && previousContractStatus && previousContractStatus !== data.status && !statusRoutedThroughGuard) {
         logCustomerStatusChange({
           eventType: "CONTRACT_STATUS_CHANGED",
           entityType: "contract",
@@ -793,6 +821,7 @@ export default function Vertraege() {
           createdBy: user?.id ?? null,
         });
       }
+
 
       // Log signature audit trail for active contracts
       if (data.status !== "entwurf" && contractId && (sigData || vertriebSigData)) {
@@ -1030,8 +1059,17 @@ export default function Vertraege() {
       }
       closeDialog();
     },
-    onError: (err: Error) => {
+    onError: (err: any) => {
       console.error("upsertMutation error:", err);
+      if (err?.__statusGuardFail) {
+        const isMandate = /SEPA|Mandat/i.test(err.message ?? "");
+        toast({
+          title: isMandate ? "⚠️ SEPA-Mandat fehlt" : "Statuswechsel nicht möglich",
+          description: err.message,
+          variant: "destructive",
+        });
+        return;
+      }
       if (err.message === "SEPA_MANDATE_MISSING") {
         toast({
           title: "⚠️ SEPA-Mandat fehlt",
@@ -2372,21 +2410,31 @@ export default function Vertraege() {
                               <DropdownMenuItem
                                 className="text-success"
                                 onClick={async () => {
-                                  const { error } = await supabase.from("contracts").update({ status: "aktiv", approved_by: user?.id, approved_at: new Date().toISOString() } as any).eq("id", c.id);
-                                  if (error) { toast({ title: "Fehler", description: error.message, variant: "destructive" }); return; }
-                                  // Freigabe wird nur auf Verträgen im Status "gezeichnet" angeboten — alter Status ist deterministisch
-                                  logCustomerStatusChange({
-                                    eventType: "CONTRACT_STATUS_CHANGED",
-                                    entityType: "contract",
-                                    entityId: c.id,
-                                    oldStatus: "gezeichnet",
-                                    newStatus: "aktiv",
-                                    source: "vertraege_freigabe",
-                                    hfxCustomerNumber: c.hfx_customer_number ?? null,
+                                  const result = await changeContractStatus({
                                     contractId: c.id,
-                                    createdBy: user?.id ?? null,
+                                    newStatus: "aktiv",
+                                    oldStatus: "gezeichnet",
+                                    hfxCustomerNumber: c.hfx_customer_number ?? null,
+                                    userId: user?.id ?? null,
+                                    queryClient,
+                                    contract: c as any,
+                                    source: "vertraege_freigeben_button",
                                   });
-                                  queryClient.invalidateQueries({ queryKey: ["contracts"] });
+                                  if (!result.success) {
+                                    const isMandate = /SEPA|Mandat/i.test(result.error ?? "");
+                                    toast({
+                                      title: isMandate ? "⚠️ SEPA-Mandat fehlt" : "Fehler",
+                                      description: result.error,
+                                      variant: "destructive",
+                                    });
+                                    return;
+                                  }
+                                  if (result.praxenCreated) {
+                                    toast({
+                                      title: "✅ Kunde angelegt",
+                                      description: `${c.praxis || c.customer_name} wurde erfolgreich als Kunden hinterlegt.`,
+                                    });
+                                  }
                                   toast({ title: "Vertrag freigegeben", description: "Status auf Aktiv gesetzt." });
                                 }}
                               >
@@ -3112,11 +3160,9 @@ export default function Vertraege() {
                 <Select value={form.status} onValueChange={(v) => set("status", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="entwurf">Entwurf</SelectItem>
-                    <SelectItem value="aktiv">Aktiv</SelectItem>
-                    <SelectItem value="gekuendigt">Gekündigt</SelectItem>
-                    <SelectItem value="beendet">Beendet</SelectItem>
-                    <SelectItem value="gesperrt">Gesperrt</SelectItem>
+                    {CONTRACT_STATUS_ORDER.map((s) => (
+                      <SelectItem key={s} value={s}>{statusConfig[s].label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
