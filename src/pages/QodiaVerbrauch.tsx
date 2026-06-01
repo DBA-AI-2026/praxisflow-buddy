@@ -353,7 +353,8 @@ export default function QodiaVerbrauch() {
                   </TableRow>
                 ) : (
                   filtered.map((r) => {
-                    const isPromo = Number(r.qodia_unit_price ?? 0) === 0;
+                    const product = productMap.get(r.product_name) ?? null;
+                    const isPromo = isContractPromoActive(r, product);
                     return (
                       <TableRow
                         key={r.id}
