@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, rgb, StandardFonts } from "npm:pdf-lib@1.17.1";
+import { isContractPromoActive } from "../_shared/promoStatus.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -64,8 +66,36 @@ function findBestProductMatch(products: ProductWithAgb[], candidates: Array<stri
   }) ?? null;
 }
 
-async function buildContractPdf(contract: Record<string, unknown>, logoBytes?: ArrayBuffer): Promise<Uint8Array> {
+type AddonModuleLike = { name: string; monthly_price: number | null };
+type PromoProductFull = {
+  name: string;
+  promo_price: number | null;
+  promo_end_date: string | null;
+  promo_price_label: string | null;
+  promo_base_fee_end_date: string | null;
+  monthly_price: number | null;
+  price_per_unit: number | null;
+  price_per_unit_label: string | null;
+};
+
+type BuildExtras = {
+  addonModules?: AddonModuleLike[];
+  promoProduct?: PromoProductFull | null;
+};
+
+function maskIban(iban: string | null | undefined): string {
+  if (!iban || String(iban).replace(/\s/g, "").length < 4) return "–";
+  const clean = String(iban).replace(/\s/g, "");
+  return `••••${clean.slice(-4)}`;
+}
+
+async function buildContractPdf(
+  contract: Record<string, unknown>,
+  logoBytes?: ArrayBuffer,
+  extras: BuildExtras = {},
+): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
+
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
 
@@ -205,20 +235,22 @@ async function buildContractPdf(contract: Record<string, unknown>, logoBytes?: A
     const halfW = CW / 2;
     text(label, ML + 8, y, 7, font, C_MUTED);
     if (label2) text(label2, ML + halfW + 8, y, 7, font, C_MUTED);
-    y -= 11;
+    y -= 13;
     text(value || "–", ML + 8, y, 9, font, C_TEXT, halfW - 16);
     if (label2) text(value2 || "–", ML + halfW + 8, y, 9, font, C_TEXT, halfW - 16);
-    y -= 15;
-    page.drawLine({ start: { x: ML, y: y + 4 }, end: { x: PAGE_W - MR, y: y + 4 }, thickness: 0.3, color: C_LINE_LIGHT });
+    y -= 13;
+    page.drawLine({ start: { x: ML, y: y + 3 }, end: { x: PAGE_W - MR, y: y + 3 }, thickness: 0.3, color: C_LINE_LIGHT });
   };
 
   // Vertragsparteien
   sectionHeader("VERTRAGSPARTEIEN");
   fieldRow("Praxis", String(contract.praxis || "–"), "Fachrichtung", String(contract.fachrichtung || "–"));
   fieldRow("Vorname", String(contract.vorname || "–"), "Nachname", String(contract.nachname || "–"));
-  fieldRow("Adresse", String(contract.adresse || "–"));
+  const plzOrt = `${contract.plz ?? ""} ${contract.ort ?? ""}`.trim();
+  fieldRow("Adresse", String(contract.adresse || "–"), "PLZ / Ort", plzOrt || "–");
   fieldRow("Telefon", String(contract.telefon || "–"), "E-Mail", String(contract.email || "–"));
   fieldRow("MP-Nummer", String(contract.mp_nr || "–"), "Vertriebspartner", String(contract.sales_partner_name || "–"));
+
   y -= 10;
 
   // Produkte
@@ -226,6 +258,33 @@ async function buildContractPdf(contract: Record<string, unknown>, logoBytes?: A
   fieldRow("Produkt", String(contract.product_name || "–"));
   fieldRow("Anzahl Lizenzen", String(contract.license_count ?? 1));
   y -= 6;
+
+  // Zusatzmodule
+  sectionHeader("ZUSATZMODULE");
+  const addons = extras.addonModules ?? [];
+  if (addons.length === 0) {
+    ensureSpace(20);
+    text("Keine Zusatzmodule gebucht", ML + 8, y, 9, font, C_MUTED);
+    y -= 16;
+  } else {
+    let addonsTotal = 0;
+    for (const m of addons) {
+      ensureSpace(18);
+      const price = Number(m.monthly_price) || 0;
+      addonsTotal += price;
+      text(`• ${m.name}`, ML + 8, y, 9, font, C_TEXT, CW - 120);
+      rightText(`${formatCurrency(price)}/Mon.`, PAGE_W - MR - 8, y, 9, font, C_TEXT);
+      y -= 14;
+      page.drawLine({ start: { x: ML, y: y + 3 }, end: { x: PAGE_W - MR, y: y + 3 }, thickness: 0.3, color: C_LINE_LIGHT });
+    }
+    ensureSpace(20);
+    y -= 4;
+    text("Zusatzmodule gesamt", ML + 8, y, 9, fontBold, C_NAVY);
+    rightText(`${formatCurrency(addonsTotal)}/Mon.`, PAGE_W - MR - 8, y, 9, fontBold, C_NAVY);
+    y -= 14;
+  }
+  y -= 6;
+
 
   // Laufzeit
   sectionHeader("LAUFZEIT");
@@ -276,12 +335,51 @@ async function buildContractPdf(contract: Record<string, unknown>, logoBytes?: A
   rightText(formatCurrency(Number(contract.monthly_price) || 0), TABLE_RIGHT - 8, grossTextY, 11, fontBold, C_NAVY);
   y -= grossRowH + 4;
 
+  // Promo-Block (nur bei aktiver Produkt-Promo, SSOT: _shared/promoStatus.ts)
+  const promoProduct = extras.promoProduct ?? null;
+  const promoActive = isContractPromoActive(
+    { qodia_unit_price: Number(contract.qodia_unit_price ?? 0) },
+    promoProduct,
+  );
+  if (promoActive && promoProduct) {
+    sectionHeader("AKTIONSPREIS");
+    ensureSpace(20);
+    text(promoProduct.name, ML + 8, y, 10, fontBold, C_NAVY);
+    y -= 16;
+    const unitLabel = promoProduct.price_per_unit_label || "Einheit";
+    const promoPriceStr = `${formatCurrency(Number(promoProduct.promo_price) || 0)}/${unitLabel} dauerhaft`;
+    fieldRow("Aktionspreis", promoPriceStr);
+    if (promoProduct.promo_base_fee_end_date) {
+      fieldRow("Keine Grundgebühr bis", formatDate(promoProduct.promo_base_fee_end_date));
+    }
+    const regBase = `${formatCurrency(Number(promoProduct.monthly_price) || 0)}/Mon. Grundgebühr`;
+    const regUnit = promoProduct.price_per_unit != null
+      ? `+ ${formatCurrency(Number(promoProduct.price_per_unit) || 0)}/${unitLabel}`
+      : "–";
+    fieldRow("Regulär nach Aktionsende", regBase, "Stückpreis regulär", regUnit);
+    if (promoProduct.promo_end_date) {
+      fieldRow("Aktion gültig bis (Abschlussdatum)", formatDate(promoProduct.promo_end_date));
+    }
+    y -= 6;
+  }
+
+  // SEPA-Lastschrifteinzug (Kontoinhaber + maskierte IBAN; BIC bewusst nicht im PDF)
+  sectionHeader("SEPA-LASTSCHRIFTEINZUG");
+  fieldRow(
+    "Kontoinhaber",
+    String(contract.kontoinhaber || "–"),
+    "IBAN (maskiert)",
+    maskIban(contract.iban as string | null | undefined),
+  );
+  y -= 6;
+
   // Closing
   ensureSpace(50);
   y -= 8;
   text("Mit freundlichen Grüßen", ML, y, 9, font, C_TEXT);
   y -= 16;
   text("HFX Honorarfuchs", ML, y, 10, fontBold, C_NAVY);
+
 
   drawFooter();
 
@@ -397,8 +495,50 @@ Deno.serve(async (req) => {
       if (logoRes.ok) logoBytes = await logoRes.arrayBuffer();
     } catch { /* skip logo */ }
 
-    const pdfBytes = await buildContractPdf(contract as Record<string, unknown>, logoBytes);
+    // Addon-Modul-Preise (text[] → product_modules.monthly_price)
+    let addonModules: AddonModuleLike[] = [];
+    const addonNames = Array.isArray((contract as any).selected_addon_modules)
+      ? ((contract as any).selected_addon_modules as string[]).filter(Boolean)
+      : [];
+    if (addonNames.length > 0) {
+      const { data: modRows } = await adminClient
+        .from("product_modules")
+        .select("name, monthly_price")
+        .in("name", addonNames);
+      const byName = new Map((modRows ?? []).map((m: any) => [m.name, Number(m.monthly_price) || 0]));
+      addonModules = addonNames.map((n) => ({ name: n, monthly_price: byName.get(n) ?? 0 }));
+    }
+
+    // Promo-Produkt: alle Promo-fähigen Produkte laden, dann via findBestProductMatch
+    // gegen die Vertragsprodukte mappen. Helper liefert kein Match → kein Promo-Block.
+    let promoProduct: PromoProductFull | null = null;
+    try {
+      const { data: promoCandidates } = await adminClient
+        .from("products")
+        .select("name, promo_price, promo_end_date, promo_price_label, promo_base_fee_end_date, monthly_price, price_per_unit, price_per_unit_label")
+        .not("promo_price", "is", null)
+        .not("promo_end_date", "is", null);
+      const candidateNames = [
+        (contract as any).product_name,
+        ...(Array.isArray((contract as any).modules) ? (contract as any).modules : []),
+      ];
+      const matched = findBestProductMatch(
+        (promoCandidates ?? []).map((p: any) => ({ name: p.name, agb_pdf_path: null })),
+        candidateNames,
+      );
+      if (matched) {
+        promoProduct = (promoCandidates ?? []).find((p: any) => p.name === matched.name) as PromoProductFull | null;
+      }
+    } catch (e) {
+      console.log("[send-contract-confirmation] Promo lookup skipped:", String(e));
+    }
+
+    const pdfBytes = await buildContractPdf(contract as Record<string, unknown>, logoBytes, {
+      addonModules,
+      promoProduct,
+    });
     const pdfBase64 = toBase64(pdfBytes);
+
 
     // --- Fetch product-specific AGB PDF (fallback to generic) ---
     let agbBase64: string | undefined;
