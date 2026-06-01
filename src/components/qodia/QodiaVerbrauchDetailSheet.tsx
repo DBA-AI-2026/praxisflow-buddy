@@ -42,6 +42,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export interface DashboardContract {
   id: string;
@@ -167,13 +173,21 @@ export function QodiaVerbrauchDetailSheet({
           <SheetDescription className="font-mono text-xs">
             {contract?.hfx_customer_number ?? "—"} · {contract?.product_name ?? ""}
             {isPromo && (
-              <Badge
-                variant="outline"
-                title={promoTooltip}
-                className="ml-2 bg-primary/10 text-primary border-primary/40 text-[10px]"
-              >
-                Aktionspreis
-              </Badge>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className="ml-2 bg-primary/10 text-primary border-primary/40 text-[10px]"
+                    >
+                      Aktionspreis
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs text-xs">
+                    {promoTooltip || "Aktionspreis aktiv"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </SheetDescription>
         </SheetHeader>
