@@ -335,12 +335,51 @@ async function buildContractPdf(
   rightText(formatCurrency(Number(contract.monthly_price) || 0), TABLE_RIGHT - 8, grossTextY, 11, fontBold, C_NAVY);
   y -= grossRowH + 4;
 
+  // Promo-Block (nur bei aktiver Produkt-Promo, SSOT: _shared/promoStatus.ts)
+  const promoProduct = extras.promoProduct ?? null;
+  const promoActive = isContractPromoActive(
+    { qodia_unit_price: Number(contract.qodia_unit_price ?? 0) },
+    promoProduct,
+  );
+  if (promoActive && promoProduct) {
+    sectionHeader("AKTIONSPREIS");
+    ensureSpace(20);
+    text(promoProduct.name, ML + 8, y, 10, fontBold, C_NAVY);
+    y -= 16;
+    const unitLabel = promoProduct.price_per_unit_label || "Einheit";
+    const promoPriceStr = `${formatCurrency(Number(promoProduct.promo_price) || 0)}/${unitLabel} dauerhaft`;
+    fieldRow("Aktionspreis", promoPriceStr);
+    if (promoProduct.promo_base_fee_end_date) {
+      fieldRow("Keine Grundgebühr bis", formatDate(promoProduct.promo_base_fee_end_date));
+    }
+    const regBase = `${formatCurrency(Number(promoProduct.monthly_price) || 0)}/Mon. Grundgebühr`;
+    const regUnit = promoProduct.price_per_unit != null
+      ? `+ ${formatCurrency(Number(promoProduct.price_per_unit) || 0)}/${unitLabel}`
+      : "–";
+    fieldRow("Regulär nach Aktionsende", regBase, "Stückpreis regulär", regUnit);
+    if (promoProduct.promo_end_date) {
+      fieldRow("Aktion gültig bis (Abschlussdatum)", formatDate(promoProduct.promo_end_date));
+    }
+    y -= 6;
+  }
+
+  // SEPA-Lastschrifteinzug (Kontoinhaber + maskierte IBAN; BIC bewusst nicht im PDF)
+  sectionHeader("SEPA-LASTSCHRIFTEINZUG");
+  fieldRow(
+    "Kontoinhaber",
+    String(contract.kontoinhaber || "–"),
+    "IBAN (maskiert)",
+    maskIban(contract.iban as string | null | undefined),
+  );
+  y -= 6;
+
   // Closing
   ensureSpace(50);
   y -= 8;
   text("Mit freundlichen Grüßen", ML, y, 9, font, C_TEXT);
   y -= 16;
   text("HFX Honorarfuchs", ML, y, 10, fontBold, C_NAVY);
+
 
   drawFooter();
 
