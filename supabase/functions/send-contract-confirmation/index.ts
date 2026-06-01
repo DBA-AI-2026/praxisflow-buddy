@@ -259,6 +259,33 @@ async function buildContractPdf(
   fieldRow("Anzahl Lizenzen", String(contract.license_count ?? 1));
   y -= 6;
 
+  // Zusatzmodule
+  sectionHeader("ZUSATZMODULE");
+  const addons = extras.addonModules ?? [];
+  if (addons.length === 0) {
+    ensureSpace(20);
+    text("Keine Zusatzmodule gebucht", ML + 8, y, 9, font, C_MUTED);
+    y -= 16;
+  } else {
+    let addonsTotal = 0;
+    for (const m of addons) {
+      ensureSpace(18);
+      const price = Number(m.monthly_price) || 0;
+      addonsTotal += price;
+      text(`• ${m.name}`, ML + 8, y, 9, font, C_TEXT, CW - 120);
+      rightText(`${formatCurrency(price)}/Mon.`, PAGE_W - MR - 8, y, 9, font, C_TEXT);
+      y -= 14;
+      page.drawLine({ start: { x: ML, y: y + 3 }, end: { x: PAGE_W - MR, y: y + 3 }, thickness: 0.3, color: C_LINE_LIGHT });
+    }
+    ensureSpace(20);
+    y -= 4;
+    text("Zusatzmodule gesamt", ML + 8, y, 9, fontBold, C_NAVY);
+    rightText(`${formatCurrency(addonsTotal)}/Mon.`, PAGE_W - MR - 8, y, 9, fontBold, C_NAVY);
+    y -= 14;
+  }
+  y -= 6;
+
+
   // Laufzeit
   sectionHeader("LAUFZEIT");
   const endDateLabel = endDate === "2099-12-31" ? "Unbefristet" : formatDate(endDate);
