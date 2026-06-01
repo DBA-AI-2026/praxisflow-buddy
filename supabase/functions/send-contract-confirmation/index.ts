@@ -235,20 +235,22 @@ async function buildContractPdf(
     const halfW = CW / 2;
     text(label, ML + 8, y, 7, font, C_MUTED);
     if (label2) text(label2, ML + halfW + 8, y, 7, font, C_MUTED);
-    y -= 11;
+    y -= 13;
     text(value || "–", ML + 8, y, 9, font, C_TEXT, halfW - 16);
     if (label2) text(value2 || "–", ML + halfW + 8, y, 9, font, C_TEXT, halfW - 16);
-    y -= 15;
-    page.drawLine({ start: { x: ML, y: y + 4 }, end: { x: PAGE_W - MR, y: y + 4 }, thickness: 0.3, color: C_LINE_LIGHT });
+    y -= 13;
+    page.drawLine({ start: { x: ML, y: y + 3 }, end: { x: PAGE_W - MR, y: y + 3 }, thickness: 0.3, color: C_LINE_LIGHT });
   };
 
   // Vertragsparteien
   sectionHeader("VERTRAGSPARTEIEN");
   fieldRow("Praxis", String(contract.praxis || "–"), "Fachrichtung", String(contract.fachrichtung || "–"));
   fieldRow("Vorname", String(contract.vorname || "–"), "Nachname", String(contract.nachname || "–"));
-  fieldRow("Adresse", String(contract.adresse || "–"));
+  const plzOrt = `${contract.plz ?? ""} ${contract.ort ?? ""}`.trim();
+  fieldRow("Adresse", String(contract.adresse || "–"), "PLZ / Ort", plzOrt || "–");
   fieldRow("Telefon", String(contract.telefon || "–"), "E-Mail", String(contract.email || "–"));
   fieldRow("MP-Nummer", String(contract.mp_nr || "–"), "Vertriebspartner", String(contract.sales_partner_name || "–"));
+
   y -= 10;
 
   // Produkte
