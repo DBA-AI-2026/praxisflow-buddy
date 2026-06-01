@@ -293,12 +293,13 @@ function ChargesSection({
                   </div>
                   <div className="mt-1 text-xs tabular-nums">
                     {c.quantity} Stk · {Number(c.net_amount).toFixed(2)} €
-                    {isPromoRow && (
-                      <span className="ml-2 text-muted-foreground italic">
-                        Promo (kein Verbrauchsentgelt)
-                      </span>
-                    )}
                   </div>
+                  {isDataError && (
+                    <div className="mt-1.5 flex items-start gap-1.5 text-xs text-warning">
+                      <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                      <span>Stückpreis fehlt — Datenfehler.</span>
+                    </div>
+                  )}
                   {invoiceNo && (
                     <button
                       type="button"
