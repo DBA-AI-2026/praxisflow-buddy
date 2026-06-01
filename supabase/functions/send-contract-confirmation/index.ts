@@ -495,8 +495,50 @@ Deno.serve(async (req) => {
       if (logoRes.ok) logoBytes = await logoRes.arrayBuffer();
     } catch { /* skip logo */ }
 
-    const pdfBytes = await buildContractPdf(contract as Record<string, unknown>, logoBytes);
+    // Addon-Modul-Preise (text[] → product_modules.monthly_price)
+    let addonModules: AddonModuleLike[] = [];
+    const addonNames = Array.isArray((contract as any).selected_addon_modules)
+      ? ((contract as any).selected_addon_modules as string[]).filter(Boolean)
+      : [];
+    if (addonNames.length > 0) {
+      const { data: modRows } = await adminClient
+        .from("product_modules")
+        .select("name, monthly_price")
+        .in("name", addonNames);
+      const byName = new Map((modRows ?? []).map((m: any) => [m.name, Number(m.monthly_price) || 0]));
+      addonModules = addonNames.map((n) => ({ name: n, monthly_price: byName.get(n) ?? 0 }));
+    }
+
+    // Promo-Produkt: alle Promo-fähigen Produkte laden, dann via findBestProductMatch
+    // gegen die Vertragsprodukte mappen. Helper liefert kein Match → kein Promo-Block.
+    let promoProduct: PromoProductFull | null = null;
+    try {
+      const { data: promoCandidates } = await adminClient
+        .from("products")
+        .select("name, promo_price, promo_end_date, promo_price_label, promo_base_fee_end_date, monthly_price, price_per_unit, price_per_unit_label")
+        .not("promo_price", "is", null)
+        .not("promo_end_date", "is", null);
+      const candidateNames = [
+        (contract as any).product_name,
+        ...(Array.isArray((contract as any).modules) ? (contract as any).modules : []),
+      ];
+      const matched = findBestProductMatch(
+        (promoCandidates ?? []).map((p: any) => ({ name: p.name, agb_pdf_path: null })),
+        candidateNames,
+      );
+      if (matched) {
+        promoProduct = (promoCandidates ?? []).find((p: any) => p.name === matched.name) as PromoProductFull | null;
+      }
+    } catch (e) {
+      console.log("[send-contract-confirmation] Promo lookup skipped:", String(e));
+    }
+
+    const pdfBytes = await buildContractPdf(contract as Record<string, unknown>, logoBytes, {
+      addonModules,
+      promoProduct,
+    });
     const pdfBase64 = toBase64(pdfBytes);
+
 
     // --- Fetch product-specific AGB PDF (fallback to generic) ---
     let agbBase64: string | undefined;
