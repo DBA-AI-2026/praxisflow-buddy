@@ -2372,21 +2372,31 @@ export default function Vertraege() {
                               <DropdownMenuItem
                                 className="text-success"
                                 onClick={async () => {
-                                  const { error } = await supabase.from("contracts").update({ status: "aktiv", approved_by: user?.id, approved_at: new Date().toISOString() } as any).eq("id", c.id);
-                                  if (error) { toast({ title: "Fehler", description: error.message, variant: "destructive" }); return; }
-                                  // Freigabe wird nur auf Verträgen im Status "gezeichnet" angeboten — alter Status ist deterministisch
-                                  logCustomerStatusChange({
-                                    eventType: "CONTRACT_STATUS_CHANGED",
-                                    entityType: "contract",
-                                    entityId: c.id,
-                                    oldStatus: "gezeichnet",
-                                    newStatus: "aktiv",
-                                    source: "vertraege_freigabe",
-                                    hfxCustomerNumber: c.hfx_customer_number ?? null,
+                                  const result = await changeContractStatus({
                                     contractId: c.id,
-                                    createdBy: user?.id ?? null,
+                                    newStatus: "aktiv",
+                                    oldStatus: "gezeichnet",
+                                    hfxCustomerNumber: c.hfx_customer_number ?? null,
+                                    userId: user?.id ?? null,
+                                    queryClient,
+                                    contract: c as any,
+                                    source: "vertraege_freigeben_button",
                                   });
-                                  queryClient.invalidateQueries({ queryKey: ["contracts"] });
+                                  if (!result.success) {
+                                    const isMandate = /SEPA|Mandat/i.test(result.error ?? "");
+                                    toast({
+                                      title: isMandate ? "⚠️ SEPA-Mandat fehlt" : "Fehler",
+                                      description: result.error,
+                                      variant: "destructive",
+                                    });
+                                    return;
+                                  }
+                                  if (result.praxenCreated) {
+                                    toast({
+                                      title: "✅ Kunde angelegt",
+                                      description: `${c.praxis || c.customer_name} wurde erfolgreich als Kunden hinterlegt.`,
+                                    });
+                                  }
                                   toast({ title: "Vertrag freigegeben", description: "Status auf Aktiv gesetzt." });
                                 }}
                               >
