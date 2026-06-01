@@ -66,8 +66,36 @@ function findBestProductMatch(products: ProductWithAgb[], candidates: Array<stri
   }) ?? null;
 }
 
-async function buildContractPdf(contract: Record<string, unknown>, logoBytes?: ArrayBuffer): Promise<Uint8Array> {
+type AddonModuleLike = { name: string; monthly_price: number | null };
+type PromoProductFull = {
+  name: string;
+  promo_price: number | null;
+  promo_end_date: string | null;
+  promo_price_label: string | null;
+  promo_base_fee_end_date: string | null;
+  monthly_price: number | null;
+  price_per_unit: number | null;
+  price_per_unit_label: string | null;
+};
+
+type BuildExtras = {
+  addonModules?: AddonModuleLike[];
+  promoProduct?: PromoProductFull | null;
+};
+
+function maskIban(iban: string | null | undefined): string {
+  if (!iban || String(iban).replace(/\s/g, "").length < 4) return "–";
+  const clean = String(iban).replace(/\s/g, "");
+  return `••••${clean.slice(-4)}`;
+}
+
+async function buildContractPdf(
+  contract: Record<string, unknown>,
+  logoBytes?: ArrayBuffer,
+  extras: BuildExtras = {},
+): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
+
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
 
