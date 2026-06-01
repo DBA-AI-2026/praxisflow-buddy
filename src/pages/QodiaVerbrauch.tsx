@@ -507,11 +507,22 @@ function SummaryCard({
 
 function QtyCell({ qty, net, isPromo }: { qty: number; net: number; isPromo: boolean }) {
   if (qty === 0 && net === 0) return <span className="text-muted-foreground">—</span>;
+  // Datenfehler: Verbrauch vorhanden, aber kein Stückpreis hinterlegt
+  // und es liegt KEINE aktive Produkt-Promo vor.
+  const isDataError = !isPromo && qty > 0 && net === 0;
+  if (isDataError) {
+    return (
+      <span>
+        <span className="font-medium">{qty}</span>
+        <span className="text-xs text-warning ml-1">(⚠ Datenfehler)</span>
+      </span>
+    );
+  }
   return (
     <span>
       <span className="font-medium">{qty}</span>
       <span className="text-xs text-muted-foreground ml-1">
-        ({isPromo ? "0,00 € — Promo" : `${net.toFixed(2)} €`})
+        ({net.toFixed(2)} €{isPromo ? " · Aktion" : ""})
       </span>
     </span>
   );
