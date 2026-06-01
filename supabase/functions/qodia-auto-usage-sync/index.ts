@@ -219,11 +219,14 @@ Deno.serve(async (req) => {
 
     console.log(`${opts.logPrefix} Sync für ${period === "current" ? "laufenden Monat" : "Vormonat"}: ${opts.startDate} – ${opts.endDate} (${opts.billingPeriodLabel})`);
 
-    // Fetch all active HFX GOÄ contracts with email and hfx_customer_number
+    // Fetch active HFX GOÄ contracts with email and hfx_customer_number.
+    // Status-Filter: nur "aktiv" — gezeichnet/eingegangen haben kein scharfes SEPA-Mandat,
+    // gesperrt/gekuendigt/beendet sind nicht abrechnungsfähig (statusGlossary).
     const { data: contracts, error: contractsError } = await supabase
       .from("contracts")
       .select("id, customer_name, email, hfx_customer_number, qodia_unit_price")
       .ilike("product_name", "HFX GOÄ%")
+      .in("status", ["aktiv"])
       .not("email", "is", null)
       .not("hfx_customer_number", "is", null);
 
