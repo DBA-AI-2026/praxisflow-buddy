@@ -169,9 +169,10 @@ export function QodiaVerbrauchDetailSheet({
             {isPromo && (
               <Badge
                 variant="outline"
+                title={promoTooltip}
                 className="ml-2 bg-primary/10 text-primary border-primary/40 text-[10px]"
               >
-                Promo
+                Aktionspreis
               </Badge>
             )}
           </SheetDescription>
