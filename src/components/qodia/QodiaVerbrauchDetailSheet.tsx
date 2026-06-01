@@ -25,6 +25,12 @@ import { format } from "date-fns";
 import { AlertTriangle, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+// SYNCHRONIZE: isPromo wird über isContractPromoActive aus src/lib/promoStatus.ts
+// berechnet. Nicht durch qodia_unit_price === 0 heuristisch raten — siehe JSDoc
+// dort für die Begründung.
+import { isContractPromoActive } from "@/lib/promoStatus";
+import { useQodiaProducts } from "@/hooks/useQodiaProducts";
+
 import { supabase } from "@/lib/supabaseClient";
 import {
   Sheet,
