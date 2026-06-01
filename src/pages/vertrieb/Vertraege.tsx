@@ -218,7 +218,7 @@ function SalesPartnerCombobox({
   );
 }
 
-import { CONTRACT_STATUS_CONFIG as statusConfig } from "@/lib/statusConfig";
+import { CONTRACT_STATUS_CONFIG as statusConfig, CONTRACT_STATUS_ORDER } from "@/lib/statusConfig";
 import { changeContractStatus } from "@/lib/contractStatusActions";
 
 const LOCKED_STATUSES = ["aktiv", "eingegangen", "gekuendigt", "beendet", "gesperrt", "gezeichnet"];
