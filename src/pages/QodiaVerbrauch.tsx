@@ -128,6 +128,13 @@ export default function QodiaVerbrauch() {
     enabled: contractIds.length > 0,
   });
 
+  // 2b) Produkt-Promo-Daten (echte Promo-Erkennung)
+  const productNames = useMemo(
+    () => (contracts ?? []).map((c) => c.product_name).filter(Boolean) as string[],
+    [contracts],
+  );
+  const { productMap } = useQodiaProducts(productNames);
+
   // 3) Current month aggregate
   const { data: currentAgg, isLoading: currentLoading } = useQuery({
     queryKey: ["qodia-dashboard-current", currentMonthStart, contractIds.join(",")],
