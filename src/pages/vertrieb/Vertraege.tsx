@@ -3122,11 +3122,9 @@ export default function Vertraege() {
                 <Select value={form.status} onValueChange={(v) => set("status", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="entwurf">Entwurf</SelectItem>
-                    <SelectItem value="aktiv">Aktiv</SelectItem>
-                    <SelectItem value="gekuendigt">Gekündigt</SelectItem>
-                    <SelectItem value="beendet">Beendet</SelectItem>
-                    <SelectItem value="gesperrt">Gesperrt</SelectItem>
+                    {CONTRACT_STATUS_ORDER.map((s) => (
+                      <SelectItem key={s} value={s}>{statusConfig[s].label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
