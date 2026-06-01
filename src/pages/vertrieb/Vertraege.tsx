@@ -763,15 +763,42 @@ export default function Vertraege() {
 
       let contractId = editId;
       let previousContractStatus: string | null = null;
+      let statusRoutedThroughGuard = false;
       if (editId) {
-        // Capture old status BEFORE update for customer_events log (edit only)
+        // Lade vollständige DB-Row für Status-Guard (Mandat-Check, Side-Effects)
         const { data: before } = await supabase
           .from("contracts")
-          .select("status")
+          .select("*")
           .eq("id", editId)
           .maybeSingle();
         previousContractStatus = (before as any)?.status ?? null;
-        const { error } = await supabase.from("contracts").update(record).eq("id", editId);
+
+        // Wenn Status sich ändert → zwingend durch changeContractStatus (Mandat-Guard, customer_events, leads→kunde, praxen, fibu)
+        if (previousContractStatus && previousContractStatus !== data.status) {
+          const result = await changeContractStatus({
+            contractId: editId,
+            newStatus: data.status,
+            oldStatus: previousContractStatus,
+            hfxCustomerNumber: (before as any)?.hfx_customer_number ?? null,
+            userId: user?.id ?? null,
+            queryClient,
+            contract: before as any,
+            source: "vertraege_edit_modal",
+          });
+          if (!result.success) {
+            // Hartstopp: kein Teilerfolg. Modal bleibt offen, restliche Felder werden NICHT gespeichert.
+            const err: any = new Error(result.error ?? "Statuswechsel fehlgeschlagen");
+            err.__statusGuardFail = true;
+            throw err;
+          }
+          statusRoutedThroughGuard = true;
+        }
+
+        // Restliche Felder speichern. Status-Feld bei Guard-Route entfernen (changeContractStatus hat es bereits gesetzt
+        // inkl. approved_by/approved_at — kein doppeltes Überschreiben).
+        const restRecord = { ...record };
+        if (statusRoutedThroughGuard) delete (restRecord as any).status;
+        const { error } = await supabase.from("contracts").update(restRecord).eq("id", editId);
         if (error) throw error;
       } else {
         const { data: inserted, error } = await supabase.from("contracts").insert(record).select("id").single();
@@ -779,8 +806,9 @@ export default function Vertraege() {
         contractId = inserted.id;
       }
 
-      // Log status change (edit only, only if status actually changed) — fire-and-forget
-      if (editId && contractId && previousContractStatus && previousContractStatus !== data.status) {
+      // Audit-Event nur noch nötig, wenn der Statuswechsel NICHT durch changeContractStatus lief
+      // (z. B. Insert mit status=aktiv — separater Pfad). Bei Edit + Status-Change ist das Event bereits gesetzt.
+      if (editId && contractId && previousContractStatus && previousContractStatus !== data.status && !statusRoutedThroughGuard) {
         logCustomerStatusChange({
           eventType: "CONTRACT_STATUS_CHANGED",
           entityType: "contract",
@@ -793,6 +821,7 @@ export default function Vertraege() {
           createdBy: user?.id ?? null,
         });
       }
+
 
       // Log signature audit trail for active contracts
       if (data.status !== "entwurf" && contractId && (sigData || vertriebSigData)) {
