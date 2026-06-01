@@ -267,7 +267,10 @@ function ChargesSection({
             className: "bg-muted text-muted-foreground border-border",
           };
           const isUngeklaert = c.status === "ungeklaert";
-          const isPromoRow = isPromo && Number(c.net_amount) === 0 && c.quantity > 0;
+          // Datenfehler: Verbrauch vorhanden, aber kein Stückpreis hinterlegt
+          // und es liegt KEINE aktive Produkt-Promo vor.
+          const isDataError =
+            !isPromo && c.quantity > 0 && Number(c.net_amount) === 0;
           const invoiceNo = c.invoices?.invoice_number ?? null;
           const invoiceDate = c.invoices?.invoice_date
             ? format(new Date(c.invoices.invoice_date), "dd.MM.yyyy")
