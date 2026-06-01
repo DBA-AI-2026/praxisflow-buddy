@@ -122,7 +122,16 @@ export function QodiaVerbrauchDetailSheet({
 }: Props) {
   const navigate = useNavigate();
   const contractId = contract?.id ?? null;
-  const isPromo = contract ? Number(contract.qodia_unit_price ?? 0) === 0 : false;
+
+  // Echte Promo-Erkennung über Produktdaten (siehe src/lib/promoStatus.ts).
+  const { productMap } = useQodiaProducts(
+    contract?.product_name ? [contract.product_name] : [],
+  );
+  const product = contract?.product_name
+    ? productMap.get(contract.product_name) ?? null
+    : null;
+  const isPromo = contract ? isContractPromoActive(contract, product) : false;
+  const promoTooltip = product?.promo_price_label ?? undefined;
 
   const { data: charges, isLoading } = useQuery({
     queryKey: ["qodia-detail-charges", contractId],
