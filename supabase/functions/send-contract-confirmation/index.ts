@@ -178,6 +178,8 @@ async function buildContractPdf(
   const fullName = [contract.vorname, contract.nachname].filter(Boolean).join(" ");
   if (fullName) recipientLines.push(fullName);
   if (contract.adresse) recipientLines.push(String(contract.adresse));
+  const recipPlzOrt = `${contract.plz ?? ""} ${contract.ort ?? ""}`.trim();
+  if (recipPlzOrt) recipientLines.push(recipPlzOrt);
   if (contract.email) recipientLines.push(String(contract.email));
 
   let ry = boxTop - 4;
@@ -223,10 +225,10 @@ async function buildContractPdf(
   const sectionHeader = (title: string) => {
     ensureSpace(40);
     page.drawLine({ start: { x: ML, y: y + 10 }, end: { x: PAGE_W - MR, y: y + 10 }, thickness: 1, color: C_LINE });
-    const rowH = 22;
+    const rowH = 24;
     page.drawRectangle({ x: ML, y: y - rowH + 10, width: CW, height: rowH, color: C_BG_LIGHT });
     page.drawLine({ start: { x: ML, y: y - rowH + 10 }, end: { x: PAGE_W - MR, y: y - rowH + 10 }, thickness: 0.8, color: C_LINE });
-    text(title, ML + 8, y, 8.5, fontBold, C_NAVY);
+    page.drawText(title, { x: ML + 8, y: y - 1, size: 10, font: fontBold, color: C_NAVY, characterSpacing: 0.5 });
     y -= rowH + 6;
   };
 
