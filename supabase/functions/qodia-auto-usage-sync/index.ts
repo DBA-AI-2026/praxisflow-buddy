@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { DEFAULT_QODIA_UNIT_PRICE } from "../_shared/promoStatus.ts";
 
 const MONTH_NAMES = [
   "Januar","Februar","März","April","Mai","Juni",
@@ -66,7 +67,7 @@ async function syncContractUsage(
       (usage.rechnungscheck_mini ?? 0) +
       (usage.rechnungscheck_standard ?? 0);
 
-    const unitPrice = contract.qodia_unit_price ?? 0.99;
+    const unitPrice = contract.qodia_unit_price ?? DEFAULT_QODIA_UNIT_PRICE;
     const netAmount = Math.round(quantity * unitPrice * 100) / 100;
 
     // Skip if this period is already invoiced
