@@ -1,3 +1,6 @@
+// ⚠ SYNCHRONIZE MIT supabase/functions/_shared/promoStatus.ts
+// Änderungen an Konstanten/Funktionen IMMER in beiden Dateien anpassen.
+
 /**
  * Promo-Status Helper
  * --------------------
