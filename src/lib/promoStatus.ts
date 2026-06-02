@@ -56,4 +56,3 @@ export function isContractPromoActive(
  * products-Tabelle zu holen. Bis dahin: diese Konstante = SSOT.
  */
 export const DEFAULT_QODIA_UNIT_PRICE = 0.99;
-}
