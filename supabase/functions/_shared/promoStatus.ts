@@ -1,3 +1,6 @@
+// ⚠ SYNCHRONIZE MIT src/lib/promoStatus.ts
+// Änderungen an Konstanten/Funktionen IMMER in beiden Dateien anpassen.
+
 /**
  * Promo-Status Helper (Edge-Function-Spiegel)
  * --------------------------------------------
@@ -32,3 +35,17 @@ export function isContractPromoActive(
   if (new Date(product.promo_end_date) < today) return false;
   return Number(contract.qodia_unit_price ?? 0) === Number(product.promo_price);
 }
+
+/**
+ * Fallback-Wert für qodia_unit_price, wenn beim Vertrag noch kein Wert
+ * gesetzt ist (z. B. neuer Vertrag, leeres Formular).
+ *
+ * Der Wert entspricht aktuell dem HFX-GOÄ-Promo-Preis aus
+ * products.promo_price. Wenn Marketing den Promo-Preis ändert, MUSS
+ * dieser Default mit angepasst werden, sonst zeigt das Formular einen
+ * veralteten Vorschlagswert.
+ *
+ * Langfristig sauberer wäre, den Default zur Laufzeit aus der
+ * products-Tabelle zu holen. Bis dahin: diese Konstante = SSOT.
+ */
+export const DEFAULT_QODIA_UNIT_PRICE = 0.99;
