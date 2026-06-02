@@ -276,7 +276,7 @@ async function buildContractPdf(
       text(`• ${m.name}`, ML + 8, y, 9, font, C_TEXT, CW - 120);
       rightText(`${formatCurrency(price)}/Mon.`, PAGE_W - MR - 8, y, 9, font, C_TEXT);
       y -= 14;
-      page.drawLine({ start: { x: ML, y: y + 3 }, end: { x: PAGE_W - MR, y: y + 3 }, thickness: 0.3, color: C_LINE_LIGHT });
+      page.drawLine({ start: { x: ML, y: y + 9 }, end: { x: PAGE_W - MR, y: y + 9 }, thickness: 0.3, color: C_LINE_LIGHT });
     }
     ensureSpace(20);
     y -= 4;

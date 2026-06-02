@@ -837,7 +837,7 @@ function ContractActions({ contract }: { contract: ContractRow }) {
         });
       } else {
         toast({
-          title: "Bestätigungs-Mail erneut gesendet",
+          title: "Vertragsbestätigungs-Mail erneut gesendet",
           description: "E-Mail wurde an den Kunden verschickt.",
         });
       }
@@ -915,7 +915,7 @@ function ContractActions({ contract }: { contract: ContractRow }) {
             ) : (
               <RefreshCw className="h-3.5 w-3.5" />
             )}
-            Bestätigungs-Mail erneut senden
+            Vertragsbestätigungs-Mail erneut senden
           </Button>
         )}
 
@@ -952,7 +952,7 @@ function ContractActions({ contract }: { contract: ContractRow }) {
             <AlertDialogTitle>
               {confirmOpen === "resend-mandate"
                 ? "Mandat-Mail erneut senden?"
-                : "Bestätigungs-Mail erneut senden?"}
+                : "Vertragsbestätigungs-Mail erneut senden?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmOpen === "resend-mandate"
