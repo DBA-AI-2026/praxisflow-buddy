@@ -745,7 +745,7 @@ export default function Vertraege() {
         selected_addon_modules: data.selected_modules.length > 0 ? data.selected_modules : [],
         bsnr_count: data.bsnr_count,
         lanr_count: data.lanr_count,
-        qodia_unit_price: (data as any).qodia_unit_price ?? 0.99,
+        qodia_unit_price: (data as any).qodia_unit_price ?? DEFAULT_QODIA_UNIT_PRICE,
         ...(data.mandate_accepted && !editId ? { mandate_accepted_at: new Date().toISOString() } : {}),
         ...(documentUrl ? { document_url: documentUrl, document_name: documentName } : {}),
         ...(leadHfxNumber && !editId ? { hfx_customer_number: leadHfxNumber } : {}),
@@ -2664,7 +2664,7 @@ export default function Vertraege() {
                     selected_products: next,
                     monthly_price: totalMonthly,
                     one_time_fee: totalOneTime,
-                    qodia_unit_price: unitProduct ? unitPrice : 0.99,
+                    qodia_unit_price: unitProduct ? unitPrice : DEFAULT_QODIA_UNIT_PRICE,
                   } as any));
                 };
 
@@ -3238,7 +3238,7 @@ export default function Vertraege() {
                   type="number"
                   min={0}
                   step={0.01}
-                  value={(form as any).qodia_unit_price ?? 0.99}
+                  value={(form as any).qodia_unit_price ?? DEFAULT_QODIA_UNIT_PRICE}
                   onChange={(e) => set("qodia_unit_price" as any, parseFloat(e.target.value) || 0)}
                   placeholder="z.B. 0.99"
                   className="max-w-[180px]"
