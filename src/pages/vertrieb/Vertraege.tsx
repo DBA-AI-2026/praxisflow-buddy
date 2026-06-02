@@ -41,6 +41,7 @@ import { validateBic } from "@/lib/validateBic";
 import { lookupBicFromIban } from "@/lib/lookupBic";
 import { buildStripeLineItems, hasStripeProducts } from "@/lib/stripeProducts";
 import { logCustomerStatusChange } from "@/lib/customerEvents";
+import { DEFAULT_QODIA_UNIT_PRICE } from "@/lib/promoStatus";
 import { CreditCard } from "lucide-react"; // CreditCard used for payment section
 import foxLogoUrl from "@/assets/logo.png";
 import { useAuth } from "@/hooks/useAuth";
