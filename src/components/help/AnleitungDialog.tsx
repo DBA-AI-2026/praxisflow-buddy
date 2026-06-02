@@ -155,7 +155,7 @@ export function AnleitungDialog({ open, onOpenChange }: AnleitungDialogProps) {
                     <div className="rounded-md border border-border p-3">
                       <p className="font-semibold text-sm mb-1.5">B) Bestandsvertrag nachpflegen</p>
                       <ol className="text-sm space-y-1 list-decimal list-inside text-muted-foreground">
-                        <li>Direkt mit Status <em>Aktiv/Gezeichnet</em> anlegen (Berechtigung nötig)</li>
+                        <li>Direkt mit Status <em>Aktiv/Gebucht</em> anlegen (Berechtigung nötig)</li>
                         <li>Vorhandenes Vertrags-PDF als Anhang hochladen</li>
                         <li>Vertragsbeginn + Konditionen exakt aus Original übernehmen</li>
                         <li>Stripe-Mandat / SEPA-Daten ergänzen</li>
