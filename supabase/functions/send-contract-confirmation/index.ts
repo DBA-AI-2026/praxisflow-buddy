@@ -355,7 +355,7 @@ async function buildContractPdf(
     }
     const regBase = `${formatCurrency(Number(promoProduct.monthly_price) || 0)}/Mon. Grundgebühr`;
     const regUnit = promoProduct.price_per_unit != null
-      ? `+ ${formatCurrency(Number(promoProduct.price_per_unit) || 0)}/${unitLabel}`
+      ? `${formatCurrency(Number(promoProduct.price_per_unit) || 0)}/${unitLabel}`
       : "–";
     fieldRow("Regulär nach Aktionsende", regBase, "Stückpreis regulär", regUnit);
     if (promoProduct.promo_end_date) {
