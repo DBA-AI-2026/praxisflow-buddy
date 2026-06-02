@@ -178,6 +178,8 @@ async function buildContractPdf(
   const fullName = [contract.vorname, contract.nachname].filter(Boolean).join(" ");
   if (fullName) recipientLines.push(fullName);
   if (contract.adresse) recipientLines.push(String(contract.adresse));
+  const recipPlzOrt = `${contract.plz ?? ""} ${contract.ort ?? ""}`.trim();
+  if (recipPlzOrt) recipientLines.push(recipPlzOrt);
   if (contract.email) recipientLines.push(String(contract.email));
 
   let ry = boxTop - 4;
