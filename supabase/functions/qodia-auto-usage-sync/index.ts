@@ -93,8 +93,15 @@ async function syncContractUsage(
       .eq("status", "pending");
 
     if (quantity > 0) {
-      // qty>0 but net=0 (e.g. promo, unit_price=0) → mark directly as invoiced
-      const chargeStatus = netAmount > 0 ? "pending" : "invoiced";
+      // qty>0 + net=0 bedeutet unit_price=0 → fast immer Datenfehler in den
+      // Stammdaten (echte HFX-GOÄ-Promo ist 0,99 €, nicht 0; siehe
+      // isContractPromoActive in _shared/promoStatus.ts).
+      //
+      // Charge als "ungeklaert" schreiben, damit Admins den Datenfehler im
+      // QodiaVerbrauch-Dashboard sehen, bevor die Periode in einer Rechnung
+      // untergeht. auto-invoice ignoriert "ungeklaert" wie "invoiced", also
+      // kein Verhaltens-Drift in der Rechnungs-Pipeline.
+      const chargeStatus = netAmount > 0 ? "pending" : "ungeklaert";
 
       await supabase.from("usage_charges").insert({
         hfx_customer_number: contract.hfx_customer_number,
@@ -110,8 +117,8 @@ async function syncContractUsage(
         notes: netAmount > 0 ? opts.notes : opts.notesZero,
       });
 
-      if (chargeStatus === "invoiced") {
-        console.log(`${opts.logPrefix} ${contract.hfx_customer_number} – ${quantity} Nutzungen, aber 0,00 € netto → direkt als invoiced markiert.`);
+      if (chargeStatus === "ungeklaert") {
+        console.log(`${opts.logPrefix} ${contract.hfx_customer_number} – ${quantity} Nutzungen, aber 0,00 € netto (unit_price=0) → als ungeklaert markiert. Bitte qodia_unit_price im Vertrag prüfen.`);
       }
     }
 
@@ -142,7 +149,7 @@ function buildPeriodOptions(period: Period): Omit<SyncOptions, never> {
       logPrefix: "[qodia-auto-usage-sync]",
       descSuffix: "",
       notes: `Automatisch abgerufen für ${billingPeriodLabel}`,
-      notesZero: `Automatisch abgerufen für ${billingPeriodLabel} – 0,00 € (nicht abrechnungsrelevant)`,
+      notesZero: `Automatisch abgerufen für ${billingPeriodLabel} – 0,00 € (Datenfehler: unit_price=0, bitte Stammdaten prüfen)`,
     };
   }
 
@@ -161,7 +168,7 @@ function buildPeriodOptions(period: Period): Omit<SyncOptions, never> {
     logPrefix: "[qodia-auto-usage-sync][current]",
     descSuffix: ` (bis ${today})`,
     notes: `Automatisch abgerufen für laufenden Monat ${billingPeriodLabel} – Stand: ${today}`,
-    notesZero: `Automatisch abgerufen für laufenden Monat ${billingPeriodLabel} – Stand: ${today} – 0,00 € (nicht abrechnungsrelevant)`,
+    notesZero: `Automatisch abgerufen für laufenden Monat ${billingPeriodLabel} – Stand: ${today} – 0,00 € (Datenfehler: unit_price=0, bitte Stammdaten prüfen)`,
   };
 }
 
