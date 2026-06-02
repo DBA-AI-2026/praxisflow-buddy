@@ -239,7 +239,8 @@ async function buildContractPdf(
     text(value || "–", ML + 8, y, 9, font, C_TEXT, halfW - 16);
     if (label2) text(value2 || "–", ML + halfW + 8, y, 9, font, C_TEXT, halfW - 16);
     y -= 13;
-    page.drawLine({ start: { x: ML, y: y + 3 }, end: { x: PAGE_W - MR, y: y + 3 }, thickness: 0.3, color: C_LINE_LIGHT });
+    // Trennlinie deutlich über dem nächsten Label (Label ist 7pt hoch, +9 lässt ~2pt Luft über der Label-Oberkante)
+    page.drawLine({ start: { x: ML, y: y + 9 }, end: { x: PAGE_W - MR, y: y + 9 }, thickness: 0.3, color: C_LINE_LIGHT });
   };
 
   // Vertragsparteien
@@ -354,7 +355,7 @@ async function buildContractPdf(
     }
     const regBase = `${formatCurrency(Number(promoProduct.monthly_price) || 0)}/Mon. Grundgebühr`;
     const regUnit = promoProduct.price_per_unit != null
-      ? `+ ${formatCurrency(Number(promoProduct.price_per_unit) || 0)}/${unitLabel}`
+      ? `${formatCurrency(Number(promoProduct.price_per_unit) || 0)}/${unitLabel}`
       : "–";
     fieldRow("Regulär nach Aktionsende", regBase, "Stückpreis regulär", regUnit);
     if (promoProduct.promo_end_date) {
