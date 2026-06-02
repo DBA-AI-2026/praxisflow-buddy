@@ -84,13 +84,16 @@ async function syncContractUsage(
       return "ok";
     }
 
-    // Delete existing pending charge for this contract+period and re-insert (idempotent)
+    // Vor dem Re-Insert beide Zwischenstände wegräumen:
+    // - "pending" = noch nicht fakturierte Charge (Standardfall)
+    // - "ungeklaert" = Datenfehler-Marker (qty>0, unit_price=0)
+    // Nicht löschen: "invoiced" (bereits abgerechnet).
     await supabase
       .from("usage_charges")
       .delete()
       .eq("hfx_customer_number", contract.hfx_customer_number)
       .eq("period_from", opts.startDate)
-      .eq("status", "pending");
+      .in("status", ["pending", "ungeklaert"]);
 
     if (quantity > 0) {
       // qty>0 + net=0 bedeutet unit_price=0 → fast immer Datenfehler in den
