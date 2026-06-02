@@ -40,7 +40,7 @@ export const CONTRACT_STATUS_CONFIG: Record<
 > = {
   entwurf:     { label: "Entwurf",     class: "bg-muted text-muted-foreground",   icon: FilePen },
   eingegangen: { label: "Versendet, wartet auf Mandat", class: "bg-warning/10 text-warning", icon: Upload },
-  gezeichnet:  { label: "Gezeichnet",  class: "bg-primary/10 text-primary",       icon: FileSignature },
+  gezeichnet:  { label: "Gebucht",     class: "bg-primary/10 text-primary",       icon: FileSignature },
   aktiv:       { label: "Aktiv",       class: "bg-success/10 text-success",       icon: CircleCheck },
   gekuendigt:  { label: "Gekündigt",   class: "bg-warning/10 text-warning",       icon: CircleOff },
   beendet:     { label: "Beendet",     class: "bg-destructive/10 text-destructive", icon: ArchiveX },
