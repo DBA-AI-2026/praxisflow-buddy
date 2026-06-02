@@ -285,13 +285,13 @@ export function useKundenDialogData(
 
   /* ---- Schritt 3: Verträge (für Ownership + derivedPhase) ---- */
   const contractsQ = useQuery({
-    queryKey: ["kunden-dialog-contracts", customerQ.data?.id],
-    enabled: enabled && !!customerQ.data?.id,
+    queryKey: ["kunden-dialog-contracts", hfxNumber],
+    enabled: enabled && !!hfxNumber,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contracts")
         .select("*")
-        .eq("customer_id", customerQ.data!.id);
+        .eq("hfx_customer_number", hfxNumber!);
       if (error) throw error;
       return (data ?? []) as ContractRow[];
     },
