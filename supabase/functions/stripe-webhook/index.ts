@@ -702,6 +702,19 @@ async function handleContractActivation(
     } as any)
     .eq("id", contractId);
 
+  // Multi-Standort Self-Heal: customers.stripe_customer_id idempotent (NULL-only)
+  if (!error && contract?.customer_id && stripeCustomerId) {
+    try {
+      await supabase
+        .from("customers")
+        .update({ stripe_customer_id: stripeCustomerId } as any)
+        .eq("id", contract.customer_id)
+        .is("stripe_customer_id", null);
+    } catch (healEx) {
+      log("WARN: customers self-heal (contract_activation) failed", String(healEx));
+    }
+  }
+
   if (error) {
     console.error("[stripe-webhook] failed to update contract:", error);
     await supabase.from("audit_logs").insert({
@@ -923,6 +936,24 @@ async function handleSepaMandateSetup(
     }
   } else {
     log("sepa_mandate_setup: stripe_customer_id already set (idempotent)", contractId);
+  }
+
+  // Multi-Standort Self-Heal: customers.stripe_customer_id idempotent (NULL-only)
+  // Kunde wird aus dem gerade geschriebenen Vertrag abgeleitet — nie breit über
+  // WHERE stripe_customer_id = X auf customers.
+  try {
+    const { data: linkedContract } = await supabase
+      .from("contracts").select("customer_id").eq("id", contractId).maybeSingle();
+    const linkedCustomerId = (linkedContract as any)?.customer_id ?? null;
+    if (linkedCustomerId && stripeCustomerId) {
+      await supabase
+        .from("customers")
+        .update({ stripe_customer_id: stripeCustomerId } as any)
+        .eq("id", linkedCustomerId)
+        .is("stripe_customer_id", null);
+    }
+  } catch (healEx) {
+    log("WARN: customers self-heal (sepa_mandate_setup) failed", String(healEx));
   }
 
   // Status-Update auf "aktiv" — nur aus eingegangen/wartend_auf_mandat heraus

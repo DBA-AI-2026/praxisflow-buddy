@@ -1,6 +1,7 @@
 import { Resend } from "npm:resend@2.0.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14.21.0";
+import { isGoaeProduct, isCarrierContract, healCustomerStripeId } from "../_shared/multiLocation.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
@@ -253,6 +254,29 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // ── Multi-Standort: Trägervertrag ermitteln (NULL = Träger) ──────────
+        // Identische Bedingung wird unten bei Grundgebühr UND in
+        // createGoaeCommissions (AD-Signup-Bonus) verwendet.
+        let customerBaseFeeContractId: string | null = null;
+        if (contract.customer_id) {
+          try {
+            const { data: cust } = await supabase
+              .from("customers")
+              .select("base_fee_contract_id")
+              .eq("id", contract.customer_id)
+              .maybeSingle();
+            customerBaseFeeContractId = (cust as any)?.base_fee_contract_id ?? null;
+          } catch (e) {
+            console.warn(`[auto-invoice] customer lookup failed for ${contract.id}:`, String(e));
+          }
+        }
+        const isCarrier = isCarrierContract(contract.id, contract.customer_id, customerBaseFeeContractId);
+        const isGoae = isGoaeProduct(contract.product_name);
+        const isLocationGoae = isGoae && !isCarrier;
+        if (isLocationGoae) {
+          console.log(`[auto-invoice] Standort-GOÄ erkannt für Vertrag ${contract.id} (Träger=${customerBaseFeeContractId}) — Grundgebühr & AD-Signup-Bonus werden ausgesetzt`);
+        }
+
         // ── Grundgebühr-Waiver-Logik (aus Vertragsfeldern statt hart codiert) ──
         const isInWaiverPeriod = contract.base_fee_waived === true &&
           contract.base_fee_waived_until != null &&
@@ -350,25 +374,35 @@ Deno.serve(async (req) => {
           }
         } else {
           // ── Bestehender, produkt-agnostischer Pfad (GOÄ, Live-Check, etc.) ──
-          const baseNetAmount = isInWaiverPeriod ? 0 : contractMonthly;
-          if (baseNetAmount > 0) {
+          // Multi-Standort: Bei GOÄ-Standortverträgen (nicht-Träger) entfällt die Grundgebühr,
+          // weil sie einmalig auf dem Hauptaccount-Vertrag abgerechnet wird.
+          if (isLocationGoae) {
             positions.push({
-              description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
-              quantity: contract.license_count || 1,
-              unit_price: baseNetAmount / (contract.license_count || 1),
-            });
-          } else if (isInWaiverPeriod) {
-            positions.push({
-              description: `Grundgebühr ${contract.product_name} – ${billingPeriod} (Einführungsaktion – Grundgebühr ausgesetzt bis ${waiverUntilFormatted})`,
+              description: `Grundgebühr ${contract.product_name} – ${billingPeriod} (Standortvertrag – Grundgebühr läuft über Hauptaccount)`,
               quantity: contract.license_count || 1,
               unit_price: 0,
             });
           } else {
-            positions.push({
-              description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
-              quantity: contract.license_count || 1,
-              unit_price: 0,
-            });
+            const baseNetAmount = isInWaiverPeriod ? 0 : contractMonthly;
+            if (baseNetAmount > 0) {
+              positions.push({
+                description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
+                quantity: contract.license_count || 1,
+                unit_price: baseNetAmount / (contract.license_count || 1),
+              });
+            } else if (isInWaiverPeriod) {
+              positions.push({
+                description: `Grundgebühr ${contract.product_name} – ${billingPeriod} (Einführungsaktion – Grundgebühr ausgesetzt bis ${waiverUntilFormatted})`,
+                quantity: contract.license_count || 1,
+                unit_price: 0,
+              });
+            } else {
+              positions.push({
+                description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
+                quantity: contract.license_count || 1,
+                unit_price: 0,
+              });
+            }
           }
         }
 
@@ -427,6 +461,9 @@ Deno.serve(async (req) => {
                 .from("contracts")
                 .update({ stripe_customer_id: stripeCustomer.id } as any)
                 .eq("id", contract.id);
+
+              // Multi-Standort Self-Heal (NULL-only, kein breites WHERE):
+              await healCustomerStripeId(supabase, contract.customer_id, stripeCustomer.id);
 
               const setupSession = await stripe.checkout.sessions.create({
                 mode: "setup",
@@ -802,6 +839,7 @@ Deno.serve(async (req) => {
               periodEnd,
               billingPeriod,
               today,
+              isCarrier,
             });
           } else {
             // Andere Produkte: Provisionsberechnung mit Override-Hierarchie
@@ -1046,8 +1084,11 @@ async function createGoaeCommissions(params: {
   periodEnd: string;
   billingPeriod: string;
   today: Date;
+  /** Multi-Standort: nur Trägervertrag erhält AD-Signup-Bonus. NULL/Unbekannt = true (Bestand). */
+  isCarrier?: boolean;
 }) {
   const { supabase, contract, invoice, netAmount, baseNetAmount, usageChargeIds, periodMonthStr, periodStart, periodEnd, billingPeriod, today } = params;
+  const isCarrier = params.isCarrier !== false; // default true für Bestand
 
   // Net amount from usage charges
   let usageNetAmount = 0;
@@ -1082,8 +1123,9 @@ async function createGoaeCommissions(params: {
 
   // ── AD-Provision ─────────────────────────────────────────────────────────
   if (isAdRole) {
-    // 1. Festbetrag bei Vertragsabschluss (erste Rechnung)
-    if (isFirstInvoice) {
+    // 1. Festbetrag bei Vertragsabschluss (erste Rechnung).
+    //    Multi-Standort: Bonus nur einmal pro Hauptaccount, also nur auf dem Trägervertrag.
+    if (isFirstInvoice && isCarrier) {
       let fixedAmount = 100;
 
       const sprintEnd = new Date("2026-12-31");
@@ -1682,10 +1724,20 @@ async function processFailedInvoiceRetry(params: {
     try {
       const isGoae = /GOÄ|GOA/i.test(contract.product_name || "");
       const today = new Date();
+      // Multi-Standort: identische Carrier-Bedingung auch im Retry-Pfad
+      let custBaseFee: string | null = null;
+      if (contract.customer_id) {
+        const { data: cust } = await supabase
+          .from("customers").select("base_fee_contract_id")
+          .eq("id", contract.customer_id).maybeSingle();
+        custBaseFee = (cust as any)?.base_fee_contract_id ?? null;
+      }
+      const isCarrier = isCarrierContract(contract.id, contract.customer_id, custBaseFee);
       if (isGoae) {
         await createGoaeCommissions({
           supabase, contract, invoice, netAmount, baseNetAmount,
           usageChargeIds, periodMonthStr, periodStart, periodEnd, billingPeriod, today,
+          isCarrier,
         });
       } else {
         const [{ data: productCommission }, { data: partnerOverride }] = await Promise.all([

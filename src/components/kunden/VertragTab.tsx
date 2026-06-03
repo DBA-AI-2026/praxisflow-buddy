@@ -634,9 +634,17 @@ function ContractCard({
       )}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <div>
-          <div className="font-medium text-foreground">{product}</div>
-          <div className="text-xs text-muted-foreground font-mono">{number}</div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div>
+            <div className="font-medium text-foreground">{product}</div>
+            <div className="text-xs text-muted-foreground font-mono">{number}</div>
+          </div>
+          {/* Multi-Standort: Badge wenn dieser Vertrag NICHT der Trägervertrag ist */}
+          {/GOÄ|GOA/i.test(product) && (contract.status ?? "").toLowerCase() === "gezeichnet" && !contract.stripe_customer_id && (
+            <Badge variant="secondary" title="Standortvertrag – kein Kunden-Setup nötig. Bitte direkt aktivieren.">
+              Standortvertrag
+            </Badge>
+          )}
         </div>
         <ContractStatusPill contract={contract} onChange={onStatusChange} busy={statusBusy} />
       </div>

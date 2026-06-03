@@ -165,6 +165,19 @@ Deno.serve(async (req) => {
       });
       stripeCustomerId = customer.id;
       await admin.from("contracts").update({ stripe_customer_id: stripeCustomerId } as any).eq("id", contract.id);
+
+      // Multi-Standort Self-Heal: customers.stripe_customer_id idempotent (NULL-only) auffüllen
+      if ((contract as any).customer_id) {
+        try {
+          await admin
+            .from("customers")
+            .update({ stripe_customer_id: stripeCustomerId } as any)
+            .eq("id", (contract as any).customer_id)
+            .is("stripe_customer_id", null);
+        } catch (healEx) {
+          console.warn("[send-mandate-setup] customers self-heal non-fatal:", String(healEx));
+        }
+      }
     }
 
     // 2) Setup-Session
