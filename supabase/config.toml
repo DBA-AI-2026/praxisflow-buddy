@@ -9,6 +9,8 @@ project_id = "gvsxentbbzuyanqbqvea"
     verify_jwt = false
   [functions.salesforce-auth]
     verify_jwt = false
+  [functions.salesforce-auto-sync]
+    verify_jwt = false
   [functions.salesforce-callback]
     verify_jwt = false
   [functions.salesforce-sync-price]
