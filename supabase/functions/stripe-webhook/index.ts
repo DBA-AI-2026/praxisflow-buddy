@@ -702,6 +702,19 @@ async function handleContractActivation(
     } as any)
     .eq("id", contractId);
 
+  // Multi-Standort Self-Heal: customers.stripe_customer_id idempotent (NULL-only)
+  if (!error && contract?.customer_id && stripeCustomerId) {
+    try {
+      await supabase
+        .from("customers")
+        .update({ stripe_customer_id: stripeCustomerId } as any)
+        .eq("id", contract.customer_id)
+        .is("stripe_customer_id", null);
+    } catch (healEx) {
+      log("WARN: customers self-heal (contract_activation) failed", String(healEx));
+    }
+  }
+
   if (error) {
     console.error("[stripe-webhook] failed to update contract:", error);
     await supabase.from("audit_logs").insert({
