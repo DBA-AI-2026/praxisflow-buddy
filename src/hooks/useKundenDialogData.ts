@@ -77,6 +77,10 @@ type CustomerRow = {
   abrechnungszentrum: string;
   mp_nr: string | null;
   notes: string | null;
+  /** Multi-Standort: geteilte Stripe-Customer-ID (SEPA-Mandat). */
+  stripe_customer_id: string | null;
+  /** Multi-Standort: Trägervertrag für Grundgebühr + AD-Signup-Bonus. */
+  base_fee_contract_id: string | null;
 };
 
 /**
