@@ -839,6 +839,7 @@ Deno.serve(async (req) => {
               periodEnd,
               billingPeriod,
               today,
+              isCarrier,
             });
           } else {
             // Andere Produkte: Provisionsberechnung mit Override-Hierarchie
