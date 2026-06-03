@@ -462,6 +462,9 @@ Deno.serve(async (req) => {
                 .update({ stripe_customer_id: stripeCustomer.id } as any)
                 .eq("id", contract.id);
 
+              // Multi-Standort Self-Heal (NULL-only, kein breites WHERE):
+              await healCustomerStripeId(supabase, contract.customer_id, stripeCustomer.id);
+
               const setupSession = await stripe.checkout.sessions.create({
                 mode: "setup",
                 customer: stripeCustomer.id,
