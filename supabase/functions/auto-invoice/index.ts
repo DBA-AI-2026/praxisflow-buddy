@@ -374,25 +374,35 @@ Deno.serve(async (req) => {
           }
         } else {
           // ── Bestehender, produkt-agnostischer Pfad (GOÄ, Live-Check, etc.) ──
-          const baseNetAmount = isInWaiverPeriod ? 0 : contractMonthly;
-          if (baseNetAmount > 0) {
+          // Multi-Standort: Bei GOÄ-Standortverträgen (nicht-Träger) entfällt die Grundgebühr,
+          // weil sie einmalig auf dem Hauptaccount-Vertrag abgerechnet wird.
+          if (isLocationGoae) {
             positions.push({
-              description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
-              quantity: contract.license_count || 1,
-              unit_price: baseNetAmount / (contract.license_count || 1),
-            });
-          } else if (isInWaiverPeriod) {
-            positions.push({
-              description: `Grundgebühr ${contract.product_name} – ${billingPeriod} (Einführungsaktion – Grundgebühr ausgesetzt bis ${waiverUntilFormatted})`,
+              description: `Grundgebühr ${contract.product_name} – ${billingPeriod} (Standortvertrag – Grundgebühr läuft über Hauptaccount)`,
               quantity: contract.license_count || 1,
               unit_price: 0,
             });
           } else {
-            positions.push({
-              description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
-              quantity: contract.license_count || 1,
-              unit_price: 0,
-            });
+            const baseNetAmount = isInWaiverPeriod ? 0 : contractMonthly;
+            if (baseNetAmount > 0) {
+              positions.push({
+                description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
+                quantity: contract.license_count || 1,
+                unit_price: baseNetAmount / (contract.license_count || 1),
+              });
+            } else if (isInWaiverPeriod) {
+              positions.push({
+                description: `Grundgebühr ${contract.product_name} – ${billingPeriod} (Einführungsaktion – Grundgebühr ausgesetzt bis ${waiverUntilFormatted})`,
+                quantity: contract.license_count || 1,
+                unit_price: 0,
+              });
+            } else {
+              positions.push({
+                description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
+                quantity: contract.license_count || 1,
+                unit_price: 0,
+              });
+            }
           }
         }
 
