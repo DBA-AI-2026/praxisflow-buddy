@@ -1,7 +1,3 @@
-import { Bell, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-
 interface HeaderProps {
   title: string;
   subtitle?: string;
@@ -17,23 +13,6 @@ export function Header({ title, subtitle }: HeaderProps) {
         )}
       </div>
 
-      <div className="flex items-center gap-2 lg:gap-4 flex-shrink-0">
-        <div className="relative hidden lg:block">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Suchen..."
-            className="w-64 pl-9 bg-muted/50 border-0 focus-visible:ring-1"
-          />
-        </div>
-
-        <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10">
-          <Bell className="h-4 w-4 lg:h-5 lg:w-5" />
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
-            3
-          </span>
-        </Button>
-      </div>
     </header>
   );
 }
