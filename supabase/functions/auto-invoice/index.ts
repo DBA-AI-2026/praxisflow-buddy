@@ -254,6 +254,29 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // ── Multi-Standort: Trägervertrag ermitteln (NULL = Träger) ──────────
+        // Identische Bedingung wird unten bei Grundgebühr UND in
+        // createGoaeCommissions (AD-Signup-Bonus) verwendet.
+        let customerBaseFeeContractId: string | null = null;
+        if (contract.customer_id) {
+          try {
+            const { data: cust } = await supabase
+              .from("customers")
+              .select("base_fee_contract_id")
+              .eq("id", contract.customer_id)
+              .maybeSingle();
+            customerBaseFeeContractId = (cust as any)?.base_fee_contract_id ?? null;
+          } catch (e) {
+            console.warn(`[auto-invoice] customer lookup failed for ${contract.id}:`, String(e));
+          }
+        }
+        const isCarrier = isCarrierContract(contract.id, contract.customer_id, customerBaseFeeContractId);
+        const isGoae = isGoaeProduct(contract.product_name);
+        const isLocationGoae = isGoae && !isCarrier;
+        if (isLocationGoae) {
+          console.log(`[auto-invoice] Standort-GOÄ erkannt für Vertrag ${contract.id} (Träger=${customerBaseFeeContractId}) — Grundgebühr & AD-Signup-Bonus werden ausgesetzt`);
+        }
+
         // ── Grundgebühr-Waiver-Logik (aus Vertragsfeldern statt hart codiert) ──
         const isInWaiverPeriod = contract.base_fee_waived === true &&
           contract.base_fee_waived_until != null &&
