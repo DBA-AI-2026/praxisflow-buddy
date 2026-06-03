@@ -864,6 +864,7 @@ export type Database = {
         Row: {
           abrechnungszentrum: string
           adresse: string | null
+          base_fee_contract_id: string | null
           bsnr: string | null
           created_at: string
           email: string | null
@@ -877,6 +878,7 @@ export type Database = {
           plz: string | null
           praxis_name: string | null
           salesforce_id: string | null
+          stripe_customer_id: string | null
           telefon: string | null
           updated_at: string
           vorname: string | null
@@ -884,6 +886,7 @@ export type Database = {
         Insert: {
           abrechnungszentrum?: string
           adresse?: string | null
+          base_fee_contract_id?: string | null
           bsnr?: string | null
           created_at?: string
           email?: string | null
@@ -897,6 +900,7 @@ export type Database = {
           plz?: string | null
           praxis_name?: string | null
           salesforce_id?: string | null
+          stripe_customer_id?: string | null
           telefon?: string | null
           updated_at?: string
           vorname?: string | null
@@ -904,6 +908,7 @@ export type Database = {
         Update: {
           abrechnungszentrum?: string
           adresse?: string | null
+          base_fee_contract_id?: string | null
           bsnr?: string | null
           created_at?: string
           email?: string | null
@@ -917,11 +922,27 @@ export type Database = {
           plz?: string | null
           praxis_name?: string | null
           salesforce_id?: string | null
+          stripe_customer_id?: string | null
           telefon?: string | null
           updated_at?: string
           vorname?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customers_base_fee_contract_id_fkey"
+            columns: ["base_fee_contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_base_fee_contract_id_fkey"
+            columns: ["base_fee_contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts_public_booking"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       demo_downloads: {
         Row: {
