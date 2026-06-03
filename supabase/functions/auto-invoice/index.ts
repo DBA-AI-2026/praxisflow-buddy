@@ -1084,8 +1084,11 @@ async function createGoaeCommissions(params: {
   periodEnd: string;
   billingPeriod: string;
   today: Date;
+  /** Multi-Standort: nur Trägervertrag erhält AD-Signup-Bonus. NULL/Unbekannt = true (Bestand). */
+  isCarrier?: boolean;
 }) {
   const { supabase, contract, invoice, netAmount, baseNetAmount, usageChargeIds, periodMonthStr, periodStart, periodEnd, billingPeriod, today } = params;
+  const isCarrier = params.isCarrier !== false; // default true für Bestand
 
   // Net amount from usage charges
   let usageNetAmount = 0;
