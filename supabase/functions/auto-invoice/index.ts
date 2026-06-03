@@ -1720,10 +1720,20 @@ async function processFailedInvoiceRetry(params: {
     try {
       const isGoae = /GOÄ|GOA/i.test(contract.product_name || "");
       const today = new Date();
+      // Multi-Standort: identische Carrier-Bedingung auch im Retry-Pfad
+      let custBaseFee: string | null = null;
+      if (contract.customer_id) {
+        const { data: cust } = await supabase
+          .from("customers").select("base_fee_contract_id")
+          .eq("id", contract.customer_id).maybeSingle();
+        custBaseFee = (cust as any)?.base_fee_contract_id ?? null;
+      }
+      const isCarrier = isCarrierContract(contract.id, contract.customer_id, custBaseFee);
       if (isGoae) {
         await createGoaeCommissions({
           supabase, contract, invoice, netAmount, baseNetAmount,
           usageChargeIds, periodMonthStr, periodStart, periodEnd, billingPeriod, today,
+          isCarrier,
         });
       } else {
         const [{ data: productCommission }, { data: partnerOverride }] = await Promise.all([
