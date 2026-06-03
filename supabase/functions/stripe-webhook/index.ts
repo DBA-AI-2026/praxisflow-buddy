@@ -938,6 +938,24 @@ async function handleSepaMandateSetup(
     log("sepa_mandate_setup: stripe_customer_id already set (idempotent)", contractId);
   }
 
+  // Multi-Standort Self-Heal: customers.stripe_customer_id idempotent (NULL-only)
+  // Kunde wird aus dem gerade geschriebenen Vertrag abgeleitet — nie breit über
+  // WHERE stripe_customer_id = X auf customers.
+  try {
+    const { data: linkedContract } = await supabase
+      .from("contracts").select("customer_id").eq("id", contractId).maybeSingle();
+    const linkedCustomerId = (linkedContract as any)?.customer_id ?? null;
+    if (linkedCustomerId && stripeCustomerId) {
+      await supabase
+        .from("customers")
+        .update({ stripe_customer_id: stripeCustomerId } as any)
+        .eq("id", linkedCustomerId)
+        .is("stripe_customer_id", null);
+    }
+  } catch (healEx) {
+    log("WARN: customers self-heal (sepa_mandate_setup) failed", String(healEx));
+  }
+
   // Status-Update auf "aktiv" — nur aus eingegangen/wartend_auf_mandat heraus
   const activatableStatuses = new Set(["eingegangen", "wartend_auf_mandat"]);
   if (existing && activatableStatuses.has(String(existing.status))) {
