@@ -1123,8 +1123,9 @@ async function createGoaeCommissions(params: {
 
   // ── AD-Provision ─────────────────────────────────────────────────────────
   if (isAdRole) {
-    // 1. Festbetrag bei Vertragsabschluss (erste Rechnung)
-    if (isFirstInvoice) {
+    // 1. Festbetrag bei Vertragsabschluss (erste Rechnung).
+    //    Multi-Standort: Bonus nur einmal pro Hauptaccount, also nur auf dem Trägervertrag.
+    if (isFirstInvoice && isCarrier) {
       let fixedAmount = 100;
 
       const sprintEnd = new Date("2026-12-31");
