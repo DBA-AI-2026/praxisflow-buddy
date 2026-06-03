@@ -69,6 +69,35 @@ export async function changeContractStatus(
   const { error } = await supabase.from("contracts").update(updateData).eq("id", contractId);
   if (error) return { success: false, error: error.message };
 
+  // 2b) Multi-Standort Self-Heal auf customers (idempotent, NULL-only):
+  //  - stripe_customer_id: damit Standorte das geteilte Mandat finden
+  //  - base_fee_contract_id: erster aktivierter Vertrag wird Träger der Grundgebühr
+  if (newStatus === "aktiv" && contract.customer_id) {
+    try {
+      const heal: Record<string, any> = {};
+      if (contract.stripe_customer_id) heal.stripe_customer_id = contract.stripe_customer_id;
+      heal.base_fee_contract_id = contractId;
+
+      // stripe_customer_id nur setzen, wenn auf customers noch NULL
+      if (heal.stripe_customer_id) {
+        await (supabase as any)
+          .from("customers")
+          .update({ stripe_customer_id: heal.stripe_customer_id })
+          .eq("id", contract.customer_id)
+          .is("stripe_customer_id", null);
+      }
+      // base_fee_contract_id nur setzen, wenn auf customers noch NULL
+      await (supabase as any)
+        .from("customers")
+        .update({ base_fee_contract_id: contractId })
+        .eq("id", contract.customer_id)
+        .is("base_fee_contract_id", null);
+    } catch (healEx) {
+      // Self-Heal-Fehler sind nicht fatal — beim nächsten Stripe-Touch greift es erneut
+      console.warn("[contractStatusActions] customer self-heal failed (non-fatal):", String(healEx));
+    }
+  }
+
   // 3) customer_events: CONTRACT_STATUS_CHANGED (schliesst Bestands-Lücke)
   if (oldStatus && oldStatus !== newStatus) {
     await logCustomerStatusChange({

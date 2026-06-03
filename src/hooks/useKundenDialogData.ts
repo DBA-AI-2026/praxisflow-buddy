@@ -77,6 +77,10 @@ type CustomerRow = {
   abrechnungszentrum: string;
   mp_nr: string | null;
   notes: string | null;
+  /** Multi-Standort: geteilte Stripe-Customer-ID (SEPA-Mandat). */
+  stripe_customer_id: string | null;
+  /** Multi-Standort: Trägervertrag für Grundgebühr + AD-Signup-Bonus. */
+  base_fee_contract_id: string | null;
 };
 
 /**
@@ -274,7 +278,7 @@ export function useKundenDialogData(
       const { data, error } = await supabase
         .from("customers")
         .select(
-          "id,hfx_customer_number,praxis_name,vorname,nachname,email,telefon,plz,ort,adresse,abrechnungszentrum,mp_nr,notes",
+          "id,hfx_customer_number,praxis_name,vorname,nachname,email,telefon,plz,ort,adresse,abrechnungszentrum,mp_nr,notes,stripe_customer_id,base_fee_contract_id",
         )
         .eq("hfx_customer_number", hfxNumber!)
         .maybeSingle();
