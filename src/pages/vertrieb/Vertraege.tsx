@@ -354,8 +354,9 @@ export default function Vertraege() {
   const [showErrors, setShowErrors] = useState(false);
   const [leadHfxNumber, setLeadHfxNumber] = useState<string | null>(null);
   const [locationContext, setLocationContext] = useState<
-    { customerId: string; stripeCustomerId: string | null; hfxNumber: string } | null
+    { customerId: string; stripeCustomerId: string | null; hfxNumber: string; carrierActive: boolean } | null
   >(null);
+  const [locationConfirmOpen, setLocationConfirmOpen] = useState(false);
   const [forceCreateDuplicate, setForceCreateDuplicate] = useState(false);
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
   const [resendingConfirmationId, setResendingConfirmationId] = useState<string | null>(null);
@@ -502,7 +503,7 @@ export default function Vertraege() {
       (async () => {
         const { data: cust } = await (supabase as any)
           .from("customers")
-          .select("id, hfx_customer_number, stripe_customer_id, praxis_name, vorname, nachname, email, telefon, adresse, plz, ort, mp_nr")
+          .select("id, hfx_customer_number, stripe_customer_id, base_fee_contract_id, praxis_name, vorname, nachname, email, telefon, adresse, plz, ort, mp_nr")
           .eq("id", addLocationFor)
           .maybeSingle();
         if (!cust) {
@@ -517,10 +518,22 @@ export default function Vertraege() {
           });
           return;
         }
+        // Träger-Status prüfen: bei aktiv → Born-aktiv-Pfad, sonst gezeichnet.
+        // Defensiv: ohne base_fee_contract_id oder Lookup-Fehler → gezeichnet.
+        let carrierActive = false;
+        if (cust.base_fee_contract_id) {
+          const { data: carrier } = await (supabase as any)
+            .from("contracts")
+            .select("status")
+            .eq("id", cust.base_fee_contract_id)
+            .maybeSingle();
+          carrierActive = (carrier as any)?.status === "aktiv";
+        }
         setLocationContext({
           customerId: cust.id,
           stripeCustomerId: cust.stripe_customer_id,
           hfxNumber: cust.hfx_customer_number,
+          carrierActive,
         });
         setLeadHfxNumber(cust.hfx_customer_number);
         setForm({
@@ -536,7 +549,7 @@ export default function Vertraege() {
           ort: cust.ort || "",
           mp_nr: cust.mp_nr || "",
           selected_products: ["HFX GOÄ - die KI für ihre Privatabrechnung"],
-          status: "gezeichnet",
+          status: carrierActive ? "aktiv" : "gezeichnet",
           sales_partner_name: profile?.full_name || "",
         });
         setDialogOpen(true);
