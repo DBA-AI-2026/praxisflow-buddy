@@ -690,9 +690,9 @@ function ContractCard({
             <div className="font-medium text-foreground">{product}</div>
             <div className="text-xs text-muted-foreground font-mono">{number}</div>
           </div>
-          {/* Multi-Standort: Badge wenn dieser Vertrag NICHT der Trägervertrag ist */}
-          {/GOÄ|GOA/i.test(product) && (contract.status ?? "").toLowerCase() === "gezeichnet" && !contract.stripe_customer_id && (
-            <Badge variant="secondary" title="Standortvertrag – kein Kunden-Setup nötig. Bitte direkt aktivieren.">
+          {/* Multi-Standort: Badge nur auf echten Standortverträgen (Carrier-Kriterium). */}
+          {!!contract.customer_id && !!customer?.base_fee_contract_id && customer.base_fee_contract_id !== contract.id && (
+            <Badge variant="secondary" title="Standortvertrag – kein eigenes Mandat. Grundgebühr läuft über Hauptaccount.">
               Standortvertrag
             </Badge>
           )}
