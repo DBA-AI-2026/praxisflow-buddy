@@ -29,7 +29,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye, CheckCircle,
   FilePen, FileSignature, CircleCheck, CircleOff, ArchiveX, ShieldBan, ArrowUpDown, ArrowUp, ArrowDown,
-  GitMerge, AlertTriangle, Send, Lightbulb,
+  GitMerge, AlertTriangle, Send, Lightbulb, MapPin,
 } from "lucide-react";
 // Check and ChevronsUpDown already imported above via combobox imports
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
@@ -569,6 +569,31 @@ export default function Vertraege() {
       return data;
     },
   });
+
+  // Weg A — Standortvertrag-Kennzeichnung (flat list, keine Gruppierung).
+  // Quelle: customers.base_fee_contract_id zeigt den Trägervertrag pro Kunde.
+  // Standort = Vertrag mit customer_id, dessen id NICHT der Träger ist.
+  const { data: carrierMap = {} } = useQuery({
+    queryKey: ["carrier-map"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("customers")
+        .select("id, base_fee_contract_id")
+        .not("base_fee_contract_id", "is", null);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      for (const c of data || []) {
+        if (c.base_fee_contract_id) map[c.id] = c.base_fee_contract_id;
+      }
+      return map;
+    },
+  });
+
+  const isLocationContract = (c: any): boolean => {
+    if (!c?.customer_id) return false;
+    const carrier = carrierMap[c.customer_id];
+    return !!carrier && carrier !== c.id;
+  };
 
   // Open contract edit dialog once contracts are loaded and autoOpenContractId is set
   useEffect(() => {
@@ -2317,6 +2342,21 @@ export default function Vertraege() {
                             <GitMerge className="h-3 w-3" />
                             Nachtrag
                           </span>
+                        )}
+                        {isLocationContract(c) && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-accent-foreground border border-border bg-accent/40 rounded px-1.5 py-0.5 w-fit">
+                                  <MapPin className="h-3 w-3" />
+                                  Standortvertrag
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Standort eines Hauptaccounts — teilt SEPA-Mandat &amp; Grundgebühr mit dem Träger.
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         )}
                         <div className="flex flex-wrap gap-1">
                           {c.product_name.split(", ").map((p: string, i: number) => (
