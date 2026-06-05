@@ -585,9 +585,11 @@ function ContractStatusPill({
 function ContractCard({
   contract,
   dimmed,
+  customer,
 }: {
   contract: ContractRow;
   dimmed?: boolean;
+  customer?: UseKundenDialogDataResult["customer"];
 }) {
   const navigate = useNavigate();
   const { toast } = useToast();
