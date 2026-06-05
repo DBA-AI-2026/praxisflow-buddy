@@ -3629,6 +3629,31 @@ export default function Vertraege() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Standort-Anlage Bestätigung — bewusster Consent-Klick (Kosten + Mandat). */}
+      <AlertDialog open={locationConfirmOpen} onOpenChange={setLocationConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Standort jetzt anlegen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {locationContext?.carrierActive
+                ? "Dieser Standort wird sofort aktiv. Ab dem nächsten Abrechnungslauf werden seine Kosten (Verbrauch, ggf. weitere Positionen) über das bestehende SEPA-Mandat des Hauptaccounts eingezogen. Die Grundgebühr fällt weiterhin nur einmal am Hauptaccount an."
+                : "Sobald der Hauptaccount sein SEPA-Mandat bestätigt, wird dieser Standort automatisch aktiv und ab dem nächsten Abrechnungslauf über dasselbe Mandat abgerechnet."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setLocationConfirmOpen(false);
+                upsertMutation.mutate(form);
+              }}
+            >
+              Standort anlegen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {kundenDialogHfx && (
         <KundenDialog
           open={!!kundenDialogHfx}
