@@ -353,6 +353,9 @@ export default function Vertraege() {
   const [bicLoading, setBicLoading] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [leadHfxNumber, setLeadHfxNumber] = useState<string | null>(null);
+  const [locationContext, setLocationContext] = useState<
+    { customerId: string; stripeCustomerId: string | null; hfxNumber: string } | null
+  >(null);
   const [forceCreateDuplicate, setForceCreateDuplicate] = useState(false);
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
   const [resendingConfirmationId, setResendingConfirmationId] = useState<string | null>(null);
