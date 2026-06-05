@@ -215,13 +215,34 @@ export function useKundenDialogData(
   const { toast } = useToast();
   const qc = useQueryClient();
 
-  /* ---- Schritt 1: Input → HFX-Nummer auflösen ---- */
+  /* ---- Schritt 1: Input → { customerId, hfxNumber } auflösen ----
+   *
+   * Phase 1b: Standorte tragen abweichende HFX ({base}-NN), gehören aber zur
+   * selben Kunden-Identität. Anker für alle Folge-Lookups ist daher
+   * customer_id (nicht die Input-/Vertrags-HFX). Für reine Leads ohne Kunde
+   * bleibt der HFX-Pfad bestehen.
+   */
   const resolveQ = useQuery({
     queryKey: ["kunden-dialog-resolve", input],
     enabled: enabled && !!input,
-    queryFn: async (): Promise<{ hfxNumber: string | null }> => {
-      if (!input) return { hfxNumber: null };
-      if (input.type === "hfx") return { hfxNumber: input.hfxNumber };
+    queryFn: async (): Promise<{ customerId: string | null; hfxNumber: string | null }> => {
+      if (!input) return { customerId: null, hfxNumber: null };
+      if (input.type === "customer") {
+        return { customerId: input.customerId, hfxNumber: null };
+      }
+      if (input.type === "contract") {
+        const { data, error } = await supabase
+          .from("contracts")
+          .select("customer_id, hfx_customer_number")
+          .eq("id", input.contractId)
+          .maybeSingle();
+        if (error) throw error;
+        return {
+          customerId: (data as any)?.customer_id ?? null,
+          // HFX nur als Legacy-Fallback (customer_id IS NULL = Altvertrag)
+          hfxNumber: (data as any)?.customer_id ? null : (data?.hfx_customer_number ?? null),
+        };
+      }
       if (input.type === "lead") {
         const { data, error } = await supabase
           .from("leads")
@@ -229,31 +250,50 @@ export function useKundenDialogData(
           .eq("id", input.leadId)
           .maybeSingle();
         if (error) throw error;
-        return { hfxNumber: data?.hfx_customer_number ?? null };
+        return { customerId: null, hfxNumber: data?.hfx_customer_number ?? null };
       }
-      if (input.type === "customer") {
-        const { data, error } = await supabase
-          .from("customers")
-          .select("hfx_customer_number")
-          .eq("id", input.customerId)
-          .maybeSingle();
-        if (error) throw error;
-        return { hfxNumber: data?.hfx_customer_number ?? null };
-      }
-      // contract
-      const { data, error } = await supabase
-        .from("contracts")
-        .select("hfx_customer_number")
-        .eq("id", input.contractId)
-        .maybeSingle();
-      if (error) throw error;
-      return { hfxNumber: data?.hfx_customer_number ?? null };
+      // type === "hfx"
+      return { customerId: null, hfxNumber: input.hfxNumber };
     },
   });
 
-  const hfxNumber = resolveQ.data?.hfxNumber ?? null;
+  const resolvedCustomerId = resolveQ.data?.customerId ?? null;
+  const resolvedHfx = resolveQ.data?.hfxNumber ?? null;
 
-  /* ---- Schritt 2: Lead + Customer parallel laden ---- */
+  /* ---- Schritt 2: Customer laden (per customerId, Fallback HFX) ---- */
+  const customerQ = useQuery({
+    queryKey: ["kunden-dialog-customer", resolvedCustomerId, resolvedHfx],
+    enabled: enabled && (!!resolvedCustomerId || !!resolvedHfx),
+    queryFn: async () => {
+      const sel =
+        "id,hfx_customer_number,praxis_name,vorname,nachname,email,telefon,plz,ort,adresse,abrechnungszentrum,mp_nr,notes,stripe_customer_id,base_fee_contract_id";
+      if (resolvedCustomerId) {
+        const { data, error } = await supabase
+          .from("customers")
+          .select(sel)
+          .eq("id", resolvedCustomerId)
+          .maybeSingle();
+        if (error) throw error;
+        return (data as CustomerRow | null) ?? null;
+      }
+      const { data, error } = await supabase
+        .from("customers")
+        .select(sel)
+        .eq("hfx_customer_number", resolvedHfx!)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as CustomerRow | null) ?? null;
+    },
+  });
+
+  // Basis-HFX des Kunden — auch für Standort-Inputs die Hauptaccount-HFX.
+  // Fallback auf den Input-HFX, wenn (noch) kein Customer existiert (Lead-Phase).
+  const hfxNumber = customerQ.data?.hfx_customer_number ?? resolvedHfx;
+
+  /* ---- Schritt 3: Lead über Basis-HFX des Kunden laden ----
+   * Standort-Inputs lösen so den Hauptaccount-Lead auf (statt am -NN-HFX
+   * leerzulaufen). Reine Leads (ohne Customer) laufen weiter über die HFX.
+   */
   const leadQ = useQuery({
     queryKey: ["kunden-dialog-lead", hfxNumber],
     enabled: enabled && !!hfxNumber,
@@ -271,21 +311,6 @@ export function useKundenDialogData(
     },
   });
 
-  const customerQ = useQuery({
-    queryKey: ["kunden-dialog-customer", hfxNumber],
-    enabled: enabled && !!hfxNumber,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("customers")
-        .select(
-          "id,hfx_customer_number,praxis_name,vorname,nachname,email,telefon,plz,ort,adresse,abrechnungszentrum,mp_nr,notes,stripe_customer_id,base_fee_contract_id",
-        )
-        .eq("hfx_customer_number", hfxNumber!)
-        .maybeSingle();
-      if (error) throw error;
-      return (data as CustomerRow | null) ?? null;
-    },
-  });
 
   /* ---- Schritt 3: Verträge (für Ownership + derivedPhase) ----
    * Phase 1a: Gruppierung läuft jetzt über customer_id (statt hfx_customer_number).

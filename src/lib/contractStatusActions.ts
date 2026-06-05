@@ -16,6 +16,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { logCustomerStatusChange } from "@/lib/customerEvents";
+import { isStandortHfx } from "@/lib/multiLocation";
 import type { ContractRow } from "@/hooks/useKundenDialogData";
 
 export interface ChangeContractStatusParams {
@@ -162,7 +163,12 @@ export async function changeContractStatus(
   if (newStatus === "aktiv" || newStatus === "gezeichnet") {
     const hfxNr = contract?.hfx_customer_number || contract?.mp_nr || null;
 
-    if (hfxNr) {
+    // Phase 1b: Standorte tragen eine eigene {base}-NN-HFX, unter der KEIN Lead
+    // existiert. Lead-Status-Update bewusst skippen — niemals über den
+    // Träger-Lead umbiegen (würde den falschen Lead treffen).
+    const isStandort = !!contract?.customer_id && isStandortHfx(hfxNr);
+
+    if (hfxNr && !isStandort) {
       const { data: leadBefore } = await supabase
         .from("leads")
         .select("id, status")

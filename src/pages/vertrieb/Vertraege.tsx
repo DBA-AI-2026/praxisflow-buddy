@@ -44,7 +44,7 @@ import { lookupBicFromIban } from "@/lib/lookupBic";
 import { buildStripeLineItems, hasStripeProducts } from "@/lib/stripeProducts";
 import { logCustomerStatusChange } from "@/lib/customerEvents";
 import { DEFAULT_QODIA_UNIT_PRICE } from "@/lib/promoStatus";
-import { isGoaeProduct } from "@/lib/multiLocation";
+import { isGoaeProduct, isStandortHfx } from "@/lib/multiLocation";
 import { CreditCard } from "lucide-react"; // CreditCard used for payment section
 import foxLogoUrl from "@/assets/logo.png";
 import { useAuth } from "@/hooks/useAuth";
@@ -385,6 +385,15 @@ export default function Vertraege() {
   const syncLeadQodia = async (contract: any) => {
     if (!contract.hfx_customer_number) {
       toast({ title: "Keine HFX-Nummer", description: "Diesem Vertrag ist keine HFX-Kundennummer zugewiesen.", variant: "destructive" });
+      return;
+    }
+    // Phase 1b: Standorte bekommen in Phase 2 eine eigene Qodia-Identität (eigene HFX + E-Mail).
+    // Niemals über die Träger-HFX umbiegen — würde den falschen Account treffen.
+    if (isStandortHfx(contract.hfx_customer_number)) {
+      toast({
+        title: "Standort-Qodia folgt (Phase 2)",
+        description: "Standorte erhalten in Phase 2 einen eigenen Qodia-Account. Kein Sync über den Träger.",
+      });
       return;
     }
     setSyncingQodiaId(contract.id);
@@ -1060,8 +1069,10 @@ export default function Vertraege() {
         converted_from_lead_id?: string | null;
         vorname?: string | null; nachname?: string | null; bsnr?: string | null; lanr?: string | null;
       }, cId: string, knownCustomerId: string | null = null) => {
-        // Convert linked lead to "kunde" — capture old status for customer_events log
-        if (hfxNr) {
+        // Convert linked lead to "kunde" — capture old status for customer_events log.
+        // Phase 1b: Bei Standort-Anlage (knownCustomerId via locationContext) existiert
+        // unter der -NN-HFX kein Lead. Niemals über den Träger-Lead umbiegen — bewusst skip.
+        if (hfxNr && !knownCustomerId && !isStandortHfx(hfxNr)) {
           const { data: leadBefore } = await supabase
             .from("leads")
             .select("id, status")
@@ -1727,7 +1738,12 @@ export default function Vertraege() {
               created_by: user?.id,
             });
           }
-        } else if (hfxNr2 && contractId) {
+        } else if (hfxNr2 && contractId && !isStandortHfx(hfxNr2)) {
+          // Defensiver Phantom-Guard (Phase 1b): Standort-HFX ({base}-NN) niemals
+          // als Upsert-Schlüssel — sonst entstünde unter der Standort-HFX ein
+          // zweiter customers-Eintrag. Standorte laufen heute ausschliesslich
+          // über den locationContext-Zweig oben; dieser Guard schützt vor
+          // künftigen Pfadänderungen.
           const { data: existingCust2 } = await (supabase as any)
             .from("customers").select("id").eq("hfx_customer_number", hfxNr2).maybeSingle();
           let custId2 = existingCust2?.id ?? null;
@@ -2704,7 +2720,7 @@ export default function Vertraege() {
                               </DropdownMenuItem>
                             </>
                           )}
-                          {isAdmin && c.hfx_customer_number && !leadQodiaMap[c.hfx_customer_number] && (
+                          {isAdmin && c.hfx_customer_number && !leadQodiaMap[c.hfx_customer_number] && !isStandortHfx(c.hfx_customer_number) && (
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem

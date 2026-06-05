@@ -29,3 +29,14 @@ export function isCarrierContract(
 ): boolean {
   return !customerBaseFeeContractId || customerBaseFeeContractId === contractId;
 }
+
+/**
+ * Erkennt Standort-HFX im Format `{base}-NN` (Phase 1b).
+ * Hauptaccount: "HFX-I01070" (ein Bindestrich). Standort: "HFX-I01070-01"
+ * (zwei Bindestriche, Suffix `-\d{2}`). Demo-/Legacy-HFX (HFX-D…, HFX-…)
+ * tragen ebenfalls nur einen Bindestrich und gelten daher nie als Standort.
+ */
+export function isStandortHfx(hfx: string | null | undefined): boolean {
+  if (!hfx) return false;
+  return /^HFX-[A-Z0-9]+-\d{2}$/i.test(hfx);
+}
