@@ -799,6 +799,15 @@ export default function Vertraege() {
         ...(data.mandate_accepted && !editId ? { mandate_accepted_at: new Date().toISOString() } : {}),
         ...(documentUrl ? { document_url: documentUrl, document_name: documentName } : {}),
         ...(leadHfxNumber && !editId ? { hfx_customer_number: leadHfxNumber } : {}),
+        // Multi-Standort: Standort wird sofort dem Hauptaccount zugeordnet (geteiltes Mandat,
+        // status=gezeichnet, kein send-mandate-setup). base_fee_contract_id wird NICHT überschrieben.
+        ...(locationContext && !editId
+          ? {
+              customer_id: locationContext.customerId,
+              stripe_customer_id: locationContext.stripeCustomerId,
+              status: "gezeichnet" as const,
+            }
+          : {}),
         ...(data.selected_products.includes("HFX EBM") && !editId
           ? (() => {
               const s = data.start_date ? new Date(data.start_date) : new Date();
