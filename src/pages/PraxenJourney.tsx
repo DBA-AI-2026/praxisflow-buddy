@@ -816,6 +816,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
     contractIds: qodiaContractIds,
     provider: "qodia",
   });
+  const { data: carrierMap = {} } = useCarrierMap();
 
   const statusCounts = ABSCHLUSS_STATUSES.reduce((acc, s) => {
     acc[s] = teamContracts.filter((c: any) => c.status === s).length;
@@ -1156,6 +1157,7 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
 
   // Customer→contracts map (for Mix-products onboarding rows)
   const customerContractsMap = useCustomerContractsMap(allContracts as any);
+  const { data: carrierMap = {} } = useCarrierMap();
 
   // back-compat alias for older code paths in this file
   const providerFlags = qodiaFlags;
