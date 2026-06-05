@@ -530,7 +530,6 @@ export default function Vertraege() {
           return;
         }
         // Träger-Status prüfen: bei aktiv → Born-aktiv-Pfad, sonst gezeichnet.
-        // Defensiv: ohne base_fee_contract_id oder Lookup-Fehler → gezeichnet.
         let carrierActive = false;
         if (cust.base_fee_contract_id) {
           const { data: carrier } = await (supabase as any)
@@ -540,19 +539,47 @@ export default function Vertraege() {
             .maybeSingle();
           carrierActive = (carrier as any)?.status === "aktiv";
         }
+
+        // Phase 1b: NN-Minting der Standort-HFX als Variante der Hauptaccount-HFX.
+        // Suffix wird über ALLE je existierenden Geschwister-Standorte gezogen (inkl.
+        // gekündigte) — niemals count+1, sondern max(NN)+1.
+        const base = cust.hfx_customer_number as string;
+        const escapedBase = base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const ninePattern = new RegExp(`^${escapedBase}-(\\d{2})$`);
+        const { data: siblings } = await (supabase as any)
+          .from("contracts")
+          .select("hfx_customer_number, email")
+          .eq("customer_id", cust.id)
+          .like("hfx_customer_number", `${base}-__`);
+        let maxNN = 0;
+        const siblingEmails: string[] = [];
+        for (const s of (siblings ?? []) as Array<{ hfx_customer_number: string | null; email: string | null }>) {
+          const m = s.hfx_customer_number && ninePattern.exec(s.hfx_customer_number);
+          if (m) {
+            const nn = parseInt(m[1], 10);
+            if (nn > maxNN) maxNN = nn;
+          }
+          if (s.email) siblingEmails.push(s.email.trim().toLowerCase());
+        }
+        const nextNN = String(maxNN + 1).padStart(2, "0");
+        const locationHfx = `${base}-${nextNN}`;
+
         setLocationContext({
           customerId: cust.id,
           stripeCustomerId: cust.stripe_customer_id,
-          hfxNumber: cust.hfx_customer_number,
+          hfxNumber: locationHfx,
           carrierActive,
+          mainEmail: cust.email ? String(cust.email).trim().toLowerCase() : null,
+          siblingEmails,
         });
-        setLeadHfxNumber(cust.hfx_customer_number);
+        setLeadHfxNumber(locationHfx);
         setForm({
           ...emptyForm,
           praxis: cust.praxis_name || "",
           vorname: cust.vorname || "",
           nachname: cust.nachname || "",
-          email: cust.email || "",
+          // E-Mail bewusst leer — muss eigene Standort-E-Mail sein (Qodia: eine E-Mail pro HFX).
+          email: "",
           telefon: cust.telefon || "",
           adresse: cust.adresse || "",
           praxisanschrift: cust.adresse || "",
