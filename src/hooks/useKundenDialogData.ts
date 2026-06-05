@@ -287,15 +287,26 @@ export function useKundenDialogData(
     },
   });
 
-  /* ---- Schritt 3: Verträge (für Ownership + derivedPhase) ---- */
+  /* ---- Schritt 3: Verträge (für Ownership + derivedPhase) ----
+   * Phase 1a: Gruppierung läuft jetzt über customer_id (statt hfx_customer_number).
+   * Standorte (Phase 1b) tragen eine eigene HFX-Variante, gehören aber zur
+   * selben Kunden-Identität. customer_id ist die SSOT-Klammer.
+   *
+   * Abhängigkeit: Query läuft erst, wenn customerQ aufgelöst ist (success),
+   * damit wir wissen, ob ein Customer existiert.
+   *  - customer.id vorhanden  → contracts via customer_id (kein OR-Mix mit HFX).
+   *  - kein customer (Lead-Phase) → leeres Ergebnis (wie zuvor in HFX-only-Welt).
+   */
   const contractsQ = useQuery({
-    queryKey: ["kunden-dialog-contracts", hfxNumber],
-    enabled: enabled && !!hfxNumber,
+    queryKey: ["kunden-dialog-contracts", customerQ.data?.id ?? null, hfxNumber],
+    enabled: enabled && customerQ.isSuccess,
     queryFn: async () => {
+      const customerId = customerQ.data?.id;
+      if (!customerId) return [] as ContractRow[];
       const { data, error } = await supabase
         .from("contracts")
         .select("*")
-        .eq("hfx_customer_number", hfxNumber!);
+        .eq("customer_id", customerId);
       if (error) throw error;
       return (data ?? []) as ContractRow[];
     },
