@@ -781,8 +781,12 @@ export default function Vertraege() {
   const dupPlz = (form.plz ?? "").trim();
   const dupAdresse = (form.adresse ?? "").trim().toLowerCase();
 
+  // Standort-Anlage: Verträge des eigenen Hauptaccounts (gleiche customer_id)
+  // sind erwartungsgemäß namens-/adressgleich → aus Dubletten-Treffermenge ausnehmen.
+  const dupExcludeCustomerId = locationContext?.customerId ?? null;
+
   const { data: contractDuplicates = [] } = useQuery({
-    queryKey: ["contract-duplicates", dupHfx, dupEmail, dupPraxis, dupPlz, dupAdresse, editId],
+    queryKey: ["contract-duplicates", dupHfx, dupEmail, dupPraxis, dupPlz, dupAdresse, editId, dupExcludeCustomerId],
     enabled: dialogOpen && !editId && (!!dupHfx || !!dupEmail || !!dupPraxis),
     queryFn: async () => {
       const filters: string[] = [];
@@ -791,16 +795,22 @@ export default function Vertraege() {
       if (dupPlz) filters.push(`plz.eq.${dupPlz}`);
       if (filters.length === 0) return [];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("contracts")
-        .select("id, hfx_customer_number, contract_number, praxis, vorname, nachname, email, plz, adresse, status, created_at, parent_contract_id")
+        .select("id, hfx_customer_number, contract_number, praxis, vorname, nachname, email, plz, adresse, status, created_at, parent_contract_id, customer_id")
         .or(filters.join(","))
         .is("parent_contract_id", null)
         .limit(50);
+      if (dupExcludeCustomerId) {
+        query = query.neq("customer_id", dupExcludeCustomerId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
 
       const out: Array<{ row: any; reasons: string[] }> = [];
       for (const row of (data ?? [])) {
+        // Defensive Nachfilterung (falls neq nicht greift / Spalte NULL):
+        if (dupExcludeCustomerId && (row as any).customer_id === dupExcludeCustomerId) continue;
         const reasons: string[] = [];
         if (dupHfx && row.hfx_customer_number === dupHfx) reasons.push("HFX-Nummer");
         if (dupEmail && row.email?.toLowerCase() === dupEmail) reasons.push("E-Mail");
