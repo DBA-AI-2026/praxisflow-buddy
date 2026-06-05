@@ -231,8 +231,10 @@ export function VertragTab({ data, onSwitchToTab }: VertragTabProps) {
       {hasContracts &&
         sorted.map((c) => {
           const isFinal = FINAL_STATUSES.includes((c.status ?? "").toLowerCase());
-          return <ContractCard key={c.id} contract={c} dimmed={isFinal} />;
+          return <ContractCard key={c.id} contract={c} dimmed={isFinal} customer={customer} />;
         })}
+
+      <AddLocationButton customer={customer} contracts={contracts} />
 
       <NewCaseDialog
         open={newCaseOpen}
@@ -240,6 +242,53 @@ export function VertragTab({ data, onSwitchToTab }: VertragTabProps) {
         contracts={contracts}
         customerId={customer?.id ?? null}
       />
+    </div>
+  );
+}
+
+/* ─────────────────── Standort hinzufügen (Multi-Standort) ─────────────────── */
+
+function AddLocationButton({
+  customer,
+  contracts,
+}: {
+  customer: UseKundenDialogDataResult["customer"];
+  contracts: ContractRow[];
+}) {
+  const navigate = useNavigate();
+  const { isAdmin, isVertragsabteilung, isSalesLead } = useUserRole();
+  const canCreate = isAdmin || isVertragsabteilung || isSalesLead;
+  if (!customer || !canCreate) return null;
+  const hasGoae = contracts.some((c) => /GOÄ|GOA/i.test(c.product_name ?? ""));
+  if (!hasGoae) return null;
+  const hasMandate = !!customer.stripe_customer_id;
+
+  const btn = (
+    <Button
+      variant="outline"
+      size="sm"
+      className="gap-1.5"
+      disabled={!hasMandate}
+      onClick={() => navigate(`/vertrieb/vertraege?addLocationFor=${customer.id}`)}
+    >
+      <Plus className="h-3.5 w-3.5" />
+      Standort hinzufügen
+    </Button>
+  );
+
+  if (hasMandate) {
+    return <div className="flex justify-end">{btn}</div>;
+  }
+  return (
+    <div className="flex justify-end">
+      <TooltipProvider delayDuration={150}>
+        <Tooltip>
+          <TooltipTrigger asChild><span>{btn}</span></TooltipTrigger>
+          <TooltipContent>
+            Hauptaccount braucht erst aktives Mandat
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 }
