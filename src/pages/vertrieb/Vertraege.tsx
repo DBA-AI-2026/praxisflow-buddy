@@ -353,6 +353,9 @@ export default function Vertraege() {
   const [bicLoading, setBicLoading] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [leadHfxNumber, setLeadHfxNumber] = useState<string | null>(null);
+  const [locationContext, setLocationContext] = useState<
+    { customerId: string; stripeCustomerId: string | null; hfxNumber: string } | null
+  >(null);
   const [forceCreateDuplicate, setForceCreateDuplicate] = useState(false);
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
   const [resendingConfirmationId, setResendingConfirmationId] = useState<string | null>(null);
@@ -492,6 +495,52 @@ export default function Vertraege() {
     } else if (contractId) {
       // Will be handled when contracts are loaded — store for deferred open
       setAutoOpenContractId(contractId);
+    }
+
+    const addLocationFor = params.get("addLocationFor");
+    if (addLocationFor) {
+      (async () => {
+        const { data: cust } = await (supabase as any)
+          .from("customers")
+          .select("id, hfx_customer_number, stripe_customer_id, praxis_name, vorname, nachname, email, telefon, adresse, plz, ort, mp_nr")
+          .eq("id", addLocationFor)
+          .maybeSingle();
+        if (!cust) {
+          toast({ title: "Kunde nicht gefunden", variant: "destructive" });
+          return;
+        }
+        if (!cust.stripe_customer_id) {
+          toast({
+            title: "Hauptaccount ohne Mandat",
+            description: "Der Hauptaccount hat noch kein aktives SEPA-Mandat. Standort-Anlage nicht möglich.",
+            variant: "destructive",
+          });
+          return;
+        }
+        setLocationContext({
+          customerId: cust.id,
+          stripeCustomerId: cust.stripe_customer_id,
+          hfxNumber: cust.hfx_customer_number,
+        });
+        setLeadHfxNumber(cust.hfx_customer_number);
+        setForm({
+          ...emptyForm,
+          praxis: cust.praxis_name || "",
+          vorname: cust.vorname || "",
+          nachname: cust.nachname || "",
+          email: cust.email || "",
+          telefon: cust.telefon || "",
+          adresse: cust.adresse || "",
+          praxisanschrift: cust.adresse || "",
+          plz: cust.plz || "",
+          ort: cust.ort || "",
+          mp_nr: cust.mp_nr || "",
+          selected_products: ["HFX GOÄ - die KI für ihre Privatabrechnung"],
+          status: "gezeichnet",
+          sales_partner_name: profile?.full_name || "",
+        });
+        setDialogOpen(true);
+      })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
@@ -750,6 +799,15 @@ export default function Vertraege() {
         ...(data.mandate_accepted && !editId ? { mandate_accepted_at: new Date().toISOString() } : {}),
         ...(documentUrl ? { document_url: documentUrl, document_name: documentName } : {}),
         ...(leadHfxNumber && !editId ? { hfx_customer_number: leadHfxNumber } : {}),
+        // Multi-Standort: Standort wird sofort dem Hauptaccount zugeordnet (geteiltes Mandat,
+        // status=gezeichnet, kein send-mandate-setup). base_fee_contract_id wird NICHT überschrieben.
+        ...(locationContext && !editId
+          ? {
+              customer_id: locationContext.customerId,
+              stripe_customer_id: locationContext.stripeCustomerId,
+              status: "gezeichnet" as const,
+            }
+          : {}),
         ...(data.selected_products.includes("HFX EBM") && !editId
           ? (() => {
               const s = data.start_date ? new Date(data.start_date) : new Date();
@@ -1127,6 +1185,7 @@ export default function Vertraege() {
     setEditId(null);
     setEditingContract(null);
     setLeadHfxNumber(null);
+    setLocationContext(null);
     setForceCreateDuplicate(false);
     setLeadTippgeberName(null);
     setFromLeadId(null);

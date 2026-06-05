@@ -231,8 +231,10 @@ export function VertragTab({ data, onSwitchToTab }: VertragTabProps) {
       {hasContracts &&
         sorted.map((c) => {
           const isFinal = FINAL_STATUSES.includes((c.status ?? "").toLowerCase());
-          return <ContractCard key={c.id} contract={c} dimmed={isFinal} />;
+          return <ContractCard key={c.id} contract={c} dimmed={isFinal} customer={customer} />;
         })}
+
+      <AddLocationButton customer={customer} contracts={contracts} />
 
       <NewCaseDialog
         open={newCaseOpen}
@@ -240,6 +242,53 @@ export function VertragTab({ data, onSwitchToTab }: VertragTabProps) {
         contracts={contracts}
         customerId={customer?.id ?? null}
       />
+    </div>
+  );
+}
+
+/* ─────────────────── Standort hinzufügen (Multi-Standort) ─────────────────── */
+
+function AddLocationButton({
+  customer,
+  contracts,
+}: {
+  customer: UseKundenDialogDataResult["customer"];
+  contracts: ContractRow[];
+}) {
+  const navigate = useNavigate();
+  const { isAdmin, isVertragsabteilung, isSalesLead } = useUserRole();
+  const canCreate = isAdmin || isVertragsabteilung || isSalesLead;
+  if (!customer || !canCreate) return null;
+  const hasGoae = contracts.some((c) => /GOÄ|GOA/i.test(c.product_name ?? ""));
+  if (!hasGoae) return null;
+  const hasMandate = !!customer.stripe_customer_id;
+
+  const btn = (
+    <Button
+      variant="outline"
+      size="sm"
+      className="gap-1.5"
+      disabled={!hasMandate}
+      onClick={() => navigate(`/vertrieb/vertraege?addLocationFor=${customer.id}`)}
+    >
+      <Plus className="h-3.5 w-3.5" />
+      Standort hinzufügen
+    </Button>
+  );
+
+  if (hasMandate) {
+    return <div className="flex justify-end">{btn}</div>;
+  }
+  return (
+    <div className="flex justify-end">
+      <TooltipProvider delayDuration={150}>
+        <Tooltip>
+          <TooltipTrigger asChild><span>{btn}</span></TooltipTrigger>
+          <TooltipContent>
+            Hauptaccount braucht erst aktives Mandat
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 }
@@ -536,9 +585,11 @@ function ContractStatusPill({
 function ContractCard({
   contract,
   dimmed,
+  customer,
 }: {
   contract: ContractRow;
   dimmed?: boolean;
+  customer?: UseKundenDialogDataResult["customer"];
 }) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -639,9 +690,9 @@ function ContractCard({
             <div className="font-medium text-foreground">{product}</div>
             <div className="text-xs text-muted-foreground font-mono">{number}</div>
           </div>
-          {/* Multi-Standort: Badge wenn dieser Vertrag NICHT der Trägervertrag ist */}
-          {/GOÄ|GOA/i.test(product) && (contract.status ?? "").toLowerCase() === "gezeichnet" && !contract.stripe_customer_id && (
-            <Badge variant="secondary" title="Standortvertrag – kein Kunden-Setup nötig. Bitte direkt aktivieren.">
+          {/* Multi-Standort: Badge nur auf echten Standortverträgen (Carrier-Kriterium). */}
+          {!!contract.customer_id && !!customer?.base_fee_contract_id && customer.base_fee_contract_id !== contract.id && (
+            <Badge variant="secondary" title="Standortvertrag – kein eigenes Mandat. Grundgebühr läuft über Hauptaccount.">
               Standortvertrag
             </Badge>
           )}
