@@ -988,9 +988,16 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                     </p>
                   </td>
                   <td className="py-3 px-4">
-                    <ProductBadges
-                      products={c.product_name ? [{ key: c.product_name, label: c.product_name, variant: "primary" }] : []}
-                    />
+                    <div className="flex flex-col gap-1">
+                      <ProductBadges
+                        products={c.product_name ? [{ key: c.product_name, label: c.product_name, variant: "primary" }] : []}
+                      />
+                      <StandortBadge
+                        productName={c.product_name}
+                        contractId={c.id}
+                        carrierContractId={c.customer_id ? carrierMap[c.customer_id] : null}
+                      />
+                    </div>
                   </td>
                   <td className="py-3 px-4">
                     <StatusPill label={sc.label} cls={sc.class} tooltip={CONTRACT_STATUS_TOOLTIPS[c.status] ?? sc.label} />
@@ -1325,7 +1332,16 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                         : c.product_name
                           ? [{ key: c.product_name, label: c.product_name, variant: "primary" }]
                           : [];
-                      return <ProductBadges products={items} />;
+                      return (
+                        <div className="flex flex-col gap-1">
+                          <ProductBadges products={items} />
+                          <StandortBadge
+                            productName={c.product_name}
+                            contractId={c.id}
+                            carrierContractId={c.customer_id ? carrierMap[c.customer_id] : null}
+                          />
+                        </div>
+                      );
                     })()}
                   </td>
                   <td className="py-3 px-4">
