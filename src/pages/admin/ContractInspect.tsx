@@ -67,19 +67,58 @@ export default function ContractInspect() {
     setMergePlan(null);
     setMergeError(null);
     try {
-      const [leadRes, contractsRes, customerRes] = await Promise.all([
+      // Phase 1a: Customer zuerst laden, dann Verträge primär via customer_id
+      // (deckt künftige Standorte mit eigener HFX-Variante ab). HFX-Fallback
+      // bleibt aktiv für Altzeilen ohne customer_id und für reine Lead-Lookups
+      // (kein Customer vorhanden).
+      const [leadRes, customerRes] = await Promise.all([
         supabase.from("leads").select("*").eq("hfx_customer_number", hfx).maybeSingle(),
-        supabase.from("contracts").select("*").eq("hfx_customer_number", hfx).order("created_at", { ascending: false }),
         supabase.from("customers").select("*").eq("hfx_customer_number", hfx).maybeSingle(),
       ]);
 
       if (leadRes.error) throw leadRes.error;
-      if (contractsRes.error) throw contractsRes.error;
       if (customerRes.error) throw customerRes.error;
+
+      const customerId: string | null = customerRes.data?.id ?? null;
+
+      let contracts: any[] = [];
+      if (customerId) {
+        // Primär: alle Verträge dieses Kunden (Träger + Standorte, ggf. mit anderer HFX)
+        const byCustomer = await supabase
+          .from("contracts")
+          .select("*")
+          .eq("customer_id", customerId)
+          .order("created_at", { ascending: false });
+        if (byCustomer.error) throw byCustomer.error;
+
+        // Fallback: Altzeilen mit passender HFX aber ohne customer_id (Bestand)
+        const byHfxLegacy = await supabase
+          .from("contracts")
+          .select("*")
+          .eq("hfx_customer_number", hfx)
+          .is("customer_id", null)
+          .order("created_at", { ascending: false });
+        if (byHfxLegacy.error) throw byHfxLegacy.error;
+
+        const seen = new Set<string>();
+        contracts = [...(byCustomer.data ?? []), ...(byHfxLegacy.data ?? [])].filter((c) => {
+          if (seen.has(c.id)) return false;
+          seen.add(c.id);
+          return true;
+        });
+      } else {
+        const byHfx = await supabase
+          .from("contracts")
+          .select("*")
+          .eq("hfx_customer_number", hfx)
+          .order("created_at", { ascending: false });
+        if (byHfx.error) throw byHfx.error;
+        contracts = byHfx.data ?? [];
+      }
 
       setResult({
         lead: leadRes.data ?? null,
-        contracts: contractsRes.data ?? [],
+        contracts,
         customer: customerRes.data ?? null,
       });
     } catch (err: any) {
