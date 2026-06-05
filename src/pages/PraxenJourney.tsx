@@ -38,6 +38,8 @@ import {
 } from "@/components/pipeline/OnboardingStatus";
 import { useActivityThresholds } from "@/hooks/useAppSettings";
 import { ProductBadges, type ProductBadgeItem } from "@/components/pipeline/ProductBadges";
+import { useCarrierMap } from "@/hooks/useCarrierMap";
+import { StandortBadge } from "@/components/contracts/StandortBadge";
 
 import { useProviderStatusMap, useProductProviderFlags } from "@/hooks/useProviderStatus";
 import { useCustomerContractsMap } from "@/hooks/useCustomerContracts";
@@ -785,7 +787,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
 
       let query = supabase
         .from("contracts")
-        .select("id, customer_name, product_name, status, monthly_price, hfx_customer_number, email, vorname, nachname, praxis, created_at, start_date, mandate_email_sent_at, confirmation_email_sent_at, customer_confirmed_at, sales_partner_name, sales_partner_id, created_by")
+        .select("id, customer_name, product_name, status, monthly_price, hfx_customer_number, email, vorname, nachname, praxis, created_at, start_date, mandate_email_sent_at, confirmation_email_sent_at, customer_confirmed_at, sales_partner_name, sales_partner_id, created_by, customer_id")
         .in("status", ABSCHLUSS_STATUSES)
         .order("created_at", { ascending: false });
 
@@ -814,6 +816,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
     contractIds: qodiaContractIds,
     provider: "qodia",
   });
+  const { data: carrierMap = {} } = useCarrierMap();
 
   const statusCounts = ABSCHLUSS_STATUSES.reduce((acc, s) => {
     acc[s] = teamContracts.filter((c: any) => c.status === s).length;
@@ -985,9 +988,16 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                     </p>
                   </td>
                   <td className="py-3 px-4">
-                    <ProductBadges
-                      products={c.product_name ? [{ key: c.product_name, label: c.product_name, variant: "primary" }] : []}
-                    />
+                    <div className="flex flex-col gap-1">
+                      <ProductBadges
+                        products={c.product_name ? [{ key: c.product_name, label: c.product_name, variant: "primary" }] : []}
+                      />
+                      <StandortBadge
+                        productName={c.product_name}
+                        contractId={c.id}
+                        carrierContractId={c.customer_id ? carrierMap[c.customer_id] : null}
+                      />
+                    </div>
                   </td>
                   <td className="py-3 px-4">
                     <StatusPill label={sc.label} cls={sc.class} tooltip={CONTRACT_STATUS_TOOLTIPS[c.status] ?? sc.label} />
@@ -1154,6 +1164,7 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
 
   // Customer→contracts map (for Mix-products onboarding rows)
   const customerContractsMap = useCustomerContractsMap(allContracts as any);
+  const { data: carrierMap = {} } = useCarrierMap();
 
   // back-compat alias for older code paths in this file
   const providerFlags = qodiaFlags;
@@ -1321,7 +1332,16 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                         : c.product_name
                           ? [{ key: c.product_name, label: c.product_name, variant: "primary" }]
                           : [];
-                      return <ProductBadges products={items} />;
+                      return (
+                        <div className="flex flex-col gap-1">
+                          <ProductBadges products={items} />
+                          <StandortBadge
+                            productName={c.product_name}
+                            contractId={c.id}
+                            carrierContractId={c.customer_id ? carrierMap[c.customer_id] : null}
+                          />
+                        </div>
+                      );
                     })()}
                   </td>
                   <td className="py-3 px-4">
