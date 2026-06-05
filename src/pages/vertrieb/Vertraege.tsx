@@ -995,7 +995,7 @@ export default function Vertraege() {
         produkt?: string | null; module?: string[]; preis?: number; buchungs_datum?: string;
         converted_from_lead_id?: string | null;
         vorname?: string | null; nachname?: string | null; bsnr?: string | null; lanr?: string | null;
-      }, cId: string) => {
+      }, cId: string, knownCustomerId: string | null = null) => {
         // Convert linked lead to "kunde" — capture old status for customer_events log
         if (hfxNr) {
           const { data: leadBefore } = await supabase
@@ -1020,9 +1020,12 @@ export default function Vertraege() {
           }
         }
 
-        // Upsert customer record
-        let customerId: string | null = null;
-        if (hfxNr) {
+        // Phantom-Guard (Phase 1b): wenn beim Insert bereits eine customer_id gesetzt wurde
+        // (Standort-Anlage via locationContext), NIEMALS via HFX neuen customers-Eintrag suchen
+        // oder anlegen — sonst entsteht ein zweiter Kunde unter der Standort-HFX und das
+        // contracts.customer_id wird vom korrekten Hauptaccount weg überschrieben.
+        let customerId: string | null = knownCustomerId;
+        if (!customerId && hfxNr) {
           const { data: existingCust } = await (supabase as any)
             .from("customers")
             .select("id")
@@ -1053,8 +1056,8 @@ export default function Vertraege() {
           }
         }
 
-        // Link contract to customer
-        if (customerId && cId) {
+        // Link contract to customer — nur wenn nicht schon korrekt vorgegeben.
+        if (customerId && cId && !knownCustomerId) {
           await supabase.from("contracts").update({ customer_id: customerId }).eq("id", cId);
         }
 
