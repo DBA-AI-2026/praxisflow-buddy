@@ -387,6 +387,15 @@ export default function Vertraege() {
       toast({ title: "Keine HFX-Nummer", description: "Diesem Vertrag ist keine HFX-Kundennummer zugewiesen.", variant: "destructive" });
       return;
     }
+    // Phase 1b: Standorte bekommen in Phase 2 eine eigene Qodia-Identität (eigene HFX + E-Mail).
+    // Niemals über die Träger-HFX umbiegen — würde den falschen Account treffen.
+    if (isStandortHfx(contract.hfx_customer_number)) {
+      toast({
+        title: "Standort-Qodia folgt (Phase 2)",
+        description: "Standorte erhalten in Phase 2 einen eigenen Qodia-Account. Kein Sync über den Träger.",
+      });
+      return;
+    }
     setSyncingQodiaId(contract.id);
     try {
       // Find the lead by hfx_customer_number
