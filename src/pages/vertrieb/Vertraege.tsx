@@ -1069,8 +1069,10 @@ export default function Vertraege() {
         converted_from_lead_id?: string | null;
         vorname?: string | null; nachname?: string | null; bsnr?: string | null; lanr?: string | null;
       }, cId: string, knownCustomerId: string | null = null) => {
-        // Convert linked lead to "kunde" — capture old status for customer_events log
-        if (hfxNr) {
+        // Convert linked lead to "kunde" — capture old status for customer_events log.
+        // Phase 1b: Bei Standort-Anlage (knownCustomerId via locationContext) existiert
+        // unter der -NN-HFX kein Lead. Niemals über den Träger-Lead umbiegen — bewusst skip.
+        if (hfxNr && !knownCustomerId && !isStandortHfx(hfxNr)) {
           const { data: leadBefore } = await supabase
             .from("leads")
             .select("id, status")
