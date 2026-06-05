@@ -1185,6 +1185,7 @@ export default function Vertraege() {
     setEditId(null);
     setEditingContract(null);
     setLeadHfxNumber(null);
+    setLocationContext(null);
     setForceCreateDuplicate(false);
     setLeadTippgeberName(null);
     setFromLeadId(null);
