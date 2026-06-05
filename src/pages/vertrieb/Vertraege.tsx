@@ -1129,6 +1129,29 @@ export default function Vertraege() {
             console.error("Email send error:", emailErr);
           }
         }
+      // S3: Born-aktiv Standort — Parität zu Sweep-Nebenwirkungen.
+      // Qodia-Sync (idempotent, fängt fehlenden Account ab) + customer_events-Eintrag.
+      if (!editId && contractId && locationContext && variables.status === "aktiv") {
+        try {
+          supabase.functions.invoke("qodia-status-sync", {
+            body: {},
+          }).catch((e) => console.warn("qodia-status-sync (born-active) failed", e));
+        } catch (e) { console.warn("qodia-status-sync (born-active) raised", e); }
+        try {
+          await (supabase as any).from("customer_events").insert({
+            event_type: "CONTRACT_STATUS_CHANGED",
+            entity_type: "contract",
+            entity_id: contractId,
+            contract_id: contractId,
+            created_by: user?.id ?? null,
+            event_data: {
+              old_status: "(neu)",
+              new_status: "aktiv",
+              source: "vertraege_location_born_active",
+              customer_id: locationContext.customerId,
+            },
+          });
+        } catch (e) { console.warn("customer_events (born-active) failed", e); }
       }
       closeDialog();
     },
