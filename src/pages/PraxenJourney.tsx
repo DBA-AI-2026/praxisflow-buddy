@@ -1170,12 +1170,16 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
     ? teamContracts
     : teamContracts.filter((c: any) => c.status === statusFilter);
 
-  // Deduplicate by hfx_customer_number for cleaner view
+  // Deduplicate for cleaner view.
+  // Phase 1a: Primärer Dedup-Key ist customer_id (Klammer über Träger + Standorte).
+  // Fallback für Altzeilen ohne customer_id: hfx_customer_number; letzter Fallback: Praxisname.
   const seenKeys = new Set<string>();
   const rows = statusFiltered.filter((c: any) => {
-    const key = c.hfx_customer_number
-      ? `hfx:${c.hfx_customer_number}`
-      : `name:${(c.praxis || c.customer_name || "").toLowerCase().trim()}`;
+    const key = c.customer_id
+      ? `cust:${c.customer_id}`
+      : c.hfx_customer_number
+        ? `hfx:${c.hfx_customer_number}`
+        : `name:${(c.praxis || c.customer_name || "").toLowerCase().trim()}`;
     if (seenKeys.has(key)) return false;
     seenKeys.add(key);
     return true;
