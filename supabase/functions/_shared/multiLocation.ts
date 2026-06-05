@@ -32,6 +32,14 @@ export function isCarrierContract(
 }
 
 /**
+ * Erkennt Standort-HFX im Format `{base}-NN` (Phase 1b). Siehe src/lib/multiLocation.ts.
+ */
+export function isStandortHfx(hfx: string | null | undefined): boolean {
+  if (!hfx) return false;
+  return /^HFX-[A-Z0-9]+-\d{2}$/i.test(hfx);
+}
+
+/**
  * Self-Heal-Helper für customers.stripe_customer_id.
  * Leitet den Kunden aus dem gerade geschriebenen Vertrag ab (contract.customer_id).
  * Niemals breit über WHERE stripe_customer_id = X. Bei NULL customer_id: Skip.
