@@ -16,6 +16,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { logCustomerStatusChange } from "@/lib/customerEvents";
+import { isStandortHfx } from "@/lib/multiLocation";
 import type { ContractRow } from "@/hooks/useKundenDialogData";
 
 export interface ChangeContractStatusParams {
