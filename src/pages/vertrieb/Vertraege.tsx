@@ -570,6 +570,31 @@ export default function Vertraege() {
     },
   });
 
+  // Weg A — Standortvertrag-Kennzeichnung (flat list, keine Gruppierung).
+  // Quelle: customers.base_fee_contract_id zeigt den Trägervertrag pro Kunde.
+  // Standort = Vertrag mit customer_id, dessen id NICHT der Träger ist.
+  const { data: carrierMap = {} } = useQuery({
+    queryKey: ["carrier-map"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("customers")
+        .select("id, base_fee_contract_id")
+        .not("base_fee_contract_id", "is", null);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      for (const c of data || []) {
+        if (c.base_fee_contract_id) map[c.id] = c.base_fee_contract_id;
+      }
+      return map;
+    },
+  });
+
+  const isLocationContract = (c: any): boolean => {
+    if (!c?.customer_id) return false;
+    const carrier = carrierMap[c.customer_id];
+    return !!carrier && carrier !== c.id;
+  };
+
   // Open contract edit dialog once contracts are loaded and autoOpenContractId is set
   useEffect(() => {
     if (autoOpenContractId && contracts.length > 0) {
