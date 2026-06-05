@@ -813,12 +813,13 @@ export default function Vertraege() {
         ...(documentUrl ? { document_url: documentUrl, document_name: documentName } : {}),
         ...(leadHfxNumber && !editId ? { hfx_customer_number: leadHfxNumber } : {}),
         // Multi-Standort: Standort wird sofort dem Hauptaccount zugeordnet (geteiltes Mandat,
-        // status=gezeichnet, kein send-mandate-setup). base_fee_contract_id wird NICHT überschrieben.
+        // kein send-mandate-setup). base_fee_contract_id wird NICHT überschrieben.
+        // Born-aktiv, wenn Träger bereits aktiv ist; sonst gezeichnet (Sweep aktiviert nach Mandat).
         ...(locationContext && !editId
           ? {
               customer_id: locationContext.customerId,
               stripe_customer_id: locationContext.stripeCustomerId,
-              status: "gezeichnet" as const,
+              status: (locationContext.carrierActive ? "aktiv" : "gezeichnet") as const,
             }
           : {}),
         ...(data.selected_products.includes("HFX EBM") && !editId
@@ -1688,6 +1689,11 @@ export default function Vertraege() {
     for (const f of lanrFields) {
       const err = validateLanr(f.val);
       if (err) { toast({ title: `Ungültige ${f.label}`, description: err, variant: "destructive" }); return; }
+    }
+    // Standort-Anlage: Bestätigungs-Dialog vor finalem Insert (bewusster Consent-Klick).
+    if (locationContext && !editId) {
+      setLocationConfirmOpen(true);
+      return;
     }
     upsertMutation.mutate(form);
   };
