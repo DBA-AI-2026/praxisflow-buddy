@@ -1111,7 +1111,7 @@ export default function Vertraege() {
           preis: variables.monthly_price || 0,
           buchungs_datum: variables.start_date || new Date().toISOString().split("T")[0],
           converted_from_lead_id: fromLeadId || null,
-        }, contractId);
+        }, contractId, locationContext?.customerId ?? null);
       }
 
       // For new contracts with status "eingegangen": trigger SEPA-Mandat-Mail (Mail 1)
