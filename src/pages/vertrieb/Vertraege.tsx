@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useCarrierMap } from "@/hooks/useCarrierMap";
+import { StandortBadge } from "@/components/contracts/StandortBadge";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Mail } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -2321,21 +2323,12 @@ export default function Vertraege() {
                             Nachtrag
                           </span>
                         )}
-                        {isLocationContract(c) && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="inline-flex items-center gap-1 text-xs font-medium text-accent-foreground border border-border bg-accent/40 rounded px-1.5 py-0.5 w-fit">
-                                  <MapPin className="h-3 w-3" />
-                                  Standortvertrag
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                Standort eines Hauptaccounts — teilt SEPA-Mandat &amp; Grundgebühr mit dem Träger.
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
+                        <StandortBadge
+                          productName={c.product_name}
+                          contractId={c.id}
+                          carrierContractId={c.customer_id ? carrierMap[c.customer_id] : null}
+                        />
+
                         <div className="flex flex-wrap gap-1">
                           {c.product_name.split(", ").map((p: string, i: number) => (
                             <Badge key={i} variant="secondary" className="text-xs font-normal px-2 py-0.5 whitespace-nowrap">
