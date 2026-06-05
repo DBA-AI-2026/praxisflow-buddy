@@ -1680,6 +1680,9 @@ export default function Vertraege() {
           selected_addon_modules: form.selected_modules.length > 0 ? form.selected_modules : [],
           bsnr_count: form.bsnr_count,
           lanr_count: form.lanr_count,
+          // F1: qodia_unit_price IMMER beim Insert setzen — sweep-aktivierte Standorte
+          // erreichen sonst nie den Aktivierungs-?? -DEFAULT-Fallback und bleiben auf 0.
+          qodia_unit_price: (form as any).qodia_unit_price ?? DEFAULT_QODIA_UNIT_PRICE,
           status: "eingegangen",
           created_by: user?.id,
           ...(leadHfxNumber ? { hfx_customer_number: leadHfxNumber } : {}),
