@@ -1757,6 +1757,33 @@ export default function Vertraege() {
     }
     // Standort-Anlage: Bestätigungs-Dialog vor finalem Insert (bewusster Consent-Klick).
     if (locationContext && !editId) {
+      // E1: E-Mail-Pflicht + Eindeutigkeit gegenüber Hauptaccount UND Geschwister-Standorten
+      // (Qodia: eine E-Mail pro HFX-Nummer; gleiche E-Mail würde in Phase 2 kollidieren).
+      const submittedEmail = (form.email || "").trim().toLowerCase();
+      if (!submittedEmail) {
+        toast({
+          title: "E-Mail fehlt",
+          description: "Standorte benötigen eine eigene E-Mail-Adresse (Qodia: eine E-Mail pro Standort).",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (locationContext.mainEmail && submittedEmail === locationContext.mainEmail) {
+        toast({
+          title: "E-Mail identisch mit Hauptaccount",
+          description: "Der Standort muss eine eigene E-Mail-Adresse haben (≠ Hauptaccount).",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (locationContext.siblingEmails.includes(submittedEmail)) {
+        toast({
+          title: "E-Mail bereits an einem anderen Standort vergeben",
+          description: "Jeder Standort dieses Kunden braucht eine eigene E-Mail-Adresse.",
+          variant: "destructive",
+        });
+        return;
+      }
       setLocationConfirmOpen(true);
       return;
     }
