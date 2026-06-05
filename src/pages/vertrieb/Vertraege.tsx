@@ -2343,6 +2343,21 @@ export default function Vertraege() {
                             Nachtrag
                           </span>
                         )}
+                        {isLocationContract(c) && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-accent-foreground border border-border bg-accent/40 rounded px-1.5 py-0.5 w-fit">
+                                  <MapPin className="h-3 w-3" />
+                                  Standortvertrag
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Standort eines Hauptaccounts — teilt SEPA-Mandat &amp; Grundgebühr mit dem Träger.
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                         <div className="flex flex-wrap gap-1">
                           {c.product_name.split(", ").map((p: string, i: number) => (
                             <Badge key={i} variant="secondary" className="text-xs font-normal px-2 py-0.5 whitespace-nowrap">
