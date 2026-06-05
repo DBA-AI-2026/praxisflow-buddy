@@ -791,8 +791,14 @@ async function handleContractActivation(
     }
   }
 
-  // 3-Tier: customers-Eintrag sicherstellen
-  if (contract?.hfx_customer_number) {
+  // 3-Tier: customers-Eintrag sicherstellen.
+  // Phantom-Guard (Phase 1b): wenn contract.customer_id bereits gesetzt ist
+  // (z. B. Standort-Anlage über locationContext), den gesamten Customer-Ensure
+  // -/customer_id-Overwrite-Block überspringen — sonst entsteht unter der
+  // Standort-HFX ({base}-NN) ein zweiter Kunde und die Hierarchie zerbricht.
+  if (contract?.customer_id) {
+    log("customer_id already set — skipping HFX-based customers upsert (Phase 1b guard)", contract.customer_id);
+  } else if (contract?.hfx_customer_number) {
     const { error: custErr } = await supabase
       .from("customers")
       .upsert(
@@ -817,18 +823,16 @@ async function handleContractActivation(
     } else {
       log("customers record ensured", contract.hfx_customer_number);
 
-      if (!contract.customer_id) {
-        const { data: custRecord } = await supabase
-          .from("customers")
-          .select("id")
-          .eq("hfx_customer_number", contract.hfx_customer_number)
-          .maybeSingle();
-        if (custRecord?.id) {
-          await supabase
-            .from("contracts")
-            .update({ customer_id: custRecord.id } as any)
-            .eq("id", contractId);
-        }
+      const { data: custRecord } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("hfx_customer_number", contract.hfx_customer_number)
+        .maybeSingle();
+      if (custRecord?.id) {
+        await supabase
+          .from("contracts")
+          .update({ customer_id: custRecord.id } as any)
+          .eq("id", contractId);
       }
     }
   }
