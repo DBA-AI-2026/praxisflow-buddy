@@ -2713,7 +2713,7 @@ export default function Vertraege() {
                               </DropdownMenuItem>
                             </>
                           )}
-                          {isAdmin && c.hfx_customer_number && !leadQodiaMap[c.hfx_customer_number] && (
+                          {isAdmin && c.hfx_customer_number && !leadQodiaMap[c.hfx_customer_number] && !isStandortHfx(c.hfx_customer_number) && (
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
