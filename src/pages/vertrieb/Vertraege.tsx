@@ -356,7 +356,16 @@ export default function Vertraege() {
   const [showErrors, setShowErrors] = useState(false);
   const [leadHfxNumber, setLeadHfxNumber] = useState<string | null>(null);
   const [locationContext, setLocationContext] = useState<
-    { customerId: string; stripeCustomerId: string | null; hfxNumber: string; carrierActive: boolean } | null
+    {
+      customerId: string;
+      stripeCustomerId: string | null;
+      hfxNumber: string;
+      carrierActive: boolean;
+      /** Hauptaccount-E-Mail — neue Standort-E-Mail darf hierzu nicht identisch sein (Qodia-Kollision). */
+      mainEmail: string | null;
+      /** E-Mails aller bestehenden Standort-Verträge desselben Kunden (lowercase). */
+      siblingEmails: string[];
+    } | null
   >(null);
   const [locationConfirmOpen, setLocationConfirmOpen] = useState(false);
   const [forceCreateDuplicate, setForceCreateDuplicate] = useState(false);
@@ -521,7 +530,6 @@ export default function Vertraege() {
           return;
         }
         // Träger-Status prüfen: bei aktiv → Born-aktiv-Pfad, sonst gezeichnet.
-        // Defensiv: ohne base_fee_contract_id oder Lookup-Fehler → gezeichnet.
         let carrierActive = false;
         if (cust.base_fee_contract_id) {
           const { data: carrier } = await (supabase as any)
@@ -531,19 +539,47 @@ export default function Vertraege() {
             .maybeSingle();
           carrierActive = (carrier as any)?.status === "aktiv";
         }
+
+        // Phase 1b: NN-Minting der Standort-HFX als Variante der Hauptaccount-HFX.
+        // Suffix wird über ALLE je existierenden Geschwister-Standorte gezogen (inkl.
+        // gekündigte) — niemals count+1, sondern max(NN)+1.
+        const base = cust.hfx_customer_number as string;
+        const escapedBase = base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const ninePattern = new RegExp(`^${escapedBase}-(\\d{2})$`);
+        const { data: siblings } = await (supabase as any)
+          .from("contracts")
+          .select("hfx_customer_number, email")
+          .eq("customer_id", cust.id)
+          .like("hfx_customer_number", `${base}-__`);
+        let maxNN = 0;
+        const siblingEmails: string[] = [];
+        for (const s of (siblings ?? []) as Array<{ hfx_customer_number: string | null; email: string | null }>) {
+          const m = s.hfx_customer_number && ninePattern.exec(s.hfx_customer_number);
+          if (m) {
+            const nn = parseInt(m[1], 10);
+            if (nn > maxNN) maxNN = nn;
+          }
+          if (s.email) siblingEmails.push(s.email.trim().toLowerCase());
+        }
+        const nextNN = String(maxNN + 1).padStart(2, "0");
+        const locationHfx = `${base}-${nextNN}`;
+
         setLocationContext({
           customerId: cust.id,
           stripeCustomerId: cust.stripe_customer_id,
-          hfxNumber: cust.hfx_customer_number,
+          hfxNumber: locationHfx,
           carrierActive,
+          mainEmail: cust.email ? String(cust.email).trim().toLowerCase() : null,
+          siblingEmails,
         });
-        setLeadHfxNumber(cust.hfx_customer_number);
+        setLeadHfxNumber(locationHfx);
         setForm({
           ...emptyForm,
           praxis: cust.praxis_name || "",
           vorname: cust.vorname || "",
           nachname: cust.nachname || "",
-          email: cust.email || "",
+          // E-Mail bewusst leer — muss eigene Standort-E-Mail sein (Qodia: eine E-Mail pro HFX).
+          email: "",
           telefon: cust.telefon || "",
           adresse: cust.adresse || "",
           praxisanschrift: cust.adresse || "",
@@ -959,7 +995,7 @@ export default function Vertraege() {
         produkt?: string | null; module?: string[]; preis?: number; buchungs_datum?: string;
         converted_from_lead_id?: string | null;
         vorname?: string | null; nachname?: string | null; bsnr?: string | null; lanr?: string | null;
-      }, cId: string) => {
+      }, cId: string, knownCustomerId: string | null = null) => {
         // Convert linked lead to "kunde" — capture old status for customer_events log
         if (hfxNr) {
           const { data: leadBefore } = await supabase
@@ -984,9 +1020,12 @@ export default function Vertraege() {
           }
         }
 
-        // Upsert customer record
-        let customerId: string | null = null;
-        if (hfxNr) {
+        // Phantom-Guard (Phase 1b): wenn beim Insert bereits eine customer_id gesetzt wurde
+        // (Standort-Anlage via locationContext), NIEMALS via HFX neuen customers-Eintrag suchen
+        // oder anlegen — sonst entsteht ein zweiter Kunde unter der Standort-HFX und das
+        // contracts.customer_id wird vom korrekten Hauptaccount weg überschrieben.
+        let customerId: string | null = knownCustomerId;
+        if (!customerId && hfxNr) {
           const { data: existingCust } = await (supabase as any)
             .from("customers")
             .select("id")
@@ -1017,8 +1056,8 @@ export default function Vertraege() {
           }
         }
 
-        // Link contract to customer
-        if (customerId && cId) {
+        // Link contract to customer — nur wenn nicht schon korrekt vorgegeben.
+        if (customerId && cId && !knownCustomerId) {
           await supabase.from("contracts").update({ customer_id: customerId }).eq("id", cId);
         }
 
@@ -1072,7 +1111,7 @@ export default function Vertraege() {
           preis: variables.monthly_price || 0,
           buchungs_datum: variables.start_date || new Date().toISOString().split("T")[0],
           converted_from_lead_id: fromLeadId || null,
-        }, contractId);
+        }, contractId, locationContext?.customerId ?? null);
       }
 
       // For new contracts with status "eingegangen": trigger SEPA-Mandat-Mail (Mail 1)
@@ -1605,9 +1644,23 @@ export default function Vertraege() {
         if (error) throw error;
         contractId = inserted.id;
 
-        // Upsert customers entry and link to contract
+        // Upsert customers entry and link to contract.
+        // Phantom-Guard (Phase 1b): bei Standort-Anlage ist customer_id bereits beim Insert
+        // korrekt gesetzt — KEIN HFX-basierter customers-Upsert, kein contracts.customer_id
+        // -Overwrite. Nur den Case linken.
         const hfxNr2 = leadHfxNumber || form.mp_nr || null;
-        if (hfxNr2 && contractId) {
+        if (locationContext) {
+          if (contractId) {
+            await (supabase as any).from("contract_cases").insert({
+              customer_id: locationContext.customerId,
+              contract_id: contractId,
+              case_type: "neuabschluss",
+              status: "offen",
+              title: `Neuabschluss – ${form.selected_products.join(", ") || "Produkt"}`,
+              created_by: user?.id,
+            });
+          }
+        } else if (hfxNr2 && contractId) {
           const { data: existingCust2 } = await (supabase as any)
             .from("customers").select("id").eq("hfx_customer_number", hfxNr2).maybeSingle();
           let custId2 = existingCust2?.id ?? null;
@@ -1721,6 +1774,33 @@ export default function Vertraege() {
     }
     // Standort-Anlage: Bestätigungs-Dialog vor finalem Insert (bewusster Consent-Klick).
     if (locationContext && !editId) {
+      // E1: E-Mail-Pflicht + Eindeutigkeit gegenüber Hauptaccount UND Geschwister-Standorten
+      // (Qodia: eine E-Mail pro HFX-Nummer; gleiche E-Mail würde in Phase 2 kollidieren).
+      const submittedEmail = (form.email || "").trim().toLowerCase();
+      if (!submittedEmail) {
+        toast({
+          title: "E-Mail fehlt",
+          description: "Standorte benötigen eine eigene E-Mail-Adresse (Qodia: eine E-Mail pro Standort).",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (locationContext.mainEmail && submittedEmail === locationContext.mainEmail) {
+        toast({
+          title: "E-Mail identisch mit Hauptaccount",
+          description: "Der Standort muss eine eigene E-Mail-Adresse haben (≠ Hauptaccount).",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (locationContext.siblingEmails.includes(submittedEmail)) {
+        toast({
+          title: "E-Mail bereits an einem anderen Standort vergeben",
+          description: "Jeder Standort dieses Kunden braucht eine eigene E-Mail-Adresse.",
+          variant: "destructive",
+        });
+        return;
+      }
       setLocationConfirmOpen(true);
       return;
     }
