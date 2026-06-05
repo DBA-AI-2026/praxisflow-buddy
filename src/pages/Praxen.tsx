@@ -179,28 +179,53 @@ export default function Praxen() {
     setLoadingContracts(true);
     setPraxisContracts([]);
 
-    // Search by hfxNr, mpNr, or email
-    const conditions: string[] = [];
-    if (praxis.hfxNr) conditions.push(`hfx_customer_number.eq.${praxis.hfxNr}`);
-    if (praxis.mpNr && praxis.mpNr !== praxis.hfxNr) conditions.push(`mp_nr.eq.${praxis.mpNr}`);
-
-    let query = supabase
-      .from("contracts")
-      .select("*")
-      .order("created_at", { ascending: false });
-
+    // Phase 1a: Verträge primär via customer_id auflösen (Träger + Standorte).
+    // HFX-Fallback für Altzeilen ohne customer_id; E-Mail als letzter Fallback.
     if (praxis.hfxNr) {
-      // Try by hfx_customer_number first, fallback to email
-      const { data: byHfx } = await supabase
-        .from("contracts")
-        .select("*")
+      const { data: customerRow } = await supabase
+        .from("customers")
+        .select("id")
         .eq("hfx_customer_number", praxis.hfxNr)
-        .order("created_at", { ascending: false });
+        .maybeSingle();
 
-      if (byHfx && byHfx.length > 0) {
-        setPraxisContracts(byHfx);
-        setLoadingContracts(false);
-        return;
+      if (customerRow?.id) {
+        const [byCustomer, byHfxLegacy] = await Promise.all([
+          supabase
+            .from("contracts")
+            .select("*")
+            .eq("customer_id", customerRow.id)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("contracts")
+            .select("*")
+            .eq("hfx_customer_number", praxis.hfxNr)
+            .is("customer_id", null)
+            .order("created_at", { ascending: false }),
+        ]);
+        const merged = [...(byCustomer.data ?? []), ...(byHfxLegacy.data ?? [])];
+        const seen = new Set<string>();
+        const dedup = merged.filter((c) => {
+          if (seen.has(c.id)) return false;
+          seen.add(c.id);
+          return true;
+        });
+        if (dedup.length > 0) {
+          setPraxisContracts(dedup);
+          setLoadingContracts(false);
+          return;
+        }
+      } else {
+        // Kein Customer-Datensatz → reiner HFX-Pfad (Altbestand / Lead-Praxis)
+        const { data: byHfx } = await supabase
+          .from("contracts")
+          .select("*")
+          .eq("hfx_customer_number", praxis.hfxNr)
+          .order("created_at", { ascending: false });
+        if (byHfx && byHfx.length > 0) {
+          setPraxisContracts(byHfx);
+          setLoadingContracts(false);
+          return;
+        }
       }
     }
 
