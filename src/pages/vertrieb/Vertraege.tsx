@@ -44,6 +44,7 @@ import { lookupBicFromIban } from "@/lib/lookupBic";
 import { buildStripeLineItems, hasStripeProducts } from "@/lib/stripeProducts";
 import { logCustomerStatusChange } from "@/lib/customerEvents";
 import { DEFAULT_QODIA_UNIT_PRICE } from "@/lib/promoStatus";
+import { isGoaeProduct } from "@/lib/multiLocation";
 import { CreditCard } from "lucide-react"; // CreditCard used for payment section
 import foxLogoUrl from "@/assets/logo.png";
 import { useAuth } from "@/hooks/useAuth";
@@ -529,16 +530,61 @@ export default function Vertraege() {
           });
           return;
         }
-        // Träger-Status prüfen: bei aktiv → Born-aktiv-Pfad, sonst gezeichnet.
+        // Träger-Status prüfen + Produkt/Preis-Felder vom Träger ziehen.
+        // F2: nur die GOÄ-Anteile übernehmen — Träger kann GOÄ + EBM bündeln,
+        //     EBM darf NICHT mit auf den Standort wandern (L1).
+        // F1: qodia_unit_price MUSS schon hier ins Prefill, weil ein per
+        //     Sweep aktivierter Standort sonst auf NULL/0 bleibt.
         let carrierActive = false;
+        let carrier: any = null;
         if (cust.base_fee_contract_id) {
-          const { data: carrier } = await (supabase as any)
+          const { data } = await (supabase as any)
             .from("contracts")
-            .select("status")
+            .select("id, status, product_name, modules, selected_addon_modules, qodia_unit_price, bsnr_count, lanr_count")
             .eq("id", cust.base_fee_contract_id)
             .maybeSingle();
-          carrierActive = (carrier as any)?.status === "aktiv";
+          carrier = data ?? null;
+          carrierActive = carrier?.status === "aktiv";
         }
+        // Fallback: kein Träger gesetzt → GOÄ-Geschwister suchen (bevorzugt aktiv).
+        if (!carrier) {
+          const { data: sibs } = await (supabase as any)
+            .from("contracts")
+            .select("id, status, product_name, modules, selected_addon_modules, qodia_unit_price, bsnr_count, lanr_count")
+            .eq("customer_id", cust.id);
+          const goaeSibs = (sibs ?? []).filter((s: any) =>
+            isGoaeProduct(s.product_name) ||
+            (Array.isArray(s.modules) && s.modules.some((m: string) => isGoaeProduct(m))),
+          );
+          carrier = goaeSibs.find((s: any) => s.status === "aktiv") ?? goaeSibs[0] ?? null;
+        }
+
+        // GOÄ-Produkte aus Träger extrahieren (modules bevorzugt, sonst product_name).
+        const carrierProductCandidates: string[] = carrier
+          ? (Array.isArray(carrier.modules) && carrier.modules.length > 0
+              ? carrier.modules
+              : String(carrier.product_name || "").split(",").map((s: string) => s.trim()).filter(Boolean))
+          : [];
+        const goaeProducts = carrierProductCandidates.filter((p) => isGoaeProduct(p));
+        // Addon-Module: EBM-Module ausschließen, Rest als GOÄ-relevant durchlassen.
+        const carrierAddons: string[] = Array.isArray(carrier?.selected_addon_modules)
+          ? carrier.selected_addon_modules.filter((m: string) => !/EBM/i.test(m))
+          : [];
+
+        if (!carrier || goaeProducts.length === 0) {
+          toast({
+            title: "Träger-GOÄ nicht auffindbar",
+            description: "Standort wird mit Standard-GOÄ-Produkt angelegt. Bitte Produkt/Preis vor Aktivierung prüfen.",
+          });
+        }
+
+        const prefillProducts = goaeProducts.length > 0
+          ? goaeProducts
+          : ["HFX GOÄ - die KI für ihre Privatabrechnung"];
+        const prefillQodiaUnitPrice =
+          carrier && carrier.qodia_unit_price != null
+            ? Number(carrier.qodia_unit_price)
+            : DEFAULT_QODIA_UNIT_PRICE;
 
         // Phase 1b: NN-Minting der Standort-HFX als Variante der Hauptaccount-HFX.
         // Suffix wird über ALLE je existierenden Geschwister-Standorte gezogen (inkl.
@@ -586,10 +632,18 @@ export default function Vertraege() {
           plz: cust.plz || "",
           ort: cust.ort || "",
           mp_nr: cust.mp_nr || "",
-          selected_products: ["HFX GOÄ - die KI für ihre Privatabrechnung"],
+          selected_products: prefillProducts,
+          selected_modules: carrierAddons,
+          bsnr_count: carrier?.bsnr_count ?? emptyForm.bsnr_count,
+          lanr_count: carrier?.lanr_count ?? emptyForm.lanr_count,
+          // Grundgebühr/Signup bleiben 0 (Carrier-Gating); qodia_unit_price wird unten ergänzt.
+          monthly_price: 0,
+          one_time_fee: 0,
           status: carrierActive ? "aktiv" : "gezeichnet",
           sales_partner_name: profile?.full_name || "",
-        });
+          // qodia_unit_price liegt außerhalb der Form-Typedef — via cast setzen (vgl. Z. 852/2861/3435).
+          ...({ qodia_unit_price: prefillQodiaUnitPrice } as any),
+        } as any);
         setDialogOpen(true);
       })();
     }
@@ -1626,6 +1680,9 @@ export default function Vertraege() {
           selected_addon_modules: form.selected_modules.length > 0 ? form.selected_modules : [],
           bsnr_count: form.bsnr_count,
           lanr_count: form.lanr_count,
+          // F1: qodia_unit_price IMMER beim Insert setzen — sweep-aktivierte Standorte
+          // erreichen sonst nie den Aktivierungs-?? -DEFAULT-Fallback und bleiben auf 0.
+          qodia_unit_price: (form as any).qodia_unit_price ?? DEFAULT_QODIA_UNIT_PRICE,
           status: "eingegangen",
           created_by: user?.id,
           ...(leadHfxNumber ? { hfx_customer_number: leadHfxNumber } : {}),
