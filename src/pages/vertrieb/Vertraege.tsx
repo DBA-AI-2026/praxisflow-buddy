@@ -496,6 +496,52 @@ export default function Vertraege() {
       // Will be handled when contracts are loaded — store for deferred open
       setAutoOpenContractId(contractId);
     }
+
+    const addLocationFor = params.get("addLocationFor");
+    if (addLocationFor) {
+      (async () => {
+        const { data: cust } = await (supabase as any)
+          .from("customers")
+          .select("id, hfx_customer_number, stripe_customer_id, praxis_name, vorname, nachname, email, telefon, adresse, plz, ort, mp_nr")
+          .eq("id", addLocationFor)
+          .maybeSingle();
+        if (!cust) {
+          toast({ title: "Kunde nicht gefunden", variant: "destructive" });
+          return;
+        }
+        if (!cust.stripe_customer_id) {
+          toast({
+            title: "Hauptaccount ohne Mandat",
+            description: "Der Hauptaccount hat noch kein aktives SEPA-Mandat. Standort-Anlage nicht möglich.",
+            variant: "destructive",
+          });
+          return;
+        }
+        setLocationContext({
+          customerId: cust.id,
+          stripeCustomerId: cust.stripe_customer_id,
+          hfxNumber: cust.hfx_customer_number,
+        });
+        setLeadHfxNumber(cust.hfx_customer_number);
+        setForm({
+          ...emptyForm,
+          praxis: cust.praxis_name || "",
+          vorname: cust.vorname || "",
+          nachname: cust.nachname || "",
+          email: cust.email || "",
+          telefon: cust.telefon || "",
+          adresse: cust.adresse || "",
+          praxisanschrift: cust.adresse || "",
+          plz: cust.plz || "",
+          ort: cust.ort || "",
+          mp_nr: cust.mp_nr || "",
+          selected_products: ["HFX GOÄ - die KI für ihre Privatabrechnung"],
+          status: "gezeichnet",
+          sales_partner_name: profile?.full_name || "",
+        });
+        setDialogOpen(true);
+      })();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
 
