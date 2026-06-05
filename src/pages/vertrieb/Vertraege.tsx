@@ -819,7 +819,7 @@ export default function Vertraege() {
           ? {
               customer_id: locationContext.customerId,
               stripe_customer_id: locationContext.stripeCustomerId,
-              status: (locationContext.carrierActive ? "aktiv" : "gezeichnet") as const,
+              status: locationContext.carrierActive ? "aktiv" : "gezeichnet",
             }
           : {}),
         ...(data.selected_products.includes("HFX EBM") && !editId
