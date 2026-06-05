@@ -354,8 +354,9 @@ export default function Vertraege() {
   const [showErrors, setShowErrors] = useState(false);
   const [leadHfxNumber, setLeadHfxNumber] = useState<string | null>(null);
   const [locationContext, setLocationContext] = useState<
-    { customerId: string; stripeCustomerId: string | null; hfxNumber: string } | null
+    { customerId: string; stripeCustomerId: string | null; hfxNumber: string; carrierActive: boolean } | null
   >(null);
+  const [locationConfirmOpen, setLocationConfirmOpen] = useState(false);
   const [forceCreateDuplicate, setForceCreateDuplicate] = useState(false);
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
   const [resendingConfirmationId, setResendingConfirmationId] = useState<string | null>(null);
@@ -502,7 +503,7 @@ export default function Vertraege() {
       (async () => {
         const { data: cust } = await (supabase as any)
           .from("customers")
-          .select("id, hfx_customer_number, stripe_customer_id, praxis_name, vorname, nachname, email, telefon, adresse, plz, ort, mp_nr")
+          .select("id, hfx_customer_number, stripe_customer_id, base_fee_contract_id, praxis_name, vorname, nachname, email, telefon, adresse, plz, ort, mp_nr")
           .eq("id", addLocationFor)
           .maybeSingle();
         if (!cust) {
@@ -517,10 +518,22 @@ export default function Vertraege() {
           });
           return;
         }
+        // Träger-Status prüfen: bei aktiv → Born-aktiv-Pfad, sonst gezeichnet.
+        // Defensiv: ohne base_fee_contract_id oder Lookup-Fehler → gezeichnet.
+        let carrierActive = false;
+        if (cust.base_fee_contract_id) {
+          const { data: carrier } = await (supabase as any)
+            .from("contracts")
+            .select("status")
+            .eq("id", cust.base_fee_contract_id)
+            .maybeSingle();
+          carrierActive = (carrier as any)?.status === "aktiv";
+        }
         setLocationContext({
           customerId: cust.id,
           stripeCustomerId: cust.stripe_customer_id,
           hfxNumber: cust.hfx_customer_number,
+          carrierActive,
         });
         setLeadHfxNumber(cust.hfx_customer_number);
         setForm({
@@ -536,7 +549,7 @@ export default function Vertraege() {
           ort: cust.ort || "",
           mp_nr: cust.mp_nr || "",
           selected_products: ["HFX GOÄ - die KI für ihre Privatabrechnung"],
-          status: "gezeichnet",
+          status: carrierActive ? "aktiv" : "gezeichnet",
           sales_partner_name: profile?.full_name || "",
         });
         setDialogOpen(true);
@@ -800,12 +813,13 @@ export default function Vertraege() {
         ...(documentUrl ? { document_url: documentUrl, document_name: documentName } : {}),
         ...(leadHfxNumber && !editId ? { hfx_customer_number: leadHfxNumber } : {}),
         // Multi-Standort: Standort wird sofort dem Hauptaccount zugeordnet (geteiltes Mandat,
-        // status=gezeichnet, kein send-mandate-setup). base_fee_contract_id wird NICHT überschrieben.
+        // kein send-mandate-setup). base_fee_contract_id wird NICHT überschrieben.
+        // Born-aktiv, wenn Träger bereits aktiv ist; sonst gezeichnet (Sweep aktiviert nach Mandat).
         ...(locationContext && !editId
           ? {
               customer_id: locationContext.customerId,
               stripe_customer_id: locationContext.stripeCustomerId,
-              status: "gezeichnet" as const,
+              status: locationContext.carrierActive ? "aktiv" : "gezeichnet",
             }
           : {}),
         ...(data.selected_products.includes("HFX EBM") && !editId
@@ -1115,6 +1129,30 @@ export default function Vertraege() {
             console.error("Email send error:", emailErr);
           }
         }
+      }
+      // S3: Born-aktiv Standort — Parität zu Sweep-Nebenwirkungen.
+      // Qodia-Sync (idempotent, fängt fehlenden Account ab) + customer_events-Eintrag.
+      if (!editId && contractId && locationContext && variables.status === "aktiv") {
+        try {
+          supabase.functions.invoke("qodia-status-sync", {
+            body: {},
+          }).catch((e) => console.warn("qodia-status-sync (born-active) failed", e));
+        } catch (e) { console.warn("qodia-status-sync (born-active) raised", e); }
+        try {
+          await (supabase as any).from("customer_events").insert({
+            event_type: "CONTRACT_STATUS_CHANGED",
+            entity_type: "contract",
+            entity_id: contractId,
+            contract_id: contractId,
+            created_by: user?.id ?? null,
+            event_data: {
+              old_status: "(neu)",
+              new_status: "aktiv",
+              source: "vertraege_location_born_active",
+              customer_id: locationContext.customerId,
+            },
+          });
+        } catch (e) { console.warn("customer_events (born-active) failed", e); }
       }
       closeDialog();
     },
@@ -1675,6 +1713,11 @@ export default function Vertraege() {
     for (const f of lanrFields) {
       const err = validateLanr(f.val);
       if (err) { toast({ title: `Ungültige ${f.label}`, description: err, variant: "destructive" }); return; }
+    }
+    // Standort-Anlage: Bestätigungs-Dialog vor finalem Insert (bewusster Consent-Klick).
+    if (locationContext && !editId) {
+      setLocationConfirmOpen(true);
+      return;
     }
     upsertMutation.mutate(form);
   };
@@ -3582,6 +3625,31 @@ export default function Vertraege() {
             >
               {deleteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Endgültig löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Standort-Anlage Bestätigung — bewusster Consent-Klick (Kosten + Mandat). */}
+      <AlertDialog open={locationConfirmOpen} onOpenChange={setLocationConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Standort jetzt anlegen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {locationContext?.carrierActive
+                ? "Dieser Standort wird sofort aktiv. Ab dem nächsten Abrechnungslauf werden seine Kosten (Verbrauch, ggf. weitere Positionen) über das bestehende SEPA-Mandat des Hauptaccounts eingezogen. Die Grundgebühr fällt weiterhin nur einmal am Hauptaccount an."
+                : "Sobald der Hauptaccount sein SEPA-Mandat bestätigt, wird dieser Standort automatisch aktiv und ab dem nächsten Abrechnungslauf über dasselbe Mandat abgerechnet."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setLocationConfirmOpen(false);
+                upsertMutation.mutate(form);
+              }}
+            >
+              Standort anlegen
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

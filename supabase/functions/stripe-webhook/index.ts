@@ -1,5 +1,6 @@
 import Stripe from "npm:stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isGoaeProduct } from "../_shared/multiLocation.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
   apiVersion: "2025-08-27.basil",
@@ -900,77 +901,116 @@ async function handleSepaMandateSetup(
   // Idempotenz: stripe_customer_id bereits gesetzt?
   const { data: existing } = await supabase
     .from("contracts")
-    .select("stripe_customer_id, status, email, confirmation_email_sent_at")
+    .select("stripe_customer_id, status, email, confirmation_email_sent_at, customer_id")
     .eq("id", contractId)
     .maybeSingle();
 
   const alreadyLinked = existing?.stripe_customer_id === stripeCustomerId;
-
-  if (session.setup_intent) {
-    const setupIntentId = typeof session.setup_intent === "string"
-      ? session.setup_intent
-      : (session.setup_intent as any).id;
-    try {
-      const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
-      if (setupIntent.payment_method) {
-        const pmId = typeof setupIntent.payment_method === "string"
-          ? setupIntent.payment_method
-          : (setupIntent.payment_method as any).id;
-        await stripe.customers.update(stripeCustomerId, {
-          invoice_settings: { default_payment_method: pmId },
-        });
-        log("SEPA payment method set as default", { stripeCustomerId, pmId });
-      }
-    } catch (err) {
-      log("WARN: could not set default payment method", String(err));
-    }
-  }
-
-  if (!alreadyLinked) {
-    const { error } = await supabase
-      .from("contracts")
-      .update({ stripe_customer_id: stripeCustomerId } as any)
-      .eq("id", contractId);
-    if (error) {
-      log("ERROR: failed to save stripe_customer_id after mandate setup", error.message);
-    }
-  } else {
-    log("sepa_mandate_setup: stripe_customer_id already set (idempotent)", contractId);
-  }
-
-  // Multi-Standort Self-Heal: customers.stripe_customer_id idempotent (NULL-only)
-  // Kunde wird aus dem gerade geschriebenen Vertrag abgeleitet — nie breit über
-  // WHERE stripe_customer_id = X auf customers.
-  try {
-    const { data: linkedContract } = await supabase
-      .from("contracts").select("customer_id").eq("id", contractId).maybeSingle();
-    const linkedCustomerId = (linkedContract as any)?.customer_id ?? null;
-    if (linkedCustomerId && stripeCustomerId) {
-      await supabase
-        .from("customers")
-        .update({ stripe_customer_id: stripeCustomerId } as any)
-        .eq("id", linkedCustomerId)
-        .is("stripe_customer_id", null);
-    }
-  } catch (healEx) {
-    log("WARN: customers self-heal (sepa_mandate_setup) failed", String(healEx));
-  }
-
-  // Status-Update auf "aktiv" — nur aus eingegangen/wartend_auf_mandat heraus
+...
+  // Status-Update auf "aktiv" — nur aus eingegangen/wartend_auf_mandat heraus.
+  // .select() für S1: nur bei echter Aktivierung (Row zurück) folgt der Geschwister-Sweep.
   const activatableStatuses = new Set(["eingegangen", "wartend_auf_mandat"]);
+  let carrierJustActivated = false;
   if (existing && activatableStatuses.has(String(existing.status))) {
-    const { error: statusErr } = await supabase
+    const { data: activatedRows, error: statusErr } = await supabase
       .from("contracts")
       .update({ status: "aktiv" } as any)
       .eq("id", contractId)
-      .in("status", Array.from(activatableStatuses));
+      .in("status", Array.from(activatableStatuses))
+      .select("id");
     if (statusErr) {
       log("ERROR: failed to activate contract after mandate", statusErr.message);
-    } else {
+    } else if (activatedRows && activatedRows.length > 0) {
+      carrierJustActivated = true;
       log("Contract activated after SEPA mandate", { contractId, prev: existing.status });
+    } else {
+      log("sepa_mandate_setup: activation UPDATE returned 0 rows (race/re-delivery)", contractId);
     }
   } else {
     log("sepa_mandate_setup: status not changed (current)", existing?.status);
+  }
+
+  // ── Multi-Standort: Geschwister-Sweep ────────────────────────────────────────
+  // Nur bei echter Träger-Aktivierung dieses Events (S1). Streng kunden-gescoped
+  // (S4: customer_id IS NOT NULL). Niemals über stripe_customer_id.
+  if (carrierJustActivated && existing?.customer_id) {
+    try {
+      const carrierCustomerId = existing.customer_id as string;
+      const { data: cust } = await supabase
+        .from("customers")
+        .select("base_fee_contract_id")
+        .eq("id", carrierCustomerId)
+        .maybeSingle();
+      const baseFeeContractId = (cust as any)?.base_fee_contract_id ?? null;
+
+      // Kandidaten: gleicher Kunde, gezeichnet, nicht der Träger selbst.
+      let candQuery = supabase
+        .from("contracts")
+        .select("id, product_name")
+        .eq("customer_id", carrierCustomerId)
+        .eq("status", "gezeichnet")
+        .neq("id", contractId);
+      if (baseFeeContractId) {
+        candQuery = candQuery.neq("id", baseFeeContractId);
+      }
+      const { data: candidates, error: candErr } = await candQuery;
+      if (candErr) {
+        log("WARN: sibling sweep query failed", candErr.message);
+      } else {
+        const goaeIds = (candidates ?? [])
+          .filter((c: any) => isGoaeProduct(c.product_name))
+          .map((c: any) => c.id as string);
+        if (goaeIds.length > 0) {
+          const { data: sweptRows, error: sweepErr } = await supabase
+            .from("contracts")
+            .update({ status: "aktiv" } as any)
+            .in("id", goaeIds)
+            .eq("status", "gezeichnet")
+            .select("id");
+          if (sweepErr) {
+            log("WARN: sibling sweep update failed", sweepErr.message);
+          } else {
+            const sweptIds = (sweptRows ?? []).map((r: any) => r.id as string);
+            log("Sibling sweep activated locations", { count: sweptIds.length, ids: sweptIds });
+            for (const locId of sweptIds) {
+              // S2: customer_events pro Standort (fire-and-forget)
+              supabase.from("customer_events").insert({
+                event_type: "CONTRACT_STATUS_CHANGED",
+                entity_type: "contract",
+                entity_id: locId,
+                contract_id: locId,
+                event_data: {
+                  old_status: "gezeichnet",
+                  new_status: "aktiv",
+                  source: "stripe_webhook_sibling_sweep",
+                  carrier_contract_id: contractId,
+                },
+              } as any).then(({ error }) => {
+                if (error) log("WARN: customer_events insert (sweep) failed", error.message);
+              });
+              // qodia-status-sync pro Standort
+              try {
+                const syncUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/qodia-status-sync?contract_id=${locId}`;
+                fetch(syncUrl, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+                  },
+                  body: "{}",
+                }).catch((e) => log("WARN: qodia-status-sync (sweep) trigger failed", String(e)));
+              } catch (e) {
+                log("WARN: could not trigger qodia-status-sync (sweep)", String(e));
+              }
+            }
+          }
+        } else {
+          log("Sibling sweep: no GOÄ candidates", { carrierCustomerId });
+        }
+      }
+    } catch (sweepEx) {
+      log("WARN: sibling sweep block raised (non-fatal)", String(sweepEx));
+    }
   }
 
   // Mail 2 (Vertragsbestätigung) — idempotent über confirmation_email_sent_at
