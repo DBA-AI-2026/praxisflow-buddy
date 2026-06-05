@@ -1129,6 +1129,7 @@ export default function Vertraege() {
             console.error("Email send error:", emailErr);
           }
         }
+      }
       // S3: Born-aktiv Standort — Parität zu Sweep-Nebenwirkungen.
       // Qodia-Sync (idempotent, fängt fehlenden Account ab) + customer_events-Eintrag.
       if (!editId && contractId && locationContext && variables.status === "aktiv") {
