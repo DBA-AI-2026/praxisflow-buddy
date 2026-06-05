@@ -1644,9 +1644,23 @@ export default function Vertraege() {
         if (error) throw error;
         contractId = inserted.id;
 
-        // Upsert customers entry and link to contract
+        // Upsert customers entry and link to contract.
+        // Phantom-Guard (Phase 1b): bei Standort-Anlage ist customer_id bereits beim Insert
+        // korrekt gesetzt — KEIN HFX-basierter customers-Upsert, kein contracts.customer_id
+        // -Overwrite. Nur den Case linken.
         const hfxNr2 = leadHfxNumber || form.mp_nr || null;
-        if (hfxNr2 && contractId) {
+        if (locationContext) {
+          if (contractId) {
+            await (supabase as any).from("contract_cases").insert({
+              customer_id: locationContext.customerId,
+              contract_id: contractId,
+              case_type: "neuabschluss",
+              status: "offen",
+              title: `Neuabschluss – ${form.selected_products.join(", ") || "Produkt"}`,
+              created_by: user?.id,
+            });
+          }
+        } else if (hfxNr2 && contractId) {
           const { data: existingCust2 } = await (supabase as any)
             .from("customers").select("id").eq("hfx_customer_number", hfxNr2).maybeSingle();
           let custId2 = existingCust2?.id ?? null;
