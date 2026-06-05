@@ -37,6 +37,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { StandortBadge } from "@/components/contracts/StandortBadge";
 import {
   Tooltip,
   TooltipTrigger,
@@ -690,12 +691,13 @@ function ContractCard({
             <div className="font-medium text-foreground">{product}</div>
             <div className="text-xs text-muted-foreground font-mono">{number}</div>
           </div>
-          {/* Multi-Standort: Badge nur auf echten Standortverträgen (Carrier-Kriterium). */}
-          {!!contract.customer_id && !!customer?.base_fee_contract_id && customer.base_fee_contract_id !== contract.id && (
-            <Badge variant="secondary" title="Standortvertrag – kein eigenes Mandat. Grundgebühr läuft über Hauptaccount.">
-              Standortvertrag
-            </Badge>
-          )}
+          {/* Multi-Standort: zentraler Badge (GOÄ-Gate + NULL-Guard inside). */}
+          <StandortBadge
+            productName={contract.product_name}
+            contractId={contract.id}
+            carrierContractId={customer?.base_fee_contract_id ?? null}
+          />
+
         </div>
         <ContractStatusPill contract={contract} onChange={onStatusChange} busy={statusBusy} />
       </div>
