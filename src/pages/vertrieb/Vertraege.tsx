@@ -356,7 +356,16 @@ export default function Vertraege() {
   const [showErrors, setShowErrors] = useState(false);
   const [leadHfxNumber, setLeadHfxNumber] = useState<string | null>(null);
   const [locationContext, setLocationContext] = useState<
-    { customerId: string; stripeCustomerId: string | null; hfxNumber: string; carrierActive: boolean } | null
+    {
+      customerId: string;
+      stripeCustomerId: string | null;
+      hfxNumber: string;
+      carrierActive: boolean;
+      /** Hauptaccount-E-Mail — neue Standort-E-Mail darf hierzu nicht identisch sein (Qodia-Kollision). */
+      mainEmail: string | null;
+      /** E-Mails aller bestehenden Standort-Verträge desselben Kunden (lowercase). */
+      siblingEmails: string[];
+    } | null
   >(null);
   const [locationConfirmOpen, setLocationConfirmOpen] = useState(false);
   const [forceCreateDuplicate, setForceCreateDuplicate] = useState(false);
