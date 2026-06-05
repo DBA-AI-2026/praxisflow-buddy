@@ -1738,7 +1738,12 @@ export default function Vertraege() {
               created_by: user?.id,
             });
           }
-        } else if (hfxNr2 && contractId) {
+        } else if (hfxNr2 && contractId && !isStandortHfx(hfxNr2)) {
+          // Defensiver Phantom-Guard (Phase 1b): Standort-HFX ({base}-NN) niemals
+          // als Upsert-Schlüssel — sonst entstünde unter der Standort-HFX ein
+          // zweiter customers-Eintrag. Standorte laufen heute ausschliesslich
+          // über den locationContext-Zweig oben; dieser Guard schützt vor
+          // künftigen Pfadänderungen.
           const { data: existingCust2 } = await (supabase as any)
             .from("customers").select("id").eq("hfx_customer_number", hfxNr2).maybeSingle();
           let custId2 = existingCust2?.id ?? null;
