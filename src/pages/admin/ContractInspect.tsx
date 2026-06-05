@@ -67,19 +67,33 @@ export default function ContractInspect() {
     setMergePlan(null);
     setMergeError(null);
     try {
-      // Phase 1a: Customer zuerst laden, dann Verträge primär via customer_id
-      // (deckt künftige Standorte mit eigener HFX-Variante ab). HFX-Fallback
-      // bleibt aktiv für Altzeilen ohne customer_id und für reine Lead-Lookups
-      // (kein Customer vorhanden).
-      const [leadRes, customerRes] = await Promise.all([
+      // Phase 1a/1b: Customer zuerst laden, dann Verträge primär via customer_id
+      // (deckt Standorte mit eigener HFX-Variante ab). HFX-Fallback bleibt aktiv
+      // für Altzeilen ohne customer_id und für reine Lead-Lookups (kein Customer).
+      const [leadByInputRes, customerRes] = await Promise.all([
         supabase.from("leads").select("*").eq("hfx_customer_number", hfx).maybeSingle(),
         supabase.from("customers").select("*").eq("hfx_customer_number", hfx).maybeSingle(),
       ]);
 
-      if (leadRes.error) throw leadRes.error;
+      if (leadByInputRes.error) throw leadByInputRes.error;
       if (customerRes.error) throw customerRes.error;
 
       const customerId: string | null = customerRes.data?.id ?? null;
+      const customerBaseHfx: string | null = customerRes.data?.hfx_customer_number ?? null;
+
+      // Lead-Auflösung (Phase 1b): bei Standort-Input (Customer mit anderer HFX
+      // gefunden) zusätzlich über die Basis-HFX des Kunden suchen, damit der
+      // Hauptaccount-Lead erscheint statt leer zu bleiben.
+      let lead = leadByInputRes.data ?? null;
+      if (!lead && customerBaseHfx && customerBaseHfx !== hfx) {
+        const { data: leadByBase, error: leadByBaseErr } = await supabase
+          .from("leads")
+          .select("*")
+          .eq("hfx_customer_number", customerBaseHfx)
+          .maybeSingle();
+        if (leadByBaseErr) throw leadByBaseErr;
+        lead = leadByBase ?? null;
+      }
 
       let contracts: any[] = [];
       if (customerId) {
@@ -117,7 +131,7 @@ export default function ContractInspect() {
       }
 
       setResult({
-        lead: leadRes.data ?? null,
+        lead,
         contracts,
         customer: customerRes.data ?? null,
       });
