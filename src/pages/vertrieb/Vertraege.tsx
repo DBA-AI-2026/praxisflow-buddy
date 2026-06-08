@@ -2404,7 +2404,7 @@ export default function Vertraege() {
                  {grouped.map(({ c, isStandort, carrierHfx }) => (
                     <tr
                       key={c.id}
-                      className={`hover:bg-muted/40 transition-colors cursor-pointer ${isStandort ? "bg-muted/10" : ""}`}
+                      className={`hover:bg-muted/40 transition-colors cursor-pointer ${isStandort ? "bg-muted/10 border-l-2 border-accent" : ""}`}
                       role="button"
                       tabIndex={0}
                       onClick={(e) => {
@@ -2427,7 +2427,7 @@ export default function Vertraege() {
                     >
                         <td className={`py-3.5 px-4 text-xs font-mono font-semibold text-primary whitespace-nowrap ${isStandort ? "pl-8" : ""}`}>
                           <div className="flex items-center gap-1.5">
-                            {isStandort && <span className="text-muted-foreground/70">↳</span>}
+                            {isStandort && <MapPin className="h-3 w-3 text-accent" aria-hidden="true" />}
                             <span>{c.contract_number || "–"}</span>
                           </div>
                           {isStandort && carrierHfx && (
