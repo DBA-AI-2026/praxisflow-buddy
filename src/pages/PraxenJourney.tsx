@@ -1197,14 +1197,32 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
 
   // Deduplicate for cleaner view.
   // Phase 1a: Primärer Dedup-Key ist customer_id (Klammer über Träger + Standorte).
+  // Phase 1c: Repräsentant pro customer_id ist bevorzugt der Trägervertrag
+  //   (carrierMap[customer_id]). Fallback: erstes nach Statusfilter sichtbares
+  //   Element (heutiges Verhalten), wenn der Träger nicht im aktuellen
+  //   Statusfilter liegt oder kein Träger gesetzt ist.
   // Fallback für Altzeilen ohne customer_id: hfx_customer_number; letzter Fallback: Praxisname.
+  const carrierRowByCustomer = new Map<string, any>();
+  const firstRowByCustomer = new Map<string, any>();
+  for (const c of statusFiltered as any[]) {
+    if (!c.customer_id) continue;
+    if (!firstRowByCustomer.has(c.customer_id)) firstRowByCustomer.set(c.customer_id, c);
+    const carrierId = carrierMap[c.customer_id];
+    if (carrierId && c.id === carrierId) carrierRowByCustomer.set(c.customer_id, c);
+  }
   const seenKeys = new Set<string>();
-  const rows = statusFiltered.filter((c: any) => {
-    const key = c.customer_id
-      ? `cust:${c.customer_id}`
-      : c.hfx_customer_number
-        ? `hfx:${c.hfx_customer_number}`
-        : `name:${(c.praxis || c.customer_name || "").toLowerCase().trim()}`;
+  const rows = (statusFiltered as any[]).filter((c: any) => {
+    if (c.customer_id) {
+      const key = `cust:${c.customer_id}`;
+      if (seenKeys.has(key)) return false;
+      const rep = carrierRowByCustomer.get(c.customer_id) ?? firstRowByCustomer.get(c.customer_id);
+      if (rep?.id !== c.id) return false;
+      seenKeys.add(key);
+      return true;
+    }
+    const key = c.hfx_customer_number
+      ? `hfx:${c.hfx_customer_number}`
+      : `name:${(c.praxis || c.customer_name || "").toLowerCase().trim()}`;
     if (seenKeys.has(key)) return false;
     seenKeys.add(key);
     return true;
@@ -1410,7 +1428,9 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                     standort={st}
                     carrierContractId={carrierContractId}
                     colSpan={8}
-                    onOpen={() => setSelectedContractId(st.id)}
+                    // L5: Sub-Zeile öffnet den KundenDialog des Hauptaccounts
+                    // (Trägervertrag), nicht den isolierten Standort.
+                    onOpen={() => setSelectedContractId(carrierContractId ?? c.id)}
                   />
                 ))}
                 </Fragment>

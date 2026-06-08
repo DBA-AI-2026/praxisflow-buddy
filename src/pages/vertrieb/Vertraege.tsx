@@ -1540,6 +1540,47 @@ export default function Vertraege() {
       return sortDir === "asc" ? aVal - bVal : bVal - aVal;
     });
 
+  // Variante A — Standortverträge direkt unter ihren Träger einsortieren
+  // (additiv; kein Verstecken). Jede Zeile bleibt eine vollwertige, sichtbar
+  // bedienbare Vertragszeile (Status/PDF/Aktivierung), Statusfilter, KPI-Kacheln
+  // und Sortierung sind nicht betroffen — wir ändern nur die Reihenfolge und
+  // markieren Standorte mit Einrückung + "↳ Standort von …"-Hinweis.
+  // Träger-Erkennung zentral über carrierMap + isGoaeProduct (L3, NULL-sicher).
+  const contractsById: Record<string, any> = {};
+  for (const c of contracts as any[]) contractsById[c.id] = c;
+  const filteredIds = new Set<string>(filtered.map((c: any) => c.id));
+  const standortGroups = new Map<string, any[]>();
+  for (const c of filtered) {
+    const carrierId = c.customer_id ? (carrierMap as any)[c.customer_id] : null;
+    if (carrierId && carrierId !== c.id && isGoaeProduct(c.product_name)) {
+      if (filteredIds.has(carrierId)) {
+        if (!standortGroups.has(carrierId)) standortGroups.set(carrierId, []);
+        standortGroups.get(carrierId)!.push(c);
+      }
+    }
+  }
+  const placed = new Set<string>();
+  const grouped: Array<{ c: any; isStandort: boolean; carrierHfx?: string | null }> = [];
+  for (const c of filtered) {
+    if (placed.has(c.id)) continue;
+    const carrierId = c.customer_id ? (carrierMap as any)[c.customer_id] : null;
+    const isStandort =
+      !!carrierId && carrierId !== c.id && isGoaeProduct(c.product_name);
+    if (isStandort && filteredIds.has(carrierId)) continue; // wird unter Träger platziert
+    grouped.push({
+      c,
+      isStandort,
+      carrierHfx: isStandort ? contractsById[carrierId!]?.hfx_customer_number ?? null : null,
+    });
+    placed.add(c.id);
+    const subs = standortGroups.get(c.id) || [];
+    for (const st of subs) {
+      if (placed.has(st.id)) continue;
+      grouped.push({ c: st, isStandort: true, carrierHfx: c.hfx_customer_number ?? null });
+      placed.add(st.id);
+    }
+  }
+
   const handleStatusChange = async (contractId: string, newStatus: string) => {
     const c = contracts.find((ct: any) => ct.id === contractId);
     if (!c) return;
@@ -2360,10 +2401,10 @@ export default function Vertraege() {
                  </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                 {filtered.map((c: any) => (
+                 {grouped.map(({ c, isStandort, carrierHfx }) => (
                     <tr
                       key={c.id}
-                      className="hover:bg-muted/40 transition-colors cursor-pointer"
+                      className={`hover:bg-muted/40 transition-colors cursor-pointer ${isStandort ? "bg-muted/10" : ""}`}
                       role="button"
                       tabIndex={0}
                       onClick={(e) => {
@@ -2384,8 +2425,16 @@ export default function Vertraege() {
                         openEdit(c);
                       }}
                     >
-                        <td className="py-3.5 px-4 text-xs font-mono font-semibold text-primary whitespace-nowrap">
-                          {c.contract_number || "–"}
+                        <td className={`py-3.5 px-4 text-xs font-mono font-semibold text-primary whitespace-nowrap ${isStandort ? "pl-8" : ""}`}>
+                          <div className="flex items-center gap-1.5">
+                            {isStandort && <span className="text-muted-foreground/70">↳</span>}
+                            <span>{c.contract_number || "–"}</span>
+                          </div>
+                          {isStandort && carrierHfx && (
+                            <div className="text-[10px] font-normal text-muted-foreground mt-0.5">
+                              Standort von <span className="font-mono">{carrierHfx}</span>
+                            </div>
+                          )}
                         </td>
                         <td
                           className="py-3.5 px-4 text-xs text-muted-foreground font-mono whitespace-nowrap"
