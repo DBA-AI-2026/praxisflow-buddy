@@ -1428,7 +1428,9 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                     standort={st}
                     carrierContractId={carrierContractId}
                     colSpan={8}
-                    onOpen={() => setSelectedContractId(st.id)}
+                    // L5: Sub-Zeile öffnet den KundenDialog des Hauptaccounts
+                    // (Trägervertrag), nicht den isolierten Standort.
+                    onOpen={() => setSelectedContractId(carrierContractId ?? c.id)}
                   />
                 ))}
                 </Fragment>
