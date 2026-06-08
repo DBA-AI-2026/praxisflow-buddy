@@ -657,7 +657,7 @@ function CustomerList() {
                 {filtered.map((c: any) => {
                   const cc = (contractCounts as any)[c.id] || { total: 0, active: 0 };
                   const carrierContractId = (carrierMap as any)[c.id] ?? null;
-                  const customerContractList = (contractsByCustomer as any)[c.id] ?? [];
+                  const customerContractList: StandortRow[] = (contractsByCustomer as any)[c.id] ?? [];
                   const standorte = pickStandorte(customerContractList, carrierContractId);
                   const isExpanded = expandedCustomers.has(c.id);
                   return (
