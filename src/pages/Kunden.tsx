@@ -45,6 +45,13 @@ import {
   User,
   ClipboardList,
 } from "lucide-react";
+import { useCarrierMap } from "@/hooks/useCarrierMap";
+import {
+  StandorteToggleBadge,
+  StandorteSubRow,
+  pickStandorte,
+  type StandortRow,
+} from "@/components/multilocation/StandorteIndicator";
 
 // Status-Config: SSOT in @/lib/statusConfig (CONTRACT_STATUS_CONFIG).
 
