@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { Fragment, useState, useEffect, useRef, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,11 @@ import { useActivityThresholds } from "@/hooks/useAppSettings";
 import { ProductBadges, type ProductBadgeItem } from "@/components/pipeline/ProductBadges";
 import { useCarrierMap } from "@/hooks/useCarrierMap";
 import { StandortBadge } from "@/components/contracts/StandortBadge";
+import {
+  StandorteToggleBadge,
+  StandorteSubRow,
+  pickStandorte,
+} from "@/components/multilocation/StandorteIndicator";
 
 import { useProviderStatusMap, useProductProviderFlags } from "@/hooks/useProviderStatus";
 import { useCustomerContractsMap } from "@/hooks/useCustomerContracts";
@@ -1110,6 +1115,15 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("aktiv");
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
+  const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
+  const toggleExpanded = (customerId: string) => {
+    setExpandedCustomers((prev) => {
+      const next = new Set(prev);
+      if (next.has(customerId)) next.delete(customerId);
+      else next.add(customerId);
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (highlightId && highlightRef.current) {
@@ -1288,9 +1302,18 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                     customerLabel: praxisLabel,
                   };
                 });
+
+              // Standort-Erkennung (Weg A, GOÄ-gegated). Sub-Zeilen werden
+              // additiv unter der Träger-Zeile gerendert; keine Änderung an
+              // Filter/Sortierung/Dedup.
+              const carrierContractId = c.customer_id ? carrierMap[c.customer_id] : null;
+              const standorte = c.customer_id
+                ? pickStandorte(customerContractsMap[c.customer_id] ?? [], carrierContractId)
+                : [];
+              const isExpanded = c.customer_id ? expandedCustomers.has(c.customer_id) : false;
               return (
+                <Fragment key={c.id}>
                 <tr
-                  key={c.id}
                   ref={highlightId === c.id ? highlightRef : null}
                   role="button"
                   tabIndex={0}
@@ -1318,6 +1341,15 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                         <span className="ml-1 font-mono text-muted-foreground/40">MP {c.mp_nr}</span>
                       )}
                     </p>
+                    {standorte.length > 0 && c.customer_id && (
+                      <div className="mt-1.5">
+                        <StandorteToggleBadge
+                          count={standorte.length}
+                          expanded={isExpanded}
+                          onToggle={() => toggleExpanded(c.customer_id)}
+                        />
+                      </div>
+                    )}
                   </td>
                   <td className="py-3 px-4">
                     {(() => {
@@ -1372,11 +1404,22 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                     </button>
                   </td>
                 </tr>
+                {isExpanded && standorte.map((st: any) => (
+                  <StandorteSubRow
+                    key={`sub-${st.id}`}
+                    standort={st}
+                    carrierContractId={carrierContractId}
+                    colSpan={8}
+                    onOpen={() => setSelectedContractId(st.id)}
+                  />
+                ))}
+                </Fragment>
               );
             })}
           </tbody>
         </table>
       </div>
+
       {selectedContractId && (
         <KundenDialog
           open={!!selectedContractId}
