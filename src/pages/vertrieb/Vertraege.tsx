@@ -2401,10 +2401,10 @@ export default function Vertraege() {
                  </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                 {filtered.map((c: any) => (
+                 {grouped.map(({ c, isStandort, carrierHfx }) => (
                     <tr
                       key={c.id}
-                      className="hover:bg-muted/40 transition-colors cursor-pointer"
+                      className={`hover:bg-muted/40 transition-colors cursor-pointer ${isStandort ? "bg-muted/10" : ""}`}
                       role="button"
                       tabIndex={0}
                       onClick={(e) => {
@@ -2425,8 +2425,16 @@ export default function Vertraege() {
                         openEdit(c);
                       }}
                     >
-                        <td className="py-3.5 px-4 text-xs font-mono font-semibold text-primary whitespace-nowrap">
-                          {c.contract_number || "–"}
+                        <td className={`py-3.5 px-4 text-xs font-mono font-semibold text-primary whitespace-nowrap ${isStandort ? "pl-8" : ""}`}>
+                          <div className="flex items-center gap-1.5">
+                            {isStandort && <span className="text-muted-foreground/70">↳</span>}
+                            <span>{c.contract_number || "–"}</span>
+                          </div>
+                          {isStandort && carrierHfx && (
+                            <div className="text-[10px] font-normal text-muted-foreground mt-0.5">
+                              Standort von <span className="font-mono">{carrierHfx}</span>
+                            </div>
+                          )}
                         </td>
                         <td
                           className="py-3.5 px-4 text-xs text-muted-foreground font-mono whitespace-nowrap"
