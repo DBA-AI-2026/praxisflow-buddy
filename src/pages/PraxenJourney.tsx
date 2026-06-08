@@ -40,6 +40,11 @@ import { useActivityThresholds } from "@/hooks/useAppSettings";
 import { ProductBadges, type ProductBadgeItem } from "@/components/pipeline/ProductBadges";
 import { useCarrierMap } from "@/hooks/useCarrierMap";
 import { StandortBadge } from "@/components/contracts/StandortBadge";
+import {
+  StandorteToggleBadge,
+  StandorteSubRow,
+  pickStandorte,
+} from "@/components/multilocation/StandorteIndicator";
 
 import { useProviderStatusMap, useProductProviderFlags } from "@/hooks/useProviderStatus";
 import { useCustomerContractsMap } from "@/hooks/useCustomerContracts";
