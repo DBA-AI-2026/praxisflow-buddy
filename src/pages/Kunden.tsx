@@ -656,9 +656,13 @@ function CustomerList() {
               <tbody className="divide-y divide-border/50">
                 {filtered.map((c: any) => {
                   const cc = (contractCounts as any)[c.id] || { total: 0, active: 0 };
+                  const carrierContractId = (carrierMap as any)[c.id] ?? null;
+                  const customerContractList = (contractsByCustomer as any)[c.id] ?? [];
+                  const standorte = pickStandorte(customerContractList, carrierContractId);
+                  const isExpanded = expandedCustomers.has(c.id);
                   return (
+                    <Fragment key={c.id}>
                     <tr
-                      key={c.id}
                       className="hover:bg-muted/30 transition-colors cursor-pointer"
                       onClick={() => navigate(`/kunden/${c.id}`)}
                     >
@@ -669,6 +673,15 @@ function CustomerList() {
                         <p className="font-medium text-foreground leading-tight">{c.praxis_name || `${c.vorname || ""} ${c.nachname || ""}`.trim() || "–"}</p>
                         {c.praxis_name && (c.vorname || c.nachname) && (
                           <p className="text-xs text-muted-foreground">{[c.vorname, c.nachname].filter(Boolean).join(" ")}</p>
+                        )}
+                        {standorte.length > 0 && (
+                          <div className="mt-1.5">
+                            <StandorteToggleBadge
+                              count={standorte.length}
+                              expanded={isExpanded}
+                              onToggle={() => toggleExpanded(c.id)}
+                            />
+                          </div>
                         )}
                       </td>
                       <td className="py-3.5 px-4 text-sm text-muted-foreground">{c.email || "–"}</td>
@@ -682,8 +695,19 @@ function CustomerList() {
                         </div>
                       </td>
                     </tr>
+                    {isExpanded && standorte.map((st) => (
+                      <StandorteSubRow
+                        key={`sub-${st.id}`}
+                        standort={st}
+                        carrierContractId={carrierContractId}
+                        colSpan={5}
+                        onOpen={() => navigate(`/kunden/${c.id}`)}
+                      />
+                    ))}
+                    </Fragment>
                   );
                 })}
+
               </tbody>
             </table>
           )}
