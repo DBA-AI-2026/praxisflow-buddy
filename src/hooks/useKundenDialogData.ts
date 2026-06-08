@@ -21,6 +21,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
 import type { KundenPhase } from "@/components/kunden/KundenDialog";
 import { LEAD_STATUS_TOOLTIPS, CONTRACT_STATUS_TOOLTIPS } from "@/lib/statusGlossary";
+import { isStandortHfx } from "@/lib/multiLocation";
 
 export type KundenDialogInput =
   | { type: "hfx"; hfxNumber: string; forcePhase?: KundenPhase }
@@ -253,6 +254,18 @@ export function useKundenDialogData(
         return { customerId: null, hfxNumber: data?.hfx_customer_number ?? null };
       }
       // type === "hfx"
+      // Standort-HFX ({base}-NN): über Vertrag auf Hauptaccount-customer_id auflösen.
+      // Hauptaccount-HFX und reine Lead-HFX laufen unverändert (Fallback unten).
+      if (isStandortHfx(input.hfxNumber)) {
+        const { data } = await supabase
+          .from("contracts")
+          .select("customer_id")
+          .eq("hfx_customer_number", input.hfxNumber)
+          .maybeSingle();
+        if ((data as any)?.customer_id) {
+          return { customerId: (data as any).customer_id, hfxNumber: input.hfxNumber };
+        }
+      }
       return { customerId: null, hfxNumber: input.hfxNumber };
     },
   });
