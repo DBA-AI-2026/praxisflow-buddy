@@ -554,6 +554,15 @@ function CustomerDetail({ customerId }: { customerId: string }) {
 function CustomerList() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
+  const toggleExpanded = (customerId: string) => {
+    setExpandedCustomers((prev) => {
+      const next = new Set(prev);
+      if (next.has(customerId)) next.delete(customerId);
+      else next.add(customerId);
+      return next;
+    });
+  };
 
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ["customers"],
@@ -567,24 +576,38 @@ function CustomerList() {
     },
   });
 
-  const { data: contractCounts = {} } = useQuery({
-    queryKey: ["customer-contract-counts"],
+  // Eine Aggregat-Query: liefert Counts UND Verträge-pro-Kunde-Map.
+  // Kein Per-Zeile-Roundtrip (Leitplanke L6).
+  const { data: customerContracts = { counts: {}, byCustomer: {} } } = useQuery({
+    queryKey: ["customer-contracts-aggregate"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contracts")
-        .select("customer_id, status")
+        .select("id, customer_id, status, product_name, hfx_customer_number, praxis")
         .not("customer_id", "is", null);
       if (error) throw error;
       const counts: Record<string, { total: number; active: number }> = {};
-      for (const c of data || []) {
+      const byCustomer: Record<string, StandortRow[]> = {};
+      for (const c of (data || []) as any[]) {
         if (!c.customer_id) continue;
         if (!counts[c.customer_id]) counts[c.customer_id] = { total: 0, active: 0 };
         counts[c.customer_id].total++;
         if (c.status === "aktiv") counts[c.customer_id].active++;
+        (byCustomer[c.customer_id] ??= []).push({
+          id: c.id,
+          product_name: c.product_name,
+          status: c.status,
+          hfx_customer_number: c.hfx_customer_number,
+          praxis: c.praxis,
+        });
       }
-      return counts;
+      return { counts, byCustomer };
     },
   });
+  const contractCounts = customerContracts.counts;
+  const contractsByCustomer = customerContracts.byCustomer;
+  const { data: carrierMap = {} } = useCarrierMap();
+
 
   const filtered = (customers as any[]).filter(c =>
     !search ||
