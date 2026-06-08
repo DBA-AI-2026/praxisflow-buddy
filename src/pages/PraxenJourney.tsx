@@ -1115,6 +1115,15 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("aktiv");
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
+  const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
+  const toggleExpanded = (customerId: string) => {
+    setExpandedCustomers((prev) => {
+      const next = new Set(prev);
+      if (next.has(customerId)) next.delete(customerId);
+      else next.add(customerId);
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (highlightId && highlightRef.current) {
