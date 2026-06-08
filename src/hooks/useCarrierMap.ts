@@ -8,7 +8,7 @@
  * Ersetzt die dreifach duplizierte Inline-Query in Vertraege/PraxenJourney/VertragTab.
  */
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 
 export type CarrierMap = Record<string, string>;
 
