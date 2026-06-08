@@ -21,6 +21,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
 import type { KundenPhase } from "@/components/kunden/KundenDialog";
 import { LEAD_STATUS_TOOLTIPS, CONTRACT_STATUS_TOOLTIPS } from "@/lib/statusGlossary";
+import { isStandortHfx } from "@/lib/multiLocation";
 
 export type KundenDialogInput =
   | { type: "hfx"; hfxNumber: string; forcePhase?: KundenPhase }
