@@ -551,6 +551,11 @@ function CustomerDetail({ customerId }: { customerId: string }) {
 }
 
 // ─── Customer List ─────────────────────────────────────────────────────
+// HINWEIS (Phase 1c, Bestandsmeldung): Diese Liste ist aktuell unerreichbar.
+// In App.tsx leitet die Route `/kunden` auf `/pipeline?tab=kunden` um, und
+// `/kunden/:id` rendert nur den CustomerDetail-Zweig (id ist Pflicht).
+// Code bewusst NICHT entfernt (L4 — nur benennen). Entscheidung über Entfernen
+// erfolgt separat. Die Sub-Zeilen-Navigation hier bliebe `navigate(/kunden/:id)`.
 function CustomerList() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
