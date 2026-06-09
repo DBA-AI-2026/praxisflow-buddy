@@ -526,7 +526,6 @@ export default function Vertraege() {
       setAutoOpenContractId(contractId);
     }
 
-    const addLocationFor = params.get("addLocationFor");
     if (addLocationFor) {
       (async () => {
         const { data: cust } = await (supabase as any)
