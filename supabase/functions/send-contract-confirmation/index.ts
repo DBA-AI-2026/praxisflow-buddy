@@ -326,20 +326,22 @@ async function buildContractPdf(
 
   // Vertragsparteien
   sectionHeader("VERTRAGSPARTEIEN");
-  fieldRow("Praxis", String(contract.praxis || "–"), "Fachrichtung", String(contract.fachrichtung || "–"));
-  fieldRow("Vorname", String(contract.vorname || "–"), "Nachname", String(contract.nachname || "–"));
+  fieldRow("Praxis", String(contract.praxis || "–"));
+  fieldRow("Fachrichtung", String(contract.fachrichtung || "–"));
+  fieldRow("Vorname", String(contract.vorname || "–"));
+  fieldRow("Nachname", String(contract.nachname || "–"));
   const plzOrt = `${contract.plz ?? ""} ${contract.ort ?? ""}`.trim();
-  fieldRow("Adresse", String(contract.adresse || "–"), "PLZ / Ort", plzOrt || "–");
-  fieldRow("Telefon", String(contract.telefon || "–"), "E-Mail", String(contract.email || "–"));
-  fieldRow("MP-Nummer", String(contract.mp_nr || "–"), "Vertriebspartner", String(contract.sales_partner_name || "–"));
-
-  y -= 10;
+  fieldRow("Adresse", String(contract.adresse || "–"));
+  fieldRow("PLZ / Ort", plzOrt || "–");
+  fieldRow("Telefon", String(contract.telefon || "–"));
+  fieldRow("E-Mail", String(contract.email || "–"));
+  fieldRow("MP-Nummer", String(contract.mp_nr || "–"));
+  fieldRow("Vertriebspartner", String(contract.sales_partner_name || "–"));
 
   // Produkte
   sectionHeader("PRODUKTE & LIZENZEN");
   fieldRow("Produkt", String(contract.product_name || "–"));
   fieldRow("Anzahl Lizenzen", String(contract.license_count ?? 1));
-  y -= 6;
 
   // Zusatzmodule
   sectionHeader("ZUSATZMODULE");
@@ -372,9 +374,9 @@ async function buildContractPdf(
   sectionHeader("LAUFZEIT");
   const endDateLabel = endDate === "2099-12-31" ? "Unbefristet" : formatDate(endDate);
   const laufzeitLabel = durationMonths === 0 ? "Unbefristet" : `${durationMonths} Monate`;
-  fieldRow("Vertragsbeginn", formatDate(contract.start_date as string), "Vertragsende", endDateLabel);
+  fieldRow("Vertragsbeginn", formatDate(contract.start_date as string));
+  fieldRow("Vertragsende", endDateLabel);
   fieldRow("Laufzeit", laufzeitLabel);
-  y -= 10;
 
   // Preisübersicht
   sectionHeader("PREISÜBERSICHT");
@@ -402,19 +404,16 @@ async function buildContractPdf(
     drawPriceRow("Rabatt", `${contract.discount_percent}%`);
   }
 
-  // Gesamtbetrag
+  // Gesamtbetrag — kein Hintergrund, kräftigere Top-Linie als Akzent
   ensureSpace(30);
   const grossRowTop = y + 10;
   const grossRowH = 28;
   const grossRowBottom = grossRowTop - grossRowH;
-  page.drawLine({ start: { x: ML, y: grossRowTop }, end: { x: TABLE_RIGHT, y: grossRowTop }, thickness: 1.5, color: C_LINE });
-  page.drawRectangle({ x: ML, y: grossRowBottom, width: CW, height: grossRowH, color: C_BG_LIGHT });
-  page.drawLine({ start: { x: ML, y: grossRowBottom }, end: { x: TABLE_RIGHT, y: grossRowBottom }, thickness: 1.5, color: C_LINE });
-  page.drawLine({ start: { x: ML, y: grossRowTop }, end: { x: ML, y: grossRowBottom }, thickness: 0.8, color: C_LINE });
-  page.drawLine({ start: { x: TABLE_RIGHT, y: grossRowTop }, end: { x: TABLE_RIGHT, y: grossRowBottom }, thickness: 0.8, color: C_LINE });
+  page.drawLine({ start: { x: ML, y: grossRowTop }, end: { x: TABLE_RIGHT, y: grossRowTop }, thickness: 1.2, color: C_NAVY });
+  page.drawLine({ start: { x: ML, y: grossRowBottom }, end: { x: TABLE_RIGHT, y: grossRowBottom }, thickness: 0.4, color: C_LINE_LIGHT });
   const grossTextY = grossRowTop - grossRowH / 2 - 2;
-  text("Monatlicher Gesamtbetrag", ML + 8, grossTextY, 10, fontBold, C_NAVY);
-  rightText(formatCurrency(Number(contract.monthly_price) || 0), TABLE_RIGHT - 8, grossTextY, 11, fontBold, C_NAVY);
+  text("Monatlicher Gesamtbetrag", ML, grossTextY, SIZE_SECTION_TITLE, fontBold, C_NAVY);
+  rightText(formatCurrency(Number(contract.monthly_price) || 0), TABLE_RIGHT, grossTextY, SIZE_SECTION_TITLE + 1, fontBold, C_NAVY);
   y -= grossRowH + 4;
 
   // Promo-Block (nur bei aktiver Produkt-Promo, SSOT: _shared/promoStatus.ts)
