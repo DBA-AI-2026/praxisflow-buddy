@@ -73,6 +73,7 @@ interface ContractPdfData {
   discount_percent?: number;
   payment_interval?: string;
   kontoinhaber?: string;
+  stripe_customer_id?: string | null;
   iban?: string;
   bic?: string;
   notes?: string;
