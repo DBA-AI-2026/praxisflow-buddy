@@ -84,6 +84,27 @@ export async function previewContractPdf(contract: ContractLike): Promise<void> 
 
   const logoBytes = await fetchLogoBytes();
 
+  // promoProduct (SSOT für AKTIONSPREIS-Sektion in generateContractPdf)
+  const promoProductRaw = products.find(
+    (p: any) =>
+      selectedNames.includes(p.name) &&
+      p.promo_price != null &&
+      p.promo_end_date &&
+      new Date(p.promo_end_date) >= now,
+  );
+  const promoProduct = promoProductRaw
+    ? {
+        name: promoProductRaw.name,
+        promo_price: promoProductRaw.promo_price ?? null,
+        promo_end_date: promoProductRaw.promo_end_date ?? null,
+        promo_price_label: promoProductRaw.promo_price_label ?? null,
+        promo_base_fee_end_date: promoProductRaw.promo_base_fee_end_date ?? null,
+        monthly_price: promoProductRaw.monthly_price ?? null,
+        price_per_unit: promoProductRaw.price_per_unit ?? null,
+        price_per_unit_label: promoProductRaw.price_per_unit_label ?? null,
+      }
+    : null;
+
   const pdfBytes = await generateContractPdf(
     {
       ...contract,
@@ -92,6 +113,7 @@ export async function previewContractPdf(contract: ContractLike): Promise<void> 
       addon_module_details,
     },
     logoBytes,
+    { promoProduct },
   );
   openPdfBlob(new Uint8Array(pdfBytes));
 }
