@@ -176,22 +176,25 @@ Deno.serve(async (req) => {
   const sig = req.headers.get("stripe-signature");
   const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
 
-  let event: Stripe.Event;
+  // Signatur-Pflicht: ohne Secret oder ohne stripe-signature wird der Request abgelehnt.
+  // Ungeprüfte Events könnten Verträge ohne Zahlung aktivieren.
+  if (!webhookSecret || !sig) {
+    log("Webhook signature missing", { hasSecret: !!webhookSecret, hasHeader: !!sig });
+    return new Response(
+      JSON.stringify({ error: "Webhook signature required" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 
-  // Signatur-Validierung
-  if (webhookSecret && sig) {
-    try {
-      event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
-    } catch (err) {
-      log("Webhook signature verification failed", String(err));
-      return new Response(JSON.stringify({ error: "Invalid signature" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-  } else {
-    // Ohne Secret (Dev-Modus) – im Prod-Betrieb sollte STRIPE_WEBHOOK_SECRET immer gesetzt sein
-    event = JSON.parse(body) as Stripe.Event;
+  let event: Stripe.Event;
+  try {
+    event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
+  } catch (err) {
+    log("Webhook signature verification failed", String(err));
+    return new Response(JSON.stringify({ error: "Invalid signature" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   log("Event received", { type: event.type, id: event.id });
@@ -910,8 +913,6 @@ async function handleSepaMandateSetup(
     .maybeSingle();
 
   const alreadyLinked = existing?.stripe_customer_id === stripeCustomerId;
-...
-  // Status-Update auf "aktiv" — nur aus eingegangen/wartend_auf_mandat heraus.
   // .select() für S1: nur bei echter Aktivierung (Row zurück) folgt der Geschwister-Sweep.
   const activatableStatuses = new Set(["eingegangen", "wartend_auf_mandat"]);
   let carrierJustActivated = false;
