@@ -9,7 +9,8 @@
  * verantwortlich.
  */
 import { supabase } from "@/lib/supabaseClient";
-import { generateContractPdf } from "@/lib/generateContractPdf";
+// generateContractPdf wird lazy via dynamic import geladen (C.3a), damit
+// @pdf-lib/fontkit + Exo-2-TTFs nicht im Initial-Bundle landen.
 import { openPdfBlob } from "@/lib/openPdfBlob";
 import foxLogoUrl from "@/assets/logo.png";
 
@@ -100,6 +101,7 @@ async function buildContractPdfBytes(contract: ContractLike): Promise<Uint8Array
       }
     : null;
 
+  const { generateContractPdf } = await import("@/lib/generateContractPdf");
   const pdfBytes = await generateContractPdf(
     {
       ...contract,

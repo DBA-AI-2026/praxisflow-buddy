@@ -19,7 +19,7 @@ import CodeMirror from "@uiw/react-codemirror";
 import { html } from "@codemirror/lang-html";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { useUserRole } from "@/hooks/useUserRole";
-import { generateContractPdf } from "@/lib/generateContractPdf";
+// generateContractPdf: lazy via dynamic import (C.3a)
 import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
 import { showPdfInViewer } from "@/lib/pdfViewerState";
 import { Textarea } from "@/components/ui/textarea";
@@ -1382,6 +1382,7 @@ export default function EmailPreview() {
       if (tpl.id === "invoice") {
         pdfBytes = await generateInvoicePdf(MOCK_INVOICE_PDF_DATA, logoBytes);
       } else {
+        const { generateContractPdf } = await import("@/lib/generateContractPdf");
         pdfBytes = await generateContractPdf(MOCK_CONTRACT_PDF_DATA, logoBytes);
       }
       const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });

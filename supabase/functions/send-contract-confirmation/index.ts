@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { PDFDocument, rgb, StandardFonts } from "npm:pdf-lib@1.17.1";
+import { PDFDocument, rgb } from "npm:pdf-lib@1.17.1";
 import { isContractPromoActive } from "../_shared/promoStatus.ts";
+import { embedExo2 } from "../_shared/pdfFontLoader.ts";
 
 
 const corsHeaders = {
@@ -130,8 +131,9 @@ async function buildContractPdf(
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
 
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const fonts = await embedExo2(doc, APP_URL);
+  const font = fonts.regular;
+  const fontBold = fonts.bold;
 
   const PAGE_W = 595.28;
   const PAGE_H = 841.89;

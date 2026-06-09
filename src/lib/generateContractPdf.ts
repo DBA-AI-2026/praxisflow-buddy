@@ -13,7 +13,8 @@
  * Unterschiede sind: (a) IBAN-Modus partial vs. compact, (b) UNTERSCHRIFT-Sektion
  * nur in der UI. Alles andere muss byte-identisch sein.
  */
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { PDFDocument, rgb } from "pdf-lib";
+import { embedExo2 } from "@/lib/pdfFontLoader";
 import { isContractPromoActive } from "@/lib/promoStatus";
 
 interface ProductPriceDetail {
@@ -140,8 +141,9 @@ export async function generateContractPdf(
   extras: GenerateContractPdfExtras = {},
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const fonts = await embedExo2(doc);
+  const font = fonts.regular;
+  const fontBold = fonts.bold;
 
   const PAGE_W = 595.28;
   const PAGE_H = 841.89;
