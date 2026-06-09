@@ -470,15 +470,11 @@ export async function generateContractPdf(
   const stripeCustomerId = String(data.stripe_customer_id || "").trim();
   const contractStatus = String(data.status || "").toLowerCase();
   if (ibanRaw.length > 0) {
-    fieldRow(
-      "Kontoinhaber",
-      data.kontoinhaber || "–",
-      "IBAN (maskiert)",
-      maskIban(ibanRaw, "partial"),
-    );
+    fieldRow("Kontoinhaber", data.kontoinhaber || "–");
+    fieldRow("IBAN (maskiert)", maskIban(ibanRaw, "partial"));
   } else if (stripeCustomerId.length > 0) {
     ensureSpace(20);
-    text("SEPA-Mandat aktiv hinterlegt — Details liegen beim Zahlungsdienstleister", ML + 8, y, 9, font, C_MUTED);
+    text("SEPA-Mandat aktiv hinterlegt — Details liegen beim Zahlungsdienstleister", ML, y, SIZE_BODY, font, C_MUTED);
     y -= 16;
   } else {
     ensureSpace(20);
@@ -486,10 +482,9 @@ export async function generateContractPdf(
     const hint = pendingStatus
       ? "SEPA-Mandat noch ausstehend"
       : "SEPA-Mandat liegt nicht im System hinterlegt";
-    text(hint, ML + 8, y, 9, font, C_MUTED);
+    text(hint, ML, y, SIZE_BODY, font, C_MUTED);
     y -= 16;
   }
-  y -= 10;
 
   // ===== UNTERSCHRIFT (UI-only) =====
   if (data.signature_data && data.signature_data.startsWith("data:image")) {
