@@ -1219,31 +1219,74 @@ export default function Vertraege() {
       // Auto-open contract summary PDF after creating a new contract (only if not a draft)
       if (!editId && variables.status !== "entwurf") {
         handlePreviewPdf(form);
-        // Send contract PDF email to sales partner
+        // Send contract summary PDF (Konditionsübersicht) to sales partner as a copy
         if (profile?.email) {
           try {
-            const templateRes = await fetch("/templates/vertrag-honorarfuchs.pdf");
-            const templateBytes = await templateRes.arrayBuffer();
-            let sigData = form.signature_data;
-            const vertriebSigData = form.vertrieb_signature_data;
-            const pdfBytes = await fillContractTemplate(templateBytes, {
-              mp_nr: form.mp_nr, praxis: form.praxis, fachrichtung: form.fachrichtung,
-              rechtsform: form.rechtsform, vorname: form.vorname, nachname: form.nachname,
-              adresse: form.adresse, praxisanschrift: form.praxisanschrift, plz: form.plz,
-              telefon: form.telefon, email: form.email,
-              kontoinhaber: form.kontoinhaber, kontoinhaber_strasse: form.kontoinhaber_strasse,
-              kontoinhaber_plz_ort: form.kontoinhaber_plz_ort, bank_name: form.bank_name,
-              iban: form.iban, bic: form.bic, bsnr: form.bsnr,
-              lanr: [form.lanr, form.lanr_2, form.lanr_3].filter(Boolean).join(", "),
-              weitere_bsnr: [form.weitere_bsnr_1, form.weitere_bsnr_2, form.weitere_bsnr_3].filter(Boolean).join(", "),
-              weitere_lanr: form.weitere_lanr, ort: form.ort,
-              monthly_price: form.monthly_price, start_date: form.start_date,
-              end_date: "2099-12-31",
-              modules: form.selected_products, duration_months: 0,
-              notes: form.notes, signature_data: sigData, vertrieb_signature_data: vertriebSigData,
-              praxissystem: form.praxissystem, stundenaufwand_pro_woche: form.stundenaufwand_pro_woche,
-              selected_addon_modules: form.selected_modules,
-            });
+            // Logo
+            let logoBytes: ArrayBuffer | undefined;
+            try {
+              const res = await fetch(foxLogoUrl);
+              logoBytes = await res.arrayBuffer();
+            } catch { /* continue without logo */ }
+
+            // Build product price details (mirrors handlePreviewPdf)
+            const now = new Date();
+            const selectedNames: string[] = form.selected_products || [];
+            const product_price_details = products
+              .filter((p: any) => selectedNames.includes(p.name))
+              .map((p: any) => {
+                const hasPromo =
+                  p.promo_price != null &&
+                  p.promo_end_date &&
+                  new Date(p.promo_end_date) >= now;
+                return {
+                  name: p.name,
+                  monthly_price: Number(p.monthly_price) || 0,
+                  price_per_unit: p.price_per_unit != null ? Number(p.price_per_unit) || 0 : null,
+                  price_per_unit_label: p.price_per_unit_label || null,
+                  promo_price: p.promo_price != null ? Number(p.promo_price) || 0 : null,
+                  promo_price_label: p.promo_price_label || null,
+                  promo_end_date: p.promo_end_date || null,
+                  promo_base_fee_end_date: p.promo_base_fee_end_date || null,
+                  has_active_promo: hasPromo,
+                };
+              });
+
+            const addonNames: string[] = form.selected_modules || [];
+            const addon_module_details = ebmModules
+              .filter((m: any) => addonNames.includes(m.name))
+              .map((m: any) => ({ name: m.name, monthly_price: Number(m.monthly_price) || 0 }));
+
+            const promoProductRaw = products.find(
+              (p: any) =>
+                selectedNames.includes(p.name) &&
+                p.promo_price != null &&
+                p.promo_end_date &&
+                new Date(p.promo_end_date) >= now,
+            );
+            const promoProduct = promoProductRaw
+              ? {
+                  name: promoProductRaw.name,
+                  promo_price: promoProductRaw.promo_price ?? null,
+                  promo_end_date: promoProductRaw.promo_end_date ?? null,
+                  promo_price_label: promoProductRaw.promo_price_label ?? null,
+                  promo_base_fee_end_date: promoProductRaw.promo_base_fee_end_date ?? null,
+                  monthly_price: promoProductRaw.monthly_price ?? null,
+                  price_per_unit: promoProductRaw.price_per_unit ?? null,
+                  price_per_unit_label: promoProductRaw.price_per_unit_label ?? null,
+                }
+              : null;
+
+            const pdfBytes = await generateContractPdf(
+              {
+                ...form,
+                product_price_details,
+                selected_addon_modules: addonNames,
+                addon_module_details,
+              },
+              logoBytes,
+              { promoProduct },
+            );
             const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBytes)));
             const customerName = [form.vorname, form.nachname].filter(Boolean).join(" ");
             await supabase.functions.invoke("send-contract-email", {
