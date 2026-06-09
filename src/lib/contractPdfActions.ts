@@ -1,19 +1,15 @@
 /**
  * contractPdfActions — wiederverwendbare PDF-Aktionen für Verträge.
  *
- * Diese drei Helfer kapseln die Logik aus `src/pages/vertrieb/Vertraege.tsx`
- * (handlePreviewPdf / handleTemplatePdf / Storage-Download). Sie werden
- * aktuell vom neuen VertragTab im KundenDialog genutzt; Vertraege.tsx hat
- * heute noch seine eigenen inline-Versionen (Quelle der Wahrheit). Wenn
- * sich die PDF-Logik ändert, beide Stellen synchronisieren — oder
- * Vertraege.tsx später hierauf umziehen.
+ * Quelle der Wahrheit für PDF-Generierung im UI. `Vertraege.tsx` hat
+ * historisch noch eigene Inline-Versionen (handlePreviewPdf); bei
+ * Änderungen beide Stellen synchronisieren.
  *
  * Alle Funktionen werfen bei Fehler; der Aufrufer ist für Toast/Logging
  * verantwortlich.
  */
 import { supabase } from "@/lib/supabaseClient";
 import { generateContractPdf } from "@/lib/generateContractPdf";
-import { fillContractTemplate } from "@/lib/fillContractTemplate";
 import { openPdfBlob } from "@/lib/openPdfBlob";
 import foxLogoUrl from "@/assets/logo.png";
 
@@ -47,10 +43,10 @@ async function fetchLogoBytes(): Promise<ArrayBuffer | undefined> {
 }
 
 /**
- * Konditions-/Produktübersicht (interne Vorschau).
- * Spiegelt handlePreviewPdf aus Vertraege.tsx.
+ * Baut die PDF-Bytes für die Konditions-/Produktübersicht.
+ * Geteilte Basis für previewContractPdf und downloadContractPdf.
  */
-export async function previewContractPdf(contract: ContractLike): Promise<void> {
+async function buildContractPdfBytes(contract: ContractLike): Promise<Uint8Array> {
   const { products, ebmModules } = await loadProductsAndEbm();
   const now = new Date();
   const selectedNames: string[] = contract.modules?.length
@@ -84,7 +80,6 @@ export async function previewContractPdf(contract: ContractLike): Promise<void> 
 
   const logoBytes = await fetchLogoBytes();
 
-  // promoProduct (SSOT für AKTIONSPREIS-Sektion in generateContractPdf)
   const promoProductRaw = products.find(
     (p: any) =>
       selectedNames.includes(p.name) &&
@@ -115,61 +110,37 @@ export async function previewContractPdf(contract: ContractLike): Promise<void> 
     logoBytes,
     { promoProduct },
   );
-  openPdfBlob(new Uint8Array(pdfBytes));
+  return new Uint8Array(pdfBytes);
 }
 
 /**
- * Offizielles Vertragsdokument (template-basiert) — dasselbe PDF, das
- * nach Stripe-Erfolg per Mail an den Kunden geht.
- * Spiegelt handleTemplatePdf aus Vertraege.tsx.
+ * Konditions-/Produktübersicht (interne Vorschau im PDF-Viewer).
  */
-export async function templateContractPdf(contract: ContractLike): Promise<void> {
-  const templateRes = await fetch("/templates/vertrag-honorarfuchs.pdf");
-  const templateBytes = await templateRes.arrayBuffer();
+export async function previewContractPdf(contract: ContractLike): Promise<void> {
+  const bytes = await buildContractPdfBytes(contract);
+  openPdfBlob(bytes);
+}
 
-  const pdfBytes = await fillContractTemplate(templateBytes, {
-    mp_nr: contract.mp_nr,
-    praxis: contract.praxis,
-    fachrichtung: contract.fachrichtung,
-    rechtsform: contract.rechtsform,
-    vorname: contract.vorname,
-    nachname: contract.nachname,
-    adresse: contract.adresse,
-    praxisanschrift: contract.praxisanschrift,
-    plz: contract.plz,
-    telefon: contract.telefon,
-    email: contract.email,
-    kontoinhaber: contract.kontoinhaber,
-    kontoinhaber_strasse: contract.kontoinhaber_strasse,
-    kontoinhaber_plz_ort: contract.kontoinhaber_plz_ort,
-    bank_name: contract.bank_name,
-    iban: contract.iban,
-    bic: contract.bic,
-    bsnr: contract.bsnr,
-    lanr: contract.lanr,
-    weitere_bsnr: contract.weitere_bsnr,
-    weitere_lanr: contract.weitere_lanr,
-    ort: contract.ort,
-    monthly_price: contract.monthly_price,
-    start_date: contract.start_date,
-    end_date: contract.end_date,
-    modules: contract.modules?.length ? contract.modules : contract.selected_products,
-    duration_months: contract.duration_months,
-    notes: contract.notes,
-    signature_data: contract.signature_data || null,
-    vertrieb_signature_data: contract.vertrieb_signature_data || null,
-    praxissystem: contract.praxissystem,
-    stundenaufwand_pro_woche: contract.stundenaufwand_pro_woche,
-    selected_addon_modules:
-      contract.selected_addon_modules || contract.selected_modules || [],
-  });
-
-  openPdfBlob(new Uint8Array(pdfBytes));
+/**
+ * Konditions-/Produktübersicht als Download.
+ */
+export async function downloadContractPdf(contract: ContractLike): Promise<void> {
+  const bytes = await buildContractPdfBytes(contract);
+  const number = contract.contract_number || contract.hfx_customer_number || "Vertrag";
+  const filename = `Vertrag_${String(number).replace(/[^A-Za-z0-9_-]+/g, "_")}.pdf`;
+  const blob = new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /**
  * Storage-Original (manuell hochgeladenes PDF) als signed URL öffnen.
- * Liefert die signed URL; Aufrufer öffnet sie (z.B. window.open).
  */
 export async function getContractStorageSignedUrl(
   documentUrl: string,
