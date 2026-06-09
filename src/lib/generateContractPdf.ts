@@ -306,7 +306,7 @@ export async function generateContractPdf(
   const sectionHeader = (title: string, titleColor = C_SECTION_TITLE) => {
     ensureSpace(40);
     y -= SECTION_GAP_BEFORE + SIZE_SECTION_TITLE;
-    text(title, ML, y, SIZE_SECTION_TITLE, fontBold, titleColor);
+    text(title, ML, y, SIZE_SECTION_TITLE, fontMedium, titleColor);
     y -= 4;
     page.drawLine({
       start: { x: ML, y },
@@ -429,8 +429,8 @@ export async function generateContractPdf(
   page.drawLine({ start: { x: ML, y: grossRowTop }, end: { x: TABLE_RIGHT, y: grossRowTop }, thickness: 1.2, color: C_NAVY });
   page.drawLine({ start: { x: ML, y: grossRowBottom }, end: { x: TABLE_RIGHT, y: grossRowBottom }, thickness: 0.4, color: C_LINE_LIGHT });
   const grossTextY = grossRowTop - grossRowH / 2 - 2;
-  text("Monatlicher Gesamtbetrag", ML, grossTextY, SIZE_SECTION_TITLE, fontBold, C_NAVY);
-  rightText(formatCurrency(data.monthly_price), TABLE_RIGHT, grossTextY, SIZE_SECTION_TITLE + 1, fontBold, C_NAVY);
+  text("Monatlicher Gesamtbetrag", ML, grossTextY, 11, fontBold, C_NAVY);
+  rightText(formatCurrency(data.monthly_price), TABLE_RIGHT, grossTextY, 12, fontBold, C_NAVY);
   y -= grossRowH + 4;
 
   // ===== AKTIONSPREIS (SSOT: src/lib/promoStatus.ts) =====

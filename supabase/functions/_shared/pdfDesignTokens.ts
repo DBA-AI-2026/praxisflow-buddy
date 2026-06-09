@@ -25,7 +25,7 @@ export const COLOR_ACCENT_PROMO = COLOR_BRAND_RED;    // AKTIONSPREIS-Hervorhebu
 
 // ---------- Schriftgrößen ----------
 export const SIZE_HEADING = 22;          // VERTRAGSÜBERSICHT
-export const SIZE_SECTION_TITLE = 11;    // Sektions-Überschriften (ohne Band)
+export const SIZE_SECTION_TITLE = 9;     // Sektions-Überschriften (dezent, fontMedium)
 export const SIZE_LABEL = 8;             // Tabellen-Labels (links, grau)
 export const SIZE_VALUE = 9.5;           // Tabellen-Werte (rechts, schwarz)
 export const SIZE_BODY = 9;              // Fließtext (Closing, Bullets)
