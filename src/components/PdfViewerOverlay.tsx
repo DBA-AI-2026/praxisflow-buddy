@@ -107,7 +107,7 @@ export function PdfViewerOverlay() {
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-muted/50 p-2">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-muted/50 p-2" style={{ WebkitOverflowScrolling: "touch" }}>
         {loading && (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
