@@ -662,6 +662,11 @@ export default function Vertraege() {
         setDialogOpen(true);
       })();
     }
+
+    // Clean up consumed params from URL so effect doesn't re-fire
+    if (leadId || contractId || addLocationFor) {
+      navigate(location.pathname, { replace: true });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
 
