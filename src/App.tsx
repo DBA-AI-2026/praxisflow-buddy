@@ -32,7 +32,7 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import Sicherheit from "./pages/Sicherheit";
 import MeinKonto from "./pages/MeinKonto";
-import PdfCoordinateFinder from "./pages/tools/PdfCoordinateFinder";
+
 import EmailPreview from "./pages/tools/EmailPreview";
 import EmailSettings from "./pages/admin/EmailSettings";
 import { PdfViewerOverlay } from "@/components/PdfViewerOverlay";
