@@ -1,6 +1,17 @@
 import { writeFile } from "node:fs/promises";
 import { generateContractPdf } from "./src/lib/generateContractPdf";
 
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  const urlStr = typeof input === "string" ? input : input.toString();
+  if (urlStr.includes("/fonts/Exo2")) {
+    const fileName = urlStr.split("/fonts/").pop()!;
+    const file = Bun.file(`/dev-server/public/fonts/${fileName}`);
+    return new Response(await file.arrayBuffer(), { status: 200, headers: { "content-type": "font/ttf" } });
+  }
+  return originalFetch(input, init);
+};
+
 const baseMock = {
   hfx_customer_number: "HFX-I01070",
   praxis: "Test Praxis",
