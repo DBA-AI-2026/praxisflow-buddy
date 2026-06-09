@@ -434,6 +434,7 @@ export default function Vertraege() {
       setSyncingQodiaId(null);
     }
   };
+  const navigate = useNavigate();
   const location = useLocation();
   // Also store lead_id for back-linking
   const [fromLeadId, setFromLeadId] = useState<string | null>(null);
