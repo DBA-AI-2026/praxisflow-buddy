@@ -16,6 +16,28 @@
 import { PDFDocument, rgb } from "pdf-lib";
 import { embedExo2 } from "@/lib/pdfFontLoader";
 import { isContractPromoActive } from "@/lib/promoStatus";
+import {
+  COLOR_BRAND_NAVY,
+  COLOR_TEXT,
+  COLOR_MUTED,
+  COLOR_LINE,
+  COLOR_LINE_LIGHT,
+  COLOR_SECTION_TITLE,
+  COLOR_ACCENT_PROMO,
+  SIZE_HEADING,
+  SIZE_SECTION_TITLE,
+  SIZE_LABEL,
+  SIZE_VALUE,
+  SIZE_BODY,
+  SIZE_FOOTER,
+  SECTION_GAP_BEFORE,
+  SECTION_GAP_AFTER,
+  SECTION_LINE_THICKNESS,
+  ROW_HEIGHT,
+  ROW_LINE_THICKNESS,
+  LABEL_COL_WIDTH_RATIO,
+  hexToRgb01,
+} from "@/lib/pdfDesignTokens";
 
 interface ProductPriceDetail {
   name: string;
@@ -144,6 +166,7 @@ export async function generateContractPdf(
   const doc = await PDFDocument.create();
   const fonts = await embedExo2(doc);
   const font = fonts.regular;
+  const fontMedium = fonts.medium;
   const fontBold = fonts.bold;
 
   const PAGE_W = 595.28;
@@ -153,12 +176,17 @@ export async function generateContractPdf(
   const CW = PAGE_W - ML - MR;
   const mmToPt = 2.8346;
 
-  const C_NAVY = rgb(0.044, 0.212, 0.498);
-  const C_TEXT = rgb(0.12, 0.12, 0.14);
-  const C_MUTED = rgb(0.35, 0.37, 0.42);
-  const C_LINE = rgb(0.044, 0.212, 0.498);
-  const C_LINE_LIGHT = rgb(0.75, 0.80, 0.88);
-  const C_BG_LIGHT = rgb(0.95, 0.96, 0.98);
+  const rgbHex = (hex: string) => {
+    const c = hexToRgb01(hex);
+    return rgb(c.r, c.g, c.b);
+  };
+  const C_NAVY = rgbHex(COLOR_BRAND_NAVY);
+  const C_TEXT = rgbHex(COLOR_TEXT);
+  const C_MUTED = rgbHex(COLOR_MUTED);
+  const C_LINE = rgbHex(COLOR_LINE);
+  const C_LINE_LIGHT = rgbHex(COLOR_LINE_LIGHT);
+  const C_SECTION_TITLE = rgbHex(COLOR_SECTION_TITLE);
+  const C_ACCENT_PROMO = rgbHex(COLOR_ACCENT_PROMO);
 
   let page = doc.addPage([PAGE_W, PAGE_H]);
   let y = PAGE_H;
