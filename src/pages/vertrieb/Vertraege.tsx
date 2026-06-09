@@ -2226,53 +2226,6 @@ export default function Vertraege() {
     return (fuzzyMatch?.agb_pdf_path as string | null) ?? null;
   };
 
-  const handleTemplatePdf = async (contractData: Record<string, any>) => {
-    try {
-      // Always show the filled contract template PDF (what the customer receives)
-      const templateRes = await fetch("/templates/vertrag-honorarfuchs.pdf");
-      const templateBytes = await templateRes.arrayBuffer();
-
-      const pdfBytes = await fillContractTemplate(templateBytes, {
-        mp_nr: contractData.mp_nr,
-        praxis: contractData.praxis,
-        fachrichtung: contractData.fachrichtung,
-        rechtsform: contractData.rechtsform,
-        vorname: contractData.vorname,
-        nachname: contractData.nachname,
-        adresse: contractData.adresse,
-        praxisanschrift: contractData.praxisanschrift,
-        plz: contractData.plz,
-        telefon: contractData.telefon,
-        email: contractData.email,
-        kontoinhaber: contractData.kontoinhaber,
-        kontoinhaber_strasse: contractData.kontoinhaber_strasse,
-        kontoinhaber_plz_ort: contractData.kontoinhaber_plz_ort,
-        bank_name: contractData.bank_name,
-        iban: contractData.iban,
-        bic: contractData.bic,
-        bsnr: contractData.bsnr,
-        lanr: contractData.lanr,
-        weitere_bsnr: contractData.weitere_bsnr,
-        weitere_lanr: contractData.weitere_lanr,
-        ort: contractData.ort,
-        monthly_price: contractData.monthly_price,
-        start_date: contractData.start_date,
-        end_date: contractData.end_date,
-        modules: contractData.modules?.length ? contractData.modules : contractData.selected_products,
-        duration_months: contractData.duration_months,
-        notes: contractData.notes,
-        signature_data: contractData.signature_data || null,
-        vertrieb_signature_data: contractData.vertrieb_signature_data || null,
-        praxissystem: contractData.praxissystem,
-        stundenaufwand_pro_woche: contractData.stundenaufwand_pro_woche,
-        selected_addon_modules: contractData.selected_addon_modules || contractData.selected_modules || [],
-      });
-
-      openPdfBlob(new Uint8Array(pdfBytes));
-    } catch (err: any) {
-      toast({ title: "PDF-Fehler", description: err.message, variant: "destructive" });
-    }
-  };
 
   return (
     <MainLayout title="Vertragserfassung" subtitle="Verträge anlegen und verwalten">
