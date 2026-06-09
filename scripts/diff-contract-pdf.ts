@@ -75,7 +75,7 @@ const EXPECTED_DIFF_NOTES = [
 ];
 
 async function main() {
-  console.log("=== Contract-PDF Drift-Check ===\n");
+  console.log("=== Contract-PDF Drift-Check (C.3b SaaS-Layout) ===\n");
 
   const uiBytes = await generateContractPdf(
     MOCK_CONTRACT as any,
@@ -88,21 +88,20 @@ async function main() {
   console.log(
     "\nℹ Edge-PDF: bitte separat erzeugen via\n" +
       "   supabase functions invoke send-contract-confirmation \\\n" +
-      "     --body '{\"contract_id\":\"<TEST-2703>\",\"force\":true}'\n" +
-      "  oder über `curl_edge_functions` im Lovable-Tooling. Die Mail enthält\n" +
-      "  die Edge-PDF als Anhang — herunterladen nach /tmp/contract-edge.pdf.\n",
+      "     --body '{\"contract_id\":\"<TEST-2703>\",\"force\":true}'\n",
   );
 
-  console.log("Erwartete Unterschiede (alles andere = Drift, bitte beheben):");
+  console.log("Erwartete Unterschiede nach C.3b (alles andere = Drift):");
   for (const note of EXPECTED_DIFF_NOTES) console.log("  • " + note);
 
   console.log(
     "\nSync-Check-Liste — diese Helfer MÜSSEN in beiden Dateien wortgleich sein:\n" +
       "  - text, rightText, ensureSpace, drawFooter\n" +
-      "  - sectionHeader (rowH=24, size 10 fett, characterSpacing 0.5, y-1)\n" +
-      "  - fieldRow (y-=13, y-=13, Trennlinie y+9)\n" +
+      "  - sectionHeader (SaaS-Stil: Titel + dünne Linie, kein Band)\n" +
+      "  - fieldRow (Tabellen-Stil: Label links/grau, Wert rechts)\n" +
       "  - drawPriceRow (priceRowH=24)\n" +
-      "  - maskIban (modes compact/partial/full)\n",
+      "  - maskIban (modes compact/partial/full)\n" +
+      "  - Tokens aus pdfDesignTokens.ts (synchron in src/lib/ + supabase/functions/_shared/)\n",
   );
 }
 
