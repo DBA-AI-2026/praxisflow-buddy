@@ -619,7 +619,7 @@ function ContractCard({
     : "—";
 
   const runPdfAction = async (
-    kind: "preview" | "template" | "storage",
+    kind: "preview" | "download" | "storage",
     fn: () => Promise<void>,
   ) => {
     setBusy(kind);
