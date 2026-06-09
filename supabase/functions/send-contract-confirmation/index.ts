@@ -83,12 +83,46 @@ type BuildExtras = {
   promoProduct?: PromoProductFull | null;
 };
 
-function maskIban(iban: string | null | undefined): string {
-  if (!iban || String(iban).replace(/\s/g, "").length < 4) return "–";
-  const clean = String(iban).replace(/\s/g, "");
+/**
+ * IBAN-Maskierung mit drei Modi:
+ *  - "compact" (default): ••••XXXX (Kunden-Mail, eng dargestellt)
+ *  - "partial":           DE21 •••• •••• •••• XXXX (UI-Vorschau, mehr Info für Vertriebler)
+ *  - "full":              DE21 1234 5678 9012 3456 (nur explizit anfordern; niemand setzt das per Default)
+ *
+ * ⚠ SYNCHRONIZE: Diese Funktion existiert wortgleich in:
+ *   - src/lib/generateContractPdf.ts (UI)
+ *   - supabase/functions/send-contract-confirmation/index.ts (Edge)
+ * Änderungen IMMER in beiden anpassen.
+ */
+function maskIban(
+  iban: string | null | undefined,
+  mode: "compact" | "partial" | "full" = "compact",
+): string {
+  if (!iban) return "–";
+  const clean = String(iban).replace(/\s+/g, "").toUpperCase();
+  if (clean.length < 8) return "–";
+  if (mode === "full") return clean.match(/.{1,4}/g)?.join(" ") ?? clean;
+  if (mode === "partial") {
+    const head = clean.slice(0, 4);
+    const tail = clean.slice(-4);
+    const middleQuartetCount = Math.max(0, Math.ceil((clean.length - 8) / 4));
+    const middle = Array(middleQuartetCount).fill("••••").join(" ");
+    return `${head} ${middle} ${tail}`.replace(/\s+/g, " ").trim();
+  }
   return `••••${clean.slice(-4)}`;
 }
 
+/**
+ * ⚠ SYNCHRONIZE MIT src/lib/generateContractPdf.ts
+ *
+ * Diese Funktion rendert die Vertragsbestätigungs-PDF, die nach Stripe-Zahlung
+ * per Mail an Kunden gesendet wird. Die UI-Vorschau (gleiche Optik, andere
+ * IBAN-Maskierung, zusätzlich UNTERSCHRIFT) lebt in der oben genannten Datei.
+ *
+ * Änderungen an Helfer-Funktionen (text, rightText, fieldRow, sectionHeader,
+ * drawPriceRow, ensureSpace, drawFooter, maskIban) IMMER in beiden Dateien
+ * anpassen. Drift wird durch das Skript scripts/diff-contract-pdf.ts erkannt.
+ */
 async function buildContractPdf(
   contract: Record<string, unknown>,
   logoBytes?: ArrayBuffer,
