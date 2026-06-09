@@ -738,14 +738,14 @@ function ContractCard({
           size="sm"
           className="gap-1.5"
           disabled={busy !== null}
-          onClick={() => runPdfAction("template", () => templateContractPdf(contract))}
+          onClick={() => runPdfAction("download", () => downloadContractPdf(contract))}
         >
-          {busy === "template" ? (
+          {busy === "download" ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
-            <FileText className="h-3.5 w-3.5" />
+            <Download className="h-3.5 w-3.5" />
           )}
-          Vertragsdaten als PDF
+          PDF herunterladen
         </Button>
         {contract.document_url && (
           <Button
