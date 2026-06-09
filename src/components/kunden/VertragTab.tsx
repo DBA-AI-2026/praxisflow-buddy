@@ -596,7 +596,7 @@ function ContractCard({
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [busy, setBusy] = useState<"preview" | "template" | "storage" | null>(null);
+  const [busy, setBusy] = useState<"preview" | "download" | "storage" | null>(null);
   const [statusBusy, setStatusBusy] = useState(false);
 
   const product = contract.product_name ?? "—";
