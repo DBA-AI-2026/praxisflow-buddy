@@ -12,10 +12,10 @@
 import type { PDFDocument, PDFFont } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 
-// Vite ?url-Imports liefern stabile, gehashte URLs für public-ähnliche Assets.
-import exo2RegularUrl from "/fonts/Exo2-Regular.ttf?url";
-import exo2MediumUrl from "/fonts/Exo2-Medium.ttf?url";
-import exo2BoldUrl from "/fonts/Exo2-Bold.ttf?url";
+// Dateien unter public/ werden von Vite/Server am Root-Pfad ausgeliefert.
+const exo2RegularUrl = "/fonts/Exo2-Regular.ttf";
+const exo2MediumUrl = "/fonts/Exo2-Medium.ttf";
+const exo2BoldUrl = "/fonts/Exo2-Bold.ttf";
 
 export interface PdfFontSet {
   regular: PDFFont;
