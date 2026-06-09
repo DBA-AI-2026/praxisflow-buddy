@@ -12,6 +12,7 @@ import { useState, useMemo } from "react";
 import {
   Eye,
   FileText,
+  Download,
   Upload,
   ExternalLink,
   Loader2,
@@ -82,7 +83,7 @@ import type {
 } from "@/hooks/useKundenDialogData";
 import {
   previewContractPdf,
-  templateContractPdf,
+  downloadContractPdf,
   getContractStorageSignedUrl,
 } from "@/lib/contractPdfActions";
 import {
@@ -596,7 +597,7 @@ function ContractCard({
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [busy, setBusy] = useState<"preview" | "template" | "storage" | null>(null);
+  const [busy, setBusy] = useState<"preview" | "download" | "storage" | null>(null);
   const [statusBusy, setStatusBusy] = useState(false);
 
   const product = contract.product_name ?? "—";
@@ -619,7 +620,7 @@ function ContractCard({
     : "—";
 
   const runPdfAction = async (
-    kind: "preview" | "template" | "storage",
+    kind: "preview" | "download" | "storage",
     fn: () => Promise<void>,
   ) => {
     setBusy(kind);
@@ -738,14 +739,14 @@ function ContractCard({
           size="sm"
           className="gap-1.5"
           disabled={busy !== null}
-          onClick={() => runPdfAction("template", () => templateContractPdf(contract))}
+          onClick={() => runPdfAction("download", () => downloadContractPdf(contract))}
         >
-          {busy === "template" ? (
+          {busy === "download" ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
-            <FileText className="h-3.5 w-3.5" />
+            <Download className="h-3.5 w-3.5" />
           )}
-          Vertragsdaten als PDF
+          PDF herunterladen
         </Button>
         {contract.document_url && (
           <Button

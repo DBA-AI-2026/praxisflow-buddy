@@ -32,7 +32,7 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import Sicherheit from "./pages/Sicherheit";
 import MeinKonto from "./pages/MeinKonto";
-import PdfCoordinateFinder from "./pages/tools/PdfCoordinateFinder";
+
 import EmailPreview from "./pages/tools/EmailPreview";
 import EmailSettings from "./pages/admin/EmailSettings";
 import { PdfViewerOverlay } from "@/components/PdfViewerOverlay";
@@ -101,7 +101,7 @@ const App = () => (
             <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
             <Route path="/admin/agb" element={<ProtectedRoute><AgbManagement /></ProtectedRoute>} />
             <Route path="/tipp-leads" element={<ProtectedRoute><TippLeadsPage /></ProtectedRoute>} />
-            <Route path="/tools/pdf-coordinates" element={<ProtectedRoute><PdfCoordinateFinder /></ProtectedRoute>} />
+            
             <Route path="/tools/email-preview" element={<ProtectedRoute><EmailPreview /></ProtectedRoute>} />
             <Route path="/admin/email-preview" element={<ProtectedRoute><EmailPreview /></ProtectedRoute>} />
             <Route path="/admin/email-settings" element={<ProtectedRoute><EmailSettings /></ProtectedRoute>} />
