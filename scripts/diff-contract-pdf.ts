@@ -93,9 +93,10 @@ const EXPECTED_DIFF_NOTES = [
 async function main() {
   console.log("=== Contract-PDF Drift-Check (C.3b SaaS-Layout) ===\n");
 
+  const logoBytes = await readFile(resolve(process.cwd(), "public/logo.png"));
   const uiBytes = await generateContractPdf(
     MOCK_CONTRACT as any,
-    undefined,
+    logoBytes.buffer.slice(logoBytes.byteOffset, logoBytes.byteOffset + logoBytes.byteLength) as ArrayBuffer,
     { promoProduct: MOCK_PROMO_PRODUCT },
   );
   await writeFile("/tmp/contract-ui.pdf", uiBytes);
