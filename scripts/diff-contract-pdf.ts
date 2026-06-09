@@ -25,6 +25,22 @@
  * Es läuft NICHT in CI; es ist eine reine Drift-Checkliste.
  */
 import { writeFile } from "node:fs/promises";
+import { writeFile, readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
+// Bun/Node: fetch() relative URLs nicht unterstützt → Font-Loader im UI nutzt
+// fetch("/fonts/..."). Hier patchen wir global fetch, sodass /fonts/* aus
+// public/fonts gelesen werden.
+const origFetch = globalThis.fetch;
+globalThis.fetch = (async (input: any, init?: any) => {
+  const url = typeof input === "string" ? input : input?.url ?? "";
+  if (typeof url === "string" && url.startsWith("/fonts/")) {
+    const bytes = await readFile(resolve(process.cwd(), "public" + url));
+    return new Response(bytes);
+  }
+  return origFetch(input, init);
+}) as typeof fetch;
+
 import { generateContractPdf } from "../src/lib/generateContractPdf";
 
 const MOCK_CONTRACT = {
