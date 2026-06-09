@@ -504,11 +504,11 @@ export async function generateContractPdf(
   }
 
   // ===== CLOSING =====
-  ensureSpace(50);
-  y -= 8;
-  text("Mit freundlichen Grüßen", ML, y, 9, font, C_TEXT);
-  y -= 16;
-  text("HFX Honorarfuchs", ML, y, 10, fontBold, C_NAVY);
+  ensureSpace(60);
+  y -= 28;
+  text("Mit freundlichen Grüßen", ML, y, SIZE_BODY, font, C_TEXT);
+  y -= 18;
+  text("HFX Honorarfuchs", ML, y, SIZE_BODY + 1, fontBold, C_NAVY);
 
   // ===== FOOTER =====
   drawFooter();
