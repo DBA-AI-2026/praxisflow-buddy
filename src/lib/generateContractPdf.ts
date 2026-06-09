@@ -423,7 +423,7 @@ export async function generateContractPdf(
   //  B/C) Beides leer → je nach Status "noch ausstehend" oder "nicht im System hinterlegt"
   sectionHeader("SEPA-LASTSCHRIFTEINZUG");
   const ibanRaw = String(data.iban || "").trim();
-  const stripeCustomerId = String((data as any).stripe_customer_id || "").trim();
+  const stripeCustomerId = String(data.stripe_customer_id || "").trim();
   const contractStatus = String(data.status || "").toLowerCase();
   if (ibanRaw.length > 0) {
     fieldRow(
