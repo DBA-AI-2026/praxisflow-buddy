@@ -36,7 +36,7 @@ import {
 // Check and ChevronsUpDown already imported above via combobox imports
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { generateContractPdf } from "@/lib/generateContractPdf";
-import { fillContractTemplate } from "@/lib/fillContractTemplate";
+
 import { openPdfBlob } from "@/lib/openPdfBlob";
 import { validateIban } from "@/lib/validateIban";
 import { validateBic } from "@/lib/validateBic";
