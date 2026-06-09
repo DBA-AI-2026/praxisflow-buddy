@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 // Check and ChevronsUpDown already imported above via combobox imports
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-import { generateContractPdf } from "@/lib/generateContractPdf";
+// generateContractPdf: lazy via dynamic import (C.3a)
 
 import { openPdfBlob } from "@/lib/openPdfBlob";
 import { validateIban } from "@/lib/validateIban";
@@ -1275,6 +1275,7 @@ export default function Vertraege() {
                 }
               : null;
 
+            const { generateContractPdf } = await import("@/lib/generateContractPdf");
             const pdfBytes = await generateContractPdf(
               {
                 ...form,
@@ -2062,6 +2063,7 @@ export default function Vertraege() {
           }
         : null;
 
+      const { generateContractPdf } = await import("@/lib/generateContractPdf");
       const pdfBytes = await generateContractPdf({
         ...contractData,
         signature_data: sigData,
