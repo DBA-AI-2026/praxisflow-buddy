@@ -344,19 +344,22 @@ export async function generateContractPdf(
 
   // ===== VERTRAGSPARTEIEN =====
   sectionHeader("VERTRAGSPARTEIEN");
-  fieldRow("Praxis", data.praxis || "–", "Fachrichtung", data.fachrichtung || "–");
-  fieldRow("Vorname", data.vorname || "–", "Nachname", data.nachname || "–");
-  fieldRow("Adresse", data.adresse || "–", "PLZ / Ort", [data.plz, data.ort].filter(Boolean).join(" ") || "–");
-  fieldRow("Telefon", data.telefon || "–", "E-Mail", data.email || "–");
-  fieldRow("MP-Nummer", data.mp_nr || "–", "Vertriebspartner", data.sales_partner_name || "–");
-  y -= 10;
+  fieldRow("Praxis", data.praxis || "–");
+  fieldRow("Fachrichtung", data.fachrichtung || "–");
+  fieldRow("Vorname", data.vorname || "–");
+  fieldRow("Nachname", data.nachname || "–");
+  fieldRow("Adresse", data.adresse || "–");
+  fieldRow("PLZ / Ort", [data.plz, data.ort].filter(Boolean).join(" ") || "–");
+  fieldRow("Telefon", data.telefon || "–");
+  fieldRow("E-Mail", data.email || "–");
+  fieldRow("MP-Nummer", data.mp_nr || "–");
+  fieldRow("Vertriebspartner", data.sales_partner_name || "–");
 
   // ===== PRODUKTE & LIZENZEN =====
   sectionHeader("PRODUKTE & LIZENZEN");
   const productList = data.modules?.length ? data.modules.join(", ") : data.product_name || "–";
   fieldRow("Ausgewählte Produkte", productList);
   fieldRow("Anzahl Lizenzen", String(data.license_count ?? 1));
-  y -= 6;
 
   // ===== ZUSATZMODULE =====
   sectionHeader("ZUSATZMODULE");
@@ -387,10 +390,10 @@ export async function generateContractPdf(
   // ===== LAUFZEIT =====
   sectionHeader("LAUFZEIT");
   const endDateLabel = endDateStr === "2099-12-31" ? "Unbefristet" : formatDate(endDateStr);
-  fieldRow("Vertragsbeginn", formatDate(data.start_date), "Vertragsende", endDateLabel);
+  fieldRow("Vertragsbeginn", formatDate(data.start_date));
+  fieldRow("Vertragsende", endDateLabel);
   const laufzeitLabel = (data.duration_months ?? 0) === 0 ? "Unbefristet" : `${data.duration_months} Monate`;
   fieldRow("Laufzeit", laufzeitLabel);
-  y -= 10;
 
   // ===== PREISÜBERSICHT =====
   sectionHeader("PREISÜBERSICHT");
@@ -418,19 +421,16 @@ export async function generateContractPdf(
     drawPriceRow("Rabatt", `${data.discount_percent}%`);
   }
 
-  // Gesamtbetrag row
+  // Gesamtbetrag row — kein Hintergrund, kräftigere Top-Linie als Akzent
   ensureSpace(30);
   const grossRowTop = y + 10;
   const grossRowH = 28;
   const grossRowBottom = grossRowTop - grossRowH;
-  page.drawLine({ start: { x: ML, y: grossRowTop }, end: { x: TABLE_RIGHT, y: grossRowTop }, thickness: 1.5, color: C_LINE });
-  page.drawRectangle({ x: ML, y: grossRowBottom, width: CW, height: grossRowH, color: C_BG_LIGHT });
-  page.drawLine({ start: { x: ML, y: grossRowBottom }, end: { x: TABLE_RIGHT, y: grossRowBottom }, thickness: 1.5, color: C_LINE });
-  page.drawLine({ start: { x: ML, y: grossRowTop }, end: { x: ML, y: grossRowBottom }, thickness: 0.8, color: C_LINE });
-  page.drawLine({ start: { x: TABLE_RIGHT, y: grossRowTop }, end: { x: TABLE_RIGHT, y: grossRowBottom }, thickness: 0.8, color: C_LINE });
+  page.drawLine({ start: { x: ML, y: grossRowTop }, end: { x: TABLE_RIGHT, y: grossRowTop }, thickness: 1.2, color: C_NAVY });
+  page.drawLine({ start: { x: ML, y: grossRowBottom }, end: { x: TABLE_RIGHT, y: grossRowBottom }, thickness: 0.4, color: C_LINE_LIGHT });
   const grossTextY = grossRowTop - grossRowH / 2 - 2;
-  text("Monatlicher Gesamtbetrag", ML + 8, grossTextY, 10, fontBold, C_NAVY);
-  rightText(formatCurrency(data.monthly_price), TABLE_RIGHT - 8, grossTextY, 11, fontBold, C_NAVY);
+  text("Monatlicher Gesamtbetrag", ML, grossTextY, SIZE_SECTION_TITLE, fontBold, C_NAVY);
+  rightText(formatCurrency(data.monthly_price), TABLE_RIGHT, grossTextY, SIZE_SECTION_TITLE + 1, fontBold, C_NAVY);
   y -= grossRowH + 4;
 
   // ===== AKTIONSPREIS (SSOT: src/lib/promoStatus.ts) =====
@@ -440,9 +440,9 @@ export async function generateContractPdf(
     promoProduct,
   );
   if (promoActive && promoProduct) {
-    sectionHeader("AKTIONSPREIS");
+    sectionHeader("AKTIONSPREIS", C_ACCENT_PROMO);
     ensureSpace(20);
-    text(promoProduct.name, ML + 8, y, 10, fontBold, C_NAVY);
+    text(promoProduct.name, ML, y, SIZE_BODY + 1, fontBold, C_ACCENT_PROMO);
     y -= 16;
     const unitLabel = promoProduct.price_per_unit_label || "Einheit";
     const promoPriceStr = `${formatCurrency(Number(promoProduct.promo_price) || 0)}/${unitLabel} dauerhaft`;
@@ -454,11 +454,11 @@ export async function generateContractPdf(
     const regUnit = promoProduct.price_per_unit != null
       ? `${formatCurrency(Number(promoProduct.price_per_unit) || 0)}/${unitLabel}`
       : "–";
-    fieldRow("Regulär nach Aktionsende", regBase, "Stückpreis regulär", regUnit);
+    fieldRow("Regulär nach Aktionsende", regBase);
+    fieldRow("Stückpreis regulär", regUnit);
     if (promoProduct.promo_end_date) {
       fieldRow("Aktion gültig bis (Abschlussdatum)", formatDate(promoProduct.promo_end_date));
     }
-    y -= 6;
   }
 
   // ===== SEPA — Drei-Wege-Hinweis (Hybrid; SSOT-Entscheidung in Phase D-vor) =====
