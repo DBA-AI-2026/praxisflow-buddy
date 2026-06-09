@@ -300,30 +300,46 @@ export async function generateContractPdf(
   y = boxTop - recipBoxH - 24 - 20 * mmToPt;
 
   // ===== TITLE =====
-  text("VERTRAGSÜBERSICHT", ML, y, 20, fontBold, C_TEXT);
+  text("VERTRAGSÜBERSICHT", ML, y, SIZE_HEADING, fontBold, C_TEXT);
   y -= 28;
 
-  const sectionHeader = (title: string) => {
+  const sectionHeader = (title: string, titleColor = C_SECTION_TITLE) => {
     ensureSpace(40);
-    page.drawLine({ start: { x: ML, y: y + 10 }, end: { x: PAGE_W - MR, y: y + 10 }, thickness: 1, color: C_LINE });
-    const rowH = 24;
-    page.drawRectangle({ x: ML, y: y - rowH + 10, width: CW, height: rowH, color: C_BG_LIGHT });
-    page.drawLine({ start: { x: ML, y: y - rowH + 10 }, end: { x: PAGE_W - MR, y: y - rowH + 10 }, thickness: 0.8, color: C_LINE });
-    page.drawText(title, { x: ML + 8, y: y - 1, size: 10, font: fontBold, color: C_NAVY, characterSpacing: 0.5 } as any);
-    y -= rowH + 6;
+    y -= SECTION_GAP_BEFORE + SIZE_SECTION_TITLE;
+    text(title, ML, y, SIZE_SECTION_TITLE, fontBold, titleColor);
+    y -= 4;
+    page.drawLine({
+      start: { x: ML, y },
+      end: { x: PAGE_W - MR, y },
+      thickness: SECTION_LINE_THICKNESS,
+      color: C_LINE,
+    });
+    y -= SECTION_GAP_AFTER;
   };
 
   const fieldRow = (label: string, value: string, label2?: string, value2?: string) => {
-    ensureSpace(20);
-    const halfW = CW / 2;
-    text(label, ML + 8, y, 7, font, C_MUTED);
-    if (label2) text(label2, ML + halfW + 8, y, 7, font, C_MUTED);
-    y -= 13;
-    text(value || "–", ML + 8, y, 9, font, C_TEXT, halfW - 16);
-    if (label2) text(value2 || "–", ML + halfW + 8, y, 9, font, C_TEXT, halfW - 16);
-    y -= 13;
-    // Trennlinie deutlich über dem nächsten Label (Label ist 7pt hoch, +9 lässt ~2pt Luft über der Label-Oberkante)
-    page.drawLine({ start: { x: ML, y: y + 9 }, end: { x: PAGE_W - MR, y: y + 9 }, thickness: 0.3, color: C_LINE_LIGHT });
+    ensureSpace(ROW_HEIGHT + 4);
+    y -= ROW_HEIGHT;
+    const baselineY = y + 7;
+    const labelColW = CW * LABEL_COL_WIDTH_RATIO;
+    if (label2 !== undefined) {
+      // Doppel-Variante (Backwards-Compat — neue Aufrufer sollten Single nutzen)
+      const halfW = CW / 2;
+      const labelColWHalf = halfW * LABEL_COL_WIDTH_RATIO;
+      text(label, ML, baselineY, SIZE_LABEL, fontMedium, C_MUTED);
+      text(value || "–", ML + labelColWHalf + 8, baselineY, SIZE_VALUE, font, C_TEXT, halfW - labelColWHalf - 8);
+      text(label2, ML + halfW, baselineY, SIZE_LABEL, fontMedium, C_MUTED);
+      text(value2 || "–", ML + halfW + labelColWHalf + 8, baselineY, SIZE_VALUE, font, C_TEXT, halfW - labelColWHalf - 8);
+    } else {
+      text(label, ML, baselineY, SIZE_LABEL, fontMedium, C_MUTED);
+      text(value || "–", ML + labelColW + 12, baselineY, SIZE_VALUE, font, C_TEXT, CW - labelColW - 12);
+    }
+    page.drawLine({
+      start: { x: ML, y },
+      end: { x: PAGE_W - MR, y },
+      thickness: ROW_LINE_THICKNESS,
+      color: C_LINE_LIGHT,
+    });
   };
 
   // ===== VERTRAGSPARTEIEN =====
