@@ -370,9 +370,7 @@ export default function Vertraege() {
   >(null);
   const [locationConfirmOpen, setLocationConfirmOpen] = useState(false);
   const [forceCreateDuplicate, setForceCreateDuplicate] = useState(false);
-  const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
   const [resendingConfirmationId, setResendingConfirmationId] = useState<string | null>(null);
-  const [emailConfirmContract, setEmailConfirmContract] = useState<any | null>(null);
   const [syncingQodiaId, setSyncingQodiaId] = useState<string | null>(null);
   const [leadTippgeberName, setLeadTippgeberName] = useState<string | null>(null);
   const [deleteContractTarget, setDeleteContractTarget] = useState<any | null>(null);
