@@ -2,6 +2,28 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, rgb } from "npm:pdf-lib@1.17.1";
 import { isContractPromoActive } from "../_shared/promoStatus.ts";
 import { embedExo2 } from "../_shared/pdfFontLoader.ts";
+import {
+  COLOR_BRAND_NAVY,
+  COLOR_TEXT,
+  COLOR_MUTED,
+  COLOR_LINE,
+  COLOR_LINE_LIGHT,
+  COLOR_SECTION_TITLE,
+  COLOR_ACCENT_PROMO,
+  SIZE_HEADING,
+  SIZE_SECTION_TITLE,
+  SIZE_LABEL,
+  SIZE_VALUE,
+  SIZE_BODY,
+  SIZE_FOOTER,
+  SECTION_GAP_BEFORE,
+  SECTION_GAP_AFTER,
+  SECTION_LINE_THICKNESS,
+  ROW_HEIGHT,
+  ROW_LINE_THICKNESS,
+  LABEL_COL_WIDTH_RATIO,
+  hexToRgb01,
+} from "../_shared/pdfDesignTokens.ts";
 
 
 const corsHeaders = {
@@ -133,6 +155,7 @@ async function buildContractPdf(
 
   const fonts = await embedExo2(doc, APP_URL);
   const font = fonts.regular;
+  const fontMedium = fonts.medium;
   const fontBold = fonts.bold;
 
   const PAGE_W = 595.28;
@@ -142,12 +165,17 @@ async function buildContractPdf(
   const CW = PAGE_W - ML - MR;
   const mmToPt = 2.8346;
 
-  const C_NAVY = rgb(0.044, 0.212, 0.498);
-  const C_TEXT = rgb(0.12, 0.12, 0.14);
-  const C_MUTED = rgb(0.35, 0.37, 0.42);
-  const C_LINE = rgb(0.044, 0.212, 0.498);
-  const C_LINE_LIGHT = rgb(0.75, 0.80, 0.88);
-  const C_BG_LIGHT = rgb(0.95, 0.96, 0.98);
+  const rgbHex = (hex: string) => {
+    const c = hexToRgb01(hex);
+    return rgb(c.r, c.g, c.b);
+  };
+  const C_NAVY = rgbHex(COLOR_BRAND_NAVY);
+  const C_TEXT = rgbHex(COLOR_TEXT);
+  const C_MUTED = rgbHex(COLOR_MUTED);
+  const C_LINE = rgbHex(COLOR_LINE);
+  const C_LINE_LIGHT = rgbHex(COLOR_LINE_LIGHT);
+  const C_SECTION_TITLE = rgbHex(COLOR_SECTION_TITLE);
+  const C_ACCENT_PROMO = rgbHex(COLOR_ACCENT_PROMO);
 
   let page = doc.addPage([PAGE_W, PAGE_H]);
   let y = PAGE_H;
@@ -254,49 +282,66 @@ async function buildContractPdf(
   y = boxTop - recipBoxH - 24 - 20 * mmToPt;
 
   // Title
-  text("VERTRAGSÜBERSICHT", ML, y, 20, fontBold, C_TEXT);
+  text("VERTRAGSÜBERSICHT", ML, y, SIZE_HEADING, fontBold, C_TEXT);
   y -= 28;
 
-  // Section header helper
-  const sectionHeader = (title: string) => {
+  // Section header helper (C.3b SaaS-Stil: dünne Linie, kein Band)
+  const sectionHeader = (title: string, titleColor = C_SECTION_TITLE) => {
     ensureSpace(40);
-    page.drawLine({ start: { x: ML, y: y + 10 }, end: { x: PAGE_W - MR, y: y + 10 }, thickness: 1, color: C_LINE });
-    const rowH = 24;
-    page.drawRectangle({ x: ML, y: y - rowH + 10, width: CW, height: rowH, color: C_BG_LIGHT });
-    page.drawLine({ start: { x: ML, y: y - rowH + 10 }, end: { x: PAGE_W - MR, y: y - rowH + 10 }, thickness: 0.8, color: C_LINE });
-    page.drawText(title, { x: ML + 8, y: y - 1, size: 10, font: fontBold, color: C_NAVY, characterSpacing: 0.5 });
-    y -= rowH + 6;
+    y -= SECTION_GAP_BEFORE + SIZE_SECTION_TITLE;
+    text(title, ML, y, SIZE_SECTION_TITLE, fontBold, titleColor);
+    y -= 4;
+    page.drawLine({
+      start: { x: ML, y },
+      end: { x: PAGE_W - MR, y },
+      thickness: SECTION_LINE_THICKNESS,
+      color: C_LINE,
+    });
+    y -= SECTION_GAP_AFTER;
   };
 
   const fieldRow = (label: string, value: string, label2?: string, value2?: string) => {
-    ensureSpace(20);
-    const halfW = CW / 2;
-    text(label, ML + 8, y, 7, font, C_MUTED);
-    if (label2) text(label2, ML + halfW + 8, y, 7, font, C_MUTED);
-    y -= 13;
-    text(value || "–", ML + 8, y, 9, font, C_TEXT, halfW - 16);
-    if (label2) text(value2 || "–", ML + halfW + 8, y, 9, font, C_TEXT, halfW - 16);
-    y -= 13;
-    // Trennlinie deutlich über dem nächsten Label (Label ist 7pt hoch, +9 lässt ~2pt Luft über der Label-Oberkante)
-    page.drawLine({ start: { x: ML, y: y + 9 }, end: { x: PAGE_W - MR, y: y + 9 }, thickness: 0.3, color: C_LINE_LIGHT });
+    ensureSpace(ROW_HEIGHT + 4);
+    y -= ROW_HEIGHT;
+    const baselineY = y + 7;
+    const labelColW = CW * LABEL_COL_WIDTH_RATIO;
+    if (label2 !== undefined) {
+      const halfW = CW / 2;
+      const labelColWHalf = halfW * LABEL_COL_WIDTH_RATIO;
+      text(label, ML, baselineY, SIZE_LABEL, fontMedium, C_MUTED);
+      text(value || "–", ML + labelColWHalf + 8, baselineY, SIZE_VALUE, font, C_TEXT, halfW - labelColWHalf - 8);
+      text(label2, ML + halfW, baselineY, SIZE_LABEL, fontMedium, C_MUTED);
+      text(value2 || "–", ML + halfW + labelColWHalf + 8, baselineY, SIZE_VALUE, font, C_TEXT, halfW - labelColWHalf - 8);
+    } else {
+      text(label, ML, baselineY, SIZE_LABEL, fontMedium, C_MUTED);
+      text(value || "–", ML + labelColW + 12, baselineY, SIZE_VALUE, font, C_TEXT, CW - labelColW - 12);
+    }
+    page.drawLine({
+      start: { x: ML, y },
+      end: { x: PAGE_W - MR, y },
+      thickness: ROW_LINE_THICKNESS,
+      color: C_LINE_LIGHT,
+    });
   };
 
   // Vertragsparteien
   sectionHeader("VERTRAGSPARTEIEN");
-  fieldRow("Praxis", String(contract.praxis || "–"), "Fachrichtung", String(contract.fachrichtung || "–"));
-  fieldRow("Vorname", String(contract.vorname || "–"), "Nachname", String(contract.nachname || "–"));
+  fieldRow("Praxis", String(contract.praxis || "–"));
+  fieldRow("Fachrichtung", String(contract.fachrichtung || "–"));
+  fieldRow("Vorname", String(contract.vorname || "–"));
+  fieldRow("Nachname", String(contract.nachname || "–"));
   const plzOrt = `${contract.plz ?? ""} ${contract.ort ?? ""}`.trim();
-  fieldRow("Adresse", String(contract.adresse || "–"), "PLZ / Ort", plzOrt || "–");
-  fieldRow("Telefon", String(contract.telefon || "–"), "E-Mail", String(contract.email || "–"));
-  fieldRow("MP-Nummer", String(contract.mp_nr || "–"), "Vertriebspartner", String(contract.sales_partner_name || "–"));
-
-  y -= 10;
+  fieldRow("Adresse", String(contract.adresse || "–"));
+  fieldRow("PLZ / Ort", plzOrt || "–");
+  fieldRow("Telefon", String(contract.telefon || "–"));
+  fieldRow("E-Mail", String(contract.email || "–"));
+  fieldRow("MP-Nummer", String(contract.mp_nr || "–"));
+  fieldRow("Vertriebspartner", String(contract.sales_partner_name || "–"));
 
   // Produkte
   sectionHeader("PRODUKTE & LIZENZEN");
   fieldRow("Produkt", String(contract.product_name || "–"));
   fieldRow("Anzahl Lizenzen", String(contract.license_count ?? 1));
-  y -= 6;
 
   // Zusatzmodule
   sectionHeader("ZUSATZMODULE");
@@ -329,9 +374,9 @@ async function buildContractPdf(
   sectionHeader("LAUFZEIT");
   const endDateLabel = endDate === "2099-12-31" ? "Unbefristet" : formatDate(endDate);
   const laufzeitLabel = durationMonths === 0 ? "Unbefristet" : `${durationMonths} Monate`;
-  fieldRow("Vertragsbeginn", formatDate(contract.start_date as string), "Vertragsende", endDateLabel);
+  fieldRow("Vertragsbeginn", formatDate(contract.start_date as string));
+  fieldRow("Vertragsende", endDateLabel);
   fieldRow("Laufzeit", laufzeitLabel);
-  y -= 10;
 
   // Preisübersicht
   sectionHeader("PREISÜBERSICHT");
@@ -359,19 +404,16 @@ async function buildContractPdf(
     drawPriceRow("Rabatt", `${contract.discount_percent}%`);
   }
 
-  // Gesamtbetrag
+  // Gesamtbetrag — kein Hintergrund, kräftigere Top-Linie als Akzent
   ensureSpace(30);
   const grossRowTop = y + 10;
   const grossRowH = 28;
   const grossRowBottom = grossRowTop - grossRowH;
-  page.drawLine({ start: { x: ML, y: grossRowTop }, end: { x: TABLE_RIGHT, y: grossRowTop }, thickness: 1.5, color: C_LINE });
-  page.drawRectangle({ x: ML, y: grossRowBottom, width: CW, height: grossRowH, color: C_BG_LIGHT });
-  page.drawLine({ start: { x: ML, y: grossRowBottom }, end: { x: TABLE_RIGHT, y: grossRowBottom }, thickness: 1.5, color: C_LINE });
-  page.drawLine({ start: { x: ML, y: grossRowTop }, end: { x: ML, y: grossRowBottom }, thickness: 0.8, color: C_LINE });
-  page.drawLine({ start: { x: TABLE_RIGHT, y: grossRowTop }, end: { x: TABLE_RIGHT, y: grossRowBottom }, thickness: 0.8, color: C_LINE });
+  page.drawLine({ start: { x: ML, y: grossRowTop }, end: { x: TABLE_RIGHT, y: grossRowTop }, thickness: 1.2, color: C_NAVY });
+  page.drawLine({ start: { x: ML, y: grossRowBottom }, end: { x: TABLE_RIGHT, y: grossRowBottom }, thickness: 0.4, color: C_LINE_LIGHT });
   const grossTextY = grossRowTop - grossRowH / 2 - 2;
-  text("Monatlicher Gesamtbetrag", ML + 8, grossTextY, 10, fontBold, C_NAVY);
-  rightText(formatCurrency(Number(contract.monthly_price) || 0), TABLE_RIGHT - 8, grossTextY, 11, fontBold, C_NAVY);
+  text("Monatlicher Gesamtbetrag", ML, grossTextY, SIZE_SECTION_TITLE, fontBold, C_NAVY);
+  rightText(formatCurrency(Number(contract.monthly_price) || 0), TABLE_RIGHT, grossTextY, SIZE_SECTION_TITLE + 1, fontBold, C_NAVY);
   y -= grossRowH + 4;
 
   // Promo-Block (nur bei aktiver Produkt-Promo, SSOT: _shared/promoStatus.ts)
@@ -381,9 +423,9 @@ async function buildContractPdf(
     promoProduct,
   );
   if (promoActive && promoProduct) {
-    sectionHeader("AKTIONSPREIS");
+    sectionHeader("AKTIONSPREIS", C_ACCENT_PROMO);
     ensureSpace(20);
-    text(promoProduct.name, ML + 8, y, 10, fontBold, C_NAVY);
+    text(promoProduct.name, ML, y, SIZE_BODY + 1, fontBold, C_ACCENT_PROMO);
     y -= 16;
     const unitLabel = promoProduct.price_per_unit_label || "Einheit";
     const promoPriceStr = `${formatCurrency(Number(promoProduct.promo_price) || 0)}/${unitLabel} dauerhaft`;
@@ -395,11 +437,11 @@ async function buildContractPdf(
     const regUnit = promoProduct.price_per_unit != null
       ? `${formatCurrency(Number(promoProduct.price_per_unit) || 0)}/${unitLabel}`
       : "–";
-    fieldRow("Regulär nach Aktionsende", regBase, "Stückpreis regulär", regUnit);
+    fieldRow("Regulär nach Aktionsende", regBase);
+    fieldRow("Stückpreis regulär", regUnit);
     if (promoProduct.promo_end_date) {
       fieldRow("Aktion gültig bis (Abschlussdatum)", formatDate(promoProduct.promo_end_date));
     }
-    y -= 6;
   }
 
   // SEPA-Lastschrifteinzug — Drei-Wege-Hinweis (Hybrid; SSOT-Entscheidung in Phase D-vor)
@@ -411,15 +453,11 @@ async function buildContractPdf(
   const stripeCustomerId = String(contract.stripe_customer_id || "").trim();
   const contractStatus = String(contract.status || "").toLowerCase();
   if (ibanRaw.length > 0) {
-    fieldRow(
-      "Kontoinhaber",
-      String(contract.kontoinhaber || "–"),
-      "IBAN (maskiert)",
-      maskIban(ibanRaw),
-    );
+    fieldRow("Kontoinhaber", String(contract.kontoinhaber || "–"));
+    fieldRow("IBAN (maskiert)", maskIban(ibanRaw));
   } else if (stripeCustomerId.length > 0) {
     ensureSpace(20);
-    text("SEPA-Mandat aktiv hinterlegt — Details liegen beim Zahlungsdienstleister", ML + 8, y, 9, font, C_MUTED);
+    text("SEPA-Mandat aktiv hinterlegt — Details liegen beim Zahlungsdienstleister", ML, y, SIZE_BODY, font, C_MUTED);
     y -= 16;
   } else {
     ensureSpace(20);
@@ -427,17 +465,16 @@ async function buildContractPdf(
     const hint = pendingStatus
       ? "SEPA-Mandat noch ausstehend"
       : "SEPA-Mandat liegt nicht im System hinterlegt";
-    text(hint, ML + 8, y, 9, font, C_MUTED);
+    text(hint, ML, y, SIZE_BODY, font, C_MUTED);
     y -= 16;
   }
-  y -= 6;
 
   // Closing
-  ensureSpace(50);
-  y -= 8;
-  text("Mit freundlichen Grüßen", ML, y, 9, font, C_TEXT);
-  y -= 16;
-  text("HFX Honorarfuchs", ML, y, 10, fontBold, C_NAVY);
+  ensureSpace(60);
+  y -= 28;
+  text("Mit freundlichen Grüßen", ML, y, SIZE_BODY, font, C_TEXT);
+  y -= 18;
+  text("HFX Honorarfuchs", ML, y, SIZE_BODY + 1, fontBold, C_NAVY);
 
 
   drawFooter();

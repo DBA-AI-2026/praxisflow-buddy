@@ -25,6 +25,22 @@
  * Es läuft NICHT in CI; es ist eine reine Drift-Checkliste.
  */
 import { writeFile } from "node:fs/promises";
+import { writeFile, readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
+// Bun/Node: fetch() relative URLs nicht unterstützt → Font-Loader im UI nutzt
+// fetch("/fonts/..."). Hier patchen wir global fetch, sodass /fonts/* aus
+// public/fonts gelesen werden.
+const origFetch = globalThis.fetch;
+globalThis.fetch = (async (input: any, init?: any) => {
+  const url = typeof input === "string" ? input : input?.url ?? "";
+  if (typeof url === "string" && url.startsWith("/fonts/")) {
+    const bytes = await readFile(resolve(process.cwd(), "public" + url));
+    return new Response(bytes);
+  }
+  return origFetch(input, init);
+}) as typeof fetch;
+
 import { generateContractPdf } from "../src/lib/generateContractPdf";
 
 const MOCK_CONTRACT = {
@@ -75,7 +91,7 @@ const EXPECTED_DIFF_NOTES = [
 ];
 
 async function main() {
-  console.log("=== Contract-PDF Drift-Check ===\n");
+  console.log("=== Contract-PDF Drift-Check (C.3b SaaS-Layout) ===\n");
 
   const uiBytes = await generateContractPdf(
     MOCK_CONTRACT as any,
@@ -88,21 +104,20 @@ async function main() {
   console.log(
     "\nℹ Edge-PDF: bitte separat erzeugen via\n" +
       "   supabase functions invoke send-contract-confirmation \\\n" +
-      "     --body '{\"contract_id\":\"<TEST-2703>\",\"force\":true}'\n" +
-      "  oder über `curl_edge_functions` im Lovable-Tooling. Die Mail enthält\n" +
-      "  die Edge-PDF als Anhang — herunterladen nach /tmp/contract-edge.pdf.\n",
+      "     --body '{\"contract_id\":\"<TEST-2703>\",\"force\":true}'\n",
   );
 
-  console.log("Erwartete Unterschiede (alles andere = Drift, bitte beheben):");
+  console.log("Erwartete Unterschiede nach C.3b (alles andere = Drift):");
   for (const note of EXPECTED_DIFF_NOTES) console.log("  • " + note);
 
   console.log(
     "\nSync-Check-Liste — diese Helfer MÜSSEN in beiden Dateien wortgleich sein:\n" +
       "  - text, rightText, ensureSpace, drawFooter\n" +
-      "  - sectionHeader (rowH=24, size 10 fett, characterSpacing 0.5, y-1)\n" +
-      "  - fieldRow (y-=13, y-=13, Trennlinie y+9)\n" +
+      "  - sectionHeader (SaaS-Stil: Titel + dünne Linie, kein Band)\n" +
+      "  - fieldRow (Tabellen-Stil: Label links/grau, Wert rechts)\n" +
       "  - drawPriceRow (priceRowH=24)\n" +
-      "  - maskIban (modes compact/partial/full)\n",
+      "  - maskIban (modes compact/partial/full)\n" +
+      "  - Tokens aus pdfDesignTokens.ts (synchron in src/lib/ + supabase/functions/_shared/)\n",
   );
 }
 
