@@ -68,7 +68,7 @@ const validateLanr = (value: string): string | null => {
 };
 import { useUserRole } from "@/hooks/useUserRole";
 import { useRegionalTeam } from "@/hooks/useRegionalTeam";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabaseClient";
 import { KundenDialog } from "@/components/kunden/KundenDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -434,6 +434,7 @@ export default function Vertraege() {
       setSyncingQodiaId(null);
     }
   };
+  const navigate = useNavigate();
   const location = useLocation();
   // Also store lead_id for back-linking
   const [fromLeadId, setFromLeadId] = useState<string | null>(null);
@@ -446,6 +447,12 @@ export default function Vertraege() {
     const params = new URLSearchParams(location.search);
     const leadId = params.get("leadId");
     const contractId = params.get("contractId");
+    const addLocationFor = params.get("addLocationFor");
+
+    // Close any open KundenDialog overlay before opening a new dialog
+    if (leadId || contractId || addLocationFor) {
+      setKundenDialogHfx(null);
+    }
 
     if (leadId) {
       // Fetch lead and prefill form
@@ -519,7 +526,6 @@ export default function Vertraege() {
       setAutoOpenContractId(contractId);
     }
 
-    const addLocationFor = params.get("addLocationFor");
     if (addLocationFor) {
       (async () => {
         const { data: cust } = await (supabase as any)
@@ -656,6 +662,11 @@ export default function Vertraege() {
         setDialogOpen(true);
       })();
     }
+
+    // Clean up consumed params from URL so effect doesn't re-fire
+    if (leadId || contractId || addLocationFor) {
+      navigate(location.pathname, { replace: true });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
 
@@ -679,6 +690,7 @@ export default function Vertraege() {
     if (autoOpenContractId && contracts.length > 0) {
       const c = contracts.find((x: any) => x.id === autoOpenContractId);
       if (c) {
+        setKundenDialogHfx(null);
         openEdit(c);
         setAutoOpenContractId(null);
       }
