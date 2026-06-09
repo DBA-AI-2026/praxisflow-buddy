@@ -404,12 +404,20 @@ async function buildContractPdf(
 
   // SEPA-Lastschrifteinzug (Kontoinhaber + maskierte IBAN; BIC bewusst nicht im PDF)
   sectionHeader("SEPA-LASTSCHRIFTEINZUG");
-  fieldRow(
-    "Kontoinhaber",
-    String(contract.kontoinhaber || "–"),
-    "IBAN (maskiert)",
-    maskIban(contract.iban as string | null | undefined),
-  );
+  const ibanRaw = String(contract.iban || "").trim();
+  const hasMandate = ibanRaw.length > 0;
+  if (hasMandate) {
+    fieldRow(
+      "Kontoinhaber",
+      String(contract.kontoinhaber || "–"),
+      "IBAN (maskiert)",
+      maskIban(ibanRaw),
+    );
+  } else {
+    ensureSpace(20);
+    text("SEPA-Mandat liegt nicht im System hinterlegt", ML + 8, y, 9, font, C_MUTED);
+    y -= 16;
+  }
   y -= 6;
 
   // Closing

@@ -418,12 +418,20 @@ export async function generateContractPdf(
 
   // ===== SEPA =====
   sectionHeader("SEPA-LASTSCHRIFTEINZUG");
-  fieldRow(
-    "Kontoinhaber",
-    data.kontoinhaber || "–",
-    "IBAN (maskiert)",
-    maskIban(data.iban, "partial"),
-  );
+  const ibanRaw = String(data.iban || "").trim();
+  const hasMandate = ibanRaw.length > 0;
+  if (hasMandate) {
+    fieldRow(
+      "Kontoinhaber",
+      data.kontoinhaber || "–",
+      "IBAN (maskiert)",
+      maskIban(ibanRaw, "partial"),
+    );
+  } else {
+    ensureSpace(20);
+    text("SEPA-Mandat liegt nicht im System hinterlegt", ML + 8, y, 9, font, C_MUTED);
+    y -= 16;
+  }
   y -= 10;
 
   // ===== UNTERSCHRIFT (UI-only) =====
