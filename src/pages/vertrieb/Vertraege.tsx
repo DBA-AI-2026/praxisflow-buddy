@@ -690,6 +690,7 @@ export default function Vertraege() {
     if (autoOpenContractId && contracts.length > 0) {
       const c = contracts.find((x: any) => x.id === autoOpenContractId);
       if (c) {
+        setKundenDialogHfx(null);
         openEdit(c);
         setAutoOpenContractId(null);
       }
