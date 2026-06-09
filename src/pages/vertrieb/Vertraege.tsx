@@ -447,6 +447,12 @@ export default function Vertraege() {
     const params = new URLSearchParams(location.search);
     const leadId = params.get("leadId");
     const contractId = params.get("contractId");
+    const addLocationFor = params.get("addLocationFor");
+
+    // Close any open KundenDialog overlay before opening a new dialog
+    if (leadId || contractId || addLocationFor) {
+      setKundenDialogHfx(null);
+    }
 
     if (leadId) {
       // Fetch lead and prefill form
