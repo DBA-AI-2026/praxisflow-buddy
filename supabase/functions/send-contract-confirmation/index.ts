@@ -2,6 +2,28 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, rgb } from "npm:pdf-lib@1.17.1";
 import { isContractPromoActive } from "../_shared/promoStatus.ts";
 import { embedExo2 } from "../_shared/pdfFontLoader.ts";
+import {
+  COLOR_BRAND_NAVY,
+  COLOR_TEXT,
+  COLOR_MUTED,
+  COLOR_LINE,
+  COLOR_LINE_LIGHT,
+  COLOR_SECTION_TITLE,
+  COLOR_ACCENT_PROMO,
+  SIZE_HEADING,
+  SIZE_SECTION_TITLE,
+  SIZE_LABEL,
+  SIZE_VALUE,
+  SIZE_BODY,
+  SIZE_FOOTER,
+  SECTION_GAP_BEFORE,
+  SECTION_GAP_AFTER,
+  SECTION_LINE_THICKNESS,
+  ROW_HEIGHT,
+  ROW_LINE_THICKNESS,
+  LABEL_COL_WIDTH_RATIO,
+  hexToRgb01,
+} from "../_shared/pdfDesignTokens.ts";
 
 
 const corsHeaders = {
