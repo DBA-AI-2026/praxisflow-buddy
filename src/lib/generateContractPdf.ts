@@ -73,6 +73,7 @@ interface ContractPdfData {
   discount_percent?: number;
   payment_interval?: string;
   kontoinhaber?: string;
+  stripe_customer_id?: string | null;
   iban?: string;
   bic?: string;
   notes?: string;
@@ -416,20 +417,32 @@ export async function generateContractPdf(
     y -= 6;
   }
 
-  // ===== SEPA =====
+  // ===== SEPA — Drei-Wege-Hinweis (Hybrid; SSOT-Entscheidung in Phase D-vor) =====
+  //  D) IBAN in DB hinterlegt → Tabelle
+  //  A) IBAN leer, aber stripe_customer_id gesetzt → Mandat liegt beim PSP
+  //  B/C) Beides leer → je nach Status "noch ausstehend" oder "nicht im System hinterlegt"
   sectionHeader("SEPA-LASTSCHRIFTEINZUG");
   const ibanRaw = String(data.iban || "").trim();
-  const hasMandate = ibanRaw.length > 0;
-  if (hasMandate) {
+  const stripeCustomerId = String(data.stripe_customer_id || "").trim();
+  const contractStatus = String(data.status || "").toLowerCase();
+  if (ibanRaw.length > 0) {
     fieldRow(
       "Kontoinhaber",
       data.kontoinhaber || "–",
       "IBAN (maskiert)",
       maskIban(ibanRaw, "partial"),
     );
+  } else if (stripeCustomerId.length > 0) {
+    ensureSpace(20);
+    text("SEPA-Mandat aktiv hinterlegt — Details liegen beim Zahlungsdienstleister", ML + 8, y, 9, font, C_MUTED);
+    y -= 16;
   } else {
     ensureSpace(20);
-    text("SEPA-Mandat liegt nicht im System hinterlegt", ML + 8, y, 9, font, C_MUTED);
+    const pendingStatus = contractStatus === "entwurf" || contractStatus === "eingegangen";
+    const hint = pendingStatus
+      ? "SEPA-Mandat noch ausstehend"
+      : "SEPA-Mandat liegt nicht im System hinterlegt";
+    text(hint, ML + 8, y, 9, font, C_MUTED);
     y -= 16;
   }
   y -= 10;
