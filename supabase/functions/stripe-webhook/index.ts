@@ -913,7 +913,6 @@ async function handleSepaMandateSetup(
     .maybeSingle();
 
   const alreadyLinked = existing?.stripe_customer_id === stripeCustomerId;
-...
   // Status-Update auf "aktiv" — nur aus eingegangen/wartend_auf_mandat heraus.
   // .select() für S1: nur bei echter Aktivierung (Row zurück) folgt der Geschwister-Sweep.
   const activatableStatuses = new Set(["eingegangen", "wartend_auf_mandat"]);
