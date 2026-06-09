@@ -82,7 +82,7 @@ import type {
 } from "@/hooks/useKundenDialogData";
 import {
   previewContractPdf,
-  templateContractPdf,
+  downloadContractPdf,
   getContractStorageSignedUrl,
 } from "@/lib/contractPdfActions";
 import {
