@@ -1982,13 +1982,34 @@ export default function Vertraege() {
         .filter((m: any) => addonNames.includes(m.name))
         .map((m: any) => ({ name: m.name, monthly_price: Number(m.monthly_price) || 0 }));
 
+      // promoProduct = erstes Produkt mit aktiver Promo (SSOT für AKTIONSPREIS-Sektion)
+      const promoProductRaw = products.find(
+        (p: any) =>
+          selectedNames.includes(p.name) &&
+          p.promo_price != null &&
+          p.promo_end_date &&
+          new Date(p.promo_end_date) >= now,
+      );
+      const promoProduct = promoProductRaw
+        ? {
+            name: promoProductRaw.name,
+            promo_price: promoProductRaw.promo_price ?? null,
+            promo_end_date: promoProductRaw.promo_end_date ?? null,
+            promo_price_label: promoProductRaw.promo_price_label ?? null,
+            promo_base_fee_end_date: promoProductRaw.promo_base_fee_end_date ?? null,
+            monthly_price: promoProductRaw.monthly_price ?? null,
+            price_per_unit: promoProductRaw.price_per_unit ?? null,
+            price_per_unit_label: promoProductRaw.price_per_unit_label ?? null,
+          }
+        : null;
+
       // 1) Generate Vorschau PDF
       const previewBytes = await generateContractPdf({
         ...c,
         product_price_details,
         selected_addon_modules: addonNames,
         addon_module_details,
-      }, logoBytes);
+      }, logoBytes, { promoProduct });
       const previewBase64 = btoa(String.fromCharCode(...new Uint8Array(previewBytes)));
 
       // 2) Generate Vertragsdokument PDF (template)
@@ -2089,13 +2110,33 @@ export default function Vertraege() {
         .filter((m: any) => addonNames.includes(m.name))
         .map((m: any) => ({ name: m.name, monthly_price: Number(m.monthly_price) || 0 }));
 
+      const promoProductRaw = products.find(
+        (p: any) =>
+          selectedNames.includes(p.name) &&
+          p.promo_price != null &&
+          p.promo_end_date &&
+          new Date(p.promo_end_date) >= now,
+      );
+      const promoProduct = promoProductRaw
+        ? {
+            name: promoProductRaw.name,
+            promo_price: promoProductRaw.promo_price ?? null,
+            promo_end_date: promoProductRaw.promo_end_date ?? null,
+            promo_price_label: promoProductRaw.promo_price_label ?? null,
+            promo_base_fee_end_date: promoProductRaw.promo_base_fee_end_date ?? null,
+            monthly_price: promoProductRaw.monthly_price ?? null,
+            price_per_unit: promoProductRaw.price_per_unit ?? null,
+            price_per_unit_label: promoProductRaw.price_per_unit_label ?? null,
+          }
+        : null;
+
       const pdfBytes = await generateContractPdf({
         ...contractData,
         signature_data: sigData,
         product_price_details,
         selected_addon_modules: addonNames,
         addon_module_details,
-      }, logoBytes);
+      }, logoBytes, { promoProduct });
       openPdfBlob(new Uint8Array(pdfBytes));
     } catch (err: any) {
       toast({ title: "PDF-Fehler", description: err.message, variant: "destructive" });
