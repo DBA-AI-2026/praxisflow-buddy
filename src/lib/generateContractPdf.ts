@@ -278,7 +278,7 @@ export async function generateContractPdf(
     const rowH = 24;
     page.drawRectangle({ x: ML, y: y - rowH + 10, width: CW, height: rowH, color: C_BG_LIGHT });
     page.drawLine({ start: { x: ML, y: y - rowH + 10 }, end: { x: PAGE_W - MR, y: y - rowH + 10 }, thickness: 0.8, color: C_LINE });
-    page.drawText(title, { x: ML + 8, y: y - 1, size: 10, font: fontBold, color: C_NAVY, characterSpacing: 0.5 });
+    page.drawText(title, { x: ML + 8, y: y - 1, size: 10, font: fontBold, color: C_NAVY, characterSpacing: 0.5 } as any);
     y -= rowH + 6;
   };
 
