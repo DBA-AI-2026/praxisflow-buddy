@@ -423,9 +423,9 @@ async function buildContractPdf(
     promoProduct,
   );
   if (promoActive && promoProduct) {
-    sectionHeader("AKTIONSPREIS");
+    sectionHeader("AKTIONSPREIS", C_ACCENT_PROMO);
     ensureSpace(20);
-    text(promoProduct.name, ML + 8, y, 10, fontBold, C_NAVY);
+    text(promoProduct.name, ML, y, SIZE_BODY + 1, fontBold, C_ACCENT_PROMO);
     y -= 16;
     const unitLabel = promoProduct.price_per_unit_label || "Einheit";
     const promoPriceStr = `${formatCurrency(Number(promoProduct.promo_price) || 0)}/${unitLabel} dauerhaft`;
@@ -437,11 +437,11 @@ async function buildContractPdf(
     const regUnit = promoProduct.price_per_unit != null
       ? `${formatCurrency(Number(promoProduct.price_per_unit) || 0)}/${unitLabel}`
       : "–";
-    fieldRow("Regulär nach Aktionsende", regBase, "Stückpreis regulär", regUnit);
+    fieldRow("Regulär nach Aktionsende", regBase);
+    fieldRow("Stückpreis regulär", regUnit);
     if (promoProduct.promo_end_date) {
       fieldRow("Aktion gültig bis (Abschlussdatum)", formatDate(promoProduct.promo_end_date));
     }
-    y -= 6;
   }
 
   // SEPA-Lastschrifteinzug — Drei-Wege-Hinweis (Hybrid; SSOT-Entscheidung in Phase D-vor)
@@ -453,15 +453,11 @@ async function buildContractPdf(
   const stripeCustomerId = String(contract.stripe_customer_id || "").trim();
   const contractStatus = String(contract.status || "").toLowerCase();
   if (ibanRaw.length > 0) {
-    fieldRow(
-      "Kontoinhaber",
-      String(contract.kontoinhaber || "–"),
-      "IBAN (maskiert)",
-      maskIban(ibanRaw),
-    );
+    fieldRow("Kontoinhaber", String(contract.kontoinhaber || "–"));
+    fieldRow("IBAN (maskiert)", maskIban(ibanRaw));
   } else if (stripeCustomerId.length > 0) {
     ensureSpace(20);
-    text("SEPA-Mandat aktiv hinterlegt — Details liegen beim Zahlungsdienstleister", ML + 8, y, 9, font, C_MUTED);
+    text("SEPA-Mandat aktiv hinterlegt — Details liegen beim Zahlungsdienstleister", ML, y, SIZE_BODY, font, C_MUTED);
     y -= 16;
   } else {
     ensureSpace(20);
@@ -469,7 +465,7 @@ async function buildContractPdf(
     const hint = pendingStatus
       ? "SEPA-Mandat noch ausstehend"
       : "SEPA-Mandat liegt nicht im System hinterlegt";
-    text(hint, ML + 8, y, 9, font, C_MUTED);
+    text(hint, ML, y, SIZE_BODY, font, C_MUTED);
     y -= 16;
   }
   y -= 6;
