@@ -12,6 +12,7 @@ import { useState, useMemo } from "react";
 import {
   Eye,
   FileText,
+  Download,
   Upload,
   ExternalLink,
   Loader2,
