@@ -23,6 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 # Local environment files
-.env
+# .env (root) is tracked — contains public Vite vars required for build
 .env.local
 .env.*.local
