@@ -340,13 +340,27 @@ export function useKundenDialogData(
     enabled: enabled && customerQ.isSuccess,
     queryFn: async () => {
       const customerId = customerQ.data?.id;
-      if (!customerId) return [] as ContractRow[];
-      const { data, error } = await supabase
-        .from("contracts")
-        .select("*")
-        .eq("customer_id", customerId);
-      if (error) throw error;
-      return (data ?? []) as ContractRow[];
+      if (customerId) {
+        const { data, error } = await supabase
+          .from("contracts")
+          .select("*")
+          .eq("customer_id", customerId);
+        if (error) throw error;
+        return (data ?? []) as ContractRow[];
+      }
+      // Vor-Aktivierung (kein Customer): Basis-HFX-Fallback, damit
+      // entwurf/eingegangen/gezeichnet im Dialog sichtbar bleiben.
+      // Standort-HFX ({base}-NN) existieren nur mit gesetztem customer_id
+      // (Phantom-Guard + locationContext), erreichen diesen Zweig also nie.
+      if (hfxNumber) {
+        const { data, error } = await supabase
+          .from("contracts")
+          .select("*")
+          .eq("hfx_customer_number", hfxNumber);
+        if (error) throw error;
+        return (data ?? []) as ContractRow[];
+      }
+      return [] as ContractRow[];
     },
   });
 
