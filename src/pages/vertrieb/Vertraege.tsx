@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useCarrierMap } from "@/hooks/useCarrierMap";
 import { StandortBadge } from "@/components/contracts/StandortBadge";
+import { StandorteToggleBadge } from "@/components/multilocation/StandorteIndicator";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Mail } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
