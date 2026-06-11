@@ -506,6 +506,7 @@ export type Database = {
           email: string | null
           end_date: string
           fachrichtung: string | null
+          generated_password: string | null
           hfx_customer_number: string | null
           iban: string | null
           id: string
@@ -532,6 +533,8 @@ export type Database = {
           praxisanschrift: string | null
           praxissystem: string | null
           product_name: string
+          qodia_conflict: boolean
+          qodia_synced: boolean
           qodia_unit_price: number
           rechnungs_email: string | null
           rechtsform: string | null
@@ -584,6 +587,7 @@ export type Database = {
           email?: string | null
           end_date: string
           fachrichtung?: string | null
+          generated_password?: string | null
           hfx_customer_number?: string | null
           iban?: string | null
           id?: string
@@ -610,6 +614,8 @@ export type Database = {
           praxisanschrift?: string | null
           praxissystem?: string | null
           product_name: string
+          qodia_conflict?: boolean
+          qodia_synced?: boolean
           qodia_unit_price?: number
           rechnungs_email?: string | null
           rechtsform?: string | null
@@ -662,6 +668,7 @@ export type Database = {
           email?: string | null
           end_date?: string
           fachrichtung?: string | null
+          generated_password?: string | null
           hfx_customer_number?: string | null
           iban?: string | null
           id?: string
@@ -688,6 +695,8 @@ export type Database = {
           praxisanschrift?: string | null
           praxissystem?: string | null
           product_name?: string
+          qodia_conflict?: boolean
+          qodia_synced?: boolean
           qodia_unit_price?: number
           rechnungs_email?: string | null
           rechtsform?: string | null
