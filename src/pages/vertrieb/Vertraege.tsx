@@ -385,15 +385,34 @@ export default function Vertraege() {
       toast({ title: "Keine HFX-Nummer", description: "Diesem Vertrag ist keine HFX-Kundennummer zugewiesen.", variant: "destructive" });
       return;
     }
-    // Phase 1b: Standorte bekommen in Phase 2 eine eigene Qodia-Identität (eigene HFX + E-Mail).
-    // Niemals über die Träger-HFX umbiegen — würde den falschen Account treffen.
+
+    // Phase 2a: Standort-Zweig — eigene -NN-HFX + eigene E-Mail, eigener Qodia-Account.
+    // Strikt isoliert vom Lead-Pfad: keine leads-Reads/-Writes, keine leadQodiaMap-
+    // Invalidation, kein Auth-User-Sync (Standorte haben keinen Lead-Auth-User).
     if (isStandortHfx(contract.hfx_customer_number)) {
-      toast({
-        title: "Standort-Qodia folgt (Phase 2)",
-        description: "Standorte erhalten in Phase 2 einen eigenen Qodia-Account. Kein Sync über den Träger.",
-      });
+      setSyncingQodiaId(contract.id);
+      try {
+        const { data, error } = await supabase.functions.invoke("register-standort-qodia", {
+          body: { contractId: contract.id },
+        });
+        if (error) throw error;
+        if (data?.already_synced) {
+          toast({ title: "Bereits synchronisiert", description: `${contract.hfx_customer_number} ist bereits bei Qodia registriert.` });
+        } else if (data?.success) {
+          toast({ title: "Qodia-Sync erfolgreich", description: data.message || `${contract.hfx_customer_number} erfolgreich bei Qodia registriert.` });
+        } else {
+          toast({ title: "Qodia-Fehler", description: data?.error || "Unbekannter Fehler", variant: "destructive" });
+        }
+        // Nur contracts invalidieren — leadQodiaMap bleibt unberührt (L2).
+        queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      } catch (err: any) {
+        toast({ title: "Fehler", description: err.message || "Unbekannter Fehler", variant: "destructive" });
+      } finally {
+        setSyncingQodiaId(null);
+      }
       return;
     }
+
     setSyncingQodiaId(contract.id);
     try {
       // Find the lead by hfx_customer_number
@@ -413,7 +432,6 @@ export default function Vertraege() {
         return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
       const { data, error } = await supabase.functions.invoke("sync-lead-qodia", {
         body: { leadId: lead.id },
       });
@@ -432,6 +450,7 @@ export default function Vertraege() {
       setSyncingQodiaId(null);
     }
   };
+
   const navigate = useNavigate();
   const location = useLocation();
   // Also store lead_id for back-linking
@@ -2709,7 +2728,11 @@ export default function Vertraege() {
                               </DropdownMenuItem>
                             </>
                           )}
-                          {isAdmin && c.hfx_customer_number && !leadQodiaMap[c.hfx_customer_number] && !isStandortHfx(c.hfx_customer_number) && (
+                          {isAdmin && c.hfx_customer_number && (
+                            isStandortHfx(c.hfx_customer_number)
+                              ? !c.qodia_synced
+                              : !leadQodiaMap[c.hfx_customer_number]
+                          ) && (
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
