@@ -43,6 +43,7 @@ import { validateBic } from "@/lib/validateBic";
 import { lookupBicFromIban } from "@/lib/lookupBic";
 import { buildStripeLineItems, hasStripeProducts } from "@/lib/stripeProducts";
 import { logCustomerStatusChange } from "@/lib/customerEvents";
+import { sendStandortCredentials } from "@/lib/standortActions";
 import { DEFAULT_QODIA_UNIT_PRICE } from "@/lib/promoStatus";
 import { isGoaeProduct, isStandortHfx } from "@/lib/multiLocation";
 import { CreditCard } from "lucide-react"; // CreditCard used for payment section
@@ -372,6 +373,7 @@ export default function Vertraege() {
   const [forceCreateDuplicate, setForceCreateDuplicate] = useState(false);
   const [resendingConfirmationId, setResendingConfirmationId] = useState<string | null>(null);
   const [syncingQodiaId, setSyncingQodiaId] = useState<string | null>(null);
+  const [sendingStandortCredsId, setSendingStandortCredsId] = useState<string | null>(null);
   const [leadTippgeberName, setLeadTippgeberName] = useState<string | null>(null);
   const [deleteContractTarget, setDeleteContractTarget] = useState<any | null>(null);
   const { user, profile } = useAuth();
@@ -2748,6 +2750,46 @@ export default function Vertraege() {
                               </DropdownMenuItem>
                             </>
                           )}
+                          {isAdmin &&
+                            isStandortHfx(c.hfx_customer_number) &&
+                            c.qodia_synced &&
+                            c.generated_password &&
+                            c.email && (
+                              <DropdownMenuItem
+                                onClick={async () => {
+                                  setSendingStandortCredsId(c.id);
+                                  const res = await sendStandortCredentials({
+                                    contractId: c.id,
+                                    hfxCustomerNumber: c.hfx_customer_number,
+                                    queryClient,
+                                    userId: user?.id ?? null,
+                                  });
+                                  setSendingStandortCredsId(null);
+                                  if (res.success) {
+                                    toast({
+                                      title: "Zugangsdaten gesendet",
+                                      description:
+                                        res.message ||
+                                        `Zugangsdaten an ${c.email} gesendet.`,
+                                    });
+                                  } else {
+                                    toast({
+                                      title: "Fehler",
+                                      description: res.error || "Unbekannter Fehler",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                                disabled={sendingStandortCredsId === c.id}
+                              >
+                                {sendingStandortCredsId === c.id ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Mail className="h-4 w-4 mr-2" />
+                                )}
+                                Zugangsdaten senden
+                              </DropdownMenuItem>
+                            )}
                           {isAdmin && (
                             <>
                               <DropdownMenuSeparator />
