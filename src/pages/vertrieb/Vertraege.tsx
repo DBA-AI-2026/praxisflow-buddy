@@ -2342,10 +2342,10 @@ export default function Vertraege() {
               </thead>
               <tbody className="divide-y divide-border/50">
                  {grouped.map(({ c, isStandort, carrierHfx }) => (
-                    <tr
-                      key={c.id}
-                      className={`hover:bg-muted/40 transition-colors cursor-pointer ${isStandort ? "bg-muted/10 border-l-2 border-accent" : ""}`}
-                      role="button"
+                     <tr
+                       key={c.id}
+                       className={`hover:bg-muted/40 transition-colors cursor-pointer ${isStandort ? "bg-muted/10" : ""}`}
+                       role="button"
                       tabIndex={0}
                       onClick={(e) => {
                         // Ignoriere Clicks auf interaktive Kind-Elemente (Buttons, Links, Menu-Items, File-Inputs, Labels)
@@ -2365,7 +2365,7 @@ export default function Vertraege() {
                         openEdit(c);
                       }}
                     >
-                        <td className={`py-3.5 px-4 text-xs font-mono font-semibold text-primary whitespace-nowrap ${isStandort ? "pl-8" : ""}`}>
+                        <td className={`py-3.5 px-4 text-xs font-mono font-semibold text-primary whitespace-nowrap ${isStandort ? "pl-8 border-l-2 border-accent" : ""}`}>
                           <div className="flex items-center gap-1.5">
                             {isStandort && <MapPin className="h-3 w-3 text-accent" aria-hidden="true" />}
                             <span>{c.contract_number || "–"}</span>
