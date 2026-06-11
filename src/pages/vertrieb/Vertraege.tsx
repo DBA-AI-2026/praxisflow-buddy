@@ -2390,41 +2390,63 @@ export default function Vertraege() {
                  </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                 {grouped.map(({ c, isStandort, carrierHfx }) => (
-                     <tr
-                       key={c.id}
-                       className={`hover:bg-muted/40 transition-colors cursor-pointer ${isStandort ? "bg-muted/10" : ""}`}
-                       role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        // Ignoriere Clicks auf interaktive Kind-Elemente (Buttons, Links, Menu-Items, File-Inputs, Labels)
-                        if ((e.target as HTMLElement).closest("button, a, label, [role='menuitem'], input")) return;
-                        if (isContractLocked(c.status)) {
-                          if (!window.confirm("⚠️ Achtung: Sie bearbeiten einen abgeschlossenen Originalvertrag. Änderungen werden dokumentiert. Fortfahren?")) return;
-                        }
-                        openEdit(c);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key !== "Enter" && e.key !== " ") return;
-                        if ((e.target as HTMLElement) !== e.currentTarget) return;
-                        e.preventDefault();
-                        if (isContractLocked(c.status)) {
-                          if (!window.confirm("⚠️ Achtung: Sie bearbeiten einen abgeschlossenen Originalvertrag. Änderungen werden dokumentiert. Fortfahren?")) return;
-                        }
-                        openEdit(c);
-                      }}
-                    >
-                        <td className={`py-3.5 px-4 text-xs font-mono font-semibold text-primary whitespace-nowrap ${isStandort ? "pl-8 border-l-2 border-accent" : ""}`}>
-                          <div className="flex items-center gap-1.5">
-                            {isStandort && <MapPin className="h-3 w-3 text-accent" aria-hidden="true" />}
-                            <span>{c.contract_number || "–"}</span>
-                          </div>
-                          {isStandort && carrierHfx && (
-                            <div className="text-[10px] font-normal text-muted-foreground mt-0.5">
-                              Standort von <span className="font-mono">{carrierHfx}</span>
-                            </div>
-                          )}
-                        </td>
+                  {grouped.map(({ c, isStandort, carrierHfx, carrierId, standortCount }) => {
+                    // L1: Standort-Kindzeilen ausblenden, wenn weder die Gruppe aufgeklappt
+                    // noch ein Narrowing-Filter aktiv ist. Träger-Zeile bleibt immer sichtbar.
+                    if (
+                      isStandort &&
+                      carrierId &&
+                      !filtersActive &&
+                      !expandedCarriers.has(carrierId)
+                    ) {
+                      return null;
+                    }
+                    const hasStandorte = !isStandort && !!carrierId && (standortCount ?? 0) > 0;
+                    const expanded = hasStandorte
+                      ? filtersActive || expandedCarriers.has(carrierId!)
+                      : false;
+                    return (
+                      <tr
+                        key={c.id}
+                        className={`hover:bg-muted/40 transition-colors cursor-pointer ${isStandort ? "bg-muted/10" : ""}`}
+                        role="button"
+                       tabIndex={0}
+                       onClick={(e) => {
+                         // Ignoriere Clicks auf interaktive Kind-Elemente (Buttons, Links, Menu-Items, File-Inputs, Labels)
+                         if ((e.target as HTMLElement).closest("button, a, label, [role='menuitem'], input")) return;
+                         if (isContractLocked(c.status)) {
+                           if (!window.confirm("⚠️ Achtung: Sie bearbeiten einen abgeschlossenen Originalvertrag. Änderungen werden dokumentiert. Fortfahren?")) return;
+                         }
+                         openEdit(c);
+                       }}
+                       onKeyDown={(e) => {
+                         if (e.key !== "Enter" && e.key !== " ") return;
+                         if ((e.target as HTMLElement) !== e.currentTarget) return;
+                         e.preventDefault();
+                         if (isContractLocked(c.status)) {
+                           if (!window.confirm("⚠️ Achtung: Sie bearbeiten einen abgeschlossenen Originalvertrag. Änderungen werden dokumentiert. Fortfahren?")) return;
+                         }
+                         openEdit(c);
+                       }}
+                     >
+                         <td className={`py-3.5 px-4 text-xs font-mono font-semibold text-primary whitespace-nowrap ${isStandort ? "pl-8 border-l-2 border-accent" : ""}`}>
+                           <div className="flex items-center gap-1.5">
+                             {isStandort && <MapPin className="h-3 w-3 text-accent" aria-hidden="true" />}
+                             <span>{c.contract_number || "–"}</span>
+                             {hasStandorte && (
+                               <StandorteToggleBadge
+                                 count={standortCount ?? 0}
+                                 expanded={expanded}
+                                 onToggle={() => toggleCarrier(carrierId!)}
+                               />
+                             )}
+                           </div>
+                           {isStandort && carrierHfx && (
+                             <div className="text-[10px] font-normal text-muted-foreground mt-0.5">
+                               Standort von <span className="font-mono">{carrierHfx}</span>
+                             </div>
+                           )}
+                         </td>
                         <td
                           className="py-3.5 px-4 text-xs text-muted-foreground font-mono whitespace-nowrap"
                           onClick={(e) => e.stopPropagation()}
