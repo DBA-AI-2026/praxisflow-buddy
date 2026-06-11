@@ -2417,26 +2417,40 @@ export default function Vertraege() {
                            ) : (
                              <span>–</span>
                            )}
-                           {c.hfx_customer_number && (
-                             <TooltipProvider>
-                               <Tooltip>
-                                 <TooltipTrigger asChild>
-                                   <span className="inline-flex shrink-0">
-                                     {leadQodiaMap[c.hfx_customer_number] === true ? (
-                                       <CheckCircle className="h-3.5 w-3.5 text-success" />
-                                     ) : leadQodiaMap[c.hfx_customer_number] === false ? (
-                                       <CircleOff className="h-3.5 w-3.5 text-muted-foreground/40" />
-                                     ) : null}
-                                   </span>
-                                 </TooltipTrigger>
-                                 <TooltipContent>
-                                   {leadQodiaMap[c.hfx_customer_number] === true
-                                     ? "Bei Qodia registriert"
-                                     : "Noch nicht bei Qodia registriert"}
-                                 </TooltipContent>
-                               </Tooltip>
-                             </TooltipProvider>
-                           )}
+                            {c.hfx_customer_number && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="inline-flex shrink-0">
+                                      {isStandortHfx(c.hfx_customer_number) ? (
+                                        c.qodia_synced ? (
+                                          <CheckCircle className="h-3.5 w-3.5 text-success" />
+                                        ) : c.qodia_conflict ? (
+                                          <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+                                        ) : (
+                                          <CircleOff className="h-3.5 w-3.5 text-muted-foreground/40" />
+                                        )
+                                      ) : leadQodiaMap[c.hfx_customer_number] === true ? (
+                                        <CheckCircle className="h-3.5 w-3.5 text-success" />
+                                      ) : leadQodiaMap[c.hfx_customer_number] === false ? (
+                                        <CircleOff className="h-3.5 w-3.5 text-muted-foreground/40" />
+                                      ) : null}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {isStandortHfx(c.hfx_customer_number)
+                                      ? c.qodia_synced
+                                        ? "Bei Qodia registriert"
+                                        : c.qodia_conflict
+                                          ? "E-Mail-Konflikt bei Qodia — eigene E-Mail nötig, dann erneut registrieren"
+                                          : "Noch nicht bei Qodia registriert"
+                                      : leadQodiaMap[c.hfx_customer_number] === true
+                                        ? "Bei Qodia registriert"
+                                        : "Noch nicht bei Qodia registriert"}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                          </div>
                        </td>
 
