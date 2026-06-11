@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useCarrierMap } from "@/hooks/useCarrierMap";
 import { StandortBadge } from "@/components/contracts/StandortBadge";
+import { StandorteToggleBadge } from "@/components/multilocation/StandorteIndicator";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Mail } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1493,6 +1494,16 @@ export default function Vertraege() {
   const [preSystemFilter, setPreSystemFilter] = useState(false);
   const [sortField, setSortField] = useState<"created_at" | "updated_at">("created_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  // Standorte standardmäßig eingeklappt; Set enthält IDs der Träger, deren Standorte sichtbar sind.
+  const [expandedCarriers, setExpandedCarriers] = useState<Set<string>>(new Set());
+  const toggleCarrier = (carrierId: string) => {
+    setExpandedCarriers((prev) => {
+      const next = new Set(prev);
+      if (next.has(carrierId)) next.delete(carrierId);
+      else next.add(carrierId);
+      return next;
+    });
+  };
 
   // Extension / Nachtrag dialog state
   const [extensionDialogOpen, setExtensionDialogOpen] = useState(false);
@@ -1615,12 +1626,12 @@ export default function Vertraege() {
       return sortDir === "asc" ? aVal - bVal : bVal - aVal;
     });
 
-  // Variante A — Standortverträge direkt unter ihren Träger einsortieren
-  // (additiv; kein Verstecken). Jede Zeile bleibt eine vollwertige, sichtbar
-  // bedienbare Vertragszeile (Status/PDF/Aktivierung), Statusfilter, KPI-Kacheln
-  // und Sortierung sind nicht betroffen — wir ändern nur die Reihenfolge und
-  // markieren Standorte mit Einrückung + "↳ Standort von …"-Hinweis.
-  // Träger-Erkennung zentral über carrierMap + isGoaeProduct (L3, NULL-sicher).
+  // Variante A — Standortverträge direkt unter ihren Träger einsortieren.
+  // Standorte sind standardmäßig EINGEKLAPPT (Pipeline-Optik); ein Toggle-Badge
+  // auf der Träger-Zeile klappt sie auf/zu. Aktive Narrowing-Filter (Suche,
+  // Statusfilter, Pre-System-Filter) klappen alle Gruppen automatisch auf
+  // (L1) — Team-Filter zählt NICHT als aktiv (rollenbasiert/permanent).
+  // Träger-Erkennung zentral über carrierMap + isGoaeProduct (L5, NULL-sicher).
   const contractsById: Record<string, any> = {};
   for (const c of contracts as any[]) contractsById[c.id] = c;
   const filteredIds = new Set<string>(filtered.map((c: any) => c.id));
@@ -1635,26 +1646,43 @@ export default function Vertraege() {
     }
   }
   const placed = new Set<string>();
-  const grouped: Array<{ c: any; isStandort: boolean; carrierHfx?: string | null }> = [];
+  const grouped: Array<{
+    c: any;
+    isStandort: boolean;
+    carrierHfx?: string | null;
+    carrierId?: string | null;
+    standortCount?: number;
+  }> = [];
   for (const c of filtered) {
     if (placed.has(c.id)) continue;
     const carrierId = c.customer_id ? (carrierMap as any)[c.customer_id] : null;
     const isStandort =
       !!carrierId && carrierId !== c.id && isGoaeProduct(c.product_name);
     if (isStandort && filteredIds.has(carrierId)) continue; // wird unter Träger platziert
+    const subs = standortGroups.get(c.id) || [];
     grouped.push({
       c,
       isStandort,
       carrierHfx: isStandort ? contractsById[carrierId!]?.hfx_customer_number ?? null : null,
+      carrierId: subs.length > 0 ? c.id : null,
+      standortCount: subs.length,
     });
     placed.add(c.id);
-    const subs = standortGroups.get(c.id) || [];
     for (const st of subs) {
       if (placed.has(st.id)) continue;
-      grouped.push({ c: st, isStandort: true, carrierHfx: c.hfx_customer_number ?? null });
+      grouped.push({
+        c: st,
+        isStandort: true,
+        carrierHfx: c.hfx_customer_number ?? null,
+        carrierId: c.id,
+      });
       placed.add(st.id);
     }
   }
+  // L1: bei aktiven Narrowing-Filtern alles aufklappen (Team-Filter zählt nicht).
+  // !!statusFilter deckt sowohl null als auch "" ab — spiegelt bestehende Filter-Logik.
+  const filtersActive =
+    search.trim().length > 0 || !!statusFilter || preSystemFilter === true;
 
   const handleStatusChange = async (contractId: string, newStatus: string) => {
     const c = contracts.find((ct: any) => ct.id === contractId);
@@ -2362,41 +2390,63 @@ export default function Vertraege() {
                  </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                 {grouped.map(({ c, isStandort, carrierHfx }) => (
-                     <tr
-                       key={c.id}
-                       className={`hover:bg-muted/40 transition-colors cursor-pointer ${isStandort ? "bg-muted/10" : ""}`}
-                       role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        // Ignoriere Clicks auf interaktive Kind-Elemente (Buttons, Links, Menu-Items, File-Inputs, Labels)
-                        if ((e.target as HTMLElement).closest("button, a, label, [role='menuitem'], input")) return;
-                        if (isContractLocked(c.status)) {
-                          if (!window.confirm("⚠️ Achtung: Sie bearbeiten einen abgeschlossenen Originalvertrag. Änderungen werden dokumentiert. Fortfahren?")) return;
-                        }
-                        openEdit(c);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key !== "Enter" && e.key !== " ") return;
-                        if ((e.target as HTMLElement) !== e.currentTarget) return;
-                        e.preventDefault();
-                        if (isContractLocked(c.status)) {
-                          if (!window.confirm("⚠️ Achtung: Sie bearbeiten einen abgeschlossenen Originalvertrag. Änderungen werden dokumentiert. Fortfahren?")) return;
-                        }
-                        openEdit(c);
-                      }}
-                    >
-                        <td className={`py-3.5 px-4 text-xs font-mono font-semibold text-primary whitespace-nowrap ${isStandort ? "pl-8 border-l-2 border-accent" : ""}`}>
-                          <div className="flex items-center gap-1.5">
-                            {isStandort && <MapPin className="h-3 w-3 text-accent" aria-hidden="true" />}
-                            <span>{c.contract_number || "–"}</span>
-                          </div>
-                          {isStandort && carrierHfx && (
-                            <div className="text-[10px] font-normal text-muted-foreground mt-0.5">
-                              Standort von <span className="font-mono">{carrierHfx}</span>
-                            </div>
-                          )}
-                        </td>
+                  {grouped.map(({ c, isStandort, carrierHfx, carrierId, standortCount }) => {
+                    // L1: Standort-Kindzeilen ausblenden, wenn weder die Gruppe aufgeklappt
+                    // noch ein Narrowing-Filter aktiv ist. Träger-Zeile bleibt immer sichtbar.
+                    if (
+                      isStandort &&
+                      carrierId &&
+                      !filtersActive &&
+                      !expandedCarriers.has(carrierId)
+                    ) {
+                      return null;
+                    }
+                    const hasStandorte = !isStandort && !!carrierId && (standortCount ?? 0) > 0;
+                    const expanded = hasStandorte
+                      ? filtersActive || expandedCarriers.has(carrierId!)
+                      : false;
+                    return (
+                      <tr
+                        key={c.id}
+                        className={`hover:bg-muted/40 transition-colors cursor-pointer ${isStandort ? "bg-muted/10" : ""}`}
+                        role="button"
+                       tabIndex={0}
+                       onClick={(e) => {
+                         // Ignoriere Clicks auf interaktive Kind-Elemente (Buttons, Links, Menu-Items, File-Inputs, Labels)
+                         if ((e.target as HTMLElement).closest("button, a, label, [role='menuitem'], input")) return;
+                         if (isContractLocked(c.status)) {
+                           if (!window.confirm("⚠️ Achtung: Sie bearbeiten einen abgeschlossenen Originalvertrag. Änderungen werden dokumentiert. Fortfahren?")) return;
+                         }
+                         openEdit(c);
+                       }}
+                       onKeyDown={(e) => {
+                         if (e.key !== "Enter" && e.key !== " ") return;
+                         if ((e.target as HTMLElement) !== e.currentTarget) return;
+                         e.preventDefault();
+                         if (isContractLocked(c.status)) {
+                           if (!window.confirm("⚠️ Achtung: Sie bearbeiten einen abgeschlossenen Originalvertrag. Änderungen werden dokumentiert. Fortfahren?")) return;
+                         }
+                         openEdit(c);
+                       }}
+                     >
+                         <td className={`py-3.5 px-4 text-xs font-mono font-semibold text-primary whitespace-nowrap ${isStandort ? "pl-8 border-l-2 border-accent" : ""}`}>
+                           <div className="flex items-center gap-1.5">
+                             {isStandort && <MapPin className="h-3 w-3 text-accent" aria-hidden="true" />}
+                             <span>{c.contract_number || "–"}</span>
+                             {hasStandorte && (
+                               <StandorteToggleBadge
+                                 count={standortCount ?? 0}
+                                 expanded={expanded}
+                                 onToggle={() => toggleCarrier(carrierId!)}
+                               />
+                             )}
+                           </div>
+                           {isStandort && carrierHfx && (
+                             <div className="text-[10px] font-normal text-muted-foreground mt-0.5">
+                               Standort von <span className="font-mono">{carrierHfx}</span>
+                             </div>
+                           )}
+                         </td>
                         <td
                           className="py-3.5 px-4 text-xs text-muted-foreground font-mono whitespace-nowrap"
                           onClick={(e) => e.stopPropagation()}
@@ -2820,7 +2870,8 @@ export default function Vertraege() {
                       </DropdownMenu>
                     </td>
                   </tr>
-                ))}
+                    );
+                  })}
               </tbody>
             </table>
           )}
