@@ -685,7 +685,7 @@ function aggregateByContract(
  *
  * usageStatus-Ableitung aus dem Aggregat (dokumentiert in der 2e-Übergabe):
  *   - submittedTotal === 0                                  → "no_usage"
- *   - lastUsageAt > 60 Tage alt                              → "inactive"
+ *   - lastUsageAt > 30 Tage alt                              → "inactive"
  *   - submittedTotal ≤ 1                                    → "first_usage"
  *   - sonst                                                  → "active"
  */
@@ -717,7 +717,7 @@ function aggregateGroup(carrier: EnrichedRow, standorte: EnrichedRow[]): Enriche
     usageStatus = "no_usage";
   } else if (
     lastUsageAt &&
-    differenceInDays(new Date(), new Date(lastUsageAt)) > 60
+    differenceInDays(new Date(), new Date(lastUsageAt)) > 30
   ) {
     usageStatus = "inactive";
   } else if (submittedTotal <= 1) {
