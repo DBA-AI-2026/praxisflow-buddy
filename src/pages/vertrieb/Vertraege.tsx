@@ -2342,10 +2342,10 @@ export default function Vertraege() {
               </thead>
               <tbody className="divide-y divide-border/50">
                  {grouped.map(({ c, isStandort, carrierHfx }) => (
-                    <tr
-                      key={c.id}
-                      className={`hover:bg-muted/40 transition-colors cursor-pointer ${isStandort ? "bg-muted/10 border-l-2 border-accent" : ""}`}
-                      role="button"
+                     <tr
+                       key={c.id}
+                       className={`hover:bg-muted/40 transition-colors cursor-pointer ${isStandort ? "bg-muted/10" : ""}`}
+                       role="button"
                       tabIndex={0}
                       onClick={(e) => {
                         // Ignoriere Clicks auf interaktive Kind-Elemente (Buttons, Links, Menu-Items, File-Inputs, Labels)
