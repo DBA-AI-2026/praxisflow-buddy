@@ -2870,7 +2870,8 @@ export default function Vertraege() {
                       </DropdownMenu>
                     </td>
                   </tr>
-                ))}
+                    );
+                  })}
               </tbody>
             </table>
           )}
