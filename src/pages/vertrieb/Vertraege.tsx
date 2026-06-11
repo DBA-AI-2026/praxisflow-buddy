@@ -1493,6 +1493,16 @@ export default function Vertraege() {
   const [preSystemFilter, setPreSystemFilter] = useState(false);
   const [sortField, setSortField] = useState<"created_at" | "updated_at">("created_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  // Standorte standardmäßig eingeklappt; Set enthält IDs der Träger, deren Standorte sichtbar sind.
+  const [expandedCarriers, setExpandedCarriers] = useState<Set<string>>(new Set());
+  const toggleCarrier = (carrierId: string) => {
+    setExpandedCarriers((prev) => {
+      const next = new Set(prev);
+      if (next.has(carrierId)) next.delete(carrierId);
+      else next.add(carrierId);
+      return next;
+    });
+  };
 
   // Extension / Nachtrag dialog state
   const [extensionDialogOpen, setExtensionDialogOpen] = useState(false);
