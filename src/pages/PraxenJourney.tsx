@@ -190,9 +190,18 @@ function StaleBadge({ dateStr, label }: { dateStr: string; label?: string }) {
   );
 }
 
-function TH({ children, right, className }: { children: React.ReactNode; right?: boolean; className?: string }) {
+// Tier-Klassen für responsives Ausblenden niedrigpriorisierter Spalten.
+// display:none via Tailwind hidden xl:table-cell / 2xl:table-cell — DOM bleibt
+// intakt, damit Mehrstandort-Sub-Zeilen (colSpan) und Sortierung unberührt sind.
+const TH_TIER_CLS = {
+  secondary: "hidden xl:table-cell",
+  tertiary: "hidden 2xl:table-cell",
+} as const;
+
+function TH({ children, right, className, tier }: { children: React.ReactNode; right?: boolean; className?: string; tier?: "secondary" | "tertiary" }) {
+  const tierCls = tier ? TH_TIER_CLS[tier] : "";
   return (
-    <th className={`py-2.5 px-4 text-${right ? "right" : "left"} text-xs font-medium text-muted-foreground bg-muted/40 border-b border-border ${className || ""}`}>
+    <th className={`py-2.5 px-4 text-${right ? "right" : "left"} text-xs font-medium text-muted-foreground bg-muted/40 border-b border-border ${tierCls} ${className || ""}`}>
       {children}
     </th>
   );
@@ -945,12 +954,12 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
               <TH>Praxis / Arzt</TH>
               <TH>Produkt</TH>
               <TH>Status</TH>
-              <TH>Wartezeit</TH>
+              <TH tier="secondary">Wartezeit</TH>
               <TH>Nächster Schritt</TH>
-              <TH>Checkliste</TH>
-              <TH>Qodia</TH>
+              <TH tier="tertiary">Checkliste</TH>
+              <TH tier="tertiary">Qodia</TH>
               <TH right>Monatlich</TH>
-              <TH>Vertrieb</TH>
+              <TH tier="tertiary">Vertrieb</TH>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
