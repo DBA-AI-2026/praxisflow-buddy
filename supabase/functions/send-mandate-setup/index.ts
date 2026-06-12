@@ -36,8 +36,11 @@ const AGB_COUPLING_SENTENCE_TEXT =
 function buildMandateSetupEmail(params: {
   greeting: string;
   setupUrl: string;
+  agbUrl: string;
 }): { html: string; text: string } {
-  const { greeting, setupUrl } = params;
+  const { greeting, setupUrl, agbUrl } = params;
+  const couplingHtml = AGB_COUPLING_SENTENCE_HTML.replaceAll("{{AGB_URL}}", agbUrl);
+  const couplingText = AGB_COUPLING_SENTENCE_TEXT.replaceAll("{{AGB_URL}}", agbUrl);
   const html = `<!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f4f6fa;font-family:Arial,sans-serif;">
@@ -50,10 +53,12 @@ function buildMandateSetupEmail(params: {
     <p style="margin:0 0 14px;">${greeting},</p>
     <p style="margin:0 0 14px;">vielen Dank für Ihren Vertragsabschluss bei Honorarfuchs.</p>
     <p style="margin:0 0 14px;">Damit wir Ihren Vertrag aktivieren und die monatliche Abrechnung einrichten können, benötigen wir noch Ihre SEPA-Bankverbindung.</p>
+    <p style="margin:0 0 14px;"><strong>${couplingHtml}</strong></p>
     <div style="text-align:center;margin:26px 0;">
-      <a href="${setupUrl}" style="background:#0b367f;color:#fff;padding:14px 28px;border-radius:8px;font-size:16px;text-decoration:none;display:inline-block;font-weight:bold;">Bankverbindung hinterlegen</a>
+      <a href="${setupUrl}" target="_blank" rel="noopener noreferrer" style="background:#0b367f;color:#fff;padding:14px 28px;border-radius:8px;font-size:16px;text-decoration:none;display:inline-block;font-weight:bold;">Bankverbindung hinterlegen</a>
     </div>
-    <p style="margin:0 0 14px;color:#555;">Sobald Sie das SEPA-Mandat hinterlegt haben, erhalten Sie in einer zweiten E-Mail Ihre Vertragsunterlagen und die AGB.</p>
+    <p style="margin:0 0 14px;color:#555;">Die AGB finden Sie als PDF im Anhang dieser E-Mail sowie unter folgendem Link: <a href="${agbUrl}" target="_blank" rel="noopener noreferrer" style="color:#0b367f;">AGB öffnen</a>.</p>
+    <p style="margin:0 0 14px;color:#555;">Sobald Sie das SEPA-Mandat hinterlegt haben, erhalten Sie in einer zweiten E-Mail Ihre Vertragsunterlagen.</p>
     <p style="margin:0 0 14px;color:#555;">Bei Fragen erreichen Sie uns unter <a href="mailto:info@hfx-honorarfuchs.de" style="color:#0b367f;">info@hfx-honorarfuchs.de</a>.</p>
     <p style="margin:18px 0 0;">Mit freundlichen Grüßen<br/><strong>Ihr Honorarfuchs-Team</strong></p>
     <p style="margin:14px 0 0;color:#888;font-size:11px;">Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br/><a href="${setupUrl}" style="color:#0b367f;word-break:break-all;">${setupUrl}</a></p>
@@ -70,9 +75,13 @@ function buildMandateSetupEmail(params: {
     "",
     "Damit wir Ihren Vertrag aktivieren und die monatliche Abrechnung einrichten können, benötigen wir noch Ihre SEPA-Bankverbindung.",
     "",
+    couplingText,
+    "",
     `Bankverbindung hinterlegen: ${setupUrl}`,
     "",
-    "Sobald Sie das SEPA-Mandat hinterlegt haben, erhalten Sie in einer zweiten E-Mail Ihre Vertragsunterlagen und die AGB.",
+    `Die AGB finden Sie im Anhang dieser E-Mail sowie unter: ${agbUrl}`,
+    "",
+    "Sobald Sie das SEPA-Mandat hinterlegt haben, erhalten Sie in einer zweiten E-Mail Ihre Vertragsunterlagen.",
     "",
     "Bei Fragen erreichen Sie uns unter info@hfx-honorarfuchs.de.",
     "",
