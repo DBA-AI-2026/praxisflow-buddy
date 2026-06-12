@@ -12,6 +12,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14.21.0";
 import { Resend } from "npm:resend@2.0.0";
+import { resolveAgbForCandidates } from "../_shared/agbResolver.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +21,17 @@ const corsHeaders = {
 };
 
 const APP_URL = "https://praxisflow-buddy.lovable.app";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KOPPLUNGSSATZ (Platzhalter — finaler Wortlaut vor Go-live durch Anwalt).
+// Änderung erfordert Function-Re-Deploy (kein DB-Wert). Im Hauptteil der Mail
+// sichtbar, NICHT im Footer. HTML- und Text-Variante getrennt pflegen.
+// ─────────────────────────────────────────────────────────────────────────────
+const AGB_COUPLING_SENTENCE_HTML =
+  'Mit der Erteilung des SEPA-Lastschriftmandats stimmen Sie zugleich den ' +
+  'beigefügten <a href="{{AGB_URL}}" target="_blank" rel="noopener noreferrer" style="color:#0b367f;text-decoration:underline;">Allgemeinen Geschäftsbedingungen</a> zu.';
+const AGB_COUPLING_SENTENCE_TEXT =
+  "Mit der Erteilung des SEPA-Lastschriftmandats stimmen Sie zugleich den beigefügten Allgemeinen Geschäftsbedingungen (siehe Anhang bzw. Link: {{AGB_URL}}) zu.";
 
 function buildMandateSetupEmail(params: {
   greeting: string;
