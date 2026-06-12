@@ -444,15 +444,20 @@ async function buildContractPdf(
     }
   }
 
-  // SEPA-Lastschrifteinzug — Drei-Wege-Hinweis (Hybrid; SSOT-Entscheidung in Phase D-vor)
-  //  D) IBAN in DB hinterlegt → Tabelle
-  //  A) IBAN leer, aber stripe_customer_id gesetzt → Mandat liegt beim PSP
-  //  B/C) Beides leer → je nach Status "noch ausstehend" oder "nicht im System hinterlegt"
+  // SEPA — Vorrang-Regel (Variante β, D-vor):
+  //   1) iban_masked (Stripe-Webhook-Maske) → 1:1 ausgeben, NICHT erneut maskieren
+  //   2) iban (manuell, volle IBAN)         → durch maskIban() (Edge-Default "compact")
+  //   3) stripe_customer_id ohne Mandat-Daten → Hinweis "liegt beim PSP"
+  //   4) gar nichts                         → "ausstehend" oder "nicht hinterlegt"
   sectionHeader("SEPA-LASTSCHRIFTEINZUG");
+  const ibanMasked = String(contract.iban_masked || "").trim();
   const ibanRaw = String(contract.iban || "").trim();
   const stripeCustomerId = String(contract.stripe_customer_id || "").trim();
   const contractStatus = String(contract.status || "").toLowerCase();
-  if (ibanRaw.length > 0) {
+  if (ibanMasked.length > 0) {
+    fieldRow("Kontoinhaber", String(contract.kontoinhaber || "–"));
+    fieldRow("IBAN (maskiert)", ibanMasked);
+  } else if (ibanRaw.length > 0) {
     fieldRow("Kontoinhaber", String(contract.kontoinhaber || "–"));
     fieldRow("IBAN (maskiert)", maskIban(ibanRaw));
   } else if (stripeCustomerId.length > 0) {
