@@ -53,3 +53,5 @@ project_id = "gvsxentbbzuyanqbqvea"
     verify_jwt = false
   [functions.manual-interim-invoice]
     verify_jwt = false
+  [functions.backfill-sepa-iban]
+    verify_jwt = false
