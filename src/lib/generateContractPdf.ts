@@ -97,6 +97,12 @@ interface ContractPdfData {
   kontoinhaber?: string;
   stripe_customer_id?: string | null;
   iban?: string;
+  /**
+   * Maskierte SEPA-IBAN aus Stripe (Format: DE** **** **** **** **30 00).
+   * Befüllt vom stripe-webhook bei Mandat-Erteilung. Wenn gesetzt, hat dieses
+   * Feld Vorrang vor `iban` beim Rendering (Variante β, Vorrang-Regel C).
+   */
+  iban_masked?: string | null;
   bic?: string;
   notes?: string;
   signature_data?: string | null;
@@ -461,15 +467,20 @@ export async function generateContractPdf(
     }
   }
 
-  // ===== SEPA — Drei-Wege-Hinweis (Hybrid; SSOT-Entscheidung in Phase D-vor) =====
-  //  D) IBAN in DB hinterlegt → Tabelle
-  //  A) IBAN leer, aber stripe_customer_id gesetzt → Mandat liegt beim PSP
-  //  B/C) Beides leer → je nach Status "noch ausstehend" oder "nicht im System hinterlegt"
+  // ===== SEPA — Vorrang-Regel (Variante β, D-vor):
+  //   1) iban_masked (Stripe-Webhook-Maske) → 1:1 ausgeben, NICHT erneut maskieren
+  //   2) iban (manuell, volle IBAN)         → durch maskIban("partial")
+  //   3) stripe_customer_id ohne Mandat-Daten → Hinweis "liegt beim PSP"
+  //   4) gar nichts                         → "ausstehend" oder "nicht hinterlegt"
   sectionHeader("SEPA-LASTSCHRIFTEINZUG");
+  const ibanMasked = String(data.iban_masked || "").trim();
   const ibanRaw = String(data.iban || "").trim();
   const stripeCustomerId = String(data.stripe_customer_id || "").trim();
   const contractStatus = String(data.status || "").toLowerCase();
-  if (ibanRaw.length > 0) {
+  if (ibanMasked.length > 0) {
+    fieldRow("Kontoinhaber", data.kontoinhaber || "–");
+    fieldRow("IBAN (maskiert)", ibanMasked);
+  } else if (ibanRaw.length > 0) {
     fieldRow("Kontoinhaber", data.kontoinhaber || "–");
     fieldRow("IBAN (maskiert)", maskIban(ibanRaw, "partial"));
   } else if (stripeCustomerId.length > 0) {

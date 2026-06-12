@@ -1,6 +1,7 @@
 import Stripe from "npm:stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isGoaeProduct } from "../_shared/multiLocation.ts";
+import { formatStripeMaskedIban } from "../_shared/formatStripeMaskedIban.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
   apiVersion: "2025-08-27.basil",
@@ -1057,6 +1058,91 @@ async function handleSepaMandateSetup(
     log("qodia-status-sync triggered (fire-and-forget)", { contractId });
   } catch (e) {
     log("WARN: could not trigger qodia-status-sync", String(e));
+  }
+
+  // ── SEPA-Anzeige-IBAN aus SetupIntent ableiten und in contracts.iban_masked
+  //    persistieren (Variante β, D-vor). Idempotent: schreibt nur, wenn
+  //    iban_masked aktuell NULL ist. kontoinhaber wird nur gesetzt, wenn er
+  //    aktuell NULL ist (manuelle Einträge bleiben unangetastet).
+  //
+  //    Multi-Standort: das UPDATE auf stripe_customer_id ist gewollt — alle
+  //    Verträge desselben Kunden teilen das Mandat (siehe Audit). Wir filtern
+  //    NICHT auf contractId, damit Geschwister gleich mitversorgt werden.
+  //
+  //    Schutz: HFX-I01070-Cluster ist Test-Daten und wird ausgeschlossen.
+  //    Fehler hier dürfen den Mandat-Webhook NICHT brechen.
+  try {
+    const setupIntentId = typeof session.setup_intent === "string"
+      ? session.setup_intent
+      : (session.setup_intent as any)?.id;
+
+    if (setupIntentId) {
+      const si = await stripe.setupIntents.retrieve(setupIntentId, {
+        expand: ["payment_method"],
+      });
+      const pm = si.payment_method as Stripe.PaymentMethod | null;
+
+      if (pm && pm.type === "sepa_debit" && pm.sepa_debit) {
+        const ibanMasked = formatStripeMaskedIban({
+          country: pm.sepa_debit.country,
+          last4: pm.sepa_debit.last4,
+        });
+        const accountHolder = pm.billing_details?.name?.trim() || null;
+
+        if (ibanMasked) {
+          // iban_masked: nur befüllen wenn leer (Idempotenz)
+          const { data: maskUpdated, error: maskErr } = await supabase
+            .from("contracts")
+            .update({ iban_masked: ibanMasked } as any)
+            .eq("stripe_customer_id", stripeCustomerId)
+            .is("iban_masked", null)
+            .not("hfx_customer_number", "like", "HFX-I01070%")
+            .select("id");
+          if (maskErr) {
+            log("WARN: iban_masked update failed", maskErr.message);
+          } else {
+            log("iban_masked persisted", {
+              stripeCustomerId,
+              ibanMasked,
+              touched: (maskUpdated ?? []).length,
+            });
+          }
+
+          // kontoinhaber: nur befüllen wenn leer
+          if (accountHolder) {
+            const { data: khUpdated, error: khErr } = await supabase
+              .from("contracts")
+              .update({ kontoinhaber: accountHolder } as any)
+              .eq("stripe_customer_id", stripeCustomerId)
+              .is("kontoinhaber", null)
+              .not("hfx_customer_number", "like", "HFX-I01070%")
+              .select("id");
+            if (khErr) {
+              log("WARN: kontoinhaber update failed", khErr.message);
+            } else if ((khUpdated ?? []).length > 0) {
+              log("kontoinhaber persisted", {
+                stripeCustomerId,
+                accountHolder,
+                touched: khUpdated!.length,
+              });
+            }
+          }
+        } else {
+          log("SEPA mandate: insufficient data for masked IBAN", {
+            country: pm.sepa_debit.country,
+            last4: pm.sepa_debit.last4,
+          });
+        }
+      } else {
+        log("SEPA mandate: payment_method not sepa_debit, skipping mask", {
+          type: pm?.type,
+        });
+      }
+    } else {
+      log("SEPA mandate: session has no setup_intent, skipping mask");
+    }
+  } catch (ibanErr) {
+    log("WARN: iban_masked befüllung fehlgeschlagen (nicht kritisch)", String(ibanErr));
   }
 
   log("SEPA mandate setup completed", { contractId, stripeCustomerId });
