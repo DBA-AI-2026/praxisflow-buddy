@@ -1016,7 +1016,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                   <td className="py-3 px-4">
                     <StatusPill label={sc.label} cls={sc.class} tooltip={CONTRACT_STATUS_TOOLTIPS[c.status] ?? sc.label} />
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 hidden xl:table-cell">
                     <StaleBadge dateStr={c.created_at} label="Erstellt am" />
                   </td>
                   <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
@@ -1038,7 +1038,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                       </button>
                     )}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 hidden 2xl:table-cell">
                     <div className="flex flex-col gap-1">
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -1069,7 +1069,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                       </Tooltip>
                     </div>
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 hidden 2xl:table-cell">
                     {providerFlags[c.product_name] ? (
                       <div className="flex items-center gap-1.5">
                         <QodiaStatusCell row={qodiaStatusMap[c.id]} />
@@ -1084,7 +1084,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
                       ? `${Number(c.monthly_price).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €`
                       : "–"}
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground">{c.sales_partner_name || "–"}</td>
+                  <td className="py-3 px-4 text-xs text-muted-foreground hidden 2xl:table-cell">{c.sales_partner_name || "–"}</td>
                 </tr>
               );
             })}
