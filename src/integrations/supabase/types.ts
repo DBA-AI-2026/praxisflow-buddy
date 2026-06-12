@@ -509,6 +509,7 @@ export type Database = {
           generated_password: string | null
           hfx_customer_number: string | null
           iban: string | null
+          iban_masked: string | null
           id: string
           kontoinhaber: string | null
           kontoinhaber_plz_ort: string | null
@@ -590,6 +591,7 @@ export type Database = {
           generated_password?: string | null
           hfx_customer_number?: string | null
           iban?: string | null
+          iban_masked?: string | null
           id?: string
           kontoinhaber?: string | null
           kontoinhaber_plz_ort?: string | null
@@ -671,6 +673,7 @@ export type Database = {
           generated_password?: string | null
           hfx_customer_number?: string | null
           iban?: string | null
+          iban_masked?: string | null
           id?: string
           kontoinhaber?: string | null
           kontoinhaber_plz_ort?: string | null
