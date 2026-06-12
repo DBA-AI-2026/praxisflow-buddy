@@ -215,10 +215,29 @@ Deno.serve(async (req) => {
       },
     });
 
-    // 3) Mail 1 (ohne AGB-Anhang)
+    // 3) AGB auflösen (produktspezifisch mit generischem Fallback)
+    const agb = await resolveAgbForCandidates(
+      admin,
+      APP_URL,
+      [
+        (contract as any).product_name,
+        ...(Array.isArray((contract as any).modules) ? (contract as any).modules : []),
+      ],
+      "[send-mandate-setup]",
+    );
+
+    // 4) Mail 1 mit AGB-Anhang + Kopplungssatz
     const anrede = [contract.vorname, contract.nachname].filter(Boolean).join(" ").trim();
     const greeting = anrede ? `Sehr geehrte/r ${anrede}` : "Sehr geehrte Damen und Herren";
-    const { html, text } = buildMandateSetupEmail({ greeting, setupUrl: setupSession.url! });
+    const { html, text } = buildMandateSetupEmail({
+      greeting,
+      setupUrl: setupSession.url!,
+      agbUrl: agb.downloadUrl,
+    });
+
+    const attachments = agb.base64
+      ? [{ filename: agb.filename, content: agb.base64 }]
+      : undefined;
 
     const sent = await resend.emails.send({
       from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
@@ -227,11 +246,18 @@ Deno.serve(async (req) => {
       subject: "Willkommen bei Honorarfuchs — bitte aktivieren Sie Ihren Vertrag",
       html,
       text,
+      ...(attachments ? { attachments } : {}),
     });
     if ((sent as any)?.error) {
       console.error("[send-mandate-setup] Resend error:", (sent as any).error);
       throw new Error(String((sent as any).error?.message || (sent as any).error));
     }
+
+    console.log(
+      `[send-mandate-setup] AGB source=${agb.source}` +
+        (agb.matchedProductName ? ` product="${agb.matchedProductName}"` : "") +
+        ` attached=${!!attachments}`,
+    );
 
     console.log(`[send-mandate-setup] Mail 1 sent to ${recipient} for contract ${contract.id}`);
 
