@@ -12,6 +12,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14.21.0";
 import { Resend } from "npm:resend@2.0.0";
+import { resolveAgbForCandidates } from "../_shared/agbResolver.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,11 +22,25 @@ const corsHeaders = {
 
 const APP_URL = "https://praxisflow-buddy.lovable.app";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// KOPPLUNGSSATZ (Platzhalter — finaler Wortlaut vor Go-live durch Anwalt).
+// Änderung erfordert Function-Re-Deploy (kein DB-Wert). Im Hauptteil der Mail
+// sichtbar, NICHT im Footer. HTML- und Text-Variante getrennt pflegen.
+// ─────────────────────────────────────────────────────────────────────────────
+const AGB_COUPLING_SENTENCE_HTML =
+  'Mit der Erteilung des SEPA-Lastschriftmandats stimmen Sie zugleich den ' +
+  'beigefügten <a href="{{AGB_URL}}" target="_blank" rel="noopener noreferrer" style="color:#0b367f;text-decoration:underline;">Allgemeinen Geschäftsbedingungen</a> zu.';
+const AGB_COUPLING_SENTENCE_TEXT =
+  "Mit der Erteilung des SEPA-Lastschriftmandats stimmen Sie zugleich den beigefügten Allgemeinen Geschäftsbedingungen (siehe Anhang bzw. Link: {{AGB_URL}}) zu.";
+
 function buildMandateSetupEmail(params: {
   greeting: string;
   setupUrl: string;
+  agbUrl: string;
 }): { html: string; text: string } {
-  const { greeting, setupUrl } = params;
+  const { greeting, setupUrl, agbUrl } = params;
+  const couplingHtml = AGB_COUPLING_SENTENCE_HTML.replaceAll("{{AGB_URL}}", agbUrl);
+  const couplingText = AGB_COUPLING_SENTENCE_TEXT.replaceAll("{{AGB_URL}}", agbUrl);
   const html = `<!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f4f6fa;font-family:Arial,sans-serif;">
@@ -38,10 +53,12 @@ function buildMandateSetupEmail(params: {
     <p style="margin:0 0 14px;">${greeting},</p>
     <p style="margin:0 0 14px;">vielen Dank für Ihren Vertragsabschluss bei Honorarfuchs.</p>
     <p style="margin:0 0 14px;">Damit wir Ihren Vertrag aktivieren und die monatliche Abrechnung einrichten können, benötigen wir noch Ihre SEPA-Bankverbindung.</p>
+    <p style="margin:0 0 14px;"><strong>${couplingHtml}</strong></p>
     <div style="text-align:center;margin:26px 0;">
-      <a href="${setupUrl}" style="background:#0b367f;color:#fff;padding:14px 28px;border-radius:8px;font-size:16px;text-decoration:none;display:inline-block;font-weight:bold;">Bankverbindung hinterlegen</a>
+      <a href="${setupUrl}" target="_blank" rel="noopener noreferrer" style="background:#0b367f;color:#fff;padding:14px 28px;border-radius:8px;font-size:16px;text-decoration:none;display:inline-block;font-weight:bold;">Bankverbindung hinterlegen</a>
     </div>
-    <p style="margin:0 0 14px;color:#555;">Sobald Sie das SEPA-Mandat hinterlegt haben, erhalten Sie in einer zweiten E-Mail Ihre Vertragsunterlagen und die AGB.</p>
+    <p style="margin:0 0 14px;color:#555;">Die AGB finden Sie als PDF im Anhang dieser E-Mail sowie unter folgendem Link: <a href="${agbUrl}" target="_blank" rel="noopener noreferrer" style="color:#0b367f;">AGB öffnen</a>.</p>
+    <p style="margin:0 0 14px;color:#555;">Sobald Sie das SEPA-Mandat hinterlegt haben, erhalten Sie in einer zweiten E-Mail Ihre Vertragsunterlagen.</p>
     <p style="margin:0 0 14px;color:#555;">Bei Fragen erreichen Sie uns unter <a href="mailto:info@hfx-honorarfuchs.de" style="color:#0b367f;">info@hfx-honorarfuchs.de</a>.</p>
     <p style="margin:18px 0 0;">Mit freundlichen Grüßen<br/><strong>Ihr Honorarfuchs-Team</strong></p>
     <p style="margin:14px 0 0;color:#888;font-size:11px;">Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br/><a href="${setupUrl}" style="color:#0b367f;word-break:break-all;">${setupUrl}</a></p>
@@ -58,9 +75,13 @@ function buildMandateSetupEmail(params: {
     "",
     "Damit wir Ihren Vertrag aktivieren und die monatliche Abrechnung einrichten können, benötigen wir noch Ihre SEPA-Bankverbindung.",
     "",
+    couplingText,
+    "",
     `Bankverbindung hinterlegen: ${setupUrl}`,
     "",
-    "Sobald Sie das SEPA-Mandat hinterlegt haben, erhalten Sie in einer zweiten E-Mail Ihre Vertragsunterlagen und die AGB.",
+    `Die AGB finden Sie im Anhang dieser E-Mail sowie unter: ${agbUrl}`,
+    "",
+    "Sobald Sie das SEPA-Mandat hinterlegt haben, erhalten Sie in einer zweiten E-Mail Ihre Vertragsunterlagen.",
     "",
     "Bei Fragen erreichen Sie uns unter info@hfx-honorarfuchs.de.",
     "",
@@ -194,10 +215,29 @@ Deno.serve(async (req) => {
       },
     });
 
-    // 3) Mail 1 (ohne AGB-Anhang)
+    // 3) AGB auflösen (produktspezifisch mit generischem Fallback)
+    const agb = await resolveAgbForCandidates(
+      admin,
+      APP_URL,
+      [
+        (contract as any).product_name,
+        ...(Array.isArray((contract as any).modules) ? (contract as any).modules : []),
+      ],
+      "[send-mandate-setup]",
+    );
+
+    // 4) Mail 1 mit AGB-Anhang + Kopplungssatz
     const anrede = [contract.vorname, contract.nachname].filter(Boolean).join(" ").trim();
     const greeting = anrede ? `Sehr geehrte/r ${anrede}` : "Sehr geehrte Damen und Herren";
-    const { html, text } = buildMandateSetupEmail({ greeting, setupUrl: setupSession.url! });
+    const { html, text } = buildMandateSetupEmail({
+      greeting,
+      setupUrl: setupSession.url!,
+      agbUrl: agb.downloadUrl,
+    });
+
+    const attachments = agb.base64
+      ? [{ filename: agb.filename, content: agb.base64 }]
+      : undefined;
 
     const sent = await resend.emails.send({
       from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
@@ -206,11 +246,18 @@ Deno.serve(async (req) => {
       subject: "Willkommen bei Honorarfuchs — bitte aktivieren Sie Ihren Vertrag",
       html,
       text,
+      ...(attachments ? { attachments } : {}),
     });
     if ((sent as any)?.error) {
       console.error("[send-mandate-setup] Resend error:", (sent as any).error);
       throw new Error(String((sent as any).error?.message || (sent as any).error));
     }
+
+    console.log(
+      `[send-mandate-setup] AGB source=${agb.source}` +
+        (agb.matchedProductName ? ` product="${agb.matchedProductName}"` : "") +
+        ` attached=${!!attachments}`,
+    );
 
     console.log(`[send-mandate-setup] Mail 1 sent to ${recipient} for contract ${contract.id}`);
 
