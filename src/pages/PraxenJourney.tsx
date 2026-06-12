@@ -1287,10 +1287,10 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
               <TH>Praxis / Arzt</TH>
               <TH>Produkt</TH>
               <TH>Status</TH>
-              <TH>Kunde seit</TH>
-              <TH>Vertrieb</TH>
+              <TH tier="tertiary">Kunde seit</TH>
+              <TH tier="tertiary">Vertrieb</TH>
               <TH>Onboarding</TH>
-              <TH>Aktivität</TH>
+              <TH tier="secondary">Aktivität</TH>
               <TH>{""}</TH>
             </tr>
           </thead>
@@ -1406,10 +1406,10 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                   <td className="py-3 px-4">
                     <StatusPill label={sc.label} cls={sc.cls} tooltip={CONTRACT_STATUS_TOOLTIPS[c.status] ?? sc.label} />
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
+                  <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap hidden 2xl:table-cell">
                     {c.start_date ? format(new Date(c.start_date), "dd.MM.yy", { locale: de }) : "–"}
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground">{c.sales_partner_name || "–"}</td>
+                  <td className="py-3 px-4 text-xs text-muted-foreground hidden 2xl:table-cell">{c.sales_partner_name || "–"}</td>
                   <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                     <OnboardingCell
                       products={onboardingProducts}
@@ -1418,7 +1418,7 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                       onMarkReady={() => qc.invalidateQueries({ queryKey: ["provider-status-map"] })}
                     />
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 hidden xl:table-cell">
                     <ActivityCell products={onboardingProducts} thresholds={thresholds} />
                   </td>
                   <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
