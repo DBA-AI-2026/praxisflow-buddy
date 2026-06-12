@@ -80,7 +80,7 @@ export function PdfViewerOverlay() {
   if (!pdfUrl) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-background">
+    <div className="fixed inset-0 z-[100] flex flex-col bg-background" style={{ height: "100vh" }}>
       <div className="flex items-center gap-3 px-4 py-3 border-b bg-card shadow-sm shrink-0">
         <Button variant="ghost" size="sm" className="gap-2" onClick={handleClose}>
           <ArrowLeft className="h-4 w-4" />
@@ -107,7 +107,7 @@ export function PdfViewerOverlay() {
         </Button>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-muted/50 p-2" style={{ WebkitOverflowScrolling: "touch" }}>
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-muted/50 p-2" style={{ height: 0, WebkitOverflowScrolling: "touch" }}>
         {loading && (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
