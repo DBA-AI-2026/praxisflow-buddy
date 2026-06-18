@@ -909,7 +909,7 @@ async function handleSepaMandateSetup(
   // Idempotenz: stripe_customer_id bereits gesetzt?
   const { data: existing } = await supabase
     .from("contracts")
-    .select("stripe_customer_id, status, email, confirmation_email_sent_at, customer_id")
+    .select("stripe_customer_id, status, email, confirmation_email_sent_at, customer_id, customer_name, vorname, nachname, rechnungs_email")
     .eq("id", contractId)
     .maybeSingle();
 
@@ -929,6 +929,36 @@ async function handleSepaMandateSetup(
     } else if (activatedRows && activatedRows.length > 0) {
       carrierJustActivated = true;
       log("Contract activated after SEPA mandate", { contractId, prev: existing.status });
+
+      // ── AGB-Zustimmung revisionssicher schreiben (Träger-only) ───────────────
+      // Gate: carrierJustActivated ist exactly-once → keine Dublette bei Re-Delivery.
+      // Awaiteter try/catch; Fehler nur loggen, niemals throwen (Sweep darf nicht
+      // gefährdet werden). Tabelle ist append-only / Beweis-Trail: eine Zeile pro
+      // echter Aktivierung ist gewünscht — kein Existenz-Check.
+      try {
+        const e: any = existing;
+        const customerEmail = e?.rechnungs_email || e?.email || null;
+        const customerName =
+          e?.customer_name ||
+          [e?.vorname, e?.nachname].filter(Boolean).join(" ").trim() ||
+          null;
+        const { error: agbErr } = await supabase.from("agb_acceptances").insert({
+          contract_id: contractId,
+          agb_version: "1.0",
+          customer_email: customerEmail,
+          customer_name: customerName,
+          accepted_at: new Date().toISOString(),
+          ip_address: null,
+          user_agent: "via_stripe_sepa_mandate; session=" + session.id,
+        } as any);
+        if (agbErr) {
+          log("WARN: agb_acceptances insert failed (non-blocking)", agbErr.message);
+        } else {
+          log("agb_acceptances inserted (via SEPA mandate)", { contractId, agb_version: "1.0" });
+        }
+      } catch (err) {
+        log("WARN: agb_acceptances insert exception (non-blocking)", String(err));
+      }
     } else {
       log("sepa_mandate_setup: activation UPDATE returned 0 rows (race/re-delivery)", contractId);
     }
