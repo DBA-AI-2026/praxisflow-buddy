@@ -54,10 +54,10 @@ function buildMandateSetupEmail(params: {
     <p style="margin:0 0 14px;">vielen Dank für Ihren Vertragsabschluss bei Honorarfuchs.</p>
     <p style="margin:0 0 14px;">Damit wir Ihren Vertrag aktivieren und die monatliche Abrechnung einrichten können, benötigen wir noch Ihre SEPA-Bankverbindung.</p>
     <p style="margin:0 0 14px;"><strong>${couplingHtml}</strong></p>
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:26px auto;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:26px auto;">
       <tr>
-        <td align="center" bgcolor="#0b367f" style="border-radius:8px;">
-          <a href="${setupUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:14px 28px;color:#ffffff;font-size:16px;font-weight:bold;text-decoration:none;border-radius:8px;">Bankverbindung hinterlegen</a>
+        <td align="center" bgcolor="#0b367f" style="border-radius:8px;padding:14px 28px;">
+          <a href="${setupUrl}" target="_blank" rel="noopener noreferrer" style="color:#ffffff;font-size:16px;font-weight:bold;text-decoration:none;">Bankverbindung hinterlegen</a>
         </td>
       </tr>
     </table>
