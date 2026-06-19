@@ -2776,6 +2776,14 @@ export type Database = {
           status: string
         }[]
       }
+      get_salesforce_connection_status: {
+        Args: never
+        Returns: {
+          instance_url: string
+          is_connected: boolean
+          last_sync_at: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
