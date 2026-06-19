@@ -32,7 +32,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Plus, Search, FileText, MoreHorizontal, Pencil, Trash2, Upload, Download, Loader2, Eye, CheckCircle,
   FilePen, FileSignature, CircleCheck, CircleOff, ArchiveX, ShieldBan, ArrowUpDown, ArrowUp, ArrowDown,
-  GitMerge, AlertTriangle, Send, Lightbulb, MapPin,
+  GitMerge, AlertTriangle, Send, Lightbulb, MapPin, Info,
 } from "lucide-react";
 // Check and ChevronsUpDown already imported above via combobox imports
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
@@ -79,24 +79,78 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 
 function AgbAcceptanceSection({ contractId }: { contractId: string }) {
-  const [acceptance, setAcceptance] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  // Hooks unbedingt Top-Level — keine bedingten Hook-Calls.
+  const carrierMapQuery = useCarrierMap();
 
-  useEffect(() => {
-    supabase
-      .from("agb_acceptances" as any)
-      .select("*")
-      .eq("contract_id", contractId)
-      .order("accepted_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        setAcceptance(data);
-        setLoading(false);
-      });
-  }, [contractId]);
+  const acceptanceQuery = useQuery<any>({
+    queryKey: ["agb-acceptance", contractId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("agb_acceptances" as any)
+        .select("*")
+        .eq("contract_id", contractId)
+        .order("accepted_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+  });
 
-  if (loading) return null;
+  const contractLookupQuery = useQuery({
+    queryKey: ["agb-contract-lookup", contractId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("contracts")
+        .select("customer_id, product_name")
+        .eq("id", contractId)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const acceptance = acceptanceQuery.data;
+  const contractLookup = contractLookupQuery.data;
+  const carrierMap = carrierMapQuery.data;
+  const carrierContractId =
+    contractLookup?.customer_id && carrierMap
+      ? carrierMap[contractLookup.customer_id] ?? null
+      : null;
+
+  // Standort = GOÄ + Carrier vorhanden + Carrier ≠ aktueller Vertrag
+  const isStandort = (() => {
+    if (!contractLookup) return false;
+    if (!isGoaeProduct(contractLookup.product_name)) return false;
+    if (!carrierContractId) return false;
+    return carrierContractId !== contractId;
+  })();
+
+  // Träger-Existenzcheck (PII-frei: nur id), nur wenn Standort & keine eigene Zeile.
+  const needsCarrierCheck = isStandort && !acceptance && !!carrierContractId;
+  const carrierAcceptanceQuery = useQuery({
+    queryKey: ["agb-acceptance-carrier", carrierContractId],
+    enabled: needsCarrierCheck,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("agb_acceptances" as any)
+        .select("id")
+        .eq("contract_id", carrierContractId)
+        .order("accepted_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  // Loading-Guard: erst rendern, wenn der Zustand feststeht (kein Flackern
+  // zwischen "Keine Zustimmung" und Banner).
+  const baseLoading =
+    acceptanceQuery.isLoading ||
+    contractLookupQuery.isLoading ||
+    carrierMapQuery.isLoading;
+  if (baseLoading) return null;
+  if (needsCarrierCheck && carrierAcceptanceQuery.isLoading) return null;
+
+  const carrierHasAcceptance = needsCarrierCheck && !!carrierAcceptanceQuery.data;
 
   return (
     <div className="space-y-3">
@@ -123,6 +177,13 @@ function AgbAcceptanceSection({ contractId }: { contractId: string }) {
             </span>
           </div>
         </div>
+      ) : carrierHasAcceptance ? (
+        <div className="rounded-lg border border-border bg-muted/40 p-3 flex items-start gap-2">
+          <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+          <span className="text-xs text-muted-foreground">
+            AGB wurden über den Hauptaccount standortübergreifend akzeptiert.
+          </span>
+        </div>
       ) : (
         <div className="rounded-lg border border-border bg-muted/30 p-3 flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -132,6 +193,7 @@ function AgbAcceptanceSection({ contractId }: { contractId: string }) {
     </div>
   );
 }
+
 
 // Role display labels
 const roleLabels: Record<string, string> = {
