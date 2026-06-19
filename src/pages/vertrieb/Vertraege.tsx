@@ -82,7 +82,7 @@ function AgbAcceptanceSection({ contractId }: { contractId: string }) {
   // Hooks unbedingt Top-Level — keine bedingten Hook-Calls.
   const carrierMapQuery = useCarrierMap();
 
-  const acceptanceQuery = useQuery({
+  const acceptanceQuery = useQuery<any>({
     queryKey: ["agb-acceptance", contractId],
     queryFn: async () => {
       const { data } = await supabase
