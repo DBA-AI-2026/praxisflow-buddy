@@ -140,14 +140,6 @@ Deno.serve(async (req) => {
       console.log(`New auth user created for manually captured lead: ${newAuthUser.user.id}`);
     }
 
-    // Update lead record: clear stored password + set credentials_sent_at timestamp
-    if (leadId) {
-      await supabaseAdmin
-        .from("leads")
-        .update({ generated_password: null, credentials_sent_at: new Date().toISOString() })
-        .eq("id", leadId);
-    }
-
     const resend = new Resend(Deno.env.get("RESEND_API_KEY")!);
 
     const emailHtml = buildCredentialsEmailHtml({
@@ -159,7 +151,7 @@ Deno.serve(async (req) => {
       generated_password: newPassword,
     });
 
-    await resend.emails.send({
+    const sendResult = await resend.emails.send({
       from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
       reply_to: "info@hfx-honorarfuchs.de",
       to: [lead.email],
@@ -190,12 +182,30 @@ Deno.serve(async (req) => {
       ].join("\n"),
     });
 
-    console.log(`New credentials generated and sent for lead ${lead.hfx_customer_number} to ${lead.email}`);
+    if (sendResult.error) {
+      console.error("[resend-lead-credentials] Resend error:", JSON.stringify(sendResult.error));
+      return new Response(
+        JSON.stringify({ error: "Fehler beim Versand der Zugangsdaten-E-Mail." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Send successful — now mark lead as credentials_sent + clear stored password.
+    // Direct-Mode (kein leadId) hat keine leads-Zeile zu aktualisieren.
+    if (leadId) {
+      await supabaseAdmin
+        .from("leads")
+        .update({ generated_password: null, credentials_sent_at: new Date().toISOString() })
+        .eq("id", leadId);
+    }
+
+    console.log(`New credentials generated and sent for lead ${lead.hfx_customer_number} to ${lead.email}, Resend ID: ${sendResult.data?.id}`);
 
     return new Response(
       JSON.stringify({ success: true, message: `Neue Zugangsdaten wurden an ${lead.email} gesendet.` }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (err: any) {
     console.error("Error:", err);
     return new Response(JSON.stringify({ error: err.message || "Internal server error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
