@@ -1,4 +1,6 @@
 import { Resend } from "npm:resend@2.0.0";
+import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
+
 
 const ALLOWED_ORIGINS = [
   "https://praxisflow-buddy.lovable.app",
