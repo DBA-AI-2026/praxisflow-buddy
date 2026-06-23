@@ -20,7 +20,7 @@ function getCorsHeaders(origin: string | null) {
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 // Admin email address to receive notifications
-const ADMIN_EMAIL = "info@honorarfuchs.de";
+const ADMIN_EMAIL = "info@hfx-honorarfuchs.de";
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
