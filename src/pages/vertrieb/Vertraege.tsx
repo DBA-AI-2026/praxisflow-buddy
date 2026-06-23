@@ -2426,28 +2426,28 @@ export default function Vertraege() {
             <table className="data-table w-full">
               <thead>
                <tr className="bg-accent/5">
-                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Vertragsnr.</th>
+                   <th className="hidden xl:table-cell text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Vertragsnr.</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">HFX-Nr.</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Praxis / Name</th>
-                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">E-Mail</th>
-                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">MP-Nr.</th>
+                   <th className="hidden 2xl:table-cell text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">E-Mail</th>
+                   <th className="hidden 2xl:table-cell text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">MP-Nr.</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 max-w-[220px]">Produkt</th>
-                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Partner</th>
+                   <th className="hidden 2xl:table-cell text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Partner</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 text-right">Monatspreis</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 text-center">Status</th>
-                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 whitespace-nowrap">
+                   <th className="hidden xl:table-cell text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 whitespace-nowrap">
                      <button type="button" onClick={() => handleSort("created_at")} className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
                        Erfasst
                        {sortField === "created_at" ? (sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
                      </button>
                    </th>
-                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 whitespace-nowrap">
+                   <th className="hidden 2xl:table-cell text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 whitespace-nowrap">
                      <button type="button" onClick={() => handleSort("updated_at")} className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
                        Zuletzt geändert
                        {sortField === "updated_at" ? (sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
                      </button>
                    </th>
-                   <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Dokument</th>
+                   <th className="hidden xl:table-cell text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Dokument</th>
                    <th className="w-10"></th>
                  </tr>
               </thead>
@@ -2491,7 +2491,7 @@ export default function Vertraege() {
                          openEdit(c);
                        }}
                      >
-                         <td className={`py-3.5 px-4 text-xs font-mono font-semibold text-primary whitespace-nowrap ${isStandort ? "pl-8 border-l-2 border-accent" : ""}`}>
+                         <td className="hidden xl:table-cell py-3.5 px-4 text-xs font-mono font-semibold text-primary whitespace-nowrap">
                            <div className="flex items-center gap-1.5">
                              {isStandort && <MapPin className="h-3 w-3 text-accent" aria-hidden="true" />}
                              <span>{c.contract_number || "–"}</span>
@@ -2566,13 +2566,13 @@ export default function Vertraege() {
                          </div>
                        </td>
 
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className={`py-3.5 px-4 whitespace-nowrap ${isStandort ? "pl-8 border-l-2 border-accent" : ""}`}>
                         <p className="font-medium text-foreground leading-tight">{c.praxis || c.customer_name}</p>
                         {c.praxis && (c.vorname || c.nachname) && (
                           <p className="text-xs text-muted-foreground leading-tight">{[c.vorname, c.nachname].filter(Boolean).join(" ")}</p>
                         )}
                       </td>
-                     <td className="py-3.5 px-4">
+                     <td className="hidden 2xl:table-cell py-3.5 px-4">
                        <div className="space-y-0.5 min-w-[160px]">
                          {c.email ? (
                            <TooltipProvider>
@@ -2613,7 +2613,7 @@ export default function Vertraege() {
                          )}
                        </div>
                      </td>
-                     <td className="py-3.5 px-4 text-muted-foreground text-sm">{c.mp_nr || "–"}</td>
+                     <td className="hidden 2xl:table-cell py-3.5 px-4 text-muted-foreground text-sm">{c.mp_nr || "–"}</td>
                     <td className="py-3.5 px-4 max-w-[220px]">
                       <div className="space-y-1">
                         {(c as any).parent_contract_id && (
@@ -2642,7 +2642,7 @@ export default function Vertraege() {
                         )}
                       </div>
                     </td>
-                     <td className="py-3.5 px-4 text-sm text-muted-foreground whitespace-nowrap">{c.sales_partner_name || "–"}</td>
+                     <td className="hidden 2xl:table-cell py-3.5 px-4 text-sm text-muted-foreground whitespace-nowrap">{c.sales_partner_name || "–"}</td>
                     <td className="py-3.5 px-4 text-right whitespace-nowrap">
                       <span className="font-semibold text-foreground tabular-nums">
                         {(Number(c.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
@@ -2685,17 +2685,17 @@ export default function Vertraege() {
                          </DropdownMenuContent>
                          </DropdownMenu>
                        </td>
-                        <td className="py-3.5 px-4 text-xs text-muted-foreground whitespace-nowrap">
+                        <td className="hidden xl:table-cell py-3.5 px-4 text-xs text-muted-foreground whitespace-nowrap">
                           {c.created_at
                             ? format(new Date(c.created_at), "dd.MM.yy HH:mm", { locale: de })
                             : "–"}
                         </td>
-                        <td className="py-3.5 px-4 text-xs text-muted-foreground whitespace-nowrap">
+                        <td className="hidden 2xl:table-cell py-3.5 px-4 text-xs text-muted-foreground whitespace-nowrap">
                           {c.updated_at
                             ? format(new Date(c.updated_at), "dd.MM.yy HH:mm", { locale: de })
                             : "–"}
                         </td>
-                        <td>
+                        <td className="hidden xl:table-cell">
                         <div className="flex flex-col gap-1">
                           {/* [Papier] badge removed – paper flow decommissioned */}
                           {/* Confirmation email indicator for paper contracts removed – paper flow decommissioned */}
