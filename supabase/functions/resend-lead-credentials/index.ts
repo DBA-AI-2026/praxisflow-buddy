@@ -212,9 +212,9 @@ function buildCredentialsEmailHtml(fields: {
 <table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
   <!-- Header -->
   <tr>
-    <td style="background-color:#0b367f;padding:30px 40px;text-align:center;">
-      <h1 style="color:#ffffff;font-size:22pt;margin:0;font-family:verdana,geneva,sans-serif;">🦊 Honorarfuchs</h1>
-      <p style="color:#c8d8f0;font-size:11pt;margin:8px 0 0 0;">Ihre neuen Zugangsdaten</p>
+    <td bgcolor="#ffffff" style="background-color:#ffffff;padding:30px 40px;text-align:center;">
+      <img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/8270-Logo-RZ-Honorarfuchs-HFX-Claim.png" alt="HFX Honorarfuchs" width="310" height="80" style="display:block; max-width:100%; height:auto;" />
+      <p style="color:#0b367f;font-size:11pt;margin:16px 0 0 0;">Ihre neuen Zugangsdaten</p>
     </td>
   </tr>
   <!-- Body -->
@@ -256,8 +256,17 @@ function buildCredentialsEmailHtml(fields: {
   </tr>
   <!-- Footer -->
   <tr>
-    <td style="background-color:#f8f8f8;padding:16px 40px;border-top:1px solid #eeeeee;text-align:center;">
-      <p style="font-size:9pt;color:#aaaaaa;margin:0;">© Honorarfuchs GmbH · Bei Fragen: info@honorarfuchs.de</p>
+    <td style="background-color:#f8f8f8;padding:20px 40px;border-top:1px solid #eeeeee;text-align:center;">
+      <p style="font-size:9pt;color:#777777;margin:0 0 8px 0;line-height:1.5;">
+        <strong>HFX Honorarfuchs &ndash; eine Marke der MCC Medical CareCapital GmbH</strong><br>
+        Hohenzollernstr. 47 &middot; 47799 Krefeld
+      </p>
+      <p style="font-size:9pt;color:#777777;margin:0 0 8px 0;line-height:1.5;">
+        Gesch&auml;ftsf&uuml;hrer: Olaf Hagelkruys, Thilo Wiers-Keiser und Robbin Zielke<br>
+        Registergericht: Amtsgericht Krefeld &middot; HRB 14709<br>
+        Umsatzsteueridentifikationsnummer gem&auml;&szlig; &sect;27a Umsatzsteuergesetz: DE 227 420 712
+      </p>
+      <p style="font-size:9pt;color:#aaaaaa;margin:8px 0 0 0;">&copy; 2026 HFX Honorarfuchs &middot; Bei Fragen: info@hfx-honorarfuchs.de</p>
     </td>
   </tr>
 </table>
