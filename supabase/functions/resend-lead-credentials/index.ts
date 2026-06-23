@@ -178,7 +178,15 @@ Deno.serve(async (req) => {
         "Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung.",
         "Falls Sie diese E-Mail nicht angefordert haben, wenden Sie sich bitte umgehend an uns.",
         "",
-        "© Honorarfuchs GmbH · Bei Fragen: info@hfx-honorarfuchs.de",
+        "--",
+        "HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH",
+        "Hohenzollernstr. 47 · 47799 Krefeld",
+        "",
+        "Geschäftsführer: Olaf Hagelkruys, Thilo Wiers-Keiser und Robbin Zielke",
+        "Registergericht: Amtsgericht Krefeld · HRB 14709",
+        "Umsatzsteueridentifikationsnummer gemäß §27a Umsatzsteuergesetz: DE 227 420 712",
+        "",
+        "© 2026 HFX Honorarfuchs · Bei Fragen: info@hfx-honorarfuchs.de",
       ].join("\n"),
     });
 
