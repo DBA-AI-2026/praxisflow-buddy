@@ -1,4 +1,6 @@
 import { Resend } from "npm:resend@2.0.0";
+import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
+
 
 const ALLOWED_ORIGINS = [
   "https://praxisflow-buddy.lovable.app",
@@ -18,7 +20,7 @@ function getCorsHeaders(origin: string | null) {
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 // Admin email address to receive notifications
-const ADMIN_EMAIL = "info@honorarfuchs.de";
+const ADMIN_EMAIL = "info@hfx-honorarfuchs.de";
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -91,58 +93,45 @@ Deno.serve(async (req) => {
     const safeCompany = company ? esc(String(company).trim().slice(0, 200)) : null;
     const safeMessage = message ? esc(String(message).trim().slice(0, 1000)) : null;
 
+    // Build branded email body (header/footer come from renderBrandedEmail)
+    const bodyHtml = `
+      <p style="margin:0 0 16px 0;">Eine neue Zugangsanfrage ist eingegangen:</p>
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 16px 0;">
+        <tr><td style="padding:6px 0;font-size:11pt;color:#777777;text-transform:uppercase;letter-spacing:0.5px;width:120px;">Name</td><td style="padding:6px 0;font-size:11pt;color:#333333;">${safeName}</td></tr>
+        <tr><td style="padding:6px 0;font-size:11pt;color:#777777;text-transform:uppercase;letter-spacing:0.5px;">E-Mail</td><td style="padding:6px 0;font-size:11pt;color:#333333;">${safeEmail}</td></tr>
+        ${safeCompany ? `<tr><td style="padding:6px 0;font-size:11pt;color:#777777;text-transform:uppercase;letter-spacing:0.5px;">Firma</td><td style="padding:6px 0;font-size:11pt;color:#333333;">${safeCompany}</td></tr>` : ''}
+        ${safeMessage ? `<tr><td style="padding:6px 0;font-size:11pt;color:#777777;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Nachricht</td><td style="padding:6px 0;font-size:11pt;color:#333333;">${safeMessage}</td></tr>` : ''}
+      </table>
+      <p style="margin:16px 0 0 0;">Bitte im Admin-Portal anmelden, um die Anfrage zu bearbeiten.</p>
+    `;
+
+    const bodyText = [
+      "Eine neue Zugangsanfrage ist eingegangen:",
+      "",
+      `Name: ${safeName}`,
+      `E-Mail: ${safeEmail}`,
+      safeCompany ? `Firma: ${safeCompany}` : null,
+      safeMessage ? `Nachricht: ${safeMessage}` : null,
+      "",
+      "Bitte im Admin-Portal anmelden, um die Anfrage zu bearbeiten.",
+    ].filter(Boolean).join("\n");
+
+    const { html, text } = renderBrandedEmail({
+      subheadline: "Neue Zugangsanfrage",
+      bodyHtml,
+      bodyText,
+    });
+
     // Send notification email to admin
     const emailResponse = await resend.emails.send({
       from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
       reply_to: "info@hfx-honorarfuchs.de",
       to: [ADMIN_EMAIL],
       subject: `Neue Zugangsanfrage: ${safeName}`,
-      text: [
-        "Neue Zugangsanfrage eingegangen:",
-        "",
-        `Name: ${safeName}`,
-        `E-Mail: ${safeEmail}`,
-        safeCompany ? `Firma: ${safeCompany}` : null,
-        safeMessage ? `Nachricht: ${safeMessage}` : null,
-        "",
-        "Bitte im Admin-Portal anmelden, um die Anfrage zu bearbeiten.",
-        "",
-        "HFX Sales Portal",
-      ].filter(Boolean).join("\n"),
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #f97316, #ea580c); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-            .content { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
-            .field { margin-bottom: 15px; }
-            .label { font-weight: bold; color: #6b7280; font-size: 12px; text-transform: uppercase; }
-            .value { margin-top: 4px; font-size: 16px; }
-            .footer { margin-top: 20px; padding-top: 15px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1 style="margin: 0; font-size: 24px;">🦊 Neue Zugangsanfrage</h1>
-              <p style="margin: 10px 0 0 0; opacity: 0.9;">HFX Sales Portal</p>
-            </div>
-            <div class="content">
-              <p>Eine neue Zugangsanfrage ist eingegangen:</p>
-              <div class="field"><div class="label">Name</div><div class="value">${safeName}</div></div>
-              <div class="field"><div class="label">E-Mail</div><div class="value">${safeEmail}</div></div>
-              ${safeCompany ? `<div class="field"><div class="label">Firma</div><div class="value">${safeCompany}</div></div>` : ''}
-              ${safeMessage ? `<div class="field"><div class="label">Nachricht</div><div class="value">${safeMessage}</div></div>` : ''}
-              <div class="footer"><p>Bitte loggen Sie sich in das Admin-Portal ein, um die Anfrage zu bearbeiten.</p></div>
-            </div>
-          </div>
-        </body>
-        </html>
-      `,
+      text,
+      html,
     });
+
 
     console.log("Notification email sent successfully:", emailResponse);
 
