@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -115,55 +117,53 @@ Deno.serve(async (req) => {
       neu: "Der Status wurde auf Neu zurückgesetzt.",
     };
 
-    const emailHtml = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
-  <tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07);">
-      <!-- Header -->
-      <tr><td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:32px 24px;text-align:center;">
-        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Status Ihres Lead-Tipps aktualisiert</h1>
-        <p style="margin:8px 0 0;color:#c7d7f5;font-size:14px;">HFX Honorarfuchs Vertriebsportal</p>
-      </td></tr>
-      <!-- Body -->
-      <tr><td style="padding:28px 24px;">
-        <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hallo <strong>${tippgeberName}</strong>,</p>
-        <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
+    const bodyHtml = `
+        <p style="margin:0 0 16px 0;font-size:11pt;color:#333333;">Hallo <strong>${tippgeberName}</strong>,</p>
+        <p style="margin:0 0 24px 0;font-size:11pt;color:#555555;line-height:1.6;">
           der Status Ihres Lead-Tipps für <strong style="color:#111827;">${tip.praxis_name}</strong> wurde aktualisiert.
         </p>
-        <!-- Status badge -->
-        <div style="text-align:center;margin:0 0 24px;">
-          <span style="display:inline-block;background:${statusColor}1a;color:${statusColor};border:1px solid ${statusColor}33;border-radius:20px;padding:8px 24px;font-size:15px;font-weight:700;">
+        <div style="text-align:center;margin:0 0 24px 0;">
+          <span style="display:inline-block;background:${statusColor};color:#ffffff;border-radius:20px;padding:8px 24px;font-size:13pt;font-weight:700;font-family:verdana,geneva,sans-serif;">
             ${statusLabel}
           </span>
         </div>
-        <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;text-align:center;">
+        <p style="margin:0 0 24px 0;font-size:11pt;color:#555555;line-height:1.6;text-align:center;">
           ${statusNote[newStatus] ?? ""}
         </p>
-        <!-- Lead details -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:0 0 8px 0;">
           <tr><td style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
-            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Ihr Lead</p>
+            <p style="margin:0;font-size:9pt;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;font-family:verdana,geneva,sans-serif;">Ihr Lead</p>
           </td></tr>
           <tr><td style="padding:16px;">
             <table width="100%" cellpadding="0" cellspacing="0">
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;width:140px;">Arzt / Ärztin</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">${tip.arzt_name}</td></tr>
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Praxis</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">${tip.praxis_name}</td></tr>
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">PLZ</td><td style="padding:4px 0;font-size:13px;color:#111827;">${tip.plz}</td></tr>
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Geschäftsbereich</td><td style="padding:4px 0;font-size:13px;color:#111827;">${tip.geschaeftsbereich}</td></tr>
+              <tr><td style="padding:4px 0;font-size:10pt;color:#6b7280;width:140px;font-family:verdana,geneva,sans-serif;">Arzt / Ärztin</td><td style="padding:4px 0;font-size:10pt;color:#111827;font-weight:500;font-family:verdana,geneva,sans-serif;">${tip.arzt_name}</td></tr>
+              <tr><td style="padding:4px 0;font-size:10pt;color:#6b7280;font-family:verdana,geneva,sans-serif;">Praxis</td><td style="padding:4px 0;font-size:10pt;color:#111827;font-weight:500;font-family:verdana,geneva,sans-serif;">${tip.praxis_name}</td></tr>
+              <tr><td style="padding:4px 0;font-size:10pt;color:#6b7280;font-family:verdana,geneva,sans-serif;">PLZ</td><td style="padding:4px 0;font-size:10pt;color:#111827;font-family:verdana,geneva,sans-serif;">${tip.plz}</td></tr>
+              <tr><td style="padding:4px 0;font-size:10pt;color:#6b7280;font-family:verdana,geneva,sans-serif;">Geschäftsbereich</td><td style="padding:4px 0;font-size:10pt;color:#111827;font-family:verdana,geneva,sans-serif;">${tip.geschaeftsbereich}</td></tr>
             </table>
           </td></tr>
         </table>
-      </td></tr>
-      <!-- Footer -->
-      <tr><td style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center;">
-        <p style="margin:0;font-size:12px;color:#9ca3af;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
-        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${new Date().getFullYear()} HFX Honorarfuchs GmbH</p>
-      </td></tr>
-    </table>
-  </td></tr>
-</table>
-</body></html>`;
+    `;
+
+    const bodyText = [
+      `Hallo ${tippgeberName},`,
+      "",
+      `der Status Ihres Lead-Tipps für ${tip.praxis_name} wurde aktualisiert.`,
+      "",
+      `Neuer Status: ${statusLabel}`,
+      statusNote[newStatus] ?? "",
+      "",
+      `Arzt / Ärztin: ${tip.arzt_name}`,
+      `Praxis: ${tip.praxis_name}`,
+      `PLZ: ${tip.plz}`,
+      `Geschäftsbereich: ${tip.geschaeftsbereich}`,
+    ].filter(Boolean).join("\n");
+
+    const { html, text } = renderBrandedEmail({
+      subheadline: "Status-Update zu Ihrem Lead-Tipp",
+      bodyHtml,
+      bodyText,
+    });
 
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -173,25 +173,11 @@ Deno.serve(async (req) => {
         reply_to: "info@hfx-honorarfuchs.de",
         to: [tippgeberEmail],
         subject: `Status Ihres Tipps für ${tip.praxis_name}: ${statusLabel}`,
-        html: emailHtml,
-        text: [
-          `Hallo ${tippgeberName},`,
-          "",
-          `der Status Ihres Lead-Tipps für ${tip.praxis_name} wurde aktualisiert.`,
-          "",
-          `Neuer Status: ${statusLabel}`,
-          statusNote[newStatus] ?? "",
-          "",
-          `Arzt / Ärztin: ${tip.arzt_name}`,
-          `Praxis: ${tip.praxis_name}`,
-          `PLZ: ${tip.plz}`,
-          `Geschäftsbereich: ${tip.geschaeftsbereich}`,
-          "",
-          "Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.",
-          `© ${new Date().getFullYear()} HFX Honorarfuchs GmbH`,
-        ].filter(Boolean).join("\n"),
+        html,
+        text,
       }),
     });
+
 
     if (!emailRes.ok) {
       const errText = await emailRes.text();
