@@ -206,21 +206,10 @@ Deno.serve(async (req) => {
 
     // ── 4. Notification email to AD ────────────────────────────────────────
     if (adEmail && RESEND_API_KEY && adNotifEnabled) {
-      const adEmailHtml = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
-  <tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07);">
-      <!-- Header -->
-      <tr><td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:32px 24px;text-align:center;">
-        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Neuer Lead-Tipp eingegangen 🎯</h1>
-        <p style="margin:8px 0 0;color:#c7d7f5;font-size:14px;">Tippgeber: ${tippgeberName}</p>
-      </td></tr>
-      <!-- Body -->
-      <tr><td style="padding:28px 24px;">
+      const adBodyHtml = `
         <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hallo,</p>
         <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
-          Ein neuer Lead-Tipp wurde durch einen Tippgeber eingereicht und Ihnen zugeordnet.
+          Ein neuer Lead-Tipp von <strong>${tippgeberName}</strong> wurde eingereicht und Ihnen zugeordnet.
         </p>
         <!-- Lead details -->
         <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:20px;">
@@ -250,17 +239,32 @@ Deno.serve(async (req) => {
               ${tippgeberEmail ? `<tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Kontakt</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="mailto:${tippgeberEmail}" style="color:#0b367f;">${tippgeberEmail}</a></td></tr>` : ""}
             </table>
           </td></tr>
-        </table>
-      </td></tr>
-      <!-- Footer -->
-      <tr><td style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center;">
-        <p style="margin:0;font-size:12px;color:#9ca3af;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
-        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${new Date().getFullYear()} HFX Honorarfuchs GmbH</p>
-      </td></tr>
-    </table>
-  </td></tr>
-</table>
-</body></html>`;
+        </table>`;
+
+      const adBodyText = [
+        "Hallo,",
+        "",
+        `Ein neuer Lead-Tipp von ${tippgeberName} wurde eingereicht und Ihnen zugeordnet.`,
+        "",
+        "Lead-Details:",
+        `- Arzt / Ärztin: ${tip.arzt_name}`,
+        `- Praxis: ${tip.praxis_name}`,
+        `- PLZ: ${tip.plz}`,
+        ...(tip.email ? [`- E-Mail Praxis: ${tip.email}`] : []),
+        ...(tip.telefon ? [`- Telefon Praxis: ${tip.telefon}`] : []),
+        `- Geschäftsbereich: ${tip.geschaeftsbereich}`,
+        `- Dienstleistung: ${tip.gewuenschte_dienstleistung}`,
+        "",
+        "Empfohlen von:",
+        `- Tippgeber: ${tippgeberName}`,
+        ...(tippgeberEmail ? [`- Kontakt: ${tippgeberEmail}`] : []),
+      ].join("\n");
+
+      const { html: adHtml, text: adText } = renderBrandedEmail({
+        subheadline: "Neuer Lead-Tipp eingegangen",
+        bodyHtml: adBodyHtml,
+        bodyText: adBodyText,
+      });
 
       await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -269,7 +273,8 @@ Deno.serve(async (req) => {
           from: "noreply@hfx-honorarfuchs.de",
           to: [adEmail],
           subject: `Neuer Lead-Tipp: ${tip.praxis_name} (PLZ ${tip.plz})`,
-          html: adEmailHtml,
+          html: adHtml,
+          text: adText,
         }),
       });
     }
