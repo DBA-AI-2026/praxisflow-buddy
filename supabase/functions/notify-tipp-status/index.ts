@@ -15,10 +15,10 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  neu: "#3b82f6",
-  in_bearbeitung: "#f59e0b",
-  abgeschlossen: "#10b981",
-  abgelehnt: "#ef4444",
+  neu: "#1d4ed8",
+  in_bearbeitung: "#b45309",
+  abgeschlossen: "#047857",
+  abgelehnt: "#b91c1c",
 };
 
 Deno.serve(async (req) => {
