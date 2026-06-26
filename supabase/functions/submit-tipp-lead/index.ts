@@ -285,28 +285,19 @@ Deno.serve(async (req) => {
       const formattedDate = reservationDate.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
 
       const adSection = (adEmail || adTelefon)
-        ? `<tr><td style="padding:16px 24px;background:#f8fafc;border-radius:8px;">
-            <p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Ihr Ansprechpartner im Außendienst</p>
-            ${adEmail ? `<p style="margin:0 0 4px;font-size:14px;color:#0b367f;">📧 <a href="mailto:${adEmail}" style="color:#0b367f;">${adEmail}</a></p>` : ""}
-            ${adTelefon ? `<p style="margin:0;font-size:14px;color:#0b367f;">📞 <a href="tel:${adTelefon}" style="color:#0b367f;">${adTelefon}</a></p>` : ""}
-           </td></tr>`
+        ? `<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-top:8px;">
+            <tr><td style="padding:16px;background:#f8fafc;">
+              <p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Ihr Ansprechpartner im Außendienst</p>
+              ${adEmail ? `<p style="margin:0 0 4px;font-size:14px;color:#0b367f;">📧 <a href="mailto:${adEmail}" style="color:#0b367f;">${adEmail}</a></p>` : ""}
+              ${adTelefon ? `<p style="margin:0;font-size:14px;color:#0b367f;">📞 <a href="tel:${adTelefon}" style="color:#0b367f;">${adTelefon}</a></p>` : ""}
+            </td></tr>
+          </table>`
         : "";
 
-      const emailHtml = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
-  <tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07);">
-      <!-- Header -->
-      <tr><td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:32px 24px;text-align:center;">
-        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Ihr Lead-Tipp ist eingegangen ✓</h1>
-        <p style="margin:8px 0 0;color:#c7d7f5;font-size:14px;">Vielen Dank für Ihre Empfehlung!</p>
-      </td></tr>
-      <!-- Body -->
-      <tr><td style="padding:28px 24px;">
+      const tippgeberBodyHtml = `
         <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hallo <strong>${tippgeberName}</strong>,</p>
         <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
-          Ihr Lead-Tipp wurde erfolgreich erfasst und wird von unserem Vertriebsteam bearbeitet.
+          vielen Dank für Ihre Empfehlung! Ihr Lead-Tipp wurde erfolgreich erfasst und wird von unserem Vertriebsteam bearbeitet.
           Die Reservierungsfrist läuft bis zum <strong style="color:#0b367f;">${formattedDate}</strong>.
         </p>
         <!-- Lead details -->
@@ -324,17 +315,34 @@ Deno.serve(async (req) => {
             </table>
           </td></tr>
         </table>
-        ${adSection}
-      </td></tr>
-      <!-- Footer -->
-      <tr><td style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center;">
-        <p style="margin:0;font-size:12px;color:#9ca3af;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
-        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${new Date().getFullYear()} HFX Honorarfuchs GmbH</p>
-      </td></tr>
-    </table>
-  </td></tr>
-</table>
-</body></html>`;
+        ${adSection}`;
+
+      const tippgeberBodyText = [
+        `Hallo ${tippgeberName},`,
+        "",
+        `vielen Dank für Ihre Empfehlung! Ihr Lead-Tipp wurde erfolgreich erfasst und wird von unserem Vertriebsteam bearbeitet. Die Reservierungsfrist läuft bis zum ${formattedDate}.`,
+        "",
+        "Übermittelter Lead:",
+        `- Arzt / Ärztin: ${tip.arzt_name}`,
+        `- Praxis: ${tip.praxis_name}`,
+        `- PLZ: ${tip.plz}`,
+        `- Geschäftsbereich: ${tip.geschaeftsbereich}`,
+        `- Dienstleistung: ${tip.gewuenschte_dienstleistung}`,
+        ...((adEmail || adTelefon)
+          ? [
+              "",
+              "Ihr Ansprechpartner im Außendienst:",
+              ...(adEmail ? [`- E-Mail: ${adEmail}`] : []),
+              ...(adTelefon ? [`- Telefon: ${adTelefon}`] : []),
+            ]
+          : []),
+      ].join("\n");
+
+      const { html: tippgeberHtml, text: tippgeberText } = renderBrandedEmail({
+        subheadline: "Ihr Lead-Tipp ist eingegangen",
+        bodyHtml: tippgeberBodyHtml,
+        bodyText: tippgeberBodyText,
+      });
 
       await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -343,7 +351,8 @@ Deno.serve(async (req) => {
           from: "noreply@hfx-honorarfuchs.de",
           to: [tippgeberEmail],
           subject: `Ihr Lead-Tipp für ${tip.praxis_name} wurde erfasst`,
-          html: emailHtml,
+          html: tippgeberHtml,
+          text: tippgeberText,
         }),
       });
     }
