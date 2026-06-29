@@ -16,7 +16,7 @@
 // ============================================================================
 
 export const LOGO_URL =
-  "https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/8270-Logo-RZ-Honorarfuchs-HFX-Claim.png";
+  "https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/8270-Logo-RZ-Honorarfuchs-HFX.png";
 
 export interface RenderBrandedEmailInput {
   /** Optionale Sub-Headline unterhalb des Logos, #0b367f. */
