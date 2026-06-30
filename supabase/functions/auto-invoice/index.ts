@@ -437,6 +437,10 @@ Deno.serve(async (req) => {
         const taxAmount = Math.round(netAmount * taxRate) / 100;
         const grossAmount = Math.round((netAmount + taxAmount) * 100) / 100;
 
+        // Echter Null-Beleg: monthly_price=0, kein Waiver, keine Usage, kein Standort-GOÄ.
+        // Beleg wird angelegt (Ledger-Parität), aber NICHT per Mail versendet.
+        const isZeroNonWaiver = grossAmount === 0 && !isInWaiverPeriod && !isLocationGoae;
+
         const collectionDate = addBusinessDays(today, 3);
         const dueDateStr = collectionDate.toISOString().split("T")[0];
         const collectionDateFormatted = collectionDate.toLocaleDateString("de-DE");
@@ -521,7 +525,7 @@ Deno.serve(async (req) => {
             tax_amount: taxAmount,
             gross_amount: grossAmount,
             status: "entwurf",
-            notes: `Automatisch generiert – Abrechnungszeitraum: ${billingPeriod} (${periodMonthStr})${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} geprüfte GOÄ-Rechnungen: ${usageNetAmount.toFixed(2)} € netto` : ""}`,
+            notes: `Automatisch generiert – Abrechnungszeitraum: ${billingPeriod} (${periodMonthStr})${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} geprüfte GOÄ-Rechnungen: ${usageNetAmount.toFixed(2)} € netto` : ""}${isZeroNonWaiver ? " | Null-Beleg ohne Versand (monthly_price=0, kein Waiver, keine Usage)" : ""}`,
           } as any)
           .select()
           .single();
@@ -790,35 +794,40 @@ Deno.serve(async (req) => {
 </div>
 </body></html>`;
 
-        const emailTo = contract.rechnungs_email || contract.email;
-        const subjectSuffix = grossAmount === 0 ? " (kein Zahlbetrag)" : "";
-        const sendResult = await resend.emails.send({
-          from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
-          reply_to: "info@hfx-honorarfuchs.de",
-          to: [emailTo],
-          subject: `Rechnung ${invoice.invoice_number} – ${contract.customer_name} – ${billingPeriod}${subjectSuffix}`,
-          html: emailHtml,
-          text: grossAmount > 0
-            ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nGesamtbetrag: ${grossAmount.toFixed(2)} €\n${hasStripeCustomer ? `Einzugsdatum: ${collectionDateFormatted}` : `Bitte überweisen Sie bis zum ${collectionDateFormatted}.`}\nDiese Rechnung wurde automatisch generiert.`
-            : `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus (Einführungsangebot aktiv).\nDiese Rechnung wurde automatisch generiert.`,
-        });
-
         const nowTs = new Date().toISOString();
 
-        // A4: email_sent_at IMMER setzen (Kunden-Mail wurde versendet, ggf. mit Hinweisblock).
-        // Status nur auf 'versendet' anheben, wenn Stripe nicht fehlgeschlagen ist – sonst bleibt
-        // 'zahlung_fehlgeschlagen' (aus Catch). Status-Schutz verhindert Überschreiben von bezahlt/storniert.
-        if (stripeChargeFailed) {
-          await supabase
-            .from("invoices")
-            .update({ email_sent_at: nowTs })
-            .eq("id", invoice.id);
+        if (isZeroNonWaiver) {
+          // Echter Null-Beleg: keine Kundenmail, Status bleibt 'entwurf', email_sent_at bleibt leer.
+          console.log(`[auto-invoice] Null-Beleg ohne Versand – Contract ${contract.id}, Periode ${periodMonthStr} (Invoice ${invoice.invoice_number})`);
         } else {
-          await supabase
-            .from("invoices")
-            .update({ status: "versendet", email_sent_at: nowTs })
-            .eq("id", invoice.id)
-            .not("status", "in", "(bezahlt,storniert)");
+          const emailTo = contract.rechnungs_email || contract.email;
+          const subjectSuffix = grossAmount === 0 ? " (kein Zahlbetrag)" : "";
+          await resend.emails.send({
+            from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+            reply_to: "info@hfx-honorarfuchs.de",
+            to: [emailTo],
+            subject: `Rechnung ${invoice.invoice_number} – ${contract.customer_name} – ${billingPeriod}${subjectSuffix}`,
+            html: emailHtml,
+            text: grossAmount > 0
+              ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nGesamtbetrag: ${grossAmount.toFixed(2)} €\n${hasStripeCustomer ? `Einzugsdatum: ${collectionDateFormatted}` : `Bitte überweisen Sie bis zum ${collectionDateFormatted}.`}\nDiese Rechnung wurde automatisch generiert.`
+              : `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus (Einführungsangebot aktiv).\nDiese Rechnung wurde automatisch generiert.`,
+          });
+
+          // A4: email_sent_at IMMER setzen (Kunden-Mail wurde versendet, ggf. mit Hinweisblock).
+          // Status nur auf 'versendet' anheben, wenn Stripe nicht fehlgeschlagen ist – sonst bleibt
+          // 'zahlung_fehlgeschlagen' (aus Catch). Status-Schutz verhindert Überschreiben von bezahlt/storniert.
+          if (stripeChargeFailed) {
+            await supabase
+              .from("invoices")
+              .update({ email_sent_at: nowTs })
+              .eq("id", invoice.id);
+          } else {
+            await supabase
+              .from("invoices")
+              .update({ status: "versendet", email_sent_at: nowTs })
+              .eq("id", invoice.id)
+              .not("status", "in", "(bezahlt,storniert)");
+          }
         }
 
         // A5/A6: Provisionen + fibu_events nur wenn Stripe-Charge erfolgreich war.
