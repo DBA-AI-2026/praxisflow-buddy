@@ -717,7 +717,7 @@ Deno.serve(async (req) => {
 
         // ── Send invoice email ────────────────────────────────────────────────
         const positionsHtml = positions
-          .filter(p => p.unit_price > 0 || (isInWaiverPeriod && p === positions[0]))
+          .filter(p => p.unit_price > 0 || (isInWaiverPeriod && p === positions[0]) || (isLocationGoae && p === positions[0]))
           .map((p) => `
           <tr>
             <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">${p.description}</td>
@@ -810,7 +810,11 @@ Deno.serve(async (req) => {
             html: emailHtml,
             text: grossAmount > 0
               ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nGesamtbetrag: ${grossAmount.toFixed(2)} €\n${hasStripeCustomer ? `Einzugsdatum: ${collectionDateFormatted}` : `Bitte überweisen Sie bis zum ${collectionDateFormatted}.`}\nDiese Rechnung wurde automatisch generiert.`
-              : `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus (Einführungsangebot aktiv).\nDiese Rechnung wurde automatisch generiert.`,
+              : isInWaiverPeriod
+              ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus (Einführungsangebot aktiv).\nDiese Rechnung wurde automatisch generiert.`
+              : isLocationGoae
+              ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus. Die Grundgebühr wird zentral über Ihren Hauptstandort abgerechnet.\nDiese Rechnung wurde automatisch generiert.`
+              : `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus.\nDiese Rechnung wurde automatisch generiert.`,
           });
 
           // A4: email_sent_at IMMER setzen (Kunden-Mail wurde versendet, ggf. mit Hinweisblock).
