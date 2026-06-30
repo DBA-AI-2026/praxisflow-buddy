@@ -258,8 +258,8 @@ function AddLocationButton({
   contracts: ContractRow[];
 }) {
   const navigate = useNavigate();
-  const { isAdmin, isVertragsabteilung, isSalesLead } = useUserRole();
-  const canCreate = isAdmin || isVertragsabteilung || isSalesLead;
+  const { isAdmin, isVertragsabteilung, isSalesLead, isUser, isRegionalLead } = useUserRole();
+  const canCreate = isAdmin || isVertragsabteilung || isSalesLead || isUser || isRegionalLead;
   if (!customer || !canCreate) return null;
   const hasGoae = contracts.some((c) => /GOÄ|GOA/i.test(c.product_name ?? ""));
   if (!hasGoae) return null;
