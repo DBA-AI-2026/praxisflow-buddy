@@ -233,46 +233,50 @@ Deno.serve(async (req) => {
         }
 
         if (adEmail) {
-          const adHtml = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
-  <tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07);">
-      <tr><td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:32px 24px;text-align:center;">
-        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Testphase läuft in 3 Tagen ab ⏰</h1>
-        <p style="margin:8px 0 0;color:#c7d7f5;font-size:14px;">Jetzt Kontakt aufnehmen!</p>
-      </td></tr>
-      <tr><td style="padding:28px 24px;">
-        <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hallo,</p>
-        <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
+          const adBodyHtml = `
+        <p style="margin:0 0 16px 0;">Hallo,</p>
+        <p style="margin:0 0 24px 0;">
           Die Testphase eines Interessenten aus Ihrem Gebiet endet in <strong style="color:#0b367f;">3 Tagen</strong> am <strong style="color:#0b367f;">${testEndFormatted}</strong>. Dies ist ein guter Zeitpunkt, um Kontakt aufzunehmen.
         </p>
-        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:20px;">
-          <tr><td style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
-            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Interessent</p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:0 0 20px 0;">
+          <tr><td style="background-color:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:9pt;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#777777;">Interessent</p>
           </td></tr>
           <tr><td style="padding:16px;">
             <table width="100%" cellpadding="0" cellspacing="0">
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;width:160px;">Unternehmen</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">${demo.company_name}</td></tr>
-              ${demo.contact_name ? `<tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Ansprechpartner</td><td style="padding:4px 0;font-size:13px;color:#111827;">${demo.contact_name}</td></tr>` : ""}
-              ${demo.email ? `<tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">E-Mail</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="mailto:${demo.email}" style="color:#0b367f;">${demo.email}</a></td></tr>` : ""}
-              ${demo.telefon ? `<tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Telefon</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="tel:${demo.telefon}" style="color:#0b367f;">${demo.telefon}</a></td></tr>` : ""}
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Produkt</td><td style="padding:4px 0;font-size:13px;color:#111827;">${demo.product_name ?? "–"}</td></tr>
-              ${demo.hfx_customer_number ? `<tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">HFX-Nr.</td><td style="padding:4px 0;font-size:13px;color:#111827;font-family:monospace;">${demo.hfx_customer_number}</td></tr>` : ""}
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Testende</td><td style="padding:4px 0;font-size:13px;color:#0b367f;font-weight:600;">${testEndFormatted}</td></tr>
+              <tr><td style="padding:4px 0;font-size:10pt;color:#777777;width:160px;">Unternehmen</td><td style="padding:4px 0;font-size:10pt;color:#111827;font-weight:500;">${demo.company_name}</td></tr>
+              ${demo.contact_name ? `<tr><td style="padding:4px 0;font-size:10pt;color:#777777;">Ansprechpartner</td><td style="padding:4px 0;font-size:10pt;color:#111827;">${demo.contact_name}</td></tr>` : ""}
+              ${demo.email ? `<tr><td style="padding:4px 0;font-size:10pt;color:#777777;">E-Mail</td><td style="padding:4px 0;font-size:10pt;color:#0b367f;"><a href="mailto:${demo.email}" style="color:#0b367f;">${demo.email}</a></td></tr>` : ""}
+              ${demo.telefon ? `<tr><td style="padding:4px 0;font-size:10pt;color:#777777;">Telefon</td><td style="padding:4px 0;font-size:10pt;color:#0b367f;"><a href="tel:${demo.telefon}" style="color:#0b367f;">${demo.telefon}</a></td></tr>` : ""}
+              <tr><td style="padding:4px 0;font-size:10pt;color:#777777;">Produkt</td><td style="padding:4px 0;font-size:10pt;color:#111827;">${demo.product_name ?? "–"}</td></tr>
+              ${demo.hfx_customer_number ? `<tr><td style="padding:4px 0;font-size:10pt;color:#777777;">HFX-Nr.</td><td style="padding:4px 0;font-size:10pt;color:#111827;font-family:monospace;">${demo.hfx_customer_number}</td></tr>` : ""}
+              <tr><td style="padding:4px 0;font-size:10pt;color:#777777;">Testende</td><td style="padding:4px 0;font-size:10pt;color:#0b367f;font-weight:600;">${testEndFormatted}</td></tr>
             </table>
           </td></tr>
         </table>
-        <p style="margin:0;font-size:13px;color:#6b7280;">Bitte nehmen Sie zeitnah Kontakt auf, um einen Abschluss zu begleiten.</p>
-      </td></tr>
-      <tr><td style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center;">
-        <p style="margin:0;font-size:12px;color:#9ca3af;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
-        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${new Date().getFullYear()} HFX Honorarfuchs GmbH</p>
-      </td></tr>
-    </table>
-  </td></tr>
-</table>
-</body></html>`;
+        <p style="margin:0;">Bitte nehmen Sie zeitnah Kontakt auf, um einen Abschluss zu begleiten.</p>`;
+
+          const adBodyText = [
+            "Hallo,",
+            "",
+            `Die Testphase eines Interessenten aus Ihrem Gebiet endet in 3 Tagen am ${testEndFormatted}.`,
+            "",
+            `Unternehmen: ${demo.company_name}`,
+            demo.contact_name ? `Ansprechpartner: ${demo.contact_name}` : null,
+            demo.email ? `E-Mail: ${demo.email}` : null,
+            demo.telefon ? `Telefon: ${demo.telefon}` : null,
+            `Produkt: ${demo.product_name ?? "–"}`,
+            demo.hfx_customer_number ? `HFX-Nr.: ${demo.hfx_customer_number}` : null,
+            `Testende: ${testEndFormatted}`,
+            "",
+            "Bitte nehmen Sie zeitnah Kontakt auf.",
+          ].filter(Boolean).join("\n");
+
+          const adEmailRendered = renderBrandedEmail({
+            subheadline: "Testphase läuft in 3 Tagen ab",
+            bodyHtml: adBodyHtml,
+            bodyText: adBodyText,
+          });
 
           if (adNotifEnabled) {
           await fetch("https://api.resend.com/emails", {
@@ -282,25 +286,9 @@ Deno.serve(async (req) => {
               from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
               reply_to: "info@hfx-honorarfuchs.de",
               to: [adEmail],
-              subject: `⏰ Testphase endet bald: ${demo.company_name} (${testEndFormatted})`,
-              html: adHtml,
-              text: [
-                "Hallo,",
-                "",
-                `Die Testphase eines Interessenten aus Ihrem Gebiet endet in 3 Tagen am ${testEndFormatted}.`,
-                "",
-                `Unternehmen: ${demo.company_name}`,
-                demo.contact_name ? `Ansprechpartner: ${demo.contact_name}` : null,
-                demo.email ? `E-Mail: ${demo.email}` : null,
-                demo.telefon ? `Telefon: ${demo.telefon}` : null,
-                `Produkt: ${demo.product_name ?? "–"}`,
-                demo.hfx_customer_number ? `HFX-Nr.: ${demo.hfx_customer_number}` : null,
-                `Testende: ${testEndFormatted}`,
-                "",
-                "Bitte nehmen Sie zeitnah Kontakt auf.",
-                "",
-                "HFX Honorarfuchs",
-              ].filter(Boolean).join("\n"),
+              subject: `Testphase endet bald: ${demo.company_name} (${testEndFormatted})`,
+              html: adEmailRendered.html,
+              text: adEmailRendered.text,
             }),
           });
           console.log(`AD reminder sent to ${adEmail} for demo ${demo.id}`);
