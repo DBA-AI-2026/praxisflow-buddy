@@ -154,7 +154,7 @@ function buildCredentialsEmailHtml(fields: {
 <table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
   <tr>
     <td bgcolor="#ffffff" style="background-color:#ffffff;padding:30px 40px;text-align:center;">
-      <img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/8270-Logo-RZ-Honorarfuchs-HFX-Claim.png" alt="HFX Honorarfuchs" width="310" height="80" style="display:block; max-width:100%; height:auto;" />
+      <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/8270-Logo-RZ-Honorarfuchs-HFX.png" alt="HFX Honorarfuchs" style="display:block;max-width:280px;height:auto;margin:0 auto;border:0;" />
       <p style="color:#0b367f;font-size:11pt;margin:16px 0 0 0;">Ihre Zugangsdaten (Standort)</p>
     </td>
   </tr>

@@ -220,7 +220,7 @@ ${nachrichtSection}
 </td></tr>
 <tr><td align="center" valign="top" style="font-size:0; line-height:0;" height="120">&nbsp;</td></tr>
 <tr><td bgcolor="#ffffff" align="center" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:10pt; font-weight:400;">
-<img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/8270-Logo-RZ-Honorarfuchs-HFX-Claim.png" width="310" height="80" alt="Honorarfuchs" style="width:310px; height:80px;" />
+<img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/8270-Logo-RZ-Honorarfuchs-HFX.png" alt="Honorarfuchs" style="display:block;max-width:280px;height:auto;margin:0 auto;border:0;" />
 </td></tr>
 <tr><td bgcolor="#ffffff" align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td></tr>
 <tr><td bgcolor="#f8f8f8" align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td></tr>
