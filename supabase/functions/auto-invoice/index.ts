@@ -437,6 +437,10 @@ Deno.serve(async (req) => {
         const taxAmount = Math.round(netAmount * taxRate) / 100;
         const grossAmount = Math.round((netAmount + taxAmount) * 100) / 100;
 
+        // Echter Null-Beleg: monthly_price=0, kein Waiver, keine Usage, kein Standort-GOÄ.
+        // Beleg wird angelegt (Ledger-Parität), aber NICHT per Mail versendet.
+        const isZeroNonWaiver = grossAmount === 0 && !isInWaiverPeriod && !isLocationGoae;
+
         const collectionDate = addBusinessDays(today, 3);
         const dueDateStr = collectionDate.toISOString().split("T")[0];
         const collectionDateFormatted = collectionDate.toLocaleDateString("de-DE");
