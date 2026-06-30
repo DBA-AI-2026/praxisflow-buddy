@@ -105,95 +105,65 @@ Deno.serve(async (req) => {
         }
       }
 
-      const ctaSection = stripeCheckoutUrl
+      const ctaHtml = stripeCheckoutUrl
         ? `
-        <!-- Direct Booking CTA -->
-        <tr>
-          <td style="padding:0 40px 32px;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#f0f7ff,#e8f0fe);border-radius:8px;border:1px solid #bfdbfe;margin:0 0 24px;">
-              <tr><td style="padding:24px;">
-                <p style="color:#1e40af;font-size:16px;font-weight:700;margin:0 0 8px;">🚀 Jetzt direkt weiterbuchen</p>
-                <p style="color:#374151;font-size:14px;line-height:1.5;margin:0 0 16px;">
-                  Gefällt Ihnen <strong>${demo.product_name}</strong>? Buchen Sie jetzt direkt online und nutzen Sie das Produkt ohne Unterbrechung weiter.
-                </p>
-                <table cellpadding="0" cellspacing="0">
-                  <tr><td style="background:#0b367f;border-radius:6px;padding:14px 28px;">
-                    <a href="${stripeCheckoutUrl}" style="color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;display:block;">
-                      ✅ Jetzt kostenpflichtig buchen →
-                    </a>
-                  </td></tr>
-                </table>
-                <p style="color:#6b7280;font-size:12px;margin:10px 0 0;">Sichere Zahlung per Kreditkarte oder SEPA-Lastschrift über Stripe.</p>
-              </td></tr>
-            </table>
-          </td>
-        </tr>`
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f7ff;border-radius:8px;border:1px solid #bfdbfe;margin:0 0 24px 0;">
+          <tr><td style="padding:24px;">
+            <p style="color:#0b367f;font-size:12pt;font-weight:700;margin:0 0 8px 0;">Jetzt direkt weiterbuchen</p>
+            <p style="color:#333333;font-size:11pt;line-height:1.5;margin:0 0 16px 0;">
+              Gefällt Ihnen <strong>${demo.product_name}</strong>? Buchen Sie jetzt direkt online und nutzen Sie das Produkt ohne Unterbrechung weiter.
+            </p>
+            <table cellpadding="0" cellspacing="0"><tr>
+              <td style="background-color:#0b367f;border-radius:6px;">
+                <a href="${stripeCheckoutUrl}" style="display:inline-block;padding:14px 28px;color:#ffffff;font-size:11pt;font-weight:700;text-decoration:none;">Jetzt kostenpflichtig buchen</a>
+              </td>
+            </tr></table>
+            <p style="color:#777777;font-size:9pt;margin:10px 0 0 0;">Sichere Zahlung per Kreditkarte oder SEPA-Lastschrift über Stripe.</p>
+          </td></tr>
+        </table>`
         : `
-        <!-- Fallback CTA (no Stripe price mapped) -->
-        <tr>
-          <td style="padding:0 40px 32px;">
-            <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 16px;">
-              Möchten Sie HFX weiter nutzen? Sprechen Sie uns an – wir erstellen Ihnen gerne ein individuelles Angebot.
-            </p>
-          </td>
-        </tr>`;
+        <p style="color:#333333;font-size:11pt;line-height:1.5;margin:0 0 16px 0;">
+          Möchten Sie HFX weiter nutzen? Sprechen Sie uns an – wir erstellen Ihnen gerne ein individuelles Angebot.
+        </p>`;
 
-      const html = `<!DOCTYPE html>
-<html lang="de">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f4f6fa;font-family:Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fa;padding:40px 0;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-        <!-- Header -->
-        <tr>
-          <td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:32px 40px;text-align:center;">
-            <p style="color:#ffffff;font-size:22px;font-weight:700;margin:0;">HFX Honorarfuchs</p>
-            <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:4px 0 0;">Ihre Testphase läuft bald ab</p>
-          </td>
-        </tr>
-        <!-- Body -->
-        <tr>
-          <td style="padding:40px 40px 24px;">
-            <p style="color:#1a1a2e;font-size:16px;margin:0 0 16px;">Guten Tag${demo.contact_name ? ` ${demo.contact_name}` : ""},</p>
-            <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 16px;">
-              wir möchten Sie daran erinnern, dass Ihre Testphase für <strong>${demo.product_name ?? "HFX-Produkt"}</strong>
-              ${demo.company_name ? ` (${demo.company_name})` : ""} in <strong>3 Tagen</strong> – am <strong>${testEndFormatted}</strong> – abläuft.
-            </p>
-            <!-- Test phase info box -->
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4ff;border-radius:6px;margin:0 0 24px;">
-              <tr><td style="padding:16px 20px;">
-                <p style="color:#0b367f;font-size:13px;font-weight:700;margin:0 0 8px;">📋 Ihre Testphase</p>
-                <p style="color:#374151;font-size:13px;margin:0;"><strong>Produkt:</strong> ${demo.product_name ?? "–"}</p>
-                ${demo.hfx_customer_number ? `<p style="color:#374151;font-size:13px;margin:4px 0 0;"><strong>HFX-Nr.:</strong> ${demo.hfx_customer_number}</p>` : ""}
-                <p style="color:#374151;font-size:13px;margin:4px 0 0;"><strong>Testende:</strong> ${testEndFormatted}</p>
-              </td></tr>
-            </table>
-          </td>
-        </tr>
-        ${ctaSection}
-        <!-- Sign off -->
-        <tr>
-          <td style="padding:0 40px 32px;">
-            <p style="color:#374151;font-size:15px;line-height:1.6;margin:0;">
-              Mit freundlichen Grüßen,<br>
-              <strong>Ihr HFX Honorarfuchs Team</strong>
-            </p>
-          </td>
-        </tr>
-        <!-- Footer -->
-        <tr>
-          <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
-            <p style="color:#9ca3af;font-size:12px;margin:0;">
-              HFX Honorarfuchs • Diese E-Mail wurde automatisch generiert.
-            </p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+      const customerBodyHtml = `
+        <p style="margin:0 0 16px 0;">Guten Tag${demo.contact_name ? ` ${demo.contact_name}` : ""},</p>
+        <p style="margin:0 0 16px 0;">
+          wir möchten Sie daran erinnern, dass Ihre Testphase für <strong>${demo.product_name ?? "HFX-Produkt"}</strong>${demo.company_name ? ` (${demo.company_name})` : ""} in <strong>3 Tagen</strong> – am <strong>${testEndFormatted}</strong> – abläuft.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f4ff;border-radius:6px;margin:0 0 24px 0;">
+          <tr><td style="padding:16px 20px;">
+            <p style="color:#0b367f;font-size:10pt;font-weight:700;margin:0 0 8px 0;">Ihre Testphase</p>
+            <p style="color:#333333;font-size:10pt;margin:0;"><strong>Produkt:</strong> ${demo.product_name ?? "–"}</p>
+            ${demo.hfx_customer_number ? `<p style="color:#333333;font-size:10pt;margin:4px 0 0 0;"><strong>HFX-Nr.:</strong> ${demo.hfx_customer_number}</p>` : ""}
+            <p style="color:#333333;font-size:10pt;margin:4px 0 0 0;"><strong>Testende:</strong> ${testEndFormatted}</p>
+          </td></tr>
+        </table>
+        ${ctaHtml}
+        <p style="margin:0;">Mit freundlichen Grüßen,<br><strong>Ihr HFX Honorarfuchs Team</strong></p>`;
+
+      const customerBodyText = [
+        `Guten Tag${demo.contact_name ? ` ${demo.contact_name}` : ""},`,
+        "",
+        `Ihre Testphase für ${demo.product_name ?? "HFX-Produkt"}${demo.company_name ? ` (${demo.company_name})` : ""} endet in 3 Tagen – am ${testEndFormatted}.`,
+        "",
+        `Produkt: ${demo.product_name ?? "–"}`,
+        demo.hfx_customer_number ? `HFX-Nr.: ${demo.hfx_customer_number}` : null,
+        `Testende: ${testEndFormatted}`,
+        "",
+        stripeCheckoutUrl
+          ? `Jetzt direkt weiterbuchen: ${stripeCheckoutUrl}`
+          : "Möchten Sie HFX weiter nutzen? Sprechen Sie uns an – wir erstellen Ihnen gerne ein individuelles Angebot.",
+        "",
+        "Mit freundlichen Grüßen,",
+        "Ihr HFX Honorarfuchs Team",
+      ].filter(Boolean).join("\n");
+
+      const customerEmail = renderBrandedEmail({
+        subheadline: "Ihre Testphase läuft bald ab",
+        bodyHtml: customerBodyHtml,
+        bodyText: customerBodyText,
+      });
 
       if (!customerReminderEnabled) {
         console.log(`Customer reminder disabled, skipping customer email for ${demo.email}`);
@@ -209,24 +179,9 @@ Deno.serve(async (req) => {
           from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
           reply_to: "info@hfx-honorarfuchs.de",
           to: [demo.email],
-          subject: `⏰ Erinnerung: Ihre Testphase endet am ${testEndFormatted}`,
-          html,
-          text: [
-            `Guten Tag${demo.contact_name ? ` ${demo.contact_name}` : ""},`,
-            "",
-            `Ihre Testphase für ${demo.product_name ?? "HFX-Produkt"}${demo.company_name ? ` (${demo.company_name})` : ""} endet in 3 Tagen – am ${testEndFormatted}.`,
-            "",
-            `Produkt: ${demo.product_name ?? "–"}`,
-            demo.hfx_customer_number ? `HFX-Nr.: ${demo.hfx_customer_number}` : null,
-            `Testende: ${testEndFormatted}`,
-            "",
-            stripeCheckoutUrl
-              ? `Jetzt direkt weiterbuchen: ${stripeCheckoutUrl}`
-              : "Möchten Sie HFX weiter nutzen? Sprechen Sie uns an – wir erstellen Ihnen gerne ein individuelles Angebot.",
-            "",
-            "Mit freundlichen Grüßen,",
-            "Ihr HFX Honorarfuchs Team",
-          ].filter(Boolean).join("\n"),
+          subject: `Erinnerung: Ihre Testphase endet am ${testEndFormatted}`,
+          html: customerEmail.html,
+          text: customerEmail.text,
         }),
       }) : { ok: true };
 
