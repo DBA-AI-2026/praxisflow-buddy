@@ -1499,6 +1499,11 @@ async function processFailedInvoiceRetry(params: {
     return "skipped";
   }
 
+  if (contract.status === "gesperrt") {
+    console.log(`[auto-invoice][retry] Vertrag ${contract.id} ist gesperrt – Retry übersprungen.`);
+    return "skipped";
+  }
+
   const positions: { description: string; quantity: number; unit_price: number }[] = Array.isArray(invoice.positions) ? invoice.positions : [];
   const netAmount = Number(invoice.net_amount) || 0;
   const taxAmount = Number(invoice.tax_amount) || 0;
