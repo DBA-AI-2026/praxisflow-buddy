@@ -1298,6 +1298,36 @@ export type Database = {
         }
         Relationships: []
       }
+      free_quota_grants: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          grant_type: string
+          hfx_customer_number: string
+          id: string
+          menge: number
+          quelle: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          grant_type: string
+          hfx_customer_number: string
+          id?: string
+          menge: number
+          quelle?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          grant_type?: string
+          hfx_customer_number?: string
+          id?: string
+          menge?: number
+          quelle?: string | null
+        }
+        Relationships: []
+      }
       integration_settings: {
         Row: {
           api_key_encrypted: string | null
