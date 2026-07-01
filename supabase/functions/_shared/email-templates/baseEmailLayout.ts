@@ -48,7 +48,7 @@ export function renderBrandedEmail(
 <tr><td align="center">
 <table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
   <tr>
-    <td bgcolor="#ffffff" style="background-color:#ffffff;padding:30px 40px;text-align:center;">
+    <td bgcolor="#ffffff" style="background-color:#ffffff;padding:30px 40px;text-align:center;border-bottom:3px solid #b6193d;">
       <img src="${LOGO_URL}" alt="HFX Honorarfuchs" style="display:block;max-width:280px;height:auto;margin:0 auto;border:0;" />
       ${subheadlineHtml}
     </td>
@@ -93,4 +93,18 @@ ${input.bodyHtml}
   ].join("\n");
 
   return { html, text };
+}
+
+export interface RenderBrandedButtonInput {
+  href: string;
+  label: string;
+}
+
+/**
+ * Kanonischer Brand-CTA-Button (rot #b6193d), Outlook-sicheres Bulletproof-Muster.
+ * bgcolor auf <td>, align="center" am <table>, kein display:inline-block am <a>.
+ * Phase 1: nur exportiert, noch nicht konsumiert (Mandat-Mail behält Navy bis Schritt 2).
+ */
+export function renderBrandedButton(input: RenderBrandedButtonInput): string {
+  return `<table role="presentation" align="center" cellspacing="0" cellpadding="0" border="0" style="margin:26px auto;"><tr><td align="center" bgcolor="#b6193d" style="border-radius:8px;padding:14px 28px;"><a href="${input.href}" target="_blank" rel="noopener noreferrer" style="color:#ffffff;font-size:16px;font-weight:bold;text-decoration:none;font-family:verdana,geneva,sans-serif;">${input.label}</a></td></tr></table>`;
 }
