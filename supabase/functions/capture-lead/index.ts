@@ -699,6 +699,22 @@ Deno.serve(async (req) => {
       if (qodiaResponse.ok) {
         await supabase.from("leads").update({ qodia_synced: true, qodia_conflict: false }).eq("id", lead.id);
         console.log(`Lead synced to Qodia: ${lead.hfx_customer_number}`);
+
+        // Freikontingent-Trial-Grant (Phase 1): genau ein Auto-Trial über 200 Stück
+        // pro Basis-HFX-Nummer. Standorte (-NN) erhalten KEINEN Auto-Grant.
+        // Idempotenz via partiellem Unique-Index (grant_type='trial').
+        if (!isStandortHfx(lead.hfx_customer_number)) {
+          const { error: grantErr } = await supabase.from("free_quota_grants").insert({
+            hfx_customer_number: lead.hfx_customer_number,
+            grant_type: "trial",
+            menge: 200,
+            quelle: "qodia_signup_auto",
+            created_by: null,
+          });
+          if (grantErr && !String(grantErr.message || "").toLowerCase().includes("duplicate")) {
+            console.error("free_quota_grants insert error:", grantErr);
+          }
+        }
       } else {
         const errText = await qodiaResponse.text();
         console.error(`Qodia sync failed (${qodiaResponse.status}):`, errText);
