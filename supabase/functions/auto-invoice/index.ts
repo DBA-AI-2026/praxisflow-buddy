@@ -406,9 +406,15 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Nutzungsgebühren (GOÄ-Verbrauch) – NUR für den exakten Abrechnungs-Vormonat. Unverändert.
+        // Nutzungsgebühren (GOÄ-Verbrauch) – NUR für den exakten Abrechnungs-Vormonat.
         let usageChargeIds: string[] = [];
         let usageNetAmount = 0;
+        // Freikontingent-Bookkeeping (Phase 2/Baustein 3)
+        let grantsTotal = 0;
+        let usageInvoicedPrior = 0;
+        let periodUsageQty = 0;
+        let freiQty = 0;
+        let grantDeductionNet = 0;
         if (contract.hfx_customer_number) {
           const { data: usageCharges } = await supabase
             .from("usage_charges")
@@ -423,11 +429,44 @@ Deno.serve(async (req) => {
             for (const uc of usageCharges) {
               const lineNet = uc.quantity * Number(uc.unit_price);
               usageNetAmount += lineNet;
+              periodUsageQty += Number(uc.quantity) || 0;
               positions.push({
                 description: uc.unit_description || `Geprüfte GOÄ-Rechnungen (HFX GOÄ) – ${billingPeriod}`,
                 quantity: uc.quantity,
                 unit_price: Number(uc.unit_price),
               });
+            }
+
+            // ── Freikontingent-Abzug (einmal auf Perioden-Summe, nicht per Charge) ──
+            const [{ data: grantRows }, { data: priorRows }] = await Promise.all([
+              supabase
+                .from("free_quota_grants")
+                .select("menge")
+                .eq("hfx_customer_number", contract.hfx_customer_number),
+              supabase
+                .from("usage_charges")
+                .select("quantity")
+                .eq("hfx_customer_number", contract.hfx_customer_number)
+                .eq("status", "invoiced")
+                .lt("period_from", periodStart),
+            ]);
+            grantsTotal = (grantRows || []).reduce((s: number, g: any) => s + (Number(g.menge) || 0), 0);
+            usageInvoicedPrior = (priorRows || []).reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0);
+            const saldo = Math.max(0, grantsTotal - usageInvoicedPrior);
+            freiQty = Math.min(periodUsageQty, saldo);
+
+            if (freiQty > 0 && usageNetAmount > 0 && periodUsageQty > 0) {
+              // Effektiver Perioden-Durchschnittspreis (deckt gemischte unit_prices ab)
+              const avgUnitPrice = usageNetAmount / periodUsageQty;
+              grantDeductionNet = Math.round(freiQty * avgUnitPrice * 100) / 100;
+              positions.push({
+                description: `Freikontingent-Abzug (${freiQty} Rechnungen à ${avgUnitPrice.toFixed(2)} €) – ${billingPeriod}`,
+                quantity: 1,
+                unit_price: -grantDeductionNet,
+              });
+              // Provisions-/FiBu-Basis: Netto-Verbrauch nach Frei-Abzug
+              usageNetAmount = Math.round((usageNetAmount - grantDeductionNet) * 100) / 100;
+              console.log(`[auto-invoice] Freikontingent: contract=${contract.id} hfx=${contract.hfx_customer_number} grants=${grantsTotal} priorInvoiced=${usageInvoicedPrior} saldo=${saldo} periodQty=${periodUsageQty} frei=${freiQty} deduction=${grantDeductionNet.toFixed(2)}€`);
             }
           }
         }
@@ -525,7 +564,7 @@ Deno.serve(async (req) => {
             tax_amount: taxAmount,
             gross_amount: grossAmount,
             status: "entwurf",
-            notes: `Automatisch generiert – Abrechnungszeitraum: ${billingPeriod} (${periodMonthStr})${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} geprüfte GOÄ-Rechnungen: ${usageNetAmount.toFixed(2)} € netto` : ""}${isZeroNonWaiver ? " | Null-Beleg ohne Versand (monthly_price=0, kein Waiver, keine Usage)" : ""}`,
+            notes: `Automatisch generiert – Abrechnungszeitraum: ${billingPeriod} (${periodMonthStr})${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} geprüfte GOÄ-Rechnungen: ${usageNetAmount.toFixed(2)} € netto` : ""}${freiQty > 0 ? ` | Freikontingent-Abzug: ${freiQty} Rechnungen (-${grantDeductionNet.toFixed(2)} € netto)` : ""}${isZeroNonWaiver ? " | fully free by grant" : ""}`,
           } as any)
           .select()
           .single();
@@ -717,7 +756,7 @@ Deno.serve(async (req) => {
 
         // ── Send invoice email ────────────────────────────────────────────────
         const positionsHtml = positions
-          .filter(p => p.unit_price > 0 || (isInWaiverPeriod && p === positions[0]) || (isLocationGoae && p === positions[0]))
+          .filter(p => p.unit_price !== 0 || (isInWaiverPeriod && p === positions[0]) || (isLocationGoae && p === positions[0]))
           .map((p) => `
           <tr>
             <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">${p.description}</td>
@@ -797,8 +836,9 @@ Deno.serve(async (req) => {
         const nowTs = new Date().toISOString();
 
         if (isZeroNonWaiver) {
-          // Echter Null-Beleg: keine Kundenmail, Status bleibt 'entwurf', email_sent_at bleibt leer.
-          console.log(`[auto-invoice] Null-Beleg ohne Versand – Contract ${contract.id}, Periode ${periodMonthStr} (Invoice ${invoice.invoice_number})`);
+          // Fully-free-Pfad: Beleg wurde angelegt, usage_charges wurden auf 'invoiced' markiert (Z. 583–588),
+          // nur die Kundenmail wird unterdrückt. Status bleibt 'entwurf', email_sent_at bleibt leer.
+          console.log(`[auto-invoice] fully free by grant – Contract ${contract.id}, Periode ${periodMonthStr} (Invoice ${invoice.invoice_number}, ${freiQty} Rechnungen gedeckt)`);
         } else {
           const emailTo = contract.rechnungs_email || contract.email;
           const subjectSuffix = grossAmount === 0 ? " (kein Zahlbetrag)" : "";
@@ -847,6 +887,7 @@ Deno.serve(async (req) => {
               netAmount,
               baseNetAmount,
               usageChargeIds,
+              usageNetAmountEffective: usageNetAmount,
               periodMonthStr,
               periodStart,
               periodEnd,
@@ -1092,6 +1133,8 @@ async function createGoaeCommissions(params: {
   netAmount: number;
   baseNetAmount: number;
   usageChargeIds: string[];
+  /** Effektiver Verbrauchs-Netto NACH Freikontingent-Abzug. Wenn nicht gesetzt, aus usage_charges rekonstruiert (Retry-Pfad). */
+  usageNetAmountEffective?: number;
   periodMonthStr: string;
   periodStart: string;
   periodEnd: string;
@@ -1103,9 +1146,12 @@ async function createGoaeCommissions(params: {
   const { supabase, contract, invoice, netAmount, baseNetAmount, usageChargeIds, periodMonthStr, periodStart, periodEnd, billingPeriod, today } = params;
   const isCarrier = params.isCarrier !== false; // default true für Bestand
 
-  // Net amount from usage charges
+  // Net amount from usage charges: bevorzugt bereits berechneter Effektiv-Netto (nach Frei-Abzug),
+  // sonst Fallback = rohe usage_charges.net_amount (Retry-Pfad ohne neu-Berechnung).
   let usageNetAmount = 0;
-  if (usageChargeIds.length > 0) {
+  if (typeof params.usageNetAmountEffective === "number") {
+    usageNetAmount = params.usageNetAmountEffective;
+  } else if (usageChargeIds.length > 0) {
     const { data: charges } = await supabase
       .from("usage_charges")
       .select("net_amount")
