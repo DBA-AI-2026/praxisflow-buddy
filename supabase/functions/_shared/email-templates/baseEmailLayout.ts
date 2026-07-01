@@ -48,7 +48,7 @@ export function renderBrandedEmail(
 <tr><td align="center">
 <table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
   <tr>
-    <td bgcolor="#ffffff" style="background-color:#ffffff;padding:30px 40px;text-align:center;">
+    <td bgcolor="#ffffff" style="background-color:#ffffff;padding:30px 40px;text-align:center;border-bottom:3px solid #b6193d;">
       <img src="${LOGO_URL}" alt="HFX Honorarfuchs" style="display:block;max-width:280px;height:auto;margin:0 auto;border:0;" />
       ${subheadlineHtml}
     </td>
