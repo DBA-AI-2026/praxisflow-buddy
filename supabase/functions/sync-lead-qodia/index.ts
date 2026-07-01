@@ -126,6 +126,21 @@ Deno.serve(async (req) => {
 
     if (qodiaResponse.ok) {
       await supabase.from("leads").update({ qodia_synced: true, qodia_conflict: false }).eq("id", lead.id);
+
+      // Freikontingent-Trial-Grant (Phase 1): idempotent via partiellem Unique-Index
+      // (grant_type='trial'). Standorte (-NN) erhalten KEINEN Auto-Grant.
+      if (!isStandortHfx(lead.hfx_customer_number)) {
+        const { error: grantErr } = await supabase.from("free_quota_grants").insert({
+          hfx_customer_number: lead.hfx_customer_number,
+          grant_type: "trial",
+          menge: 200,
+          quelle: "sync_retrigger",
+          created_by: user.id ?? null,
+        });
+        if (grantErr && !String(grantErr.message || "").toLowerCase().includes("duplicate")) {
+          console.error("free_quota_grants insert error:", grantErr);
+        }
+      }
       return new Response(
         JSON.stringify({
           success: true,
