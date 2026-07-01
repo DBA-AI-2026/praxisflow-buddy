@@ -1133,6 +1133,8 @@ async function createGoaeCommissions(params: {
   netAmount: number;
   baseNetAmount: number;
   usageChargeIds: string[];
+  /** Effektiver Verbrauchs-Netto NACH Freikontingent-Abzug. Wenn nicht gesetzt, aus usage_charges rekonstruiert (Retry-Pfad). */
+  usageNetAmountEffective?: number;
   periodMonthStr: string;
   periodStart: string;
   periodEnd: string;
@@ -1144,9 +1146,12 @@ async function createGoaeCommissions(params: {
   const { supabase, contract, invoice, netAmount, baseNetAmount, usageChargeIds, periodMonthStr, periodStart, periodEnd, billingPeriod, today } = params;
   const isCarrier = params.isCarrier !== false; // default true für Bestand
 
-  // Net amount from usage charges
+  // Net amount from usage charges: bevorzugt bereits berechneter Effektiv-Netto (nach Frei-Abzug),
+  // sonst Fallback = rohe usage_charges.net_amount (Retry-Pfad ohne neu-Berechnung).
   let usageNetAmount = 0;
-  if (usageChargeIds.length > 0) {
+  if (typeof params.usageNetAmountEffective === "number") {
+    usageNetAmount = params.usageNetAmountEffective;
+  } else if (usageChargeIds.length > 0) {
     const { data: charges } = await supabase
       .from("usage_charges")
       .select("net_amount")
