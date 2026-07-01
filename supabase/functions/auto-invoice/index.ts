@@ -756,7 +756,7 @@ Deno.serve(async (req) => {
 
         // ── Send invoice email ────────────────────────────────────────────────
         const positionsHtml = positions
-          .filter(p => p.unit_price > 0 || (isInWaiverPeriod && p === positions[0]) || (isLocationGoae && p === positions[0]))
+          .filter(p => p.unit_price !== 0 || (isInWaiverPeriod && p === positions[0]) || (isLocationGoae && p === positions[0]))
           .map((p) => `
           <tr>
             <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">${p.description}</td>
