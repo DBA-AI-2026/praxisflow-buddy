@@ -887,6 +887,7 @@ Deno.serve(async (req) => {
               netAmount,
               baseNetAmount,
               usageChargeIds,
+              usageNetAmountEffective: usageNetAmount,
               periodMonthStr,
               periodStart,
               periodEnd,
