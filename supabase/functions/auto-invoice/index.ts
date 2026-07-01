@@ -406,9 +406,15 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Nutzungsgebühren (GOÄ-Verbrauch) – NUR für den exakten Abrechnungs-Vormonat. Unverändert.
+        // Nutzungsgebühren (GOÄ-Verbrauch) – NUR für den exakten Abrechnungs-Vormonat.
         let usageChargeIds: string[] = [];
         let usageNetAmount = 0;
+        // Freikontingent-Bookkeeping (Phase 2/Baustein 3)
+        let grantsTotal = 0;
+        let usageInvoicedPrior = 0;
+        let periodUsageQty = 0;
+        let freiQty = 0;
+        let grantDeductionNet = 0;
         if (contract.hfx_customer_number) {
           const { data: usageCharges } = await supabase
             .from("usage_charges")
@@ -423,11 +429,44 @@ Deno.serve(async (req) => {
             for (const uc of usageCharges) {
               const lineNet = uc.quantity * Number(uc.unit_price);
               usageNetAmount += lineNet;
+              periodUsageQty += Number(uc.quantity) || 0;
               positions.push({
                 description: uc.unit_description || `Geprüfte GOÄ-Rechnungen (HFX GOÄ) – ${billingPeriod}`,
                 quantity: uc.quantity,
                 unit_price: Number(uc.unit_price),
               });
+            }
+
+            // ── Freikontingent-Abzug (einmal auf Perioden-Summe, nicht per Charge) ──
+            const [{ data: grantRows }, { data: priorRows }] = await Promise.all([
+              supabase
+                .from("free_quota_grants")
+                .select("menge")
+                .eq("hfx_customer_number", contract.hfx_customer_number),
+              supabase
+                .from("usage_charges")
+                .select("quantity")
+                .eq("hfx_customer_number", contract.hfx_customer_number)
+                .eq("status", "invoiced")
+                .lt("period_from", periodStart),
+            ]);
+            grantsTotal = (grantRows || []).reduce((s: number, g: any) => s + (Number(g.menge) || 0), 0);
+            usageInvoicedPrior = (priorRows || []).reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0);
+            const saldo = Math.max(0, grantsTotal - usageInvoicedPrior);
+            freiQty = Math.min(periodUsageQty, saldo);
+
+            if (freiQty > 0 && usageNetAmount > 0 && periodUsageQty > 0) {
+              // Effektiver Perioden-Durchschnittspreis (deckt gemischte unit_prices ab)
+              const avgUnitPrice = usageNetAmount / periodUsageQty;
+              grantDeductionNet = Math.round(freiQty * avgUnitPrice * 100) / 100;
+              positions.push({
+                description: `Freikontingent-Abzug (${freiQty} Rechnungen à ${avgUnitPrice.toFixed(2)} €) – ${billingPeriod}`,
+                quantity: 1,
+                unit_price: -grantDeductionNet,
+              });
+              // Provisions-/FiBu-Basis: Netto-Verbrauch nach Frei-Abzug
+              usageNetAmount = Math.round((usageNetAmount - grantDeductionNet) * 100) / 100;
+              console.log(`[auto-invoice] Freikontingent: contract=${contract.id} hfx=${contract.hfx_customer_number} grants=${grantsTotal} priorInvoiced=${usageInvoicedPrior} saldo=${saldo} periodQty=${periodUsageQty} frei=${freiQty} deduction=${grantDeductionNet.toFixed(2)}€`);
             }
           }
         }
