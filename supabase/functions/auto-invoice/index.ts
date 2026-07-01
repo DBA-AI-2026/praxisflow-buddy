@@ -564,7 +564,7 @@ Deno.serve(async (req) => {
             tax_amount: taxAmount,
             gross_amount: grossAmount,
             status: "entwurf",
-            notes: `Automatisch generiert – Abrechnungszeitraum: ${billingPeriod} (${periodMonthStr})${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} geprüfte GOÄ-Rechnungen: ${usageNetAmount.toFixed(2)} € netto` : ""}${isZeroNonWaiver ? " | Null-Beleg ohne Versand (monthly_price=0, kein Waiver, keine Usage)" : ""}`,
+            notes: `Automatisch generiert – Abrechnungszeitraum: ${billingPeriod} (${periodMonthStr})${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} geprüfte GOÄ-Rechnungen: ${usageNetAmount.toFixed(2)} € netto` : ""}${freiQty > 0 ? ` | Freikontingent-Abzug: ${freiQty} Rechnungen (-${grantDeductionNet.toFixed(2)} € netto)` : ""}${isZeroNonWaiver ? " | fully free by grant" : ""}`,
           } as any)
           .select()
           .single();
