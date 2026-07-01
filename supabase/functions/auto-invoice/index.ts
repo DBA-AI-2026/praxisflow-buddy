@@ -836,8 +836,9 @@ Deno.serve(async (req) => {
         const nowTs = new Date().toISOString();
 
         if (isZeroNonWaiver) {
-          // Echter Null-Beleg: keine Kundenmail, Status bleibt 'entwurf', email_sent_at bleibt leer.
-          console.log(`[auto-invoice] Null-Beleg ohne Versand – Contract ${contract.id}, Periode ${periodMonthStr} (Invoice ${invoice.invoice_number})`);
+          // Fully-free-Pfad: Beleg wurde angelegt, usage_charges wurden auf 'invoiced' markiert (Z. 583–588),
+          // nur die Kundenmail wird unterdrückt. Status bleibt 'entwurf', email_sent_at bleibt leer.
+          console.log(`[auto-invoice] fully free by grant – Contract ${contract.id}, Periode ${periodMonthStr} (Invoice ${invoice.invoice_number}, ${freiQty} Rechnungen gedeckt)`);
         } else {
           const emailTo = contract.rechnungs_email || contract.email;
           const subjectSuffix = grossAmount === 0 ? " (kein Zahlbetrag)" : "";
