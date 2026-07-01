@@ -94,3 +94,17 @@ ${input.bodyHtml}
 
   return { html, text };
 }
+
+export interface RenderBrandedButtonInput {
+  href: string;
+  label: string;
+}
+
+/**
+ * Kanonischer Brand-CTA-Button (rot #b6193d), Outlook-sicheres Bulletproof-Muster.
+ * bgcolor auf <td>, align="center" am <table>, kein display:inline-block am <a>.
+ * Phase 1: nur exportiert, noch nicht konsumiert (Mandat-Mail behält Navy bis Schritt 2).
+ */
+export function renderBrandedButton(input: RenderBrandedButtonInput): string {
+  return `<table role="presentation" align="center" cellspacing="0" cellpadding="0" border="0" style="margin:26px auto;"><tr><td align="center" bgcolor="#b6193d" style="border-radius:8px;padding:14px 28px;"><a href="${input.href}" target="_blank" rel="noopener noreferrer" style="color:#ffffff;font-size:16px;font-weight:bold;text-decoration:none;font-family:verdana,geneva,sans-serif;">${input.label}</a></td></tr></table>`;
+}
