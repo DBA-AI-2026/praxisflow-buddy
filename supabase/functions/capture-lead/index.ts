@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
 import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
+import { isStandortHfx } from "../_shared/multiLocation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
