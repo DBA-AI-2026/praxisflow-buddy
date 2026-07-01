@@ -146,8 +146,7 @@ export function VertragTab({ data, onSwitchToTab }: VertragTabProps) {
   }
 
   const showLeadStatusCard = ssot === "lead" && !!lead;
-  const showLeadActionsCard =
-    ssot === "lead" && !!lead && derivedPhase === "qualifiziert";
+  const showLeadActionsCard = !!lead;
   const hasContracts = contracts.length > 0;
   const hasOwner = !!lead?.id || !!customer?.id;
   const canCreateCase = hasContracts; // RLS: nur mit contract_id für Nicht-Admins
