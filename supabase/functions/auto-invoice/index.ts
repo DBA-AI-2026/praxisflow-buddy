@@ -459,6 +459,11 @@ Deno.serve(async (req) => {
               // Effektiver Perioden-Durchschnittspreis (deckt gemischte unit_prices ab)
               const avgUnitPrice = usageNetAmount / periodUsageQty;
               grantDeductionNet = Math.round(freiQty * avgUnitPrice * 100) / 100;
+              // HINWEIS: Der Description-Prefix "Freikontingent-Abzug" ist API-relevant.
+              // Der Retry-Pfad (processFailedInvoiceRetry) erkennt diesen Abzugsposten
+              // per description.startsWith("Freikontingent-Abzug") + unit_price < 0,
+              // um Provisions- und FiBu-Basis effektiv zu rechnen. Umbenennen NUR
+              // synchron mit dem Match dort, sonst leakt der Frei-Anteil in FiBu/Provisionen.
               positions.push({
                 description: `Freikontingent-Abzug (${freiQty} Rechnungen à ${avgUnitPrice.toFixed(2)} €) – ${billingPeriod}`,
                 quantity: 1,
@@ -1579,7 +1584,21 @@ async function processFailedInvoiceRetry(params: {
     .select("id, net_amount")
     .eq("invoice_id", invoice.id);
   const usageChargeIds: string[] = (usageRows || []).map((r: any) => r.id);
-  const usageNetAmount: number = (usageRows || []).reduce((s: number, r: any) => s + Number(r.net_amount || 0), 0);
+  const usageNetAmountRaw: number = (usageRows || []).reduce((s: number, r: any) => s + Number(r.net_amount || 0), 0);
+  // Freikontingent-Abzug aus positions berücksichtigen (Match per Description-Prefix,
+  // s. Kommentar am Schreiber im Haupt-Pfad). unit_price < 0 als zusätzlicher Guard.
+  const grantDeduction = positions
+    .filter(p => typeof p.description === "string"
+              && p.description.startsWith("Freikontingent-Abzug")
+              && Number(p.unit_price) < 0)
+    .reduce((s, p) => s + Math.abs(Number(p.quantity) * Number(p.unit_price)), 0);
+  // Effektiver Verbrauchs-Netto (nach Frei-Abzug) — überschreibt die Roh-Summe,
+  // damit alle Downstream-Verwender (FiBu invoice_usage_created, Provisionen)
+  // automatisch effektiv rechnen.
+  const usageNetAmount = Math.round((usageNetAmountRaw - grantDeduction) * 100) / 100;
+  // baseNetAmount aus effektivem Verbrauch ableiten (netAmount enthält den Abzugsposten
+  // bereits). Bewusst NICHT über die Roh-Variable rechnen: falls Zeilen später umsortiert
+  // werden, bleibt diese Form stabil.
   const baseNetAmount = Math.round((netAmount - usageNetAmount) * 100) / 100;
 
   const isInWaiverPeriod = contract.base_fee_waived === true &&
@@ -1802,6 +1821,10 @@ async function processFailedInvoiceRetry(params: {
           supabase, contract, invoice, netAmount, baseNetAmount,
           usageChargeIds, periodMonthStr, periodStart, periodEnd, billingPeriod, today,
           isCarrier,
+          // Belt-and-suspenders: usageNetAmount ist oben bereits effektiv (post Frei-Abzug),
+          // trotzdem explizit übergeben, damit der Fallback in createGoaeCommissions
+          // (Σ usage_charges.net_amount, roh) definitiv nicht greift.
+          usageNetAmountEffective: usageNetAmount,
         });
       } else {
         const [{ data: productCommission }, { data: partnerOverride }] = await Promise.all([
