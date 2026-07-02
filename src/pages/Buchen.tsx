@@ -280,7 +280,7 @@ export default function Buchen() {
     try {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/initiate-booking`,
+        `https://${projectId}.supabase.co/functions/v1/buchen-submit`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -302,8 +302,8 @@ export default function Buchen() {
         throw new Error(json.error || "Unbekannter Fehler");
       }
 
-      if (json.stripe_url) {
-        window.location.href = json.stripe_url;
+      if (json.setup_url) {
+        window.location.href = json.setup_url;
       } else {
         throw new Error("Kein Zahlungslink erhalten. Bitte versuchen Sie es erneut.");
       }
