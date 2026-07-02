@@ -484,6 +484,11 @@ Deno.serve(async (req) => {
         // Echter Null-Beleg: monthly_price=0, kein Waiver, keine Usage, kein Standort-GOÄ.
         // Beleg wird angelegt (Ledger-Parität), aber NICHT per Mail versendet.
         const isZeroNonWaiver = grossAmount === 0 && !isInWaiverPeriod && !isLocationGoae;
+        // Waiver-0-€-Fall: Grundgebühr im Waiver, keine Usage → 0 €. Beleg bleibt (Ledger-Parität),
+        // Kundenmail wird unterdrückt. Standort-GOÄ bleibt bewusst ausgenommen (dessen 0-€-Mail
+        // klärt „zentral über Hauptstandort" und wird an anderer Stelle entschieden).
+        const isZeroWaiverSuppressed = grossAmount === 0 && isInWaiverPeriod && !isLocationGoae;
+        const suppressZeroInvoiceMail = isZeroNonWaiver || isZeroWaiverSuppressed;
 
         const collectionDate = addBusinessDays(today, 3);
         const dueDateStr = collectionDate.toISOString().split("T")[0];
@@ -569,7 +574,7 @@ Deno.serve(async (req) => {
             tax_amount: taxAmount,
             gross_amount: grossAmount,
             status: "entwurf",
-            notes: `Automatisch generiert – Abrechnungszeitraum: ${billingPeriod} (${periodMonthStr})${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} geprüfte GOÄ-Rechnungen: ${usageNetAmount.toFixed(2)} € netto` : ""}${freiQty > 0 ? ` | Freikontingent-Abzug: ${freiQty} Rechnungen (-${grantDeductionNet.toFixed(2)} € netto)` : ""}${isZeroNonWaiver ? " | fully free by grant" : ""}`,
+            notes: `Automatisch generiert – Abrechnungszeitraum: ${billingPeriod} (${periodMonthStr})${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} geprüfte GOÄ-Rechnungen: ${usageNetAmount.toFixed(2)} € netto` : ""}${freiQty > 0 ? ` | Freikontingent-Abzug: ${freiQty} Rechnungen (-${grantDeductionNet.toFixed(2)} € netto)` : ""}${isZeroNonWaiver ? " | fully free by grant" : ""}${isZeroWaiverSuppressed ? " | Grundgebühr-Waiver 0 € – ohne Versand" : ""}`,
           } as any)
           .select()
           .single();
@@ -840,10 +845,14 @@ Deno.serve(async (req) => {
 
         const nowTs = new Date().toISOString();
 
-        if (isZeroNonWaiver) {
-          // Fully-free-Pfad: Beleg wurde angelegt, usage_charges wurden auf 'invoiced' markiert (Z. 583–588),
+        if (suppressZeroInvoiceMail) {
+          // Suppress-Pfad: Beleg wurde angelegt, usage_charges wurden auf 'invoiced' markiert (Z. 583–588),
           // nur die Kundenmail wird unterdrückt. Status bleibt 'entwurf', email_sent_at bleibt leer.
-          console.log(`[auto-invoice] fully free by grant – Contract ${contract.id}, Periode ${periodMonthStr} (Invoice ${invoice.invoice_number}, ${freiQty} Rechnungen gedeckt)`);
+          if (isZeroNonWaiver) {
+            console.log(`[auto-invoice] fully free by grant – Contract ${contract.id}, Periode ${periodMonthStr} (Invoice ${invoice.invoice_number}, ${freiQty} Rechnungen gedeckt)`);
+          } else {
+            console.log(`[auto-invoice] Grundgebühr-Waiver 0 € – ohne Versand – Contract ${contract.id}, Periode ${periodMonthStr} (Invoice ${invoice.invoice_number})`);
+          }
         } else {
           const emailTo = contract.rechnungs_email || contract.email;
           const subjectSuffix = grossAmount === 0 ? " (kein Zahlbetrag)" : "";
