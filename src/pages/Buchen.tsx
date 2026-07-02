@@ -621,14 +621,13 @@ export default function Buchen() {
             </div>
           )}
 
-          {/* DEPRECATED — alte Stripe-Welt, Submit abgeklemmt am 08.05.2026 */}
           <Button
             type="submit"
             className="w-full"
             size="lg"
-            disabled={true}
+            disabled={!canSubmit || submitting}
           >
-            Buchung vorübergehend nicht verfügbar
+            Jetzt verbindlich buchen
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
