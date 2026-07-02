@@ -484,6 +484,11 @@ Deno.serve(async (req) => {
         // Echter Null-Beleg: monthly_price=0, kein Waiver, keine Usage, kein Standort-GOÄ.
         // Beleg wird angelegt (Ledger-Parität), aber NICHT per Mail versendet.
         const isZeroNonWaiver = grossAmount === 0 && !isInWaiverPeriod && !isLocationGoae;
+        // Waiver-0-€-Fall: Grundgebühr im Waiver, keine Usage → 0 €. Beleg bleibt (Ledger-Parität),
+        // Kundenmail wird unterdrückt. Standort-GOÄ bleibt bewusst ausgenommen (dessen 0-€-Mail
+        // klärt „zentral über Hauptstandort" und wird an anderer Stelle entschieden).
+        const isZeroWaiverSuppressed = grossAmount === 0 && isInWaiverPeriod && !isLocationGoae;
+        const suppressZeroInvoiceMail = isZeroNonWaiver || isZeroWaiverSuppressed;
 
         const collectionDate = addBusinessDays(today, 3);
         const dueDateStr = collectionDate.toISOString().split("T")[0];
