@@ -280,7 +280,7 @@ export default function Buchen() {
     try {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/initiate-booking`,
+        `https://${projectId}.supabase.co/functions/v1/buchen-submit`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -302,8 +302,8 @@ export default function Buchen() {
         throw new Error(json.error || "Unbekannter Fehler");
       }
 
-      if (json.stripe_url) {
-        window.location.href = json.stripe_url;
+      if (json.setup_url) {
+        window.location.href = json.setup_url;
       } else {
         throw new Error("Kein Zahlungslink erhalten. Bitte versuchen Sie es erneut.");
       }
@@ -473,13 +473,6 @@ export default function Buchen() {
           </div>
         )}
 
-        {/* DEPRECATED — alte Stripe-Welt, abgeklemmt am 08.05.2026 */}
-        {!isPreview && (
-          <div className="bg-warning/10 border border-warning/30 rounded-lg px-4 py-3 flex items-start gap-2 text-sm text-warning">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <span>Die digitale Buchung wird derzeit überarbeitet. Bitte kontaktieren Sie Ihren Vertriebspartner für die Aktivierung Ihres Vertrags.</span>
-          </div>
-        )}
 
         {/* Brand header */}
         <div className="text-center flex flex-col items-center gap-2">
@@ -628,14 +621,13 @@ export default function Buchen() {
             </div>
           )}
 
-          {/* DEPRECATED — alte Stripe-Welt, Submit abgeklemmt am 08.05.2026 */}
           <Button
             type="submit"
             className="w-full"
             size="lg"
-            disabled={true}
+            disabled={!canSubmit || submitting}
           >
-            Buchung vorübergehend nicht verfügbar
+            Jetzt verbindlich buchen
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
