@@ -172,16 +172,16 @@ function ProductAgbRow({
               </Button>
               <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>
                 {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1" />}
-                Ersetzen
+                Neue Version hochladen
               </Button>
-              <Button size="sm" variant="ghost" className="text-destructive" onClick={() => onRemove(product.id, product.agb_pdf_path!)} disabled={uploading}>
+              <Button size="sm" variant="ghost" className="text-destructive" onClick={() => onRemove(product.id, product.agb_pdf_path!)} disabled={uploading} title="AGB deaktivieren">
                 <X className="h-3.5 w-3.5" />
               </Button>
             </>
           ) : (
             <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>
               {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Upload className="h-3.5 w-3.5 mr-1" />}
-              PDF hochladen
+              Neue Version hochladen
             </Button>
           )}
         </div>
