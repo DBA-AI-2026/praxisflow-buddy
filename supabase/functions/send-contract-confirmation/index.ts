@@ -24,6 +24,7 @@ import {
   LABEL_COL_WIDTH_RATIO,
   hexToRgb01,
 } from "../_shared/pdfDesignTokens.ts";
+import { resolveAgbForCandidates } from "../_shared/agbResolver.ts";
 
 
 const corsHeaders = {
