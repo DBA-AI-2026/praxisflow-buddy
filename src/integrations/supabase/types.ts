@@ -122,6 +122,50 @@ export type Database = {
           },
         ]
       }
+      agb_versions: {
+        Row: {
+          created_at: string
+          file_name: string | null
+          id: string
+          is_current: boolean
+          product_id: string
+          storage_path: string
+          uploaded_at: string
+          uploaded_by: string | null
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          is_current?: boolean
+          product_id: string
+          storage_path: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          version: number
+        }
+        Update: {
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          is_current?: boolean
+          product_id?: string
+          storage_path?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agb_versions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_settings: {
         Row: {
           created_at: string
