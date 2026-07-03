@@ -4,6 +4,7 @@ import { Upload, FileText, X, Loader2, ExternalLink } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { showPdfInViewer } from "@/lib/pdfViewerState";
+import { uploadAgbVersion, deactivateCurrentAgb } from "@/lib/agbVersions";
 
 interface Props {
   productId: string;
@@ -26,22 +27,8 @@ export function AgbUploadSection({ productId, currentPath, onUploaded }: Props) 
 
     setUploading(true);
     try {
-      const path = `agb/${productId}.pdf`;
-
-      // Upload to contracts bucket (private)
-      const { error: uploadError } = await supabase.storage
-        .from("contracts")
-        .upload(path, file, { upsert: true, contentType: "application/pdf" });
-      if (uploadError) throw uploadError;
-
-      // Save path to product
-      const { error: updateError } = await supabase
-        .from("products")
-        .update({ agb_pdf_path: path } as any)
-        .eq("id", productId);
-      if (updateError) throw updateError;
-
-      toast({ title: "AGB-PDF hochgeladen" });
+      const version = await uploadAgbVersion(productId, file);
+      toast({ title: `AGB-Version ${version} gespeichert` });
       onUploaded();
     } catch (err: any) {
       toast({ title: "Upload fehlgeschlagen", description: err.message, variant: "destructive" });
@@ -54,15 +41,8 @@ export function AgbUploadSection({ productId, currentPath, onUploaded }: Props) 
   const handleRemove = async () => {
     setUploading(true);
     try {
-      if (currentPath) {
-        await supabase.storage.from("contracts").remove([currentPath]);
-      }
-      const { error } = await supabase
-        .from("products")
-        .update({ agb_pdf_path: null } as any)
-        .eq("id", productId);
-      if (error) throw error;
-      toast({ title: "AGB-PDF entfernt" });
+      await deactivateCurrentAgb(productId);
+      toast({ title: "AGB deaktiviert" });
       onUploaded();
     } catch (err: any) {
       toast({ title: "Fehler", description: err.message, variant: "destructive" });
