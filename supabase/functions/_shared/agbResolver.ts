@@ -1,8 +1,6 @@
 // _shared/agbResolver.ts
-// Resolver für produktspezifische AGB-PDFs (Phase 1, A-lite).
-// Aktuell genutzt von: send-mandate-setup.
-// send-contract-confirmation hält weiterhin eine eigene, identische Kopie —
-// Umstellung erfolgt in einer separaten Mini-Refactor-Phase.
+// Resolver für produktspezifische AGB-PDFs.
+// Genutzt von: send-mandate-setup, send-contract-confirmation.
 
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 
