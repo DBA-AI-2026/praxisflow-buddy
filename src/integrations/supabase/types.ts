@@ -2833,6 +2833,14 @@ export type Database = {
               lead_id: string
             }[]
           }
+      create_agb_version: {
+        Args: {
+          p_file_name: string
+          p_product_id: string
+          p_storage_path: string
+        }
+        Returns: number
+      }
       get_cron_secret: { Args: never; Returns: string }
       get_fk_unique_columns: {
         Args: { p_column: string; p_table: string }
