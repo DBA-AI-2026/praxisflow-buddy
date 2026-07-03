@@ -91,16 +91,16 @@ export function AgbUploadSection({ productId, currentPath, onUploaded }: Props) 
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={() => fileRef.current?.click()} disabled={uploading}>
             {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1" />}
-            Ersetzen
+            Neue Version hochladen
           </Button>
-          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={handleRemove} disabled={uploading}>
+          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={handleRemove} disabled={uploading} title="AGB deaktivieren">
             <X className="h-3.5 w-3.5" />
           </Button>
         </div>
       ) : (
         <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={uploading}>
           {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Upload className="h-3.5 w-3.5 mr-1" />}
-          AGB-PDF hochladen
+          Neue Version hochladen
         </Button>
       )}
     </div>
