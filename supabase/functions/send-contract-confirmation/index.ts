@@ -24,6 +24,7 @@ import {
   LABEL_COL_WIDTH_RATIO,
   hexToRgb01,
 } from "../_shared/pdfDesignTokens.ts";
+import { resolveAgbForCandidates } from "../_shared/agbResolver.ts";
 
 
 const corsHeaders = {
@@ -642,52 +643,18 @@ Deno.serve(async (req) => {
 
 
     // --- Fetch product-specific AGB PDF (fallback to generic) ---
-    let agbBase64: string | undefined;
-    let agbFilename = "AGB-Honorarfuchs.pdf";
-    let agbDownloadUrl = `${APP_URL}/templates/vertrag-honorarfuchs.pdf`;
-    try {
-      // Look up product-specific AGB (supports legacy labels like "HFX.GOÄ")
-      const { data: productsWithAgb } = await adminClient
-        .from("products")
-        .select("name, agb_pdf_path")
-        .not("agb_pdf_path", "is", null);
-
-      const matchedProduct = findBestProductMatch((productsWithAgb ?? []) as ProductWithAgb[], [
-        contract.product_name,
-        ...(Array.isArray(contract.modules) ? contract.modules : []),
-      ]);
-
-      if (matchedProduct?.agb_pdf_path) {
-        // Product has a specific AGB PDF in storage
-        const { data: signed } = await adminClient.storage
-          .from("contracts")
-          .createSignedUrl(matchedProduct.agb_pdf_path, 60 * 60 * 24 * 14);
-
-        if (signed?.signedUrl) {
-          agbDownloadUrl = signed.signedUrl;
-          const agbRes = await fetch(signed.signedUrl);
-          if (agbRes.ok) {
-            const agbBytes = new Uint8Array(await agbRes.arrayBuffer());
-            agbBase64 = toBase64(agbBytes);
-            const safeName = (matchedProduct.name || "Honorarfuchs").replace(/[^a-zA-Z0-9äöüÄÖÜß\-_.]/g, "_");
-            agbFilename = `AGB-${safeName}.pdf`;
-            console.log(`[send-contract-confirmation] Using product AGB for "${matchedProduct.name}"`);
-          }
-        }
-      }
-
-      // Fallback to generic AGB
-      if (!agbBase64) {
-        const agbRes = await fetch(`${APP_URL}/templates/vertrag-honorarfuchs.pdf`);
-        if (agbRes.ok) {
-          const agbBytes = new Uint8Array(await agbRes.arrayBuffer());
-          agbBase64 = toBase64(agbBytes);
-        }
-        console.log("[send-contract-confirmation] Falling back to generic AGB");
-      }
-    } catch {
-      /* skip AGB */
-    }
+    // Konsolidiert auf gemeinsamen Resolver (Mini-Refactor A-lite → voll).
+    // agbDownloadUrl wird weiter als Variable gehalten (aktuell nicht im Body
+    // referenziert; Verhalten identisch zu vorher — PDF nur als Anhang).
+    const agb = await resolveAgbForCandidates(
+      adminClient,
+      APP_URL,
+      [contract.product_name, ...(Array.isArray(contract.modules) ? contract.modules : [])],
+      "[send-contract-confirmation]",
+    );
+    const agbBase64 = agb.base64;
+    const agbFilename = agb.filename;
+    const agbDownloadUrl = agb.downloadUrl;
 
     // --- Build email ---
     // DEPRECATED — alte Stripe-Welt-Buchungslink entfernt am 08.05.2026.
