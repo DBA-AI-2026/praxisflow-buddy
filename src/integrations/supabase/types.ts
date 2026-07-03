@@ -2045,6 +2045,7 @@ export type Database = {
           agb_pdf_path: string | null
           base_license_includes: string | null
           base_license_price: number | null
+          cancellation_period_months: number
           created_at: string
           description: string | null
           extra_unit_label: string | null
@@ -2071,6 +2072,7 @@ export type Database = {
           agb_pdf_path?: string | null
           base_license_includes?: string | null
           base_license_price?: number | null
+          cancellation_period_months?: number
           created_at?: string
           description?: string | null
           extra_unit_label?: string | null
@@ -2097,6 +2099,7 @@ export type Database = {
           agb_pdf_path?: string | null
           base_license_includes?: string | null
           base_license_price?: number | null
+          cancellation_period_months?: number
           created_at?: string
           description?: string | null
           extra_unit_label?: string | null
