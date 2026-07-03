@@ -4,6 +4,7 @@ import { Upload, FileText, X, Loader2, ExternalLink } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { showPdfInViewer } from "@/lib/pdfViewerState";
+import { uploadAgbVersion, deactivateCurrentAgb } from "@/lib/agbVersions";
 
 interface Props {
   productId: string;
@@ -26,22 +27,8 @@ export function AgbUploadSection({ productId, currentPath, onUploaded }: Props) 
 
     setUploading(true);
     try {
-      const path = `agb/${productId}.pdf`;
-
-      // Upload to contracts bucket (private)
-      const { error: uploadError } = await supabase.storage
-        .from("contracts")
-        .upload(path, file, { upsert: true, contentType: "application/pdf" });
-      if (uploadError) throw uploadError;
-
-      // Save path to product
-      const { error: updateError } = await supabase
-        .from("products")
-        .update({ agb_pdf_path: path } as any)
-        .eq("id", productId);
-      if (updateError) throw updateError;
-
-      toast({ title: "AGB-PDF hochgeladen" });
+      const version = await uploadAgbVersion(productId, file);
+      toast({ title: `AGB-Version ${version} gespeichert` });
       onUploaded();
     } catch (err: any) {
       toast({ title: "Upload fehlgeschlagen", description: err.message, variant: "destructive" });
@@ -54,15 +41,8 @@ export function AgbUploadSection({ productId, currentPath, onUploaded }: Props) 
   const handleRemove = async () => {
     setUploading(true);
     try {
-      if (currentPath) {
-        await supabase.storage.from("contracts").remove([currentPath]);
-      }
-      const { error } = await supabase
-        .from("products")
-        .update({ agb_pdf_path: null } as any)
-        .eq("id", productId);
-      if (error) throw error;
-      toast({ title: "AGB-PDF entfernt" });
+      await deactivateCurrentAgb(productId);
+      toast({ title: "AGB deaktiviert" });
       onUploaded();
     } catch (err: any) {
       toast({ title: "Fehler", description: err.message, variant: "destructive" });
@@ -111,16 +91,16 @@ export function AgbUploadSection({ productId, currentPath, onUploaded }: Props) 
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={() => fileRef.current?.click()} disabled={uploading}>
             {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1" />}
-            Ersetzen
+            Neue Version hochladen
           </Button>
-          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={handleRemove} disabled={uploading}>
+          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={handleRemove} disabled={uploading} title="AGB deaktivieren">
             <X className="h-3.5 w-3.5" />
           </Button>
         </div>
       ) : (
         <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={uploading}>
           {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Upload className="h-3.5 w-3.5 mr-1" />}
-          AGB-PDF hochladen
+          Neue Version hochladen
         </Button>
       )}
     </div>
