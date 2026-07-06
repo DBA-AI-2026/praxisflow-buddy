@@ -4024,6 +4024,23 @@ export default function Vertraege() {
           input={{ type: "hfx", hfxNumber: kundenDialogHfx }}
         />
       )}
+      {reassignAdTarget && (
+        <ReassignContractAdDialog
+          open={!!reassignAdTarget}
+          onOpenChange={(o) => { if (!o) setReassignAdTarget(null); }}
+          contractId={reassignAdTarget.id}
+          currentAdId={reassignAdTarget.sales_partner_id}
+          currentAdName={reassignAdTarget.sales_partner_name}
+          hfxCustomerNumber={reassignAdTarget.hfx_customer_number}
+          onChanged={(next) => {
+            // Live-Sync des offenen Edit-Modals (falls dieselbe Zeile bearbeitet wird)
+            if (editId === reassignAdTarget.id) {
+              set("sales_partner_id", next.sales_partner_id);
+              set("sales_partner_name", next.sales_partner_name);
+            }
+          }}
+        />
+      )}
     </MainLayout>
   );
 }
