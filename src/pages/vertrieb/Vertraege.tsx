@@ -440,7 +440,14 @@ export default function Vertraege() {
   const [leadTippgeberName, setLeadTippgeberName] = useState<string | null>(null);
   const [deleteContractTarget, setDeleteContractTarget] = useState<any | null>(null);
   const { user, profile } = useAuth();
-  const { isAdmin, isVertragsabteilung, isRegionalLead } = useUserRole();
+  const { isAdmin, isVertragsabteilung, isRegionalLead, isSalesLead } = useUserRole();
+  const canReassignContractAd = isAdmin || isSalesLead;
+  const [reassignAdTarget, setReassignAdTarget] = useState<{
+    id: string;
+    sales_partner_id: string | null;
+    sales_partner_name: string | null;
+    hfx_customer_number: string | null;
+  } | null>(null);
   const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions } = useRegionalTeam();
   const { toast } = useToast();
   const queryClient = useQueryClient();
