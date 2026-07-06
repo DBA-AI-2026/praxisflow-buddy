@@ -159,14 +159,28 @@ export function ReservationDetailDialog({ reservation, open, onOpenChange, onRea
             {reservation.reserved_by_name || "—"}
           </Field>
           <Field icon={Users} label="Zuständiger AD">
-            {reservation.assigned_ad_name || (
-              <span className="text-muted-foreground italic">Kein AD zugeordnet</span>
-            )}
-            {reservation.assignment_source ? (
-              <Badge variant="outline" className="ml-2 text-[10px]">
-                {reservation.assignment_source}
-              </Badge>
-            ) : null}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span>
+                {reservation.assigned_ad_name || (
+                  <span className="text-muted-foreground italic">Kein AD zugeordnet</span>
+                )}
+              </span>
+              {reservation.assignment_source ? (
+                <Badge variant="outline" className="text-[10px]">
+                  {reservation.assignment_source}
+                </Badge>
+              ) : null}
+              {(isAdmin || isSalesLead) && effectiveStatus !== "konvertiert" ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => setReassignOpen(true)}
+                >
+                  Ändern
+                </Button>
+              ) : null}
+            </div>
           </Field>
         </div>
 
