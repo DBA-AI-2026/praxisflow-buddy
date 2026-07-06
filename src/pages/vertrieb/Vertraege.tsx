@@ -73,6 +73,7 @@ import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabaseClient";
 import { KundenDialog } from "@/components/kunden/KundenDialog";
+import { ReassignContractAdDialog } from "@/components/vertrieb/ReassignContractAdDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -440,7 +441,14 @@ export default function Vertraege() {
   const [leadTippgeberName, setLeadTippgeberName] = useState<string | null>(null);
   const [deleteContractTarget, setDeleteContractTarget] = useState<any | null>(null);
   const { user, profile } = useAuth();
-  const { isAdmin, isVertragsabteilung, isRegionalLead } = useUserRole();
+  const { isAdmin, isVertragsabteilung, isRegionalLead, isSalesLead } = useUserRole();
+  const canReassignContractAd = isAdmin || isSalesLead;
+  const [reassignAdTarget, setReassignAdTarget] = useState<{
+    id: string;
+    sales_partner_id: string | null;
+    sales_partner_name: string | null;
+    hfx_customer_number: string | null;
+  } | null>(null);
   const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions } = useRegionalTeam();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -1079,6 +1087,10 @@ export default function Vertraege() {
         // inkl. approved_by/approved_at — kein doppeltes Überschreiben).
         const restRecord = { ...record };
         if (statusRoutedThroughGuard) delete (restRecord as any).status;
+        // sales_partner_id/_name werden ausschließlich über reassign_contract_ad RPC gepflegt
+        // (Guard-Trigger blockt sonst jeden Edit von Nicht-Admins/-Sales-Leads durch null-Rewrite).
+        delete (restRecord as any).sales_partner_id;
+        delete (restRecord as any).sales_partner_name;
         const { error } = await supabase.from("contracts").update(restRecord).eq("id", editId);
         if (error) throw error;
       } else {
@@ -1868,8 +1880,7 @@ export default function Vertraege() {
           telefon: form.telefon || null,
           notes: form.notes || null,
           start_date: form.start_date,
-          sales_partner_id: form.sales_partner_id || null,
-          sales_partner_name: form.sales_partner_name || null,
+          // sales_partner_id/_name: siehe reassign_contract_ad RPC — hier bewusst nicht mitschreiben.
         } as any).eq("id", editId);
         if (error) throw error;
       } else {
@@ -2798,6 +2809,19 @@ export default function Vertraege() {
                               <span className="text-warning">Bearbeiten</span>
                             </DropdownMenuItem>
                           )}
+                          {canReassignContractAd && (
+                            <DropdownMenuItem
+                              onClick={() => setReassignAdTarget({
+                                id: c.id,
+                                sales_partner_id: c.sales_partner_id ?? null,
+                                sales_partner_name: c.sales_partner_name ?? null,
+                                hfx_customer_number: c.hfx_customer_number ?? null,
+                              })}
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Zuständigen AD ändern
+                            </DropdownMenuItem>
+                          )}
                           {(c.status === "aktiv" || c.status === "gezeichnet") && (
                              <>
                                <DropdownMenuSeparator />
@@ -3042,15 +3066,38 @@ export default function Vertraege() {
                 </div>
                 <div>
                    <Label>Vertriebspartner</Label>
-                   <SalesPartnerCombobox
-                     value={form.sales_partner_name}
-                     selectedId={form.sales_partner_id}
-                     onChange={(id, name) => {
-                       set("sales_partner_id", id);
-                       set("sales_partner_name", name);
-                     }}
-                     profiles={allProfiles}
-                   />
+                   {editId ? (
+                     <div className="mt-1.5 flex items-center gap-2 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm">
+                       <span className="flex-1 truncate font-medium text-foreground">
+                         {form.sales_partner_name || <span className="text-muted-foreground font-normal">nicht zugewiesen</span>}
+                       </span>
+                       {canReassignContractAd && (
+                         <Button
+                           type="button"
+                           variant="outline"
+                           size="sm"
+                           onClick={() => setReassignAdTarget({
+                             id: editId,
+                             sales_partner_id: form.sales_partner_id || null,
+                             sales_partner_name: form.sales_partner_name || null,
+                             hfx_customer_number: (contracts.find((c: any) => c.id === editId) as any)?.hfx_customer_number ?? null,
+                           })}
+                         >
+                           Ändern
+                         </Button>
+                       )}
+                     </div>
+                   ) : (
+                     <SalesPartnerCombobox
+                       value={form.sales_partner_name}
+                       selectedId={form.sales_partner_id}
+                       onChange={(id, name) => {
+                         set("sales_partner_id", id);
+                         set("sales_partner_name", name);
+                       }}
+                       profiles={allProfiles}
+                     />
+                   )}
                  </div>
                  {leadTippgeberName && (
                    <div className="col-span-2">
@@ -3975,6 +4022,23 @@ export default function Vertraege() {
             queryClient.invalidateQueries({ queryKey: ["contracts"] });
           }}
           input={{ type: "hfx", hfxNumber: kundenDialogHfx }}
+        />
+      )}
+      {reassignAdTarget && (
+        <ReassignContractAdDialog
+          open={!!reassignAdTarget}
+          onOpenChange={(o) => { if (!o) setReassignAdTarget(null); }}
+          contractId={reassignAdTarget.id}
+          currentAdId={reassignAdTarget.sales_partner_id}
+          currentAdName={reassignAdTarget.sales_partner_name}
+          hfxCustomerNumber={reassignAdTarget.hfx_customer_number}
+          onChanged={(next) => {
+            // Live-Sync des offenen Edit-Modals (falls dieselbe Zeile bearbeitet wird)
+            if (editId === reassignAdTarget.id) {
+              set("sales_partner_id", next.sales_partner_id);
+              set("sales_partner_name", next.sales_partner_name);
+            }
+          }}
         />
       )}
     </MainLayout>
