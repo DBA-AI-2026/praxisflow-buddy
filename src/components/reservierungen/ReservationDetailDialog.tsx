@@ -38,6 +38,11 @@ interface Props {
   reservation: Reservation | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onReassigned?: (next: {
+    assigned_ad_id: string;
+    assigned_ad_name: string;
+    assignment_source: "manual";
+  }) => void;
 }
 
 function Field({
