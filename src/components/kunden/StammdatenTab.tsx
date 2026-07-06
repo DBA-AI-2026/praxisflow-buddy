@@ -71,7 +71,27 @@ export function StammdatenTab({ data }: StammdatenTabProps) {
     saveStammdaten,
     isSaving,
     ssot,
+    lead,
   } = data;
+
+  const { isAdmin, isSalesLead } = useUserRole();
+  const canReassignAd = ssot === "lead" && !!lead && (isAdmin || isSalesLead);
+  const [reassignOpen, setReassignOpen] = useState(false);
+
+  // Look up current AD name (only when the section is visible)
+  const { data: currentAdName } = useQuery({
+    queryKey: ["lead-current-ad-name", lead?.assigned_to],
+    queryFn: async () => {
+      if (!lead?.assigned_to) return null;
+      const { data: p } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("user_id", lead.assigned_to)
+        .maybeSingle();
+      return p?.full_name || p?.email || null;
+    },
+    enabled: canReassignAd && !!lead?.assigned_to,
+  });
 
   const form = useForm<StammdatenFormValues>({
     resolver: zodResolver(schema),
