@@ -2809,6 +2809,19 @@ export default function Vertraege() {
                               <span className="text-warning">Bearbeiten</span>
                             </DropdownMenuItem>
                           )}
+                          {canReassignContractAd && (
+                            <DropdownMenuItem
+                              onClick={() => setReassignAdTarget({
+                                id: c.id,
+                                sales_partner_id: c.sales_partner_id ?? null,
+                                sales_partner_name: c.sales_partner_name ?? null,
+                                hfx_customer_number: c.hfx_customer_number ?? null,
+                              })}
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Zuständigen AD ändern
+                            </DropdownMenuItem>
+                          )}
                           {(c.status === "aktiv" || c.status === "gezeichnet") && (
                              <>
                                <DropdownMenuSeparator />
