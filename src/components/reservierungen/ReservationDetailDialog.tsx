@@ -65,7 +65,9 @@ function Field({
   );
 }
 
-export function ReservationDetailDialog({ reservation, open, onOpenChange }: Props) {
+export function ReservationDetailDialog({ reservation, open, onOpenChange, onReassigned }: Props) {
+  const { isAdmin, isSalesLead } = useUserRole();
+  const [reassignOpen, setReassignOpen] = useState(false);
   const { data: linked } = useQuery({
     enabled: !!reservation && open,
     queryKey: [
