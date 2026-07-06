@@ -6,10 +6,13 @@
  * Bei !canEdit sind alle Felder read-only und der Speichern-Button ist
  * deaktiviert mit Tooltip.
  */
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabaseClient";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   Form,
   FormField,
@@ -34,7 +37,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Lock } from "lucide-react";
+import { Lock, UserCog } from "lucide-react";
+import { ReassignLeadAdDialog } from "@/components/leads/ReassignLeadAdDialog";
 import type {
   StammdatenFormValues,
   UseKundenDialogDataResult,
@@ -67,7 +71,27 @@ export function StammdatenTab({ data }: StammdatenTabProps) {
     saveStammdaten,
     isSaving,
     ssot,
+    lead,
   } = data;
+
+  const { isAdmin, isSalesLead } = useUserRole();
+  const canReassignAd = ssot === "lead" && !!lead && (isAdmin || isSalesLead);
+  const [reassignOpen, setReassignOpen] = useState(false);
+
+  // Look up current AD name (only when the section is visible)
+  const { data: currentAdName } = useQuery({
+    queryKey: ["lead-current-ad-name", lead?.assigned_to],
+    queryFn: async () => {
+      if (!lead?.assigned_to) return null;
+      const { data: p } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("user_id", lead.assigned_to)
+        .maybeSingle();
+      return p?.full_name || p?.email || null;
+    },
+    enabled: canReassignAd && !!lead?.assigned_to,
+  });
 
   const form = useForm<StammdatenFormValues>({
     resolver: zodResolver(schema),
@@ -111,6 +135,26 @@ export function StammdatenTab({ data }: StammdatenTabProps) {
           Quelle: {ssot === "lead" ? "Interessenten-Datensatz" : "Kundendatensatz"}
           {ssot === "customer" && data.lead && " (Änderungen werden auf Interessent gespiegelt)"}
         </div>
+
+        {canReassignAd && lead && (
+          <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
+            <div className="text-sm min-w-0">
+              <div className="text-xs text-muted-foreground">Zuständiger AD</div>
+              <div className="font-medium truncate">
+                {currentAdName || (lead.assigned_to ? "—" : "nicht zugewiesen")}
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setReassignOpen(true)}
+            >
+              <UserCog className="h-4 w-4 mr-2" />
+              Ändern
+            </Button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
@@ -297,6 +341,15 @@ export function StammdatenTab({ data }: StammdatenTabProps) {
           )}
         </div>
       </form>
+      {canReassignAd && lead && (
+        <ReassignLeadAdDialog
+          open={reassignOpen}
+          onOpenChange={setReassignOpen}
+          leadId={lead.id}
+          currentAssignedTo={lead.assigned_to}
+          hfxNumber={lead.hfx_customer_number}
+        />
+      )}
     </Form>
   );
 }
