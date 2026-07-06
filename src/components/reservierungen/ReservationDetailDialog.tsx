@@ -256,6 +256,14 @@ export function ReservationDetailDialog({ reservation, open, onOpenChange, onRea
           ) : null}
         </div>
       </DialogContent>
+      <ReassignReservationAdDialog
+        open={reassignOpen}
+        onOpenChange={setReassignOpen}
+        reservationId={reservation.id}
+        currentAssignedAdId={reservation.assigned_ad_id}
+        currentAssignedAdName={reservation.assigned_ad_name}
+        onChanged={onReassigned}
+      />
     </Dialog>
   );
 }
