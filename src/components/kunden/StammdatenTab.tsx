@@ -6,10 +6,13 @@
  * Bei !canEdit sind alle Felder read-only und der Speichern-Button ist
  * deaktiviert mit Tooltip.
  */
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabaseClient";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   Form,
   FormField,
@@ -34,7 +37,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Lock } from "lucide-react";
+import { Lock, UserCog } from "lucide-react";
+import { ReassignLeadAdDialog } from "@/components/leads/ReassignLeadAdDialog";
 import type {
   StammdatenFormValues,
   UseKundenDialogDataResult,
