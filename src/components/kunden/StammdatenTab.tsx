@@ -341,6 +341,15 @@ export function StammdatenTab({ data }: StammdatenTabProps) {
           )}
         </div>
       </form>
+      {canReassignAd && lead && (
+        <ReassignLeadAdDialog
+          open={reassignOpen}
+          onOpenChange={setReassignOpen}
+          leadId={lead.id}
+          currentAssignedTo={lead.assigned_to}
+          hfxNumber={lead.hfx_customer_number}
+        />
+      )}
     </Form>
   );
 }
