@@ -73,6 +73,7 @@ import { useRegionalTeam } from "@/hooks/useRegionalTeam";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabaseClient";
 import { KundenDialog } from "@/components/kunden/KundenDialog";
+import { ReassignContractAdDialog } from "@/components/vertrieb/ReassignContractAdDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
