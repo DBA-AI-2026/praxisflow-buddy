@@ -1,4 +1,8 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { useUserRole } from "@/hooks/useUserRole";
+import { ReassignReservationAdDialog } from "./ReassignReservationAdDialog";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +38,11 @@ interface Props {
   reservation: Reservation | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onReassigned?: (next: {
+    assigned_ad_id: string;
+    assigned_ad_name: string;
+    assignment_source: "manual";
+  }) => void;
 }
 
 function Field({
@@ -56,7 +65,9 @@ function Field({
   );
 }
 
-export function ReservationDetailDialog({ reservation, open, onOpenChange }: Props) {
+export function ReservationDetailDialog({ reservation, open, onOpenChange, onReassigned }: Props) {
+  const { isAdmin, isSalesLead } = useUserRole();
+  const [reassignOpen, setReassignOpen] = useState(false);
   const { data: linked } = useQuery({
     enabled: !!reservation && open,
     queryKey: [
@@ -148,14 +159,28 @@ export function ReservationDetailDialog({ reservation, open, onOpenChange }: Pro
             {reservation.reserved_by_name || "—"}
           </Field>
           <Field icon={Users} label="Zuständiger AD">
-            {reservation.assigned_ad_name || (
-              <span className="text-muted-foreground italic">Kein AD zugeordnet</span>
-            )}
-            {reservation.assignment_source ? (
-              <Badge variant="outline" className="ml-2 text-[10px]">
-                {reservation.assignment_source}
-              </Badge>
-            ) : null}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span>
+                {reservation.assigned_ad_name || (
+                  <span className="text-muted-foreground italic">Kein AD zugeordnet</span>
+                )}
+              </span>
+              {reservation.assignment_source ? (
+                <Badge variant="outline" className="text-[10px]">
+                  {reservation.assignment_source}
+                </Badge>
+              ) : null}
+              {(isAdmin || isSalesLead) && effectiveStatus !== "konvertiert" ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => setReassignOpen(true)}
+                >
+                  Ändern
+                </Button>
+              ) : null}
+            </div>
           </Field>
         </div>
 
@@ -231,6 +256,14 @@ export function ReservationDetailDialog({ reservation, open, onOpenChange }: Pro
           ) : null}
         </div>
       </DialogContent>
+      <ReassignReservationAdDialog
+        open={reassignOpen}
+        onOpenChange={setReassignOpen}
+        reservationId={reservation.id}
+        currentAssignedAdId={reservation.assigned_ad_id}
+        currentAssignedAdName={reservation.assigned_ad_name}
+        onChanged={onReassigned}
+      />
     </Dialog>
   );
 }

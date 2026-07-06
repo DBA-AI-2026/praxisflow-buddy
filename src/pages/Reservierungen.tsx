@@ -849,6 +849,11 @@ export default function Reservierungen() {
         reservation={activeReservation}
         open={detailOpen}
         onOpenChange={setDetailOpen}
+        onReassigned={(next) =>
+          setActiveReservation((prev) =>
+            prev ? { ...prev, ...next } : prev,
+          )
+        }
       />
       <ReservationEditDialog
         reservation={activeReservation}
