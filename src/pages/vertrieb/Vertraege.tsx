@@ -1087,6 +1087,10 @@ export default function Vertraege() {
         // inkl. approved_by/approved_at — kein doppeltes Überschreiben).
         const restRecord = { ...record };
         if (statusRoutedThroughGuard) delete (restRecord as any).status;
+        // sales_partner_id/_name werden ausschließlich über reassign_contract_ad RPC gepflegt
+        // (Guard-Trigger blockt sonst jeden Edit von Nicht-Admins/-Sales-Leads durch null-Rewrite).
+        delete (restRecord as any).sales_partner_id;
+        delete (restRecord as any).sales_partner_name;
         const { error } = await supabase.from("contracts").update(restRecord).eq("id", editId);
         if (error) throw error;
       } else {
