@@ -1880,8 +1880,7 @@ export default function Vertraege() {
           telefon: form.telefon || null,
           notes: form.notes || null,
           start_date: form.start_date,
-          sales_partner_id: form.sales_partner_id || null,
-          sales_partner_name: form.sales_partner_name || null,
+          // sales_partner_id/_name: siehe reassign_contract_ad RPC — hier bewusst nicht mitschreiben.
         } as any).eq("id", editId);
         if (error) throw error;
       } else {
