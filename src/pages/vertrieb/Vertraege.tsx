@@ -3053,15 +3053,38 @@ export default function Vertraege() {
                 </div>
                 <div>
                    <Label>Vertriebspartner</Label>
-                   <SalesPartnerCombobox
-                     value={form.sales_partner_name}
-                     selectedId={form.sales_partner_id}
-                     onChange={(id, name) => {
-                       set("sales_partner_id", id);
-                       set("sales_partner_name", name);
-                     }}
-                     profiles={allProfiles}
-                   />
+                   {editId ? (
+                     <div className="mt-1.5 flex items-center gap-2 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm">
+                       <span className="flex-1 truncate font-medium text-foreground">
+                         {form.sales_partner_name || <span className="text-muted-foreground font-normal">nicht zugewiesen</span>}
+                       </span>
+                       {canReassignContractAd && (
+                         <Button
+                           type="button"
+                           variant="outline"
+                           size="sm"
+                           onClick={() => setReassignAdTarget({
+                             id: editId,
+                             sales_partner_id: form.sales_partner_id || null,
+                             sales_partner_name: form.sales_partner_name || null,
+                             hfx_customer_number: (contracts.find((c: any) => c.id === editId) as any)?.hfx_customer_number ?? null,
+                           })}
+                         >
+                           Ändern
+                         </Button>
+                       )}
+                     </div>
+                   ) : (
+                     <SalesPartnerCombobox
+                       value={form.sales_partner_name}
+                       selectedId={form.sales_partner_id}
+                       onChange={(id, name) => {
+                         set("sales_partner_id", id);
+                         set("sales_partner_name", name);
+                       }}
+                       profiles={allProfiles}
+                     />
+                   )}
                  </div>
                  {leadTippgeberName && (
                    <div className="col-span-2">
