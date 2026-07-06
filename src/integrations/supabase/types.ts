@@ -2880,6 +2880,10 @@ export type Database = {
         Args: { _regional_lead_id: string; _user_id: string }
         Returns: boolean
       }
+      reassign_contract_ad: {
+        Args: { p_contract_id: string; p_new_ad: string; p_reason?: string }
+        Returns: undefined
+      }
       recompute_contract_provider_usage: {
         Args: { _contract_id: string; _provider?: string }
         Returns: undefined
