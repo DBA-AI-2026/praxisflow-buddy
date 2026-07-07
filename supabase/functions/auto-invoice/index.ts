@@ -890,6 +890,11 @@ Deno.serve(async (req) => {
 
         // A5/A6: Provisionen + fibu_events nur wenn Stripe-Charge erfolgreich war.
         // Auto-generate commission payout
+        if (!contract.sales_partner_id) {
+          console.warn(`[auto-invoice] commission-skip contract=${contract.id} invoice=${invoice.id} reason=missing_sales_partner_id sales_partner_name=${contract.sales_partner_name ?? "null"}`);
+        } else if (stripeChargeFailed) {
+          console.warn(`[auto-invoice] commission-skip contract=${contract.id} invoice=${invoice.id} reason=stripe_charge_failed`);
+        }
         if (!stripeChargeFailed && contract.sales_partner_id) {
           const isGoae = /GOÄ|GOA/i.test(contract.product_name || "");
 
