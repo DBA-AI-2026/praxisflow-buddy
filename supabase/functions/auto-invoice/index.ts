@@ -1182,17 +1182,27 @@ async function createGoaeCommissions(params: {
     .eq("contract_id", contract.id);
   const isFirstInvoice = (invoiceCount || 0) <= 1;
 
-  // Fetch the role of the sales_partner_id
-  const { data: roleRow } = await supabase
+  // Fetch active roles of the sales_partner_id and resolve by priority.
+  // maybeSingle() vorher konnte bei mehreren Rollen-Zeilen still null liefern.
+  const { data: roleRows, error: roleErr } = await supabase
     .from("user_roles")
     .select("role")
     .eq("user_id", contract.sales_partner_id)
-    .maybeSingle();
-  const partnerRole = roleRow?.role || null;
+    .eq("is_active", true);
+  if (roleErr) {
+    console.warn(`[auto-invoice] commission-skip: role lookup failed contract=${contract.id} sales_partner_id=${contract.sales_partner_id} error=${roleErr.message}`);
+  }
+  const ROLE_PRIORITY = ["sales_lead", "regional_lead", "user", "sales_partner"] as const;
+  const activeRoles = new Set((roleRows ?? []).map((r: any) => r.role));
+  const partnerRole = ROLE_PRIORITY.find((r) => activeRoles.has(r)) ?? null;
 
   const adRoles = ["user", "regional_lead", "sales_lead"];
   const isAdRole = adRoles.includes(partnerRole);
   const isSalesPartner = partnerRole === "sales_partner";
+
+  if (!partnerRole || (!isAdRole && !isSalesPartner)) {
+    console.warn(`[auto-invoice] commission-skip contract=${contract.id} invoice=${invoice.id} sales_partner_id=${contract.sales_partner_id} resolved_role=${partnerRole ?? "null"} reason=role_not_eligible`);
+  }
 
   // ── AD-Provision ─────────────────────────────────────────────────────────
   if (isAdRole) {
