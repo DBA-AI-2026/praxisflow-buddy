@@ -39,12 +39,13 @@ type AdOption = {
   user_id: string;
   full_name: string;
   email: string | null;
-  role: "sales_partner" | "user";
+  role: "sales_partner" | "user" | "regional_lead";
 };
 
 const roleLabel: Record<string, string> = {
   sales_partner: "Vertriebspartner",
   user: "Gebietsleiter",
+  regional_lead: "Regionalleiter",
 };
 
 interface Props {
@@ -86,12 +87,12 @@ export function ReassignReservationAdDialog({
       const { data: roles, error } = await supabase
         .from("user_roles")
         .select("user_id, role, is_active")
-        .in("role", ["sales_partner", "user"])
+        .in("role", ["sales_partner", "user", "regional_lead"])
         .eq("is_active", true);
       if (error) throw error;
       if (!roles?.length) return [];
-      const roleMap: Record<string, "sales_partner" | "user"> = {};
-      for (const r of roles) roleMap[r.user_id] = r.role as "sales_partner" | "user";
+      const roleMap: Record<string, "sales_partner" | "user" | "regional_lead"> = {};
+      for (const r of roles) roleMap[r.user_id] = r.role as "sales_partner" | "user" | "regional_lead";
       const ids = roles.map((r) => r.user_id);
       const { data: profiles } = await supabase
         .from("profiles")

@@ -67,6 +67,7 @@ interface CreateLeadDialogProps {
 const leadRoleLabels: Record<string, string> = {
   sales_partner: "Vertriebspartner",
   user: "Gebietsleiter",
+  regional_lead: "Regionalleiter",
   tippgeber: "Tippgeber",
 };
 
@@ -203,7 +204,7 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
       const { data, error } = await supabase
         .from("user_roles")
         .select("user_id, role, is_active")
-        .in("role", ["sales_partner", "user"])
+        .in("role", ["sales_partner", "user", "regional_lead"])
         .eq("is_active", true);
       if (error) throw error;
       if (!data?.length) return [];
