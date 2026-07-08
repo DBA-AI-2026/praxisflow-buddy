@@ -401,6 +401,8 @@ const Provisionen = () => {
   const [approvingGroup, setApprovingGroup] = useState<string | null>(null);
   const [payingGroup, setPayingGroup] = useState<string | null>(null);
   const [revokingGroup, setRevokingGroup] = useState<string | null>(null);
+  const [resettingGroup, setResettingGroup] = useState<string | null>(null);
+  const [resetConfirm, setResetConfirm] = useState<{ month: string; partnerId: string; groupKey: string } | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
   const [csvMonth, setCsvMonth] = useState<string>("all");
 
