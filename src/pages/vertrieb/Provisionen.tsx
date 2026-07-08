@@ -565,6 +565,7 @@ const Provisionen = () => {
 
           {/* ── Payouts Tab ── */}
           <TabsContent value="payouts" className="mt-4">
+            {isAdmin && <CommissionTestrunPanel />}
             <Card>
               <CardHeader>
                 <CardTitle>Provisionsauszahlungen</CardTitle>
