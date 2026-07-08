@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -154,11 +155,11 @@ async function generateCommissionPdf(
     catch { try { embeddedLogo = await doc.embedJpg(logoBytes); } catch { /* skip */ } }
   }
 
-  // Column proportions (Produkt 34%, Zweck 14%, Modell 20%, Satz 10%, Betrag 12%, Status 10%)
+  // Column proportions (Produkt 30%, Zweck 20%, Modell 18%, Satz 10%, Betrag 12%, Status 10%)
   const COL_W = {
-    produkt: CW * 0.34,
-    zweck:   CW * 0.14,
-    modell:  CW * 0.20,
+    produkt: CW * 0.30,
+    zweck:   CW * 0.20,
+    modell:  CW * 0.18,
     satz:    CW * 0.10,
     betrag:  CW * 0.12,
     status:  CW * 0.10,
@@ -173,10 +174,27 @@ async function generateCommissionPdf(
   };
   const PAD_X = 4;
 
-  // Wrap text into lines
+  // Wrap text into lines. Hard-break single words that exceed maxW so no
+  // text runs past the column boundary.
   const wrapText = (t: string, size: number, maxW: number, f: PDFFont): string[] => {
     if (!t) return [""];
-    const words = t.split(/\s+/);
+    const hardBreak = (word: string): string[] => {
+      if (f.widthOfTextAtSize(word, size) <= maxW) return [word];
+      const parts: string[] = [];
+      let buf = "";
+      for (const ch of word) {
+        const test = buf + ch;
+        if (f.widthOfTextAtSize(test, size) > maxW && buf) {
+          parts.push(buf);
+          buf = ch;
+        } else {
+          buf = test;
+        }
+      }
+      if (buf) parts.push(buf);
+      return parts.length ? parts : [word];
+    };
+    const words = t.split(/\s+/).flatMap(hardBreak);
     const lines: string[] = [];
     let current = "";
     for (const w of words) {
@@ -384,6 +402,8 @@ const Provisionen = () => {
   const [approvingGroup, setApprovingGroup] = useState<string | null>(null);
   const [payingGroup, setPayingGroup] = useState<string | null>(null);
   const [revokingGroup, setRevokingGroup] = useState<string | null>(null);
+  const [resettingGroup, setResettingGroup] = useState<string | null>(null);
+  const [resetConfirm, setResetConfirm] = useState<{ month: string; partnerId: string; groupKey: string } | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
   const [csvMonth, setCsvMonth] = useState<string>("all");
 
@@ -650,6 +670,37 @@ const Provisionen = () => {
       toast({ title: "Fehler", description: e.message, variant: "destructive" });
     } finally {
       setPayingGroup(null);
+    }
+  };
+
+  const resetGroupToPending = async (month: string, partnerId: string, groupKey: string) => {
+    if (!isAdmin) return;
+    const groupRows = payouts.filter(p => p.period_month === month && p.sales_partner_id === partnerId);
+    const ids = groupRows.filter(p => p.status === "approved" || p.status === "paid").map(p => p.id);
+    if (ids.length === 0) { toast({ title: "Nichts zurückzusetzen" }); return; }
+    setResettingGroup(groupKey);
+    try {
+      const { error } = await supabase
+        .from("commission_payouts")
+        .update({ status: "pending", approved_by: null, approved_at: null, paid_at: null })
+        .in("id", ids);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["commission-payouts"] });
+      toast({ title: "Status zurückgesetzt", description: `${ids.length} Provisionen wieder auf ausstehend.` });
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    } finally {
+      setResettingGroup(null);
+      setResetConfirm(null);
+    }
+  };
+
+  const handleResetClick = (month: string, partnerId: string, groupKey: string) => {
+    const groupRows = payouts.filter(p => p.period_month === month && p.sales_partner_id === partnerId);
+    if (groupRows.some(p => p.status === "paid")) {
+      setResetConfirm({ month, partnerId, groupKey });
+    } else {
+      resetGroupToPending(month, partnerId, groupKey);
     }
   };
 
@@ -925,16 +976,16 @@ const Provisionen = () => {
                              Freigeben
                            </Button>
                           )}
-                          {anyApproved && !anyPending && !group.items.some(p => p.status === "paid") && (
+                          {(anyApproved || group.items.some(p => p.status === "paid")) && (
                             <Button
                               size="sm"
                               variant="outline"
                               className="text-amber-700 border-amber-300 hover:bg-amber-50 h-7 text-xs"
-                              disabled={revokingGroup === key}
-                              onClick={() => revokeApprovalGroup(group.month, group.partnerId, key)}
+                              disabled={resettingGroup === key}
+                              onClick={() => handleResetClick(group.month, group.partnerId, key)}
                             >
-                              {revokingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3 mr-1" />}
-                              Freigabe zurücknehmen
+                              {resettingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3 mr-1" />}
+                              Status zurücksetzen
                             </Button>
                           )}
                          {anyApproved && !anyPending && (
@@ -1395,6 +1446,31 @@ const Provisionen = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!resetConfirm} onOpenChange={(o) => !o && setResetConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Status zurücksetzen – Bestätigung erforderlich</AlertDialogTitle>
+            <AlertDialogDescription>
+              Diese Gruppe enthält bereits als AUSGEZAHLT markierte Provisionen.
+              Nur zurücksetzen, wenn dies ein Korrektur-/Fehlklick ist und die
+              Beträge NICHT tatsächlich überwiesen wurden. Fortfahren?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (resetConfirm) {
+                  resetGroupToPending(resetConfirm.month, resetConfirm.partnerId, resetConfirm.groupKey);
+                }
+              }}
+            >
+              Bestätigen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };
