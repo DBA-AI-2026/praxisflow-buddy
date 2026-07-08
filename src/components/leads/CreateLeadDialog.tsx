@@ -197,7 +197,7 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
     },
   });
 
-  // Fetch sales partners (users with sales_partner or user role) — only active
+  // Fetch assignable ADs (sales_partner, user, regional_lead roles) — only active
   const { data: salesPartners = [] } = useQuery({
     queryKey: ["sales-partners-for-lead"],
     queryFn: async () => {
