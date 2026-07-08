@@ -15,15 +15,22 @@ import { Progress } from "@/components/ui/progress";
 import {
   Euro, TrendingUp, Users, Calendar, Settings, Plus, Pencil, Trash2, Loader2,
   Percent, CalendarDays, CheckCircle2, Clock, Banknote, FileDown, ChevronDown, ChevronRight,
-  Zap, Award, Gift, Info,
+  Zap, Award, Gift, Info, RotateCcw,
 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { PDFDocument, PDFFont, rgb, StandardFonts } from "pdf-lib";
 import { downloadCsv } from "@/lib/csv";
 import { payoutPurposeLabel, payoutPurposeLine } from "@/lib/commissionLabels";
+import {
+  COLOR_BRAND_NAVY, COLOR_TEXT, COLOR_MUTED, COLOR_LINE, COLOR_LINE_LIGHT,
+  SIZE_LABEL, SIZE_VALUE, SIZE_BODY, SIZE_FOOTER,
+  PAGE_W, PAGE_H, MARGIN_LEFT, MARGIN_RIGHT,
+  hexToRgb01,
+} from "@/lib/pdfDesignTokens";
+import foxLogoUrl from "@/assets/logo.png";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
