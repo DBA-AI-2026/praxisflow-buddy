@@ -3659,19 +3659,47 @@ export default function Vertraege() {
             )}
 
             {/* Status */}
-            {editId && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Status</h4>
-                <Select value={form.status} onValueChange={(v) => set("status", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {CONTRACT_STATUS_ORDER.map((s) => (
-                      <SelectItem key={s} value={s}>{statusConfig[s].label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {editId && (() => {
+              const PROTECTED_TARGETS = ["aktiv", "gekuendigt", "beendet", "gesperrt"] as const;
+              const currentStatus = (editingContract?.status ?? form.status) as string;
+              return (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Status</h4>
+                  <Select value={form.status} onValueChange={(v) => set("status", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <TooltipProvider delayDuration={150}>
+                        {CONTRACT_STATUS_ORDER.map((s) => {
+                          const isCurrent = s === currentStatus;
+                          // Spiegelt den DB-Guard: geschützte Zielstatus + Rückwärts aus 'aktiv' nur für Admin/System.
+                          const isAdminGated =
+                            !isAdmin &&
+                            ((PROTECTED_TARGETS as readonly string[]).includes(s) || currentStatus === "aktiv");
+                          const item = (
+                            <SelectItem key={s} value={s} disabled={isAdminGated}>
+                              {statusConfig[s].label}
+                            </SelectItem>
+                          );
+                          if (isAdminGated && !isCurrent) {
+                            return (
+                              <Tooltip key={s}>
+                                <TooltipTrigger asChild>
+                                  <div>{item}</div>
+                                </TooltipTrigger>
+                                <TooltipContent side="right">
+                                  Nur durch Admin änderbar — zur Ausführung bitte Admin kontaktieren.
+                                </TooltipContent>
+                              </Tooltip>
+                            );
+                          }
+                          return item;
+                        })}
+                      </TooltipProvider>
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })()}
 
             {/* Zahlungsmethode */}
             {/* Rechnungs-E-Mail */}
