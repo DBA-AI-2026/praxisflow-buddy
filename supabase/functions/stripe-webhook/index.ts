@@ -1,6 +1,6 @@
 import Stripe from "npm:stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { isGoaeProduct } from "../_shared/multiLocation.ts";
+import { isGoaeProduct, isStandortHfx } from "../_shared/multiLocation.ts";
 import { formatStripeMaskedIban } from "../_shared/formatStripeMaskedIban.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
@@ -909,7 +909,7 @@ async function handleSepaMandateSetup(
   // Idempotenz: stripe_customer_id bereits gesetzt?
   const { data: existing } = await supabase
     .from("contracts")
-    .select("stripe_customer_id, status, email, confirmation_email_sent_at, customer_id, customer_name, vorname, nachname, rechnungs_email")
+    .select("stripe_customer_id, status, email, confirmation_email_sent_at, customer_id, customer_name, vorname, nachname, rechnungs_email, hfx_customer_number, mp_nr")
     .eq("id", contractId)
     .maybeSingle();
 
@@ -958,6 +958,50 @@ async function handleSepaMandateSetup(
         }
       } catch (err) {
         log("WARN: agb_acceptances insert exception (non-blocking)", String(err));
+      }
+
+      // ── Lead-Flip auf "kunde" (Ursache verwaister Leads) ─────────────────────
+      // Spiegelt changeContractStatus (src/lib/contractStatusActions.ts, Block 5).
+      // Read→Update awaited, Event fire-and-forget. Standorte skippen (kein Lead).
+      try {
+        const e: any = existing;
+        const hfx: string | null = e?.hfx_customer_number || e?.mp_nr || null;
+        if (hfx && !isStandortHfx(hfx)) {
+          const { data: leadBefore } = await supabase
+            .from("leads")
+            .select("id, status")
+            .eq("hfx_customer_number", hfx)
+            .maybeSingle();
+          if (leadBefore && (leadBefore as any).status !== "kunde") {
+            const { error: leadUpdErr } = await supabase
+              .from("leads")
+              .update({ status: "kunde" } as any)
+              .eq("hfx_customer_number", hfx);
+            if (leadUpdErr) {
+              log("WARN: lead flip update failed (non-blocking)", leadUpdErr.message);
+            } else {
+              supabase.from("customer_events").insert({
+                event_type: "LEAD_STATUS_CHANGED",
+                entity_type: "lead",
+                entity_id: (leadBefore as any).id,
+                lead_id: (leadBefore as any).id,
+                contract_id: contractId,
+                hfx_customer_number: hfx,
+                event_data: {
+                  old_status: (leadBefore as any).status,
+                  new_status: "kunde",
+                  source: "stripe_webhook_sepa_activation",
+                },
+                created_by: null,
+              } as any).then(({ error }) => {
+                if (error) log("WARN: customer_events insert (lead flip) failed", error.message);
+              });
+              log("Lead flipped to kunde (via SEPA mandate)", { contractId, hfx, prev: (leadBefore as any).status });
+            }
+          }
+        }
+      } catch (err) {
+        log("WARN: lead flip exception (non-blocking)", String(err));
       }
     } else {
       log("sepa_mandate_setup: activation UPDATE returned 0 rows (race/re-delivery)", contractId);
