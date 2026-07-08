@@ -924,7 +924,19 @@ const Provisionen = () => {
                              {approvingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
                              Freigeben
                            </Button>
-                         )}
+                          )}
+                          {anyApproved && !anyPending && !group.items.some(p => p.status === "paid") && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-amber-700 border-amber-300 hover:bg-amber-50 h-7 text-xs"
+                              disabled={revokingGroup === key}
+                              onClick={() => revokeApprovalGroup(group.month, group.partnerId, key)}
+                            >
+                              {revokingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3 mr-1" />}
+                              Freigabe zurücknehmen
+                            </Button>
+                          )}
                          {anyApproved && !anyPending && (
                            <Button
                              size="sm"
