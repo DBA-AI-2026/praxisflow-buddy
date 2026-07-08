@@ -1446,6 +1446,31 @@ const Provisionen = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!resetConfirm} onOpenChange={(o) => !o && setResetConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Status zurücksetzen – Bestätigung erforderlich</AlertDialogTitle>
+            <AlertDialogDescription>
+              Diese Gruppe enthält bereits als AUSGEZAHLT markierte Provisionen.
+              Nur zurücksetzen, wenn dies ein Korrektur-/Fehlklick ist und die
+              Beträge NICHT tatsächlich überwiesen wurden. Fortfahren?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (resetConfirm) {
+                  resetGroupToPending(resetConfirm.month, resetConfirm.partnerId, resetConfirm.groupKey);
+                }
+              }}
+            >
+              Bestätigen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };
