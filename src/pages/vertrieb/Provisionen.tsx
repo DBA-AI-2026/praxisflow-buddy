@@ -22,6 +22,8 @@ import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { downloadCsv } from "@/lib/csv";
+import { payoutPurposeLabel, payoutPurposeLine } from "@/lib/commissionLabels";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -58,6 +60,15 @@ interface CommissionPayout {
   approved_at: string | null;
   paid_at: string | null;
   created_at: string;
+  payout_trigger: string | null;
+  commission_role: string | null;
+  commission_rule_version: string | null;
+  contracts: {
+    customer_name: string | null;
+    praxis: string | null;
+    hfx_customer_number: string | null;
+    product_name: string | null;
+  } | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -128,23 +139,33 @@ async function generateCommissionPdf(
 
   // Table header
   page.drawRectangle({ x: 40, y: y - 6, width: 515, height: 22, color: rgb(0.95, 0.96, 1) });
-  const cols = [40, 180, 300, 400, 510];
+  const cols = [40, 150, 260, 360, 440, 510];
   page.drawText("Produkt", { x: cols[0], y, size: 9, font: bold, color: blue });
-  page.drawText("Provisionsmodell", { x: cols[1], y, size: 9, font: bold, color: blue });
-  page.drawText("Satz", { x: cols[2], y, size: 9, font: bold, color: blue });
-  page.drawText("Betrag", { x: cols[3], y, size: 9, font: bold, color: blue });
-  page.drawText("Status", { x: cols[4], y, size: 9, font: bold, color: blue });
+  page.drawText("Zweck", { x: cols[1], y, size: 9, font: bold, color: blue });
+  page.drawText("Modell", { x: cols[2], y, size: 9, font: bold, color: blue });
+  page.drawText("Satz", { x: cols[3], y, size: 9, font: bold, color: blue });
+  page.drawText("Betrag", { x: cols[4], y, size: 9, font: bold, color: blue });
+  page.drawText("Status", { x: cols[5], y, size: 9, font: bold, color: blue });
   y -= 24;
 
   // Rows
   for (const p of payouts) {
     if (y < 80) break;
-    page.drawText(p.product_name.slice(0, 22), { x: cols[0], y, size: 9, font, color: black });
-    page.drawText(typeLabels[p.commission_type as CommissionType] ?? p.commission_type, { x: cols[1], y, size: 9, font, color: gray });
-    page.drawText(formatValue(p.commission_type as CommissionType, p.commission_rate), { x: cols[2], y, size: 9, font, color: black });
-    page.drawText(fmtEur(p.commission_amount), { x: cols[3], y, size: 9, font: bold, color: black });
-    page.drawText(STATUS_LABELS[p.status]?.label ?? p.status, { x: cols[4], y, size: 9, font, color: gray });
-    y -= 18;
+    page.drawText(p.product_name.slice(0, 18), { x: cols[0], y, size: 9, font, color: black });
+    page.drawText(payoutPurposeLabel(p.payout_trigger).slice(0, 18), { x: cols[1], y, size: 9, font, color: black });
+    page.drawText((typeLabels[p.commission_type as CommissionType] ?? p.commission_type).slice(0, 16), { x: cols[2], y, size: 9, font, color: gray });
+    page.drawText(formatValue(p.commission_type as CommissionType, p.commission_rate), { x: cols[3], y, size: 9, font, color: black });
+    page.drawText(fmtEur(p.commission_amount), { x: cols[4], y, size: 9, font: bold, color: black });
+    page.drawText(STATUS_LABELS[p.status]?.label ?? p.status, { x: cols[5], y, size: 9, font, color: gray });
+    y -= 12;
+
+    // Sub-line: HFX-Nr · Kundenname (only if data available)
+    const subLine = payoutPurposeLine(p.contracts);
+    if (subLine) {
+      page.drawText(subLine.slice(0, 90), { x: cols[0] + 6, y, size: 8, font, color: gray });
+      y -= 8;
+    }
+    y -= 4;
 
     // Separator
     page.drawLine({ start: { x: 40, y: y + 4 }, end: { x: 555, y: y + 4 }, thickness: 0.5, color: rgb(0.9, 0.9, 0.9) });
@@ -156,7 +177,7 @@ async function generateCommissionPdf(
   const total = payouts.reduce((s, p) => s + p.commission_amount, 0);
   page.drawRectangle({ x: 40, y: y - 6, width: 515, height: 26, color: rgb(0.9, 0.93, 1) });
   page.drawText("Gesamtbetrag", { x: cols[0], y: y + 4, size: 11, font: bold, color: blue });
-  page.drawText(fmtEur(total), { x: cols[3], y: y + 4, size: 11, font: bold, color: blue });
+  page.drawText(fmtEur(total), { x: cols[4], y: y + 4, size: 11, font: bold, color: blue });
   y -= 50;
 
   // Footer
@@ -204,6 +225,7 @@ const Provisionen = () => {
   const [approvingGroup, setApprovingGroup] = useState<string | null>(null);
   const [payingGroup, setPayingGroup] = useState<string | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
+  const [csvMonth, setCsvMonth] = useState<string>("all");
 
   // ── Queries ──
 
@@ -221,10 +243,10 @@ const Provisionen = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("commission_payouts")
-        .select("*")
+        .select("*, contracts:contract_id(customer_name, praxis, hfx_customer_number, product_name)")
         .order("period_month", { ascending: false });
       if (error) throw error;
-      return data as CommissionPayout[];
+      return (data ?? []) as unknown as CommissionPayout[];
     },
   });
 
@@ -490,6 +512,63 @@ const Provisionen = () => {
     }
   };
 
+  // Verfügbare Monate für den CSV-Filter (aus freigegebenen Payouts).
+  const csvAvailableMonths = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of payouts) if (p.status === "approved") set.add(p.period_month);
+    return Array.from(set).sort((a, b) => b.localeCompare(a));
+  }, [payouts]);
+
+  const exportApprovedCsv = () => {
+    if (!canEditCommissions) return;
+    const filtered = payouts.filter(
+      (p) => p.status === "approved" && (csvMonth === "all" || p.period_month === csvMonth)
+    );
+    if (filtered.length === 0) {
+      toast({
+        title: "Keine freigegebenen Provisionen im gewählten Zeitraum",
+        variant: "destructive",
+      });
+      return;
+    }
+    const headers = [
+      "Monat",
+      "Vertriebler",
+      "HFX-Nr",
+      "Kunde",
+      "Produkt",
+      "Zweck",
+      "Rolle",
+      "Provisionsmodell",
+      "Satz",
+      "Betrag",
+      "Regelversion",
+      "Freigegeben am",
+      "Status",
+    ];
+    const rows: string[][] = [headers];
+    for (const p of filtered) {
+      const kunde = (p.contracts?.customer_name ?? p.contracts?.praxis ?? "") as string;
+      rows.push([
+        fmtMonth(p.period_month),
+        p.sales_partner_name ?? "",
+        p.contracts?.hfx_customer_number ?? "",
+        kunde,
+        p.product_name ?? "",
+        payoutPurposeLabel(p.payout_trigger),
+        p.commission_role ?? "",
+        typeLabels[p.commission_type as CommissionType] ?? p.commission_type,
+        formatValue(p.commission_type as CommissionType, Number(p.commission_rate)),
+        Number(p.commission_amount).toFixed(2).replace(".", ","),
+        p.commission_rule_version ?? "",
+        p.approved_at ? new Date(p.approved_at).toLocaleDateString("de-DE") : "",
+        STATUS_LABELS[p.status]?.label ?? p.status,
+      ]);
+    }
+    const label = csvMonth === "all" ? "alle" : csvMonth;
+    downloadCsv(rows, `HFX_Provisionen_freigegeben_${label}.csv`);
+  };
+
   const toggleGroup = (key: string) => {
     setExpandedGroups(prev => {
       const next = new Set(prev);
@@ -567,9 +646,35 @@ const Provisionen = () => {
           <TabsContent value="payouts" className="mt-4">
             {isAdmin && <CommissionTestrunPanel />}
             <Card>
-              <CardHeader>
-                <CardTitle>Provisionsauszahlungen</CardTitle>
-                <CardDescription>Automatisch generierte Provisionen aus Vertragsabrechnungen, gruppiert nach Monat und Vertriebler</CardDescription>
+              <CardHeader className="flex flex-row items-start justify-between gap-4">
+                <div>
+                  <CardTitle>Provisionsauszahlungen</CardTitle>
+                  <CardDescription>Automatisch generierte Provisionen aus Vertragsabrechnungen, gruppiert nach Monat und Vertriebler</CardDescription>
+                </div>
+                {canEditCommissions && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Select value={csvMonth} onValueChange={setCsvMonth}>
+                      <SelectTrigger className="h-9 w-[160px] text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Alle Monate</SelectItem>
+                        {csvAvailableMonths.map((m) => (
+                          <SelectItem key={m} value={m}>{fmtMonth(m)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={exportApprovedCsv}
+                      title="CSV-Export aller freigegebenen Provisionen (für interne Abteilung)"
+                    >
+                      <FileDown className="h-4 w-4 mr-1" />
+                      CSV-Export freigegeben
+                    </Button>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 {payoutsLoading ? (
@@ -667,6 +772,7 @@ const Provisionen = () => {
                                 <TableHeader>
                                   <TableRow>
                                     <TableHead>Produkt</TableHead>
+                                    <TableHead>Zweck</TableHead>
                                     <TableHead>Modell</TableHead>
                                     <TableHead>Satz</TableHead>
                                     <TableHead className="text-right">Betrag</TableHead>
@@ -675,9 +781,17 @@ const Provisionen = () => {
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {group.items.map((p) => (
+                                  {group.items.map((p) => {
+                                    const purposeSub = payoutPurposeLine(p.contracts);
+                                    return (
                                     <TableRow key={p.id}>
                                       <TableCell className="font-medium">{p.product_name}</TableCell>
+                                      <TableCell className="text-sm">
+                                        <div className="font-medium text-foreground">{payoutPurposeLabel(p.payout_trigger)}</div>
+                                        {purposeSub && (
+                                          <div className="text-xs text-muted-foreground">{purposeSub}</div>
+                                        )}
+                                      </TableCell>
                                       <TableCell className="text-muted-foreground text-sm">
                                         {typeLabels[p.commission_type as CommissionType] ?? p.commission_type}
                                       </TableCell>
@@ -696,7 +810,8 @@ const Provisionen = () => {
                                         </TableCell>
                                       )}
                                     </TableRow>
-                                  ))}
+                                    );
+                                  })}
                                 </TableBody>
                               </Table>
                             </div>
