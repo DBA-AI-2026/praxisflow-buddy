@@ -80,17 +80,7 @@ const fmtDateTime = (s: string) => {
   try { return format(new Date(s), "dd.MM.yyyy HH:mm", { locale: de }); } catch { return s; }
 };
 
-function downloadCsv(rows: string[][], filename: string) {
-  const bom = "\uFEFF";
-  const csv = bom + rows.map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(";")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
+import { downloadCsv } from "@/lib/csv";
 
 // Lexware-compatible header sets
 const REVENUE_HEADERS = ["Datum", "Belegnummer", "Buchungstext", "Konto", "Gegenkonto", "Nettobetrag", "USt-Satz %", "USt-Betrag", "Bruttobetrag", "Kostenstelle", "Zahlungsart"];
