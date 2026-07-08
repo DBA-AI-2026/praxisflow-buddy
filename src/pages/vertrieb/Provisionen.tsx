@@ -975,16 +975,16 @@ const Provisionen = () => {
                              Freigeben
                            </Button>
                           )}
-                          {anyApproved && !anyPending && !group.items.some(p => p.status === "paid") && (
+                          {(anyApproved || group.items.some(p => p.status === "paid")) && (
                             <Button
                               size="sm"
                               variant="outline"
                               className="text-amber-700 border-amber-300 hover:bg-amber-50 h-7 text-xs"
-                              disabled={revokingGroup === key}
-                              onClick={() => revokeApprovalGroup(group.month, group.partnerId, key)}
+                              disabled={resettingGroup === key}
+                              onClick={() => handleResetClick(group.month, group.partnerId, key)}
                             >
-                              {revokingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3 mr-1" />}
-                              Freigabe zurücknehmen
+                              {resettingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3 mr-1" />}
+                              Status zurücksetzen
                             </Button>
                           )}
                          {anyApproved && !anyPending && (
