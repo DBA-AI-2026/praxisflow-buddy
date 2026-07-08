@@ -82,7 +82,7 @@ interface CommissionPayout {
 
 const typeLabels: Record<CommissionType, string> = {
   prozent: "% vom Umsatz",
-  festbetrag: "Festbetrag / Abschluss",
+  festbetrag: "Festbetrag Abschluss",
   monatlich: "€ / Monat",
 };
 
