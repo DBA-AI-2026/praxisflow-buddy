@@ -2,8 +2,8 @@
  * ReassignLeadAdDialog — Zuständigen AD auf einem Lead ändern.
  *
  * Sichtbarkeit UI-seitig: admin | sales_lead (RLS deckt es serverseitig).
- * Rollenfilter für Combobox: strikt wie CreateLeadDialog — `user` + `sales_partner`,
- * nur aktive, keine Tippgeber. Keine neue AD-Konvention.
+ * Rollenfilter für Combobox: wie CreateLeadDialog — `sales_partner` + `user` +
+ * `regional_lead`, nur aktive, keine Tippgeber. Keine neue AD-Konvention.
  *
  * Nach erfolgreichem Update:
  *  - assignment_source = 'manual'
@@ -78,7 +78,7 @@ export function ReassignLeadAdDialog({
     }
   }, [open, currentAssignedTo]);
 
-  // Same source query as CreateLeadDialog: user_roles(role in user|sales_partner) + active + profiles
+  // Same source query as CreateLeadDialog: user_roles(role in sales_partner|user|regional_lead) + active + profiles
   const { data: ads = [], isLoading } = useQuery({
     queryKey: ["assignable-ads-for-lead-reassign"],
     queryFn: async (): Promise<AdOption[]> => {

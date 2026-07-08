@@ -2,8 +2,8 @@
  * ReassignReservationAdDialog — Zuständigen AD auf einer Reservierung ändern.
  *
  * Sichtbarkeit UI-seitig: admin | sales_lead (RLS deckt es serverseitig).
- * Rollenfilter für Combobox: strikt wie CreateLeadDialog / ReassignLeadAdDialog —
- * `user` + `sales_partner`, nur aktive, keine Tippgeber.
+ * Rollenfilter für Combobox: wie CreateLeadDialog / ReassignLeadAdDialog —
+ * `sales_partner` + `user` + `regional_lead`, nur aktive, keine Tippgeber.
  *
  * Schreibt gemeinsam: assigned_ad_id, assigned_ad_name (aus Profil, Fallback
  * email → "Unbenannt") und assignment_source='manual'.
