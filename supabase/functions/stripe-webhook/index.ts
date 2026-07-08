@@ -909,7 +909,7 @@ async function handleSepaMandateSetup(
   // Idempotenz: stripe_customer_id bereits gesetzt?
   const { data: existing } = await supabase
     .from("contracts")
-    .select("stripe_customer_id, status, email, confirmation_email_sent_at, customer_id, customer_name, vorname, nachname, rechnungs_email")
+    .select("stripe_customer_id, status, email, confirmation_email_sent_at, customer_id, customer_name, vorname, nachname, rechnungs_email, hfx_customer_number, mp_nr")
     .eq("id", contractId)
     .maybeSingle();
 
