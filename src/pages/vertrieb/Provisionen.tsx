@@ -565,6 +565,7 @@ const Provisionen = () => {
 
           {/* ── Payouts Tab ── */}
           <TabsContent value="payouts" className="mt-4">
+            {isAdmin && <CommissionTestrunPanel />}
             <Card>
               <CardHeader>
                 <CardTitle>Provisionsauszahlungen</CardTitle>
@@ -1084,4 +1085,130 @@ const Provisionen = () => {
   );
 };
 
+// ─── Admin: Commission Motor Testrun Panel ───────────────────────────────────
+
+const TESTRUN_STORAGE_KEY = "commission-testrun:last";
+
+interface TestrunState {
+  contract_id: string;
+  hfx_customer_number: string;
+  sales_partner_name?: string;
+  payouts?: Array<{ commission_amount: number; commission_role: string; payout_trigger: string; commission_rule_version: string }>;
+}
+
+function CommissionTestrunPanel() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [last, setLast] = useState<TestrunState | null>(() => {
+    try {
+      const raw = sessionStorage.getItem(TESTRUN_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+  const [seeding, setSeeding] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
+
+  const saveState = (s: TestrunState | null) => {
+    setLast(s);
+    if (s) sessionStorage.setItem(TESTRUN_STORAGE_KEY, JSON.stringify(s));
+    else sessionStorage.removeItem(TESTRUN_STORAGE_KEY);
+  };
+
+  const runSeed = async () => {
+    setSeeding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("commission-testrun", {
+        body: { mode: "seed_and_run" },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || "Unbekannter Fehler");
+      const state: TestrunState = {
+        contract_id: data.contract_id,
+        hfx_customer_number: data.hfx_customer_number,
+        sales_partner_name: data.sales_partner_name,
+        payouts: data.payouts,
+      };
+      saveState(state);
+      queryClient.invalidateQueries({ queryKey: ["commission-payouts"] });
+      const n = (data.payouts ?? []).length;
+      toast({
+        title: "Testlauf erfolgreich",
+        description: `${n} Payout(s) für Fixture ${data.hfx_customer_number} erzeugt.`,
+      });
+    } catch (e: any) {
+      toast({ title: "Testlauf fehlgeschlagen", description: e?.message ?? String(e), variant: "destructive" });
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+  const runCleanup = async () => {
+    if (!last) return;
+    setCleaning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("commission-testrun", {
+        body: {
+          mode: "cleanup",
+          hfx_customer_number: last.hfx_customer_number,
+          contract_id: last.contract_id,
+        },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || "Unbekannter Fehler");
+      saveState(null);
+      queryClient.invalidateQueries({ queryKey: ["commission-payouts"] });
+      const d = data.deleted ?? {};
+      toast({
+        title: "Testrun aufgeräumt",
+        description: `Gelöscht: ${d.commission_payouts ?? 0} Payouts, ${d.fibu_events ?? 0} FiBu-Events, ${d.invoices ?? 0} Rechnung(en), ${d.contracts ?? 0} Vertrag/Verträge.`,
+      });
+    } catch (e: any) {
+      toast({ title: "Cleanup fehlgeschlagen", description: e?.message ?? String(e), variant: "destructive" });
+    } finally {
+      setCleaning(false);
+    }
+  };
+
+  return (
+    <Card className="mb-4 border-dashed">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Zap className="h-4 w-4 text-amber-600" />
+          Provisionsmotor · Testlauf (Admin)
+        </CardTitle>
+        <CardDescription>
+          Erzeugt eine Wegwerf-Fixture (Vertrag <code>entwurf</code>, HFX GOÄ, {" "}
+          <code>Digital-Eigen-Vertrieb</code>) mit Marker <code>TEST-HARNESS-&lt;ts&gt;</code>, ruft den echten Motor und schreibt einen sichtbaren Payout.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={runSeed} disabled={seeding || cleaning} size="sm">
+            {seeding && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Testlauf starten
+          </Button>
+          <Button
+            onClick={runCleanup}
+            disabled={!last || seeding || cleaning}
+            variant="outline"
+            size="sm"
+          >
+            {cleaning && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Testrun aufräumen
+          </Button>
+          {last && (
+            <div className="text-xs text-muted-foreground">
+              Aktive Fixture: <code>{last.hfx_customer_number}</code>
+              {last.payouts && last.payouts.length > 0 && (
+                <> · {last.payouts.length} Payout(s)</>
+              )}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default Provisionen;
+

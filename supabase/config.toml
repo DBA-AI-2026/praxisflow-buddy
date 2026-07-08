@@ -57,3 +57,5 @@ project_id = "gvsxentbbzuyanqbqvea"
     verify_jwt = false
   [functions.buchen-submit]
     verify_jwt = false
+  [functions.commission-testrun]
+    verify_jwt = false
