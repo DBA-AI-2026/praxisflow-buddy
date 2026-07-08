@@ -67,6 +67,7 @@ interface CreateLeadDialogProps {
 const leadRoleLabels: Record<string, string> = {
   sales_partner: "Vertriebspartner",
   user: "Gebietsleiter",
+  regional_lead: "Regionalleiter",
   tippgeber: "Tippgeber",
 };
 
