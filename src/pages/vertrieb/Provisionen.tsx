@@ -672,6 +672,37 @@ const Provisionen = () => {
     }
   };
 
+  const resetGroupToPending = async (month: string, partnerId: string, groupKey: string) => {
+    if (!isAdmin) return;
+    const groupRows = payouts.filter(p => p.period_month === month && p.sales_partner_id === partnerId);
+    const ids = groupRows.filter(p => p.status === "approved" || p.status === "paid").map(p => p.id);
+    if (ids.length === 0) { toast({ title: "Nichts zurückzusetzen" }); return; }
+    setResettingGroup(groupKey);
+    try {
+      const { error } = await supabase
+        .from("commission_payouts")
+        .update({ status: "pending", approved_by: null, approved_at: null, paid_at: null })
+        .in("id", ids);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["commission-payouts"] });
+      toast({ title: "Status zurückgesetzt", description: `${ids.length} Provisionen wieder auf ausstehend.` });
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    } finally {
+      setResettingGroup(null);
+      setResetConfirm(null);
+    }
+  };
+
+  const handleResetClick = (month: string, partnerId: string, groupKey: string) => {
+    const groupRows = payouts.filter(p => p.period_month === month && p.sales_partner_id === partnerId);
+    if (groupRows.some(p => p.status === "paid")) {
+      setResetConfirm({ month, partnerId, groupKey });
+    } else {
+      resetGroupToPending(month, partnerId, groupKey);
+    }
+  };
+
   const revokeApprovalGroup = async (month: string, partnerId: string, groupKey: string) => {
     if (!isAdmin) return;
     // Client-Guard: keine paid-Zeile in der Gruppe
