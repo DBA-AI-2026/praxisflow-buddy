@@ -2,6 +2,7 @@ import { Resend } from "npm:resend@2.0.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14.21.0";
 import { isGoaeProduct, isCarrierContract, healCustomerStripeId } from "../_shared/multiLocation.ts";
+import { createGoaeCommissions } from "../_shared/goaeCommissions.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
