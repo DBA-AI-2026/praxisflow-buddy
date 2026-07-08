@@ -154,11 +154,11 @@ async function generateCommissionPdf(
     catch { try { embeddedLogo = await doc.embedJpg(logoBytes); } catch { /* skip */ } }
   }
 
-  // Column proportions (Produkt 34%, Zweck 14%, Modell 20%, Satz 10%, Betrag 12%, Status 10%)
+  // Column proportions (Produkt 30%, Zweck 20%, Modell 18%, Satz 10%, Betrag 12%, Status 10%)
   const COL_W = {
-    produkt: CW * 0.34,
-    zweck:   CW * 0.14,
-    modell:  CW * 0.20,
+    produkt: CW * 0.30,
+    zweck:   CW * 0.20,
+    modell:  CW * 0.18,
     satz:    CW * 0.10,
     betrag:  CW * 0.12,
     status:  CW * 0.10,
@@ -173,10 +173,27 @@ async function generateCommissionPdf(
   };
   const PAD_X = 4;
 
-  // Wrap text into lines
+  // Wrap text into lines. Hard-break single words that exceed maxW so no
+  // text runs past the column boundary.
   const wrapText = (t: string, size: number, maxW: number, f: PDFFont): string[] => {
     if (!t) return [""];
-    const words = t.split(/\s+/);
+    const hardBreak = (word: string): string[] => {
+      if (f.widthOfTextAtSize(word, size) <= maxW) return [word];
+      const parts: string[] = [];
+      let buf = "";
+      for (const ch of word) {
+        const test = buf + ch;
+        if (f.widthOfTextAtSize(test, size) > maxW && buf) {
+          parts.push(buf);
+          buf = ch;
+        } else {
+          buf = test;
+        }
+      }
+      if (buf) parts.push(buf);
+      return parts.length ? parts : [word];
+    };
+    const words = t.split(/\s+/).flatMap(hardBreak);
     const lines: string[] = [];
     let current = "";
     for (const w of words) {
