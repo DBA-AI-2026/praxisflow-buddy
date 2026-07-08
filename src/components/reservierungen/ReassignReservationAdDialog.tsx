@@ -39,12 +39,13 @@ type AdOption = {
   user_id: string;
   full_name: string;
   email: string | null;
-  role: "sales_partner" | "user";
+  role: "sales_partner" | "user" | "regional_lead";
 };
 
 const roleLabel: Record<string, string> = {
   sales_partner: "Vertriebspartner",
   user: "Gebietsleiter",
+  regional_lead: "Regionalleiter",
 };
 
 interface Props {
