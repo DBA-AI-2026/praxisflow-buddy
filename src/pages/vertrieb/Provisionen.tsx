@@ -383,6 +383,7 @@ const Provisionen = () => {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [approvingGroup, setApprovingGroup] = useState<string | null>(null);
   const [payingGroup, setPayingGroup] = useState<string | null>(null);
+  const [revokingGroup, setRevokingGroup] = useState<string | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
   const [csvMonth, setCsvMonth] = useState<string>("all");
 
