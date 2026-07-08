@@ -517,10 +517,11 @@ function ContractStatusPill({
   onChange: (s: ContractStatus) => void;
   busy: boolean;
 }) {
-  const { isAdmin, isVertragsabteilung } = useUserRole();
+  const { isAdmin } = useUserRole();
   const current = (contract.status ?? "entwurf") as ContractStatus;
   const cfg = CONTRACT_STATUS_CONFIG[current] ?? CONTRACT_STATUS_CONFIG.entwurf;
   const Icon = cfg.icon;
+  const PROTECTED_TARGETS: ContractStatus[] = ["aktiv", "gekuendigt", "beendet", "gesperrt"];
 
   return (
     <DropdownMenu>
@@ -546,7 +547,9 @@ function ContractStatusPill({
             const c = CONTRACT_STATUS_CONFIG[s];
             const SubIcon = c.icon;
             const isCurrent = current === s;
-            const isAdminGated = s === "aktiv" && !isAdmin && !isVertragsabteilung;
+            // Spiegelt den DB-Guard: geschützte Zielstatus + Rückwärts aus 'aktiv' nur für Admin/System.
+            const isAdminGated =
+              !isAdmin && (PROTECTED_TARGETS.includes(s) || current === "aktiv");
             const item = (
               <DropdownMenuItem
                 key={s}
@@ -563,14 +566,14 @@ function ContractStatusPill({
                 {isCurrent && <Check className="h-3 w-3 ml-auto" />}
               </DropdownMenuItem>
             );
-            if (isAdminGated) {
+            if (isAdminGated && !isCurrent) {
               return (
                 <Tooltip key={s}>
                   <TooltipTrigger asChild>
                     <div>{item}</div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    Nur Admin oder Vertragsabteilung darf einen Vertrag aktivieren.
+                    Nur durch Admin änderbar — zur Ausführung bitte Admin kontaktieren.
                   </TooltipContent>
                 </Tooltip>
               );
