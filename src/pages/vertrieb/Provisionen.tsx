@@ -112,86 +112,238 @@ const fmtMonth = (m: string) => {
 
 // ─── PDF Generation ──────────────────────────────────────────────────────────
 
+async function fetchLogoBytes(): Promise<ArrayBuffer | undefined> {
+  try {
+    const res = await fetch(foxLogoUrl);
+    return await res.arrayBuffer();
+  } catch {
+    return undefined;
+  }
+}
+
 async function generateCommissionPdf(
   partnerName: string,
   month: string,
   payouts: CommissionPayout[]
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
-  const page = doc.addPage([595, 842]); // A4
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
 
-  const blue = rgb(0.043, 0.212, 0.498);
-  const gray = rgb(0.4, 0.4, 0.4);
-  const black = rgb(0, 0, 0);
-  const white = rgb(1, 1, 1);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // Tokens → rgb()
+  const rgbTok = (hex: string) => {
+    const c = hexToRgb01(hex);
+    return rgb(c.r, c.g, c.b);
+  };
+  const C_NAVY = rgbTok(COLOR_BRAND_NAVY);
+  const C_TEXT = rgbTok(COLOR_TEXT);
+  const C_MUTED = rgbTok(COLOR_MUTED);
+  const C_LINE = rgbTok(COLOR_LINE);
+  const C_LINE_LIGHT = rgbTok(COLOR_LINE_LIGHT);
+  const C_ACCENT = rgb(0.95, 0.96, 0.98);
 
-  let y = 800;
+  // Layout
+  const M = MARGIN_LEFT;
+  const CW = PAGE_W - MARGIN_LEFT - MARGIN_RIGHT;
 
-  // Header bar
-  page.drawRectangle({ x: 0, y: y - 10, width: 595, height: 60, color: blue });
-  page.drawText("Provisionsabrechnung", { x: 40, y: y + 26, size: 22, font: bold, color: white });
-  page.drawText("HFX Sales Portal – Honorarfuchs", { x: 40, y: y + 6, size: 10, font, color: rgb(0.8, 0.85, 1) });
-  y -= 80;
-
-  // Info block
-  page.drawText(`Vertriebler: ${partnerName}`, { x: 40, y, size: 12, font: bold, color: black });
-  y -= 18;
-  page.drawText(`Abrechnungszeitraum: ${fmtMonth(month)}`, { x: 40, y, size: 11, font, color: gray });
-  y -= 18;
-  page.drawText(`Erstellt am: ${new Date().toLocaleDateString("de-DE")}`, { x: 40, y, size: 10, font, color: gray });
-  y -= 30;
-
-  // Table header
-  page.drawRectangle({ x: 40, y: y - 6, width: 515, height: 22, color: rgb(0.95, 0.96, 1) });
-  const cols = [40, 150, 260, 360, 440, 510];
-  page.drawText("Produkt", { x: cols[0], y, size: 9, font: bold, color: blue });
-  page.drawText("Zweck", { x: cols[1], y, size: 9, font: bold, color: blue });
-  page.drawText("Modell", { x: cols[2], y, size: 9, font: bold, color: blue });
-  page.drawText("Satz", { x: cols[3], y, size: 9, font: bold, color: blue });
-  page.drawText("Betrag", { x: cols[4], y, size: 9, font: bold, color: blue });
-  page.drawText("Status", { x: cols[5], y, size: 9, font: bold, color: blue });
-  y -= 24;
-
-  // Rows
-  for (const p of payouts) {
-    if (y < 80) break;
-    page.drawText(p.product_name.slice(0, 18), { x: cols[0], y, size: 9, font, color: black });
-    page.drawText(payoutPurposeLabel(p.payout_trigger).slice(0, 18), { x: cols[1], y, size: 9, font, color: black });
-    page.drawText((typeLabels[p.commission_type as CommissionType] ?? p.commission_type).slice(0, 16), { x: cols[2], y, size: 9, font, color: gray });
-    page.drawText(formatValue(p.commission_type as CommissionType, p.commission_rate), { x: cols[3], y, size: 9, font, color: black });
-    page.drawText(fmtEur(p.commission_amount), { x: cols[4], y, size: 9, font: bold, color: black });
-    page.drawText(STATUS_LABELS[p.status]?.label ?? p.status, { x: cols[5], y, size: 9, font, color: gray });
-    y -= 12;
-
-    // Sub-line: HFX-Nr · Kundenname (only if data available)
-    const subLine = payoutPurposeLine(p.contracts);
-    if (subLine) {
-      page.drawText(subLine.slice(0, 90), { x: cols[0] + 6, y, size: 8, font, color: gray });
-      y -= 8;
-    }
-    y -= 4;
-
-    // Separator
-    page.drawLine({ start: { x: 40, y: y + 4 }, end: { x: 555, y: y + 4 }, thickness: 0.5, color: rgb(0.9, 0.9, 0.9) });
+  // Logo (best-effort)
+  const logoBytes = await fetchLogoBytes();
+  let embeddedLogo: Awaited<ReturnType<typeof doc.embedPng>> | null = null;
+  if (logoBytes) {
+    try { embeddedLogo = await doc.embedPng(logoBytes); }
+    catch { try { embeddedLogo = await doc.embedJpg(logoBytes); } catch { /* skip */ } }
   }
 
+  // Column proportions (Produkt 34%, Zweck 14%, Modell 20%, Satz 10%, Betrag 12%, Status 10%)
+  const COL_W = {
+    produkt: CW * 0.34,
+    zweck:   CW * 0.14,
+    modell:  CW * 0.20,
+    satz:    CW * 0.10,
+    betrag:  CW * 0.12,
+    status:  CW * 0.10,
+  };
+  const COL_X = {
+    produkt: M,
+    zweck:   M + COL_W.produkt,
+    modell:  M + COL_W.produkt + COL_W.zweck,
+    satz:    M + COL_W.produkt + COL_W.zweck + COL_W.modell,
+    betrag:  M + COL_W.produkt + COL_W.zweck + COL_W.modell + COL_W.satz,
+    status:  M + COL_W.produkt + COL_W.zweck + COL_W.modell + COL_W.satz + COL_W.betrag,
+  };
+  const PAD_X = 4;
+
+  // Wrap text into lines
+  const wrapText = (t: string, size: number, maxW: number, f: PDFFont): string[] => {
+    if (!t) return [""];
+    const words = t.split(/\s+/);
+    const lines: string[] = [];
+    let current = "";
+    for (const w of words) {
+      const test = current ? `${current} ${w}` : w;
+      if (f.widthOfTextAtSize(test, size) > maxW && current) {
+        lines.push(current);
+        current = w;
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+    return lines.length ? lines : [""];
+  };
+
+  let page = doc.addPage([PAGE_W, PAGE_H]);
+  let y = PAGE_H;
+
+  const drawText = (
+    t: string, x: number, yy: number, size: number,
+    f: PDFFont = font, color = C_TEXT, maxW?: number
+  ) => {
+    if (!t) return;
+    page.drawText(t, { x, y: yy, size, font: f, color, maxWidth: maxW });
+  };
+
+  // Footer 1:1 aus generateInvoicePdf.ts
+  const drawFooter = () => {
+    const fY = 42;
+    page.drawLine({ start: { x: M, y: fY + 24 }, end: { x: PAGE_W - MARGIN_RIGHT, y: fY + 24 }, thickness: 0.5, color: C_LINE });
+    drawText("HFX Honorarfuchs – ein Geschäftsbereich von MCC Medical CareCapital GmbH  ·  Hohenzollernstr. 47, 47799 Krefeld", M, fY + 14, 6, font, C_MUTED);
+    drawText("Geschäftsführung: Olaf Hagelkruys, Thilo Wiers-Keiser, Robbin Zielke  ·  Amtsgericht Krefeld, HRB 14709  ·  USt-Id-Nr: DE 227 420 712  ·  www.hfx-honorarfuchs.de", M, fY + 4, 6, font, C_MUTED);
+  };
+
+  const drawHeader = () => {
+    // Logo top-right
+    if (embeddedLogo) {
+      const logoH = 40;
+      const logoW = (embeddedLogo.width / embeddedLogo.height) * logoH;
+      const logoY = PAGE_H - 45 - logoH + 10;
+      page.drawImage(embeddedLogo, {
+        x: PAGE_W - MARGIN_RIGHT - logoW,
+        y: logoY,
+        width: logoW,
+        height: logoH,
+      });
+    }
+    // Title + subtitle (Text-Inhalt unverändert)
+    let ty = PAGE_H - 60;
+    drawText("Provisionsabrechnung", M, ty, 22, bold, C_NAVY);
+    ty -= 18;
+    drawText("HFX Sales Portal – Honorarfuchs", M, ty, 10, font, C_MUTED);
+    ty -= 12;
+    // Thin separator
+    page.drawLine({ start: { x: M, y: ty }, end: { x: PAGE_W - MARGIN_RIGHT, y: ty }, thickness: 0.5, color: C_LINE });
+    return ty - 18;
+  };
+
+  const drawTableHeader = (yy: number) => {
+    const h = 20;
+    page.drawRectangle({ x: M, y: yy - h + 12, width: CW, height: h, color: C_ACCENT });
+    page.drawLine({ start: { x: M, y: yy - h + 12 }, end: { x: M + CW, y: yy - h + 12 }, thickness: 0.8, color: C_NAVY });
+    drawText("Produkt", COL_X.produkt + PAD_X, yy, SIZE_LABEL, bold, C_NAVY);
+    drawText("Zweck",   COL_X.zweck + PAD_X,   yy, SIZE_LABEL, bold, C_NAVY);
+    drawText("Modell",  COL_X.modell + PAD_X,  yy, SIZE_LABEL, bold, C_NAVY);
+    drawText("Satz",    COL_X.satz + PAD_X,    yy, SIZE_LABEL, bold, C_NAVY);
+    drawText("Betrag",  COL_X.betrag + PAD_X,  yy, SIZE_LABEL, bold, C_NAVY);
+    drawText("Status",  COL_X.status + PAD_X,  yy, SIZE_LABEL, bold, C_NAVY);
+    return yy - h - 4;
+  };
+
+  const newPage = () => {
+    drawFooter();
+    page = doc.addPage([PAGE_W, PAGE_H]);
+    let ny = drawHeader();
+    ny = drawTableHeader(ny);
+    return ny;
+  };
+
+  const ensureSpace = (needed: number) => {
+    if (y - needed < 80) {
+      y = newPage();
+    }
+  };
+
+  // ── Page 1 ──
+  y = drawHeader();
+
+  // Info block
+  drawText(`Vertriebler: ${partnerName}`, M, y, 12, bold, C_TEXT);
   y -= 16;
+  drawText(`Abrechnungszeitraum: ${fmtMonth(month)}`, M, y, 10, font, C_MUTED);
+  y -= 14;
+  drawText(`Erstellt am: ${new Date().toLocaleDateString("de-DE")}`, M, y, 9, font, C_MUTED);
+  y -= 22;
 
-  // Total
-  const total = payouts.reduce((s, p) => s + p.commission_amount, 0);
-  page.drawRectangle({ x: 40, y: y - 6, width: 515, height: 26, color: rgb(0.9, 0.93, 1) });
-  page.drawText("Gesamtbetrag", { x: cols[0], y: y + 4, size: 11, font: bold, color: blue });
-  page.drawText(fmtEur(total), { x: cols[4], y: y + 4, size: 11, font: bold, color: blue });
-  y -= 50;
+  y = drawTableHeader(y);
 
-  // Footer
-  page.drawText("Diese Abrechnung wurde automatisch vom HFX Sales Portal generiert.", {
-    x: 40, y: 30, size: 8, font, color: gray,
-  });
+  // Rows
+  const rowFontSize = SIZE_VALUE;
+  const subFontSize = SIZE_LABEL;
+  const lineSpacing = 11;
+  const rowPadV = 6;
 
+  let rowBg = false;
+  for (const p of payouts) {
+    const productLines = wrapText(p.product_name || "", rowFontSize, COL_W.produkt - 2 * PAD_X, font);
+    const modelText = typeLabels[p.commission_type as CommissionType] ?? p.commission_type;
+    const modelLines = wrapText(modelText, rowFontSize, COL_W.modell - 2 * PAD_X, font);
+    const zweckLines = wrapText(payoutPurposeLabel(p.payout_trigger), rowFontSize, COL_W.zweck - 2 * PAD_X, font);
+    const subLine = payoutPurposeLine(p.contracts);
+    const subLines = subLine ? wrapText(subLine, subFontSize, COL_W.produkt + COL_W.zweck - 2 * PAD_X, font) : [];
+
+    const maxTextLines = Math.max(productLines.length, modelLines.length, zweckLines.length, 1);
+    const rowH = Math.max(20, maxTextLines * lineSpacing + subLines.length * (lineSpacing - 2) + 2 * rowPadV);
+
+    ensureSpace(rowH + 4);
+
+    if (rowBg) {
+      page.drawRectangle({ x: M, y: y - rowH + lineSpacing, width: CW, height: rowH, color: rgb(0.97, 0.98, 0.99) });
+    }
+
+    // Produkt (top-aligned, wrapped)
+    let ly = y - rowPadV + 2;
+    productLines.forEach((ln, i) => drawText(ln, COL_X.produkt + PAD_X, ly - i * lineSpacing, rowFontSize, font, C_TEXT));
+    // Zweck (top-aligned)
+    zweckLines.forEach((ln, i) => drawText(ln, COL_X.zweck + PAD_X, ly - i * lineSpacing, rowFontSize, font, C_TEXT));
+    // Modell
+    modelLines.forEach((ln, i) => drawText(ln, COL_X.modell + PAD_X, ly - i * lineSpacing, rowFontSize, font, C_MUTED));
+    // Satz / Betrag / Status – single-line, aligned with first text row
+    drawText(formatValue(p.commission_type as CommissionType, p.commission_rate), COL_X.satz + PAD_X, ly, rowFontSize, font, C_TEXT);
+    drawText(fmtEur(p.commission_amount), COL_X.betrag + PAD_X, ly, rowFontSize, bold, C_TEXT);
+    drawText(STATUS_LABELS[p.status]?.label ?? p.status, COL_X.status + PAD_X, ly, rowFontSize, font, C_MUTED);
+
+    // Sub-line HFX/Kunde
+    if (subLines.length) {
+      let sy = ly - maxTextLines * lineSpacing - 1;
+      subLines.forEach((ln, i) => drawText(ln, COL_X.produkt + PAD_X, sy - i * (lineSpacing - 2), subFontSize, font, C_MUTED));
+    }
+
+    // Row separator
+    const rowBottom = y - rowH + lineSpacing;
+    page.drawLine({ start: { x: M, y: rowBottom }, end: { x: M + CW, y: rowBottom }, thickness: 0.4, color: C_LINE_LIGHT });
+
+    y -= rowH;
+    rowBg = !rowBg;
+  }
+
+  y -= 10;
+
+  // Totals block (accent + Navy)
+  ensureSpace(50);
+  const total = payouts.reduce((s, p) => s + Number(p.commission_amount), 0);
+  const boxH = 32;
+  page.drawRectangle({ x: M, y: y - boxH + 12, width: CW, height: boxH, color: C_ACCENT });
+  page.drawLine({ start: { x: M, y: y - boxH + 12 + boxH }, end: { x: M + CW, y: y - boxH + 12 + boxH }, thickness: 1.2, color: C_NAVY });
+  page.drawLine({ start: { x: M, y: y - boxH + 12 }, end: { x: M + CW, y: y - boxH + 12 }, thickness: 1.2, color: C_NAVY });
+  const totY = y - boxH / 2 + 6;
+  drawText("Gesamtbetrag", COL_X.produkt + PAD_X, totY, 11, bold, C_NAVY);
+  drawText(fmtEur(total), COL_X.betrag + PAD_X, totY, 12, bold, C_NAVY);
+  y -= boxH + 12;
+
+  // Info line
+  ensureSpace(20);
+  drawText("Diese Abrechnung wurde automatisch vom HFX Sales Portal generiert.", M, y, SIZE_BODY - 1, font, C_MUTED);
+
+  drawFooter();
   return doc.save();
 }
 
