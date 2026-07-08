@@ -167,65 +167,77 @@ export async function createGoaeCommissions(params: {
       if (monthsElapsed <= 24) {
         const usageCommission = Math.round(usageNetAmount * 10) / 100;
         if (usageCommission > 0) {
-          await supabase.from("commission_payouts").insert({
-            sales_partner_id: contract.sales_partner_id,
-            sales_partner_name: contract.sales_partner_name || "Unbekannt",
-            contract_id: contract.id,
-            invoice_id: invoice.id,
-            product_name: contract.product_name,
-            commission_type: "prozent",
-            commission_rate: 10,
-            commission_amount: usageCommission,
-            commission_base_amount: usageNetAmount,
-            commission_rule_version: "GOÄ-AD-USAGE-10PCT-24M-v1",
-            period_month: periodMonthStr,
-            status: "pending",
-            commission_role: "ad",
-            payout_trigger: "usage_revenue",
-            contract_start_date: contract.start_date,
-          });
-          console.log(`[auto-invoice] GOÄ AD usage payout ${usageCommission} € for ${contract.sales_partner_name}`);
+          const { data: existingUsage } = await supabase
+            .from("commission_payouts")
+            .select("id")
+            .eq("invoice_id", invoice.id)
+            .eq("commission_role", "ad")
+            .eq("payout_trigger", "usage_revenue")
+            .maybeSingle();
 
-          try {
-            const { error: fibuAdUsageErr } = await supabase.from("fibu_events").insert({
-              event_type: "internal_sales_bonus_reference",
-              source_module: "commission_payouts",
-              source_reference_id: `${invoice.id}:ad-usage`,
+          if (!existingUsage) {
+            await supabase.from("commission_payouts").insert({
+              sales_partner_id: contract.sales_partner_id,
+              sales_partner_name: contract.sales_partner_name || "Unbekannt",
               contract_id: contract.id,
-              customer_id: contract.customer_id ?? null,
+              invoice_id: invoice.id,
               product_name: contract.product_name,
-              period_start: periodStart,
-              period_end: periodEnd,
-              amount_net: usageCommission,
-              tax_amount: 0,
-              amount_gross: usageCommission,
-              currency: "EUR",
               commission_type: "prozent",
-              commission_base_amount: usageNetAmount,
               commission_rate: 10,
               commission_amount: usageCommission,
+              commission_base_amount: usageNetAmount,
               commission_rule_version: "GOÄ-AD-USAGE-10PCT-24M-v1",
-              beneficiary_type: "ad",
-              beneficiary_id: contract.sales_partner_id,
-              status: "draft",
-              export_status: "open",
-              description: `AD-Verbrauchsbonus ${contract.sales_partner_name} – ${contract.product_name} – ${periodMonthStr} (${usageCommission} €)`,
-              created_by: null,
-              metadata: {
-                invoice_id: invoice.id,
-                invoice_number: invoice.invoice_number,
+              period_month: periodMonthStr,
+              status: "pending",
+              commission_role: "ad",
+              payout_trigger: "usage_revenue",
+              contract_start_date: contract.start_date,
+            });
+            console.log(`[auto-invoice] GOÄ AD usage payout ${usageCommission} € for ${contract.sales_partner_name}`);
+
+            try {
+              const { error: fibuAdUsageErr } = await supabase.from("fibu_events").insert({
+                event_type: "internal_sales_bonus_reference",
+                source_module: "commission_payouts",
+                source_reference_id: `${invoice.id}:ad-usage`,
+                contract_id: contract.id,
+                customer_id: contract.customer_id ?? null,
+                product_name: contract.product_name,
+                period_start: periodStart,
+                period_end: periodEnd,
+                amount_net: usageCommission,
+                tax_amount: 0,
+                amount_gross: usageCommission,
+                currency: "EUR",
+                commission_type: "prozent",
+                commission_base_amount: usageNetAmount,
+                commission_rate: 10,
+                commission_amount: usageCommission,
                 commission_rule_version: "GOÄ-AD-USAGE-10PCT-24M-v1",
-                period_month: periodMonthStr,
-                payout_trigger: "usage_revenue",
-                usage_net_amount: usageNetAmount,
-                hfx_customer_number: contract.hfx_customer_number ?? null,
-              },
-            } as any);
-            if (fibuAdUsageErr && (fibuAdUsageErr as any).code !== "23505") {
-              console.error(`[auto-invoice] fibu_events internal_sales_bonus_reference (AD usage) failed:`, fibuAdUsageErr.message);
+                beneficiary_type: "ad",
+                beneficiary_id: contract.sales_partner_id,
+                status: "draft",
+                export_status: "open",
+                description: `AD-Verbrauchsbonus ${contract.sales_partner_name} – ${contract.product_name} – ${periodMonthStr} (${usageCommission} €)`,
+                created_by: null,
+                metadata: {
+                  invoice_id: invoice.id,
+                  invoice_number: invoice.invoice_number,
+                  commission_rule_version: "GOÄ-AD-USAGE-10PCT-24M-v1",
+                  period_month: periodMonthStr,
+                  payout_trigger: "usage_revenue",
+                  usage_net_amount: usageNetAmount,
+                  hfx_customer_number: contract.hfx_customer_number ?? null,
+                },
+              } as any);
+              if (fibuAdUsageErr && (fibuAdUsageErr as any).code !== "23505") {
+                console.error(`[auto-invoice] fibu_events internal_sales_bonus_reference (AD usage) failed:`, fibuAdUsageErr.message);
+              }
+            } catch (ex) {
+              console.error(`[auto-invoice] fibu_events AD usage exception:`, String(ex));
             }
-          } catch (ex) {
-            console.error(`[auto-invoice] fibu_events AD usage exception:`, String(ex));
+          } else {
+            console.log(`[auto-invoice] GOÄ AD usage payout already exists, skip invoice=${invoice.id}`);
           }
         }
       } else {
