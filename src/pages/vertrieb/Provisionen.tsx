@@ -578,13 +578,13 @@ const Provisionen = () => {
   // Read-only Edge-Function commission-forecast, damit die Freikontingent-/
   // Effektiv-Netto-Formel nicht im Frontend gespiegelt wird.
   const { data: forecastRows = [], isLoading: forecastLoading } = useQuery({
-    queryKey: ["commission-forecast", user?.id, isAdmin, isSalesLead, isSalesPartner],
+    queryKey: ["commission-forecast", user?.id, isAdmin, isSalesLead, isSalesPartner, isRegionalLead, isUser],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("commission-forecast", { body: {} });
       if (error) throw error;
       return ((data as any)?.contracts ?? []) as any[];
     },
-    enabled: !!user?.id && (isAdmin || isSalesLead || isSalesPartner),
+    enabled: !!user?.id && (isAdmin || isSalesLead || isSalesPartner || isRegionalLead || isUser),
   });
 
   // Bisher verdient je Vertrag (echte AD-Verbrauchs-Payouts).
