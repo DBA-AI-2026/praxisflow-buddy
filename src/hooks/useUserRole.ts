@@ -8,6 +8,7 @@ export type AppRole = Database["public"]["Enums"]["app_role"];
 
 interface UseUserRoleResult {
   role: AppRole | null;
+  roles: AppRole[];
   isLoading: boolean;
   isAdmin: boolean;
   isVertragsabteilung: boolean;
@@ -21,9 +22,28 @@ interface UseUserRoleResult {
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1500;
 
-export function useUserRole(): UseUserRoleResult & { isRegionalLead: boolean; actualRole: AppRole | null; roleError: boolean; retryRoleFetch: () => void } {
+// Priority for deriving a single "actualRole" from multiple active roles.
+// Highest privilege first.
+const ROLE_PRIORITY: AppRole[] = [
+  "admin",
+  "sales_lead",
+  "regional_lead",
+  "vertragsabteilung",
+  "sales_partner",
+  "user",
+  "tippgeber",
+];
+
+function pickPrimaryRole(roles: AppRole[]): AppRole | null {
+  for (const r of ROLE_PRIORITY) {
+    if (roles.includes(r)) return r;
+  }
+  return null;
+}
+
+export function useUserRole(): UseUserRoleResult & { actualRole: AppRole | null; actualRoles: AppRole[]; roleError: boolean; retryRoleFetch: () => void } {
   const { user, isLoading: authLoading } = useAuth();
-  const [actualRole, setActualRole] = useState<AppRole | null>(null);
+  const [actualRoles, setActualRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [roleError, setRoleError] = useState(false);
   const { previewRole } = useRolePreview();
@@ -41,7 +61,7 @@ export function useUserRole(): UseUserRoleResult & { isRegionalLead: boolean; ac
 
   const fetchRole = useCallback(async (attempt: number = 0) => {
     if (!user) {
-      setActualRole(null);
+      setActualRoles([]);
       setIsLoading(false);
       setRoleError(false);
       return;
@@ -51,29 +71,35 @@ export function useUserRole(): UseUserRoleResult & { isRegionalLead: boolean; ac
     setRoleError(false);
 
     try {
+      // Multi-role aware: load ALL active roles for this user.
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
-        .maybeSingle();
+        .eq("is_active", true);
 
       if (!mountedRef.current) return;
 
-      if (data && !error) {
-        setActualRole(data.role);
-        setIsLoading(false);
-        setRoleError(false);
-      } else if (attempt < MAX_RETRIES - 1) {
-        console.warn(`useUserRole: role fetch attempt ${attempt + 1} returned no data, retrying…`);
-        retryTimerRef.current = setTimeout(() => {
-          if (mountedRef.current) fetchRole(attempt + 1);
-        }, RETRY_DELAY_MS);
-      } else {
-        console.error("useUserRole: no role found after retries", error);
-        setActualRole(null);
-        setIsLoading(false);
-        setRoleError(true);
+      if (error) {
+        // Only a genuine query error triggers retry / roleError.
+        if (attempt < MAX_RETRIES - 1) {
+          console.warn(`useUserRole: role fetch attempt ${attempt + 1} errored, retrying…`, error);
+          retryTimerRef.current = setTimeout(() => {
+            if (mountedRef.current) fetchRole(attempt + 1);
+          }, RETRY_DELAY_MS);
+        } else {
+          console.error("useUserRole: role fetch failed after retries", error);
+          setActualRoles([]);
+          setIsLoading(false);
+          setRoleError(true);
+        }
+        return;
       }
+
+      const roles = (data ?? []).map((r) => r.role as AppRole);
+      setActualRoles(roles);
+      setIsLoading(false);
+      setRoleError(false);
     } catch (error) {
       if (!mountedRef.current) return;
       console.error("useUserRole: error fetching role:", error);
@@ -82,7 +108,7 @@ export function useUserRole(): UseUserRoleResult & { isRegionalLead: boolean; ac
           if (mountedRef.current) fetchRole(attempt + 1);
         }, RETRY_DELAY_MS);
       } else {
-        setActualRole(null);
+        setActualRoles([]);
         setIsLoading(false);
         setRoleError(true);
       }
@@ -106,21 +132,28 @@ export function useUserRole(): UseUserRoleResult & { isRegionalLead: boolean; ac
     fetchRole(0);
   }, [fetchRole, cancelPendingRetry]);
 
-  // Admins can preview as another role; actual role is always preserved
-  const role = (actualRole === "admin" && previewRole) ? previewRole : actualRole;
+  // Derive a single primary role for consumers that still expect one value.
+  const actualRole = pickPrimaryRole(actualRoles);
+  const isAdmin = actualRoles.includes("admin");
+
+  // Admins can preview as another role; actual roles are always preserved.
+  const effectiveRoles: AppRole[] = (isAdmin && previewRole) ? [previewRole] : actualRoles;
+  const role = (isAdmin && previewRole) ? previewRole : actualRole;
 
   return {
     role,
+    roles: effectiveRoles,
     actualRole,
+    actualRoles,
     roleError,
     retryRoleFetch,
     isLoading: authLoading || isLoading,
-    isAdmin: actualRole === "admin",
-    isVertragsabteilung: role === "vertragsabteilung",
-    isSalesLead: role === "sales_lead",
-    isRegionalLead: role === "regional_lead",
-    isSalesPartner: role === "sales_partner",
-    isUser: role === "user",
-    isTippgeber: role === "tippgeber",
+    isAdmin,
+    isVertragsabteilung: effectiveRoles.includes("vertragsabteilung"),
+    isSalesLead: effectiveRoles.includes("sales_lead"),
+    isRegionalLead: effectiveRoles.includes("regional_lead"),
+    isSalesPartner: effectiveRoles.includes("sales_partner"),
+    isUser: effectiveRoles.includes("user"),
+    isTippgeber: effectiveRoles.includes("tippgeber"),
   };
 }

@@ -47,16 +47,20 @@ export default function Auth() {
   const [requestCompany, setRequestCompany] = useState("");
   const [requestMessage, setRequestMessage] = useState("");
 
-  // Redirect if already logged in (role-aware: tippgeber → /tipp-leads)
+  // Redirect if already logged in (role-aware, multi-role: tippgeber only when it's the primary role)
   useEffect(() => {
     if (user && !authLoading) {
       (async () => {
-        const { data: roleRow } = await supabase
+        const { data: roleRows } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", user.id)
-          .maybeSingle();
-        navigate(roleRow?.role === "tippgeber" ? "/tipp-leads" : "/");
+          .eq("is_active", true);
+        const roles = (roleRows ?? []).map((r) => r.role as string);
+        // Priority: admin > sales_lead > regional_lead > vertragsabteilung > sales_partner > user > tippgeber
+        const priority = ["admin", "sales_lead", "regional_lead", "vertragsabteilung", "sales_partner", "user", "tippgeber"];
+        const primary = priority.find((r) => roles.includes(r)) ?? null;
+        navigate(primary === "tippgeber" ? "/tipp-leads" : "/");
       })();
     }
   }, [user, authLoading, navigate]);
