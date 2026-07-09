@@ -1049,7 +1049,7 @@ const Provisionen = () => {
                       const isExpanded = expandedGroups.has(key);
                       const groupTotal = group.items.reduce((s, p) => s + Number(p.commission_amount), 0);
                       const allPending = group.items.every(p => p.status === "pending");
-                      const allApproved = group.items.every(p => p.status === "approved");
+                      // allApproved entfernt (ungenutzt).
                       const anyPending = group.items.some(p => p.status === "pending");
                       const anyApproved = group.items.some(p => p.status === "approved");
 
