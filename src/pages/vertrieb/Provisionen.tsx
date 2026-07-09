@@ -1022,6 +1022,7 @@ const Provisionen = () => {
           <TabsList>
             <TabsTrigger value="payouts">Provisionsauszahlungen ({payouts.length})</TabsTrigger>
             <TabsTrigger value="preview">Vorschau ({previewSignups.length})</TabsTrigger>
+            <TabsTrigger value="bestandskunden">Bestandskunden ({forecastRows.length})</TabsTrigger>
             {!isOwnView && <TabsTrigger value="rates">Provisionssätze ({commissions.length})</TabsTrigger>}
             {(isAdmin || isTippgeber) && <TabsTrigger value="goae">HFX GOÄ Regelwerk</TabsTrigger>}
             {(isAdmin || isTippgeber) && <TabsTrigger value="milestones">Tippgeber-Meilensteine ({milestones.filter((m: any) => m.milestone_reached && !m.payout_triggered).length})</TabsTrigger>}
