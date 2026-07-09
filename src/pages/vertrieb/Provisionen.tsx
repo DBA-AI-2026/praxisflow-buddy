@@ -1304,6 +1304,80 @@ const Provisionen = () => {
             </Card>
           </TabsContent>
 
+          {/* ── Bestandskunden Tab (Verbrauchs-Forecast, read-only) ── */}
+          <TabsContent value="bestandskunden" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Bestandskunden – Verbrauchs-Provision
+                </CardTitle>
+                <CardDescription>
+                  Laufende GOÄ-Verträge mit AD-Vertriebler. „Bisher verdient" ist die
+                  Summe bereits ausgelöster {payoutPurposeLabel("usage_revenue")}en (10 %),
+                  „Entsteht zur nächsten Rechnung" ist eine Live-Vorschau auf Basis aller
+                  noch nicht abgerechneten Verbrauchspositionen (nach Freikontingent-Abzug).
+                  Keine Buchung, keine Zusage.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {forecastLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+                ) : forecastRows.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Info className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                    <p className="font-medium">Keine Bestandskunden im Provisionsfenster</p>
+                    <p className="text-sm mt-1">
+                      Aktive GOÄ-Verträge mit AD, mindestens einer Rechnung und ≤ 24 Monaten
+                      seit Vertragsbeginn erscheinen hier.
+                    </p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Vertriebler</TableHead>
+                        <TableHead>HFX-Nr</TableHead>
+                        <TableHead>Kunde</TableHead>
+                        <TableHead>Produkt</TableHead>
+                        <TableHead className="text-right">Bisher verdient</TableHead>
+                        <TableHead className="text-right">Entsteht zur nächsten Rechnung</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {forecastRows.map((r: any) => {
+                        const earned = earnedByContract.get(r.contract_id) ?? 0;
+                        const until = r.eligible_until
+                          ? new Date(r.eligible_until).toLocaleDateString("de-DE", { month: "2-digit", year: "numeric" })
+                          : "—";
+                        return (
+                          <TableRow key={r.contract_id}>
+                            <TableCell className="font-medium">{r.sales_partner_name || "Unbekannt"}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{r.hfx_customer_number ?? "—"}</TableCell>
+                            <TableCell className="text-sm">{r.customer_name || "—"}</TableCell>
+                            <TableCell className="text-sm">
+                              <div>{r.product_name}</div>
+                              <div className="text-xs text-muted-foreground">provisionsberechtigt bis {until}</div>
+                            </TableCell>
+                            <TableCell className="text-right font-semibold">{fmtEur(earned)}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="font-semibold">{fmtEur(Number(r.forecast_ad_amount || 0))}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {r.pending_qty} offen{r.frei_qty > 0 ? ` · ${r.frei_qty} frei` : ""}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+
+
           {/* ── Commission Rates Tab ── */}
           <TabsContent value="rates" className="mt-4">
             <Card>
