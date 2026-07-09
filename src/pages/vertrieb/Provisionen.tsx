@@ -442,7 +442,7 @@ const Provisionen = () => {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [approvingGroup, setApprovingGroup] = useState<string | null>(null);
   const [payingGroup, setPayingGroup] = useState<string | null>(null);
-  const [revokingGroup, setRevokingGroup] = useState<string | null>(null);
+  // (revokingGroup entfernt — resetGroupToPending übernimmt.)
   const [resettingGroup, setResettingGroup] = useState<string | null>(null);
   const [resetConfirm, setResetConfirm] = useState<{ month: string; partnerId: string; groupKey: string } | null>(null);
   const [holdOverride, setHoldOverride] = useState<{ month: string; partnerId: string; groupKey: string; daysLeft: number; release: Date } | null>(null);
