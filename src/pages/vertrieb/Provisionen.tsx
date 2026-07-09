@@ -409,7 +409,7 @@ async function generateCommissionPdf(
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 const Provisionen = () => {
-  const { isAdmin, isSalesPartner, isTippgeber, isSalesLead } = useUserRole();
+  const { isAdmin, isSalesPartner, isTippgeber, isSalesLead, isRegionalLead, isUser } = useUserRole();
   // Provisionsbearbeitung: nur admin und sales_lead
   const canEditCommissions = isAdmin || isSalesLead;
   const { user } = useAuth();
