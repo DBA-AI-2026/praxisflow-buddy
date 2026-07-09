@@ -1297,6 +1297,7 @@ const Provisionen = () => {
             </Card>
           </TabsContent>
 
+          {/* ── Commission Rates Tab ── */}
           <TabsContent value="rates" className="mt-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
