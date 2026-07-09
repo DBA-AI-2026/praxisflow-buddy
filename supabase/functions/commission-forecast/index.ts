@@ -66,8 +66,11 @@ Deno.serve(async (req) => {
   const roles = new Set((roleRows ?? []).map((r: any) => r.role));
   const isAdmin = roles.has("admin");
   const isSalesLead = roles.has("sales_lead");
-  const isSalesPartner = roles.has("sales_partner") || roles.has("user") || roles.has("regional_lead");
-  if (!(isAdmin || isSalesLead || isSalesPartner)) {
+  const isRegionalLead = roles.has("regional_lead");
+  const isInternalUser = roles.has("user");
+  const isSalesPartner = roles.has("sales_partner");
+  const hasAccess = isAdmin || isSalesLead || isRegionalLead || isInternalUser || isSalesPartner;
+  if (!hasAccess) {
     return new Response(JSON.stringify({ error: "Forbidden" }), {
       status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -77,14 +80,46 @@ Deno.serve(async (req) => {
     // 1) Kandidaten-Verträge: aktiv, sales_partner_id gesetzt, Testdaten ausgeschlossen.
     let q = supabase
       .from("contracts")
-      .select("id, hfx_customer_number, customer_name, praxis, product_name, sales_partner_id, sales_partner_name, customer_id, start_date, status")
+      .select("id, hfx_customer_number, customer_name, praxis, product_name, sales_partner_id, sales_partner_name, customer_id, start_date, status, tippgeber_id")
       .eq("status", "aktiv")
       .not("sales_partner_id", "is", null)
       .not("hfx_customer_number", "ilike", "HFX-I01070%")
       .not("hfx_customer_number", "ilike", "TEST-HARNESS%");
 
+    // Sichtbarkeits-Matrix (serverseitig, NICHT auf Frontend vertrauen):
+    //   admin / sales_lead → alle
+    //   regional_lead      → eigene + Team + Tippgeber (eigene + Team)
+    //   user               → eigene + eigene Tippgeber
+    //   sales_partner      → nur eigene
     if (!isAdmin && !isSalesLead) {
-      q = q.eq("sales_partner_id", userId);
+      // Erlaubte Partner-IDs zusammensetzen
+      const allowedPartners = new Set<string>([userId]);
+      if (isRegionalLead) {
+        const { data: teamRows } = await supabase
+          .from("user_regional_assignments")
+          .select("user_id")
+          .eq("regional_lead_id", userId);
+        for (const r of (teamRows ?? []) as any[]) {
+          if (r.user_id) allowedPartners.add(r.user_id);
+        }
+      }
+      // Tippgeber, die diesen Partnern zugeordnet sind
+      const partnerArr = Array.from(allowedPartners);
+      let allowedTippgeber: string[] = [];
+      if (isRegionalLead || isInternalUser) {
+        const { data: tRows } = await supabase
+          .from("tippgeber_partner_assignments")
+          .select("tippgeber_user_id")
+          .in("partner_user_id", partnerArr)
+          .eq("is_active", true);
+        allowedTippgeber = (tRows ?? []).map((r: any) => r.tippgeber_user_id).filter(Boolean);
+      }
+      const partnerList = partnerArr.join(",");
+      if (allowedTippgeber.length > 0) {
+        q = q.or(`sales_partner_id.in.(${partnerList}),tippgeber_id.in.(${allowedTippgeber.join(",")})`);
+      } else {
+        q = q.in("sales_partner_id", partnerArr);
+      }
     }
 
     const { data: candidates, error: cErr } = await q;
