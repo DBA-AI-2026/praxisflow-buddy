@@ -844,31 +844,9 @@ const Provisionen = () => {
     }
   };
 
-  const revokeApprovalGroup = async (month: string, partnerId: string, groupKey: string) => {
-    if (!isAdmin) return;
-    // Client-Guard: keine paid-Zeile in der Gruppe
-    const groupRows = payouts.filter(p => p.period_month === month && p.sales_partner_id === partnerId);
-    if (groupRows.some(p => p.status === "paid")) {
-      toast({ title: "Nicht möglich", description: "Gruppe enthält bereits ausgezahlte Positionen.", variant: "destructive" });
-      return;
-    }
-    setRevokingGroup(groupKey);
-    try {
-      const ids = groupRows.filter(p => p.status === "approved").map(p => p.id);
-      if (ids.length === 0) { toast({ title: "Keine freigegebenen Einträge" }); return; }
-      const { error } = await supabase
-        .from("commission_payouts")
-        .update({ status: "pending", approved_by: null, approved_at: null })
-        .in("id", ids);
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["commission-payouts"] });
-      toast({ title: "Freigabe zurückgenommen", description: `${ids.length} Provisionen wieder auf ausstehend.` });
-    } catch (e: any) {
-      toast({ title: "Fehler", description: e.message, variant: "destructive" });
-    } finally {
-      setRevokingGroup(null);
-    }
-  };
+  // revokeApprovalGroup entfernt (toter Code — ersetzt durch resetGroupToPending).
+
+
 
 
   const downloadPdf = async (group: { month: string; partner: string; partnerId: string; items: CommissionPayout[] }) => {
