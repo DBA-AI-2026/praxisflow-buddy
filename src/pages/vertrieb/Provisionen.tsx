@@ -25,6 +25,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { PDFDocument, PDFFont, rgb, StandardFonts } from "pdf-lib";
 import { downloadCsv } from "@/lib/csv";
 import { payoutPurposeLabel, payoutPurposeLine } from "@/lib/commissionLabels";
+import { isCarrierContract, isGoaeProduct } from "@/lib/multiLocation";
 import {
   COLOR_BRAND_NAVY, COLOR_TEXT, COLOR_MUTED, COLOR_LINE, COLOR_LINE_LIGHT,
   SIZE_LABEL, SIZE_VALUE, SIZE_BODY, SIZE_FOOTER,
