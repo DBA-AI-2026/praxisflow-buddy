@@ -1412,11 +1412,30 @@ const Provisionen = () => {
                             </TableCell>
                             <TableCell className="text-right font-semibold">{fmtEur(earned)}</TableCell>
                             <TableCell className="text-right">
-                              <div className="font-semibold">{fmtEur(Number(r.forecast_ad_amount || 0))}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {r.pending_qty} offen{r.frei_qty > 0 ? ` · ${r.frei_qty} frei` : ""}
-                              </div>
+                              <TooltipProvider delayDuration={200}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="inline-block cursor-help">
+                                      <div className="font-semibold">{fmtEur(Number(r.forecast_ad_amount || 0))}</div>
+                                      <div className="text-xs text-muted-foreground underline decoration-dotted underline-offset-2">
+                                        {r.pending_qty} offen{r.frei_qty > 0 ? ` · ${r.frei_qty} frei` : ""}
+                                      </div>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="bottom" className="max-w-xs text-xs">
+                                    <div className="space-y-1">
+                                      <div><strong>{r.pending_qty}</strong> offene Positionen</div>
+                                      <div>Freikontingent-Rest: <strong>{Number(r.grants_saldo ?? 0)}</strong>{r.frei_qty > 0 ? ` · davon frei: ${r.frei_qty}` : ""}</div>
+                                      <div>abrechenbar: <strong>{fmtEur(Number(r.usage_net_effective || 0))}</strong></div>
+                                      <div className="pt-1 border-t border-border/50">
+                                        → 10 % AD-Verbrauchsprovision = <strong>{fmtEur(Number(r.forecast_ad_amount || 0))}</strong>
+                                      </div>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </TableCell>
+
                           </TableRow>
                         );
                       })}
