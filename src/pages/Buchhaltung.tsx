@@ -725,6 +725,24 @@ export default function Buchhaltung() {
       toast({ title: "Keine exportierbaren Vorfälle", description: "Nur Vorfälle mit Status 'Freigegeben' und Exportstatus 'Offen' können exportiert werden." });
       return;
     }
+    // Guard: block export if any freigegebene, buchungsrelevante Events keinen SKR03-Account haben.
+    // DEFAULT_ACCOUNTS (9999) bleibt Konstante, wird aber im Export-Pfad NICHT mehr stillschweigend verwendet.
+    const uncontieredTypes = Array.from(
+      new Set(
+        exportableFibuEvents
+          .filter((e: any) => !SKR03_ACCOUNT_MAP[e.event_type])
+          .map((e: any) => e.event_type as string),
+      ),
+    );
+    if (uncontieredTypes.length > 0) {
+      const count = exportableFibuEvents.filter((e: any) => !SKR03_ACCOUNT_MAP[e.event_type]).length;
+      toast({
+        title: "Export abgebrochen",
+        description: `${count} Vorfälle sind nicht kontiert (Typ: ${uncontieredTypes.join(", ")}). Bitte Kontenzuordnung ergänzen oder Vorfälle sperren.`,
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       const year = new Date().getFullYear();
 
