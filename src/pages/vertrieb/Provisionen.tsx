@@ -25,6 +25,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { PDFDocument, PDFFont, rgb, StandardFonts } from "pdf-lib";
 import { downloadCsv } from "@/lib/csv";
 import { payoutPurposeLabel, payoutPurposeLine } from "@/lib/commissionLabels";
+import { isGoaeProduct } from "@/lib/multiLocation";
 import {
   COLOR_BRAND_NAVY, COLOR_TEXT, COLOR_MUTED, COLOR_LINE, COLOR_LINE_LIGHT,
   SIZE_LABEL, SIZE_VALUE, SIZE_BODY, SIZE_FOOTER,
@@ -77,7 +78,44 @@ interface CommissionPayout {
     hfx_customer_number: string | null;
     product_name: string | null;
   } | null;
+  invoices: {
+    invoice_date: string | null;
+  } | null;
 }
+
+// ─── Retention (28-day hold after first invoice) ─────────────────────────────
+
+const RETENTION_DAYS = 28;
+
+/**
+ * Anker für die Haltefrist:
+ *   – bevorzugt invoices.invoice_date (fachlich, backfill-immun)
+ *   – Fallback created_at NUR wenn keine Rechnung verknüpft ist (z. B. tippgeber_milestone)
+ */
+function payoutAnchorDate(p: {
+  invoices?: { invoice_date: string | null } | null;
+  invoice_id?: string | null;
+  created_at: string;
+}): Date {
+  const invDate = p.invoices?.invoice_date;
+  if (invDate) return new Date(invDate);
+  return new Date(p.created_at);
+}
+
+function releaseDate(anchor: Date): Date {
+  const d = new Date(anchor);
+  d.setDate(d.getDate() + RETENTION_DAYS);
+  return d;
+}
+
+function daysUntil(target: Date, now: Date = new Date()): number {
+  const MS = 24 * 60 * 60 * 1000;
+  const a = Date.UTC(target.getFullYear(), target.getMonth(), target.getDate());
+  const b = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.ceil((a - b) / MS);
+}
+
+const fmtDate = (d: Date) => d.toLocaleDateString("de-DE");
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -407,6 +445,7 @@ const Provisionen = () => {
   const [revokingGroup, setRevokingGroup] = useState<string | null>(null);
   const [resettingGroup, setResettingGroup] = useState<string | null>(null);
   const [resetConfirm, setResetConfirm] = useState<{ month: string; partnerId: string; groupKey: string } | null>(null);
+  const [holdOverride, setHoldOverride] = useState<{ month: string; partnerId: string; groupKey: string; daysLeft: number; release: Date } | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
   const [csvMonth, setCsvMonth] = useState<string>("all");
 
@@ -426,14 +465,112 @@ const Provisionen = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("commission_payouts")
-        .select("*, contracts:contract_id(customer_name, praxis, hfx_customer_number, product_name)")
+        .select("*, contracts:contract_id(customer_name, praxis, hfx_customer_number, product_name), invoices:invoice_id(invoice_date)")
         .order("period_month", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as CommissionPayout[];
     },
   });
 
-  // Tippgeber milestone tracking
+  // ── Vorschau: voraussichtliche Provisionen (Verträge aktiv, noch keine Rechnung, noch kein Signup-Payout) ──
+  // Betragsformel und Trägerregel MÜSSEN identisch zum Motor (_shared/goaeCommissions.ts) sein.
+  const { data: previewSignups = [], isLoading: previewLoading } = useQuery({
+    queryKey: ["commission-preview-signups", user?.id, isAdmin, isSalesLead, isSalesPartner],
+    queryFn: async () => {
+      // 1. Kandidaten-Verträge: GOÄ, aktiv, sales_partner_id gesetzt
+      let q = supabase
+        .from("contracts")
+        .select("id, hfx_customer_number, customer_name, praxis, product_name, sales_partner_id, sales_partner_name, customer_id, start_date")
+        .eq("status", "aktiv")
+        .not("sales_partner_id", "is", null);
+      // Sales-Partner sieht nur eigene
+      if (isSalesPartner && !isAdmin && !isSalesLead && user?.id) {
+        q = q.eq("sales_partner_id", user.id);
+      }
+      const { data: candidates, error: cErr } = await q;
+      if (cErr) throw cErr;
+      const goae = (candidates ?? []).filter((c: any) => isGoaeProduct(c.product_name));
+      if (goae.length === 0) return [] as any[];
+
+      const contractIds = goae.map((c: any) => c.id);
+      const partnerIds = Array.from(new Set(goae.map((c: any) => c.sales_partner_id).filter(Boolean)));
+      const customerIds = Array.from(new Set(goae.map((c: any) => c.customer_id).filter(Boolean)));
+
+      // 2. Ausschluss: Verträge mit bereits vorhandener Rechnung
+      const { data: invRows } = await supabase
+        .from("invoices")
+        .select("contract_id")
+        .in("contract_id", contractIds);
+      const withInvoice = new Set((invRows ?? []).map((r: any) => r.contract_id));
+
+      // 3. Ausschluss: Verträge mit bestehendem contract_signup Payout
+      const { data: sigPayouts } = await supabase
+        .from("commission_payouts")
+        .select("contract_id")
+        .in("contract_id", contractIds)
+        .eq("payout_trigger", "contract_signup");
+      const withSignup = new Set((sigPayouts ?? []).map((r: any) => r.contract_id));
+
+      // 4. Partner-Rollen (Motor-Priorität): nur AD-Rollen behandeln Signup-Bonus
+      const { data: roleRows } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .in("user_id", partnerIds)
+        .eq("is_active", true);
+      const ROLE_PRIORITY = ["sales_lead", "regional_lead", "user", "sales_partner"] as const;
+      const rolesByPartner: Record<string, string | null> = {};
+      for (const pid of partnerIds as string[]) {
+        const active = new Set((roleRows ?? []).filter((r: any) => r.user_id === pid).map((r: any) => r.role));
+        rolesByPartner[pid] = ROLE_PRIORITY.find((r) => active.has(r)) ?? null;
+      }
+      const AD_ROLES = new Set(["user", "regional_lead", "sales_lead"]);
+
+      // 5. Träger-Vertrag (Motor-Logik: customers.base_fee_contract_id)
+      const { data: customersRows } = customerIds.length
+        ? await supabase.from("customers").select("id, base_fee_contract_id").in("id", customerIds)
+        : { data: [] as any[] };
+      const carrierByCustomer: Record<string, string | null> = {};
+      for (const c of (customersRows ?? []) as any[]) carrierByCustomer[c.id] = c.base_fee_contract_id ?? null;
+
+      // 6. Sprint-Bonus: 250 € falls Partner ≥ 25 GOÄ-Verträge und heute ≤ 2026-12-31
+      const today = new Date();
+      const sprintEnd = new Date("2026-12-31");
+      const inSprint = today <= sprintEnd;
+      const goaeCountByPartner: Record<string, number> = {};
+      if (inSprint && partnerIds.length) {
+        for (const pid of partnerIds as string[]) {
+          const { count } = await supabase
+            .from("contracts")
+            .select("id", { count: "exact", head: true })
+            .eq("sales_partner_id", pid)
+            .or("product_name.ilike.%GOÄ%,product_name.ilike.%GOA%")
+            .in("status", ["aktiv", "gekündigt", "beendet"]);
+          goaeCountByPartner[pid] = count ?? 0;
+        }
+      }
+
+      return goae
+        .filter((c: any) => !withInvoice.has(c.id) && !withSignup.has(c.id))
+        .filter((c: any) => AD_ROLES.has(rolesByPartner[c.sales_partner_id] ?? ""))
+        .filter((c: any) => {
+          // Motor-Logik isCarrierContract(contract.id, customer_id, customers.base_fee_contract_id)
+          if (!c.customer_id) return true;
+          const baseFee = carrierByCustomer[c.customer_id];
+          if (!baseFee) return true;
+          return baseFee === c.id;
+        })
+        .map((c: any) => ({
+          contract_id: c.id,
+          hfx_customer_number: c.hfx_customer_number,
+          customer_name: c.customer_name || c.praxis || "",
+          product_name: c.product_name,
+          sales_partner_id: c.sales_partner_id,
+          sales_partner_name: c.sales_partner_name || "Unbekannt",
+          expected_amount: inSprint && (goaeCountByPartner[c.sales_partner_id] ?? 0) >= 25 ? 250 : 100,
+        }));
+    },
+  });
+
   const { data: milestones = [], refetch: refetchMilestones } = useQuery({
     queryKey: ["tippgeber-milestones", user?.id, isAdmin, isTippgeber],
     queryFn: async () => {
@@ -878,6 +1015,7 @@ const Provisionen = () => {
         <Tabs defaultValue="payouts">
           <TabsList>
             <TabsTrigger value="payouts">Provisionsauszahlungen ({payouts.length})</TabsTrigger>
+            <TabsTrigger value="preview">Vorschau ({previewSignups.length})</TabsTrigger>
             {!isOwnView && <TabsTrigger value="rates">Provisionssätze ({commissions.length})</TabsTrigger>}
             {(isAdmin || isTippgeber) && <TabsTrigger value="goae">HFX GOÄ Regelwerk</TabsTrigger>}
             {(isAdmin || isTippgeber) && <TabsTrigger value="milestones">Tippgeber-Meilensteine ({milestones.filter((m: any) => m.milestone_reached && !m.payout_triggered).length})</TabsTrigger>}
@@ -937,6 +1075,18 @@ const Provisionen = () => {
                       const anyPending = group.items.some(p => p.status === "pending");
                       const anyApproved = group.items.some(p => p.status === "approved");
 
+                      // Haltefrist: 28 Tage nach ANKER (invoice_date bevorzugt, Fallback created_at).
+                      // groupAnchor = frühester Anker aller Positionen mit Status "pending".
+                      const pendingItems = group.items.filter(p => p.status === "pending");
+                      const anchors = pendingItems.map(p => payoutAnchorDate(p as any).getTime());
+                      const groupAnchor = anchors.length > 0 ? new Date(Math.min(...anchors)) : null;
+                      const groupRelease = groupAnchor ? releaseDate(groupAnchor) : null;
+                      const groupDaysLeft = groupRelease ? daysUntil(groupRelease) : 0;
+                      const holdActive = groupDaysLeft > 0;
+                      const holdTooltip = holdActive && groupRelease
+                        ? `Haltefrist: Provision ist erst 28 Tage nach der ersten Rechnung freigebbar (ab ${fmtDate(groupRelease)}, noch ${groupDaysLeft} Tage).`
+                        : undefined;
+
                       // Determine overall group status
                       let groupStatus = "mixed";
                       if (group.items.every(p => p.status === "paid")) groupStatus = "paid";
@@ -968,16 +1118,30 @@ const Provisionen = () => {
                      {isAdmin && (
                        <div className="flex gap-2" onClick={e => e.stopPropagation()}>
                          {anyPending && (
-                           <Button
-                             size="sm"
-                             variant="outline"
-                             className="text-blue-700 border-blue-300 hover:bg-blue-50 h-7 text-xs"
-                             disabled={approvingGroup === key}
-                             onClick={() => approveGroup(group.month, group.partnerId, key)}
-                           >
-                             {approvingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
-                             Freigeben
-                           </Button>
+                           <div className="flex flex-col items-end gap-0.5">
+                             <Button
+                               size="sm"
+                               variant="outline"
+                               className="text-blue-700 border-blue-300 hover:bg-blue-50 h-7 text-xs"
+                               disabled={approvingGroup === key || (holdActive && !isAdmin)}
+                               title={holdActive && !isAdmin ? holdTooltip : undefined}
+                               onClick={() => {
+                                 if (holdActive && isAdmin && groupRelease) {
+                                   setHoldOverride({ month: group.month, partnerId: group.partnerId, groupKey: key, daysLeft: groupDaysLeft, release: groupRelease });
+                                 } else {
+                                   approveGroup(group.month, group.partnerId, key);
+                                 }
+                               }}
+                             >
+                               {approvingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
+                               Freigeben
+                             </Button>
+                             {holdActive && groupRelease && (
+                               <span className="text-[10px] text-muted-foreground">
+                                 Freigabe ab {fmtDate(groupRelease)} (noch {groupDaysLeft} Tage)
+                               </span>
+                             )}
+                           </div>
                           )}
                           {(anyApproved || group.items.some(p => p.status === "paid")) && (
                             <Button
@@ -1073,6 +1237,61 @@ const Provisionen = () => {
                       );
                     })}
                   </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── Preview Tab: voraussichtliche Provisionen (Live, keine DB-Zeilen) ── */}
+          <TabsContent value="preview" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Voraussichtliche Provisionen
+                </CardTitle>
+                <CardDescription>
+                  Aktive GOÄ-Verträge ohne erste Rechnung. Die Provision entsteht real erst mit der ersten Rechnung –
+                  bis dahin nur eine Live-Vorschau. Verbrauchsbonus (10 % über 24 Monate) wird hier nicht vorhergesagt.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {previewLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+                ) : previewSignups.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Info className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                    <p className="font-medium">Keine offenen Signup-Provisionen</p>
+                    <p className="text-sm mt-1">Alle aktiven GOÄ-Verträge sind bereits abgerechnet.</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Vertriebler</TableHead>
+                        <TableHead>HFX-Nr</TableHead>
+                        <TableHead>Kunde</TableHead>
+                        <TableHead>Produkt</TableHead>
+                        <TableHead>Zweck</TableHead>
+                        <TableHead className="text-right">Voraussichtl. Betrag</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {previewSignups.map((p: any) => (
+                        <TableRow key={p.contract_id}>
+                          <TableCell className="font-medium">{p.sales_partner_name}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{p.hfx_customer_number ?? "—"}</TableCell>
+                          <TableCell className="text-sm">{p.customer_name || "—"}</TableCell>
+                          <TableCell className="text-sm">{p.product_name}</TableCell>
+                          <TableCell className="text-sm">
+                            <div className="font-medium text-foreground">{payoutPurposeLabel("contract_signup")}</div>
+                            <div className="text-xs text-muted-foreground">entsteht mit erster Rechnung</div>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">{fmtEur(Number(p.expected_amount))}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 )}
               </CardContent>
             </Card>
@@ -1470,6 +1689,34 @@ const Provisionen = () => {
               }}
             >
               Bestätigen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!holdOverride} onOpenChange={(o) => !o && setHoldOverride(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Haltefrist noch nicht abgelaufen</AlertDialogTitle>
+            <AlertDialogDescription>
+              Provisionen dürfen regulär erst 28 Tage nach der ersten Rechnung freigegeben werden.
+              {holdOverride && (
+                <> Diese Gruppe wäre erst ab <strong>{fmtDate(holdOverride.release)}</strong> freigebbar
+                (noch {holdOverride.daysLeft} Tage). Trotzdem als Admin freigeben?</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (holdOverride) {
+                  approveGroup(holdOverride.month, holdOverride.partnerId, holdOverride.groupKey);
+                  setHoldOverride(null);
+                }
+              }}
+            >
+              Trotzdem freigeben
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
