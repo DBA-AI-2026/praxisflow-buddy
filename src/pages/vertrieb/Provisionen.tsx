@@ -997,7 +997,7 @@ const Provisionen = () => {
     >
       <div className="space-y-6">
 
-        {/* Stats */}
+        {/* Stats — verbindliche Provisionen (echte payouts) */}
         <div className={`grid gap-4 ${isOwnView ? "grid-cols-2 lg:grid-cols-3" : "grid-cols-2 lg:grid-cols-5"}`}>
           {[
             { label: "Gesamt", value: fmtEur(stats.total), sub: "Alle Provisionen", icon: <Euro className="h-4 w-4 text-muted-foreground" /> },
@@ -1020,6 +1020,53 @@ const Provisionen = () => {
             </Card>
           ))}
         </div>
+
+        {/* Prognose — voraussichtliche, noch nicht abgerechnete Beträge.
+            Optisch klar von den verbindlichen KPIs abgesetzt (gestrichelter Rahmen,
+            muted Hintergrund). KEINE Summenbildung mit "Gesamt". */}
+        {(previewSignups.length > 0 || forecastRows.length > 0) && (
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+            {previewSignups.length > 0 && (
+              <Card className="border-dashed bg-muted/40">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Info className="h-3.5 w-3.5" />
+                    Prognose · Voraussichtlich
+                  </CardTitle>
+                  <Award className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-muted-foreground">
+                    {fmtEur(previewSignups.reduce((s: number, p: any) => s + Number(p.expected_amount || 0), 0))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Abschlussprovisionen, entstehen mit erster Rechnung ({previewSignups.length} Verträge)
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+            {forecastRows.length > 0 && (
+              <Card className="border-dashed bg-muted/40">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Info className="h-3.5 w-3.5" />
+                    Prognose · Laufend erwartet
+                  </CardTitle>
+                  <Zap className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-muted-foreground">
+                    {fmtEur(forecastRows.reduce((s: number, r: any) => s + Number(r.forecast_ad_amount || 0), 0))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Verbrauchsprovision zur nächsten Rechnung ({forecastRows.length} Verträge)
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
 
 
         <Tabs defaultValue="payouts">
