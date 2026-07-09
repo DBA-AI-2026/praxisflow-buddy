@@ -168,24 +168,39 @@ Deno.serve(async (req) => {
     }
 
     if (mode === "cleanup") {
+      const sweepAll: boolean = body?.sweep_all === true;
       const hfx = String(body?.hfx_customer_number ?? "");
       const contractId = String(body?.contract_id ?? "");
 
-      if (!hfx.startsWith(TEST_MARKER_PREFIX)) {
-        return json(400, { error: `Safety: hfx_customer_number muss mit '${TEST_MARKER_PREFIX}' beginnen` });
-      }
-
-      // Vertrag verifizieren (LIKE-Safety) & optional per id einschränken
+      // Vertrag verifizieren — LIKE-Safety wird IMMER erzwungen.
       let contractQuery = supabase
         .from("contracts")
         .select("id, hfx_customer_number")
         .like("hfx_customer_number", `${TEST_MARKER_PREFIX}%`);
-      if (contractId) contractQuery = contractQuery.eq("id", contractId);
-      else contractQuery = contractQuery.eq("hfx_customer_number", hfx);
+
+      if (!sweepAll) {
+        if (!hfx.startsWith(TEST_MARKER_PREFIX)) {
+          return json(400, { error: `Safety: hfx_customer_number muss mit '${TEST_MARKER_PREFIX}' beginnen` });
+        }
+        if (contractId) contractQuery = contractQuery.eq("id", contractId);
+        else contractQuery = contractQuery.eq("hfx_customer_number", hfx);
+      }
 
       const { data: contracts, error: cErr } = await contractQuery;
       if (cErr) return json(500, { error: `Contract-Lookup fehlgeschlagen: ${cErr.message}` });
       if (!contracts || contracts.length === 0) {
+        if (sweepAll) {
+          return json(200, {
+            ok: true,
+            mode,
+            contracts_deleted: 0,
+            payouts_deleted: 0,
+            invoices_deleted: 0,
+            fibu_events_deleted: 0,
+            deleted: { commission_payouts: 0, fibu_events: 0, invoices: 0, contracts: 0 },
+            contract_ids: [],
+          });
+        }
         return json(404, { error: "Keine passende TEST-HARNESS-Fixture gefunden" });
       }
 
