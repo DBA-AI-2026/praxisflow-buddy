@@ -471,7 +471,105 @@ const Provisionen = () => {
     },
   });
 
-  // Tippgeber milestone tracking
+  // ── Vorschau: voraussichtliche Provisionen (Verträge aktiv, noch keine Rechnung, noch kein Signup-Payout) ──
+  // Betragsformel und Trägerregel MÜSSEN identisch zum Motor (_shared/goaeCommissions.ts) sein.
+  const { data: previewSignups = [], isLoading: previewLoading } = useQuery({
+    queryKey: ["commission-preview-signups", user?.id, isAdmin, isSalesLead, isSalesPartner],
+    queryFn: async () => {
+      // 1. Kandidaten-Verträge: GOÄ, aktiv, sales_partner_id gesetzt
+      let q = supabase
+        .from("contracts")
+        .select("id, hfx_customer_number, customer_name, praxis, product_name, sales_partner_id, sales_partner_name, customer_id, start_date")
+        .eq("status", "aktiv")
+        .not("sales_partner_id", "is", null);
+      // Sales-Partner sieht nur eigene
+      if (isSalesPartner && !isAdmin && !isSalesLead && user?.id) {
+        q = q.eq("sales_partner_id", user.id);
+      }
+      const { data: candidates, error: cErr } = await q;
+      if (cErr) throw cErr;
+      const goae = (candidates ?? []).filter((c: any) => isGoaeProduct(c.product_name));
+      if (goae.length === 0) return [] as any[];
+
+      const contractIds = goae.map((c: any) => c.id);
+      const partnerIds = Array.from(new Set(goae.map((c: any) => c.sales_partner_id).filter(Boolean)));
+      const customerIds = Array.from(new Set(goae.map((c: any) => c.customer_id).filter(Boolean)));
+
+      // 2. Ausschluss: Verträge mit bereits vorhandener Rechnung
+      const { data: invRows } = await supabase
+        .from("invoices")
+        .select("contract_id")
+        .in("contract_id", contractIds);
+      const withInvoice = new Set((invRows ?? []).map((r: any) => r.contract_id));
+
+      // 3. Ausschluss: Verträge mit bestehendem contract_signup Payout
+      const { data: sigPayouts } = await supabase
+        .from("commission_payouts")
+        .select("contract_id")
+        .in("contract_id", contractIds)
+        .eq("payout_trigger", "contract_signup");
+      const withSignup = new Set((sigPayouts ?? []).map((r: any) => r.contract_id));
+
+      // 4. Partner-Rollen (Motor-Priorität): nur AD-Rollen behandeln Signup-Bonus
+      const { data: roleRows } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .in("user_id", partnerIds)
+        .eq("is_active", true);
+      const ROLE_PRIORITY = ["sales_lead", "regional_lead", "user", "sales_partner"] as const;
+      const rolesByPartner: Record<string, string | null> = {};
+      for (const pid of partnerIds as string[]) {
+        const active = new Set((roleRows ?? []).filter((r: any) => r.user_id === pid).map((r: any) => r.role));
+        rolesByPartner[pid] = ROLE_PRIORITY.find((r) => active.has(r)) ?? null;
+      }
+      const AD_ROLES = new Set(["user", "regional_lead", "sales_lead"]);
+
+      // 5. Träger-Vertrag (Motor-Logik: customers.base_fee_contract_id)
+      const { data: customersRows } = customerIds.length
+        ? await supabase.from("customers").select("id, base_fee_contract_id").in("id", customerIds)
+        : { data: [] as any[] };
+      const carrierByCustomer: Record<string, string | null> = {};
+      for (const c of (customersRows ?? []) as any[]) carrierByCustomer[c.id] = c.base_fee_contract_id ?? null;
+
+      // 6. Sprint-Bonus: 250 € falls Partner ≥ 25 GOÄ-Verträge und heute ≤ 2026-12-31
+      const today = new Date();
+      const sprintEnd = new Date("2026-12-31");
+      const inSprint = today <= sprintEnd;
+      const goaeCountByPartner: Record<string, number> = {};
+      if (inSprint && partnerIds.length) {
+        for (const pid of partnerIds as string[]) {
+          const { count } = await supabase
+            .from("contracts")
+            .select("id", { count: "exact", head: true })
+            .eq("sales_partner_id", pid)
+            .or("product_name.ilike.%GOÄ%,product_name.ilike.%GOA%")
+            .in("status", ["aktiv", "gekündigt", "beendet"]);
+          goaeCountByPartner[pid] = count ?? 0;
+        }
+      }
+
+      return goae
+        .filter((c: any) => !withInvoice.has(c.id) && !withSignup.has(c.id))
+        .filter((c: any) => AD_ROLES.has(rolesByPartner[c.sales_partner_id] ?? ""))
+        .filter((c: any) => {
+          // Motor-Logik isCarrierContract(contract.id, customer_id, customers.base_fee_contract_id)
+          if (!c.customer_id) return true;
+          const baseFee = carrierByCustomer[c.customer_id];
+          if (!baseFee) return true;
+          return baseFee === c.id;
+        })
+        .map((c: any) => ({
+          contract_id: c.id,
+          hfx_customer_number: c.hfx_customer_number,
+          customer_name: c.customer_name || c.praxis || "",
+          product_name: c.product_name,
+          sales_partner_id: c.sales_partner_id,
+          sales_partner_name: c.sales_partner_name || "Unbekannt",
+          expected_amount: inSprint && (goaeCountByPartner[c.sales_partner_id] ?? 0) >= 25 ? 250 : 100,
+        }));
+    },
+  });
+
   const { data: milestones = [], refetch: refetchMilestones } = useQuery({
     queryKey: ["tippgeber-milestones", user?.id, isAdmin, isTippgeber],
     queryFn: async () => {
