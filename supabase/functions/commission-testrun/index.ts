@@ -233,7 +233,16 @@ Deno.serve(async (req) => {
         .like("hfx_customer_number", `${TEST_MARKER_PREFIX}%`);
       report.contracts = contractDel ?? 0;
 
-      return json(200, { ok: true, mode, deleted: report, contract_ids: ids });
+      return json(200, {
+        ok: true,
+        mode,
+        contracts_deleted: report.contracts,
+        payouts_deleted: report.commission_payouts,
+        invoices_deleted: report.invoices,
+        fibu_events_deleted: report.fibu_events,
+        deleted: report,
+        contract_ids: ids,
+      });
     }
 
     return json(400, { error: "Unbekannter mode. Erwartet: 'seed_and_run' oder 'cleanup'." });
