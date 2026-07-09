@@ -1242,7 +1242,61 @@ const Provisionen = () => {
             </Card>
           </TabsContent>
 
-          {/* ── Commission Rates Tab ── */}
+          {/* ── Preview Tab: voraussichtliche Provisionen (Live, keine DB-Zeilen) ── */}
+          <TabsContent value="preview" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Voraussichtliche Provisionen
+                </CardTitle>
+                <CardDescription>
+                  Aktive GOÄ-Verträge ohne erste Rechnung. Die Provision entsteht real erst mit der ersten Rechnung –
+                  bis dahin nur eine Live-Vorschau. Verbrauchsbonus (10 % über 24 Monate) wird hier nicht vorhergesagt.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {previewLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+                ) : previewSignups.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Info className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                    <p className="font-medium">Keine offenen Signup-Provisionen</p>
+                    <p className="text-sm mt-1">Alle aktiven GOÄ-Verträge sind bereits abgerechnet.</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Vertriebler</TableHead>
+                        <TableHead>HFX-Nr</TableHead>
+                        <TableHead>Kunde</TableHead>
+                        <TableHead>Produkt</TableHead>
+                        <TableHead>Zweck</TableHead>
+                        <TableHead className="text-right">Voraussichtl. Betrag</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {previewSignups.map((p: any) => (
+                        <TableRow key={p.contract_id}>
+                          <TableCell className="font-medium">{p.sales_partner_name}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{p.hfx_customer_number ?? "—"}</TableCell>
+                          <TableCell className="text-sm">{p.customer_name || "—"}</TableCell>
+                          <TableCell className="text-sm">{p.product_name}</TableCell>
+                          <TableCell className="text-sm">
+                            <div className="font-medium text-foreground">{payoutPurposeLabel("contract_signup")}</div>
+                            <div className="text-xs text-muted-foreground">entsteht mit erster Rechnung</div>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">{fmtEur(Number(p.expected_amount))}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="rates" className="mt-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
