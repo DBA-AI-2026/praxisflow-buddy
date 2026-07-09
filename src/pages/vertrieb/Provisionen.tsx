@@ -442,7 +442,7 @@ const Provisionen = () => {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [approvingGroup, setApprovingGroup] = useState<string | null>(null);
   const [payingGroup, setPayingGroup] = useState<string | null>(null);
-  const [revokingGroup, setRevokingGroup] = useState<string | null>(null);
+  // (revokingGroup entfernt — resetGroupToPending übernimmt.)
   const [resettingGroup, setResettingGroup] = useState<string | null>(null);
   const [resetConfirm, setResetConfirm] = useState<{ month: string; partnerId: string; groupKey: string } | null>(null);
   const [holdOverride, setHoldOverride] = useState<{ month: string; partnerId: string; groupKey: string; daysLeft: number; release: Date } | null>(null);
@@ -844,31 +844,9 @@ const Provisionen = () => {
     }
   };
 
-  const revokeApprovalGroup = async (month: string, partnerId: string, groupKey: string) => {
-    if (!isAdmin) return;
-    // Client-Guard: keine paid-Zeile in der Gruppe
-    const groupRows = payouts.filter(p => p.period_month === month && p.sales_partner_id === partnerId);
-    if (groupRows.some(p => p.status === "paid")) {
-      toast({ title: "Nicht möglich", description: "Gruppe enthält bereits ausgezahlte Positionen.", variant: "destructive" });
-      return;
-    }
-    setRevokingGroup(groupKey);
-    try {
-      const ids = groupRows.filter(p => p.status === "approved").map(p => p.id);
-      if (ids.length === 0) { toast({ title: "Keine freigegebenen Einträge" }); return; }
-      const { error } = await supabase
-        .from("commission_payouts")
-        .update({ status: "pending", approved_by: null, approved_at: null })
-        .in("id", ids);
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["commission-payouts"] });
-      toast({ title: "Freigabe zurückgenommen", description: `${ids.length} Provisionen wieder auf ausstehend.` });
-    } catch (e: any) {
-      toast({ title: "Fehler", description: e.message, variant: "destructive" });
-    } finally {
-      setRevokingGroup(null);
-    }
-  };
+  // revokeApprovalGroup entfernt (toter Code — ersetzt durch resetGroupToPending).
+
+
 
 
   const downloadPdf = async (group: { month: string; partner: string; partnerId: string; items: CommissionPayout[] }) => {
@@ -1071,7 +1049,7 @@ const Provisionen = () => {
                       const isExpanded = expandedGroups.has(key);
                       const groupTotal = group.items.reduce((s, p) => s + Number(p.commission_amount), 0);
                       const allPending = group.items.every(p => p.status === "pending");
-                      const allApproved = group.items.every(p => p.status === "approved");
+                      // allApproved entfernt (ungenutzt).
                       const anyPending = group.items.some(p => p.status === "pending");
                       const anyApproved = group.items.some(p => p.status === "approved");
 
@@ -1783,25 +1761,27 @@ function CommissionTestrunPanel() {
   };
 
   const runCleanup = async () => {
-    if (!last) return;
     setCleaning(true);
     try {
       const { data, error } = await supabase.functions.invoke("commission-testrun", {
-        body: {
-          mode: "cleanup",
-          hfx_customer_number: last.hfx_customer_number,
-          contract_id: last.contract_id,
-        },
+        body: { mode: "cleanup", sweep_all: true },
       });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || "Unbekannter Fehler");
       saveState(null);
       queryClient.invalidateQueries({ queryKey: ["commission-payouts"] });
-      const d = data.deleted ?? {};
-      toast({
-        title: "Testrun aufgeräumt",
-        description: `Gelöscht: ${d.commission_payouts ?? 0} Payouts, ${d.fibu_events ?? 0} FiBu-Events, ${d.invoices ?? 0} Rechnung(en), ${d.contracts ?? 0} Vertrag/Verträge.`,
-      });
+      const contracts = data.contracts_deleted ?? 0;
+      const payouts = data.payouts_deleted ?? 0;
+      const invoices = data.invoices_deleted ?? 0;
+      const fibu = data.fibu_events_deleted ?? 0;
+      if (contracts === 0 && payouts === 0 && invoices === 0 && fibu === 0) {
+        toast({ title: "Keine Test-Fixtures gefunden" });
+      } else {
+        toast({
+          title: "Testrun aufgeräumt",
+          description: `Gelöscht: ${payouts} Payouts, ${fibu} FiBu-Events, ${invoices} Rechnung(en), ${contracts} Vertrag/Verträge.`,
+        });
+      }
     } catch (e: any) {
       toast({ title: "Cleanup fehlgeschlagen", description: e?.message ?? String(e), variant: "destructive" });
     } finally {
@@ -1829,7 +1809,7 @@ function CommissionTestrunPanel() {
           </Button>
           <Button
             onClick={runCleanup}
-            disabled={!last || seeding || cleaning}
+            disabled={seeding || cleaning}
             variant="outline"
             size="sm"
           >
