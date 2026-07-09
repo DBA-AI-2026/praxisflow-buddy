@@ -1074,6 +1074,18 @@ const Provisionen = () => {
                       const anyPending = group.items.some(p => p.status === "pending");
                       const anyApproved = group.items.some(p => p.status === "approved");
 
+                      // Haltefrist: 28 Tage nach ANKER (invoice_date bevorzugt, Fallback created_at).
+                      // groupAnchor = frühester Anker aller Positionen mit Status "pending".
+                      const pendingItems = group.items.filter(p => p.status === "pending");
+                      const anchors = pendingItems.map(p => payoutAnchorDate(p as any).getTime());
+                      const groupAnchor = anchors.length > 0 ? new Date(Math.min(...anchors)) : null;
+                      const groupRelease = groupAnchor ? releaseDate(groupAnchor) : null;
+                      const groupDaysLeft = groupRelease ? daysUntil(groupRelease) : 0;
+                      const holdActive = groupDaysLeft > 0;
+                      const holdTooltip = holdActive && groupRelease
+                        ? `Haltefrist: Provision ist erst 28 Tage nach der ersten Rechnung freigebbar (ab ${fmtDate(groupRelease)}, noch ${groupDaysLeft} Tage).`
+                        : undefined;
+
                       // Determine overall group status
                       let groupStatus = "mixed";
                       if (group.items.every(p => p.status === "paid")) groupStatus = "paid";
