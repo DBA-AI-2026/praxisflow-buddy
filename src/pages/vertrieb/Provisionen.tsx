@@ -1809,7 +1809,7 @@ function CommissionTestrunPanel() {
           </Button>
           <Button
             onClick={runCleanup}
-            disabled={!last || seeding || cleaning}
+            disabled={seeding || cleaning}
             variant="outline"
             size="sm"
           >
