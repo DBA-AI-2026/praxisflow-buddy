@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14.21.0";
 import { isGoaeProduct, isCarrierContract, healCustomerStripeId } from "../_shared/multiLocation.ts";
 import { createGoaeCommissions } from "../_shared/goaeCommissions.ts";
+import { computeEffectiveUsageNet } from "../_shared/freeQuota.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
@@ -426,19 +427,7 @@ Deno.serve(async (req) => {
             .eq("period_to", periodEnd);
 
           if (usageCharges && usageCharges.length > 0) {
-            usageChargeIds = usageCharges.map((u: any) => u.id);
-            for (const uc of usageCharges) {
-              const lineNet = uc.quantity * Number(uc.unit_price);
-              usageNetAmount += lineNet;
-              periodUsageQty += Number(uc.quantity) || 0;
-              positions.push({
-                description: uc.unit_description || `Geprüfte GOÄ-Rechnungen (HFX GOÄ) – ${billingPeriod}`,
-                quantity: uc.quantity,
-                unit_price: Number(uc.unit_price),
-              });
-            }
-
-            // ── Freikontingent-Abzug (einmal auf Perioden-Summe, nicht per Charge) ──
+            // Freikontingent-Grants + bereits fakturierter Vorperioden-Verbrauch
             const [{ data: grantRows }, { data: priorRows }] = await Promise.all([
               supabase
                 .from("free_quota_grants")
@@ -453,26 +442,20 @@ Deno.serve(async (req) => {
             ]);
             grantsTotal = (grantRows || []).reduce((s: number, g: any) => s + (Number(g.menge) || 0), 0);
             usageInvoicedPrior = (priorRows || []).reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0);
-            const saldo = Math.max(0, grantsTotal - usageInvoicedPrior);
-            freiQty = Math.min(periodUsageQty, saldo);
 
-            if (freiQty > 0 && usageNetAmount > 0 && periodUsageQty > 0) {
-              // Effektiver Perioden-Durchschnittspreis (deckt gemischte unit_prices ab)
-              const avgUnitPrice = usageNetAmount / periodUsageQty;
-              grantDeductionNet = Math.round(freiQty * avgUnitPrice * 100) / 100;
-              // HINWEIS: Der Description-Prefix "Freikontingent-Abzug" ist API-relevant.
-              // Der Retry-Pfad (processFailedInvoiceRetry) erkennt diesen Abzugsposten
-              // per description.startsWith("Freikontingent-Abzug") + unit_price < 0,
-              // um Provisions- und FiBu-Basis effektiv zu rechnen. Umbenennen NUR
-              // synchron mit dem Match dort, sonst leakt der Frei-Anteil in FiBu/Provisionen.
-              positions.push({
-                description: `Freikontingent-Abzug (${freiQty} Rechnungen à ${avgUnitPrice.toFixed(2)} €) – ${billingPeriod}`,
-                quantity: 1,
-                unit_price: -grantDeductionNet,
-              });
-              // Provisions-/FiBu-Basis: Netto-Verbrauch nach Frei-Abzug
-              usageNetAmount = Math.round((usageNetAmount - grantDeductionNet) * 100) / 100;
-              console.log(`[auto-invoice] Freikontingent: contract=${contract.id} hfx=${contract.hfx_customer_number} grants=${grantsTotal} priorInvoiced=${usageInvoicedPrior} saldo=${saldo} periodQty=${periodUsageQty} frei=${freiQty} deduction=${grantDeductionNet.toFixed(2)}€`);
+            // Formel geteilt via _shared/freeQuota.ts (VERBATIM aus vorheriger Inline-Version).
+            // HINWEIS: Der Description-Prefix "Freikontingent-Abzug" bleibt API-relevant für
+            // processFailedInvoiceRetry (description.startsWith + unit_price < 0).
+            const eff = computeEffectiveUsageNet(usageCharges as any, grantsTotal, usageInvoicedPrior, billingPeriod);
+            usageChargeIds = eff.usageChargeIds;
+            usageNetAmount = eff.usageNetAmount;
+            periodUsageQty = eff.periodUsageQty;
+            freiQty = eff.freiQty;
+            grantDeductionNet = eff.grantDeductionNet;
+            positions.push(...eff.positions);
+
+            if (freiQty > 0) {
+              console.log(`[auto-invoice] Freikontingent: contract=${contract.id} hfx=${contract.hfx_customer_number} grants=${grantsTotal} priorInvoiced=${usageInvoicedPrior} saldo=${eff.saldo} periodQty=${periodUsageQty} frei=${freiQty} deduction=${grantDeductionNet.toFixed(2)}€`);
             }
           }
         }
