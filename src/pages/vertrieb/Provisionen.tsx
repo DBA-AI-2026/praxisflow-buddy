@@ -477,13 +477,16 @@ const Provisionen = () => {
   const { data: previewSignups = [], isLoading: previewLoading } = useQuery({
     queryKey: ["commission-preview-signups", user?.id, isAdmin, isSalesLead, isSalesPartner],
     queryFn: async () => {
-      // 1. Kandidaten-Verträge: GOÄ, aktiv, sales_partner_id gesetzt
+      // 1. Kandidaten-Verträge: GOÄ, aktiv, sales_partner_id gesetzt.
+      // Sichtbarkeit für user/regional_lead kommt über contracts-RLS
+      // ("Gebietsleiter can view own contracts": Self OR Team via
+      // is_in_regional_lead_team). Kein zusätzlicher Frontend-Filter nötig.
       let q = supabase
         .from("contracts")
         .select("id, hfx_customer_number, customer_name, praxis, product_name, sales_partner_id, sales_partner_name, customer_id, start_date")
         .eq("status", "aktiv")
         .not("sales_partner_id", "is", null);
-      // Sales-Partner sieht nur eigene
+      // Zusätzlicher Sicherheitsanker für sales_partner (RLS greift ohnehin).
       if (isSalesPartner && !isAdmin && !isSalesLead && user?.id) {
         q = q.eq("sales_partner_id", user.id);
       }
