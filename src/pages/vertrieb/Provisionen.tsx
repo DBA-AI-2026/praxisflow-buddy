@@ -78,7 +78,44 @@ interface CommissionPayout {
     hfx_customer_number: string | null;
     product_name: string | null;
   } | null;
+  invoices: {
+    invoice_date: string | null;
+  } | null;
 }
+
+// ─── Retention (28-day hold after first invoice) ─────────────────────────────
+
+const RETENTION_DAYS = 28;
+
+/**
+ * Anker für die Haltefrist:
+ *   – bevorzugt invoices.invoice_date (fachlich, backfill-immun)
+ *   – Fallback created_at NUR wenn keine Rechnung verknüpft ist (z. B. tippgeber_milestone)
+ */
+function payoutAnchorDate(p: {
+  invoices?: { invoice_date: string | null } | null;
+  invoice_id?: string | null;
+  created_at: string;
+}): Date {
+  const invDate = p.invoices?.invoice_date;
+  if (invDate) return new Date(invDate);
+  return new Date(p.created_at);
+}
+
+function releaseDate(anchor: Date): Date {
+  const d = new Date(anchor);
+  d.setDate(d.getDate() + RETENTION_DAYS);
+  return d;
+}
+
+function daysUntil(target: Date, now: Date = new Date()): number {
+  const MS = 24 * 60 * 60 * 1000;
+  const a = Date.UTC(target.getFullYear(), target.getMonth(), target.getDate());
+  const b = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.ceil((a - b) / MS);
+}
+
+const fmtDate = (d: Date) => d.toLocaleDateString("de-DE");
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
