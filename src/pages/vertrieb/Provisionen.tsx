@@ -1637,6 +1637,34 @@ const Provisionen = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!holdOverride} onOpenChange={(o) => !o && setHoldOverride(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Haltefrist noch nicht abgelaufen</AlertDialogTitle>
+            <AlertDialogDescription>
+              Provisionen dürfen regulär erst 28 Tage nach der ersten Rechnung freigegeben werden.
+              {holdOverride && (
+                <> Diese Gruppe wäre erst ab <strong>{fmtDate(holdOverride.release)}</strong> freigebbar
+                (noch {holdOverride.daysLeft} Tage). Trotzdem als Admin freigeben?</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (holdOverride) {
+                  approveGroup(holdOverride.month, holdOverride.partnerId, holdOverride.groupKey);
+                  setHoldOverride(null);
+                }
+              }}
+            >
+              Trotzdem freigeben
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };
