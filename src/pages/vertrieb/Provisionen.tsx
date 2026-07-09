@@ -1761,25 +1761,27 @@ function CommissionTestrunPanel() {
   };
 
   const runCleanup = async () => {
-    if (!last) return;
     setCleaning(true);
     try {
       const { data, error } = await supabase.functions.invoke("commission-testrun", {
-        body: {
-          mode: "cleanup",
-          hfx_customer_number: last.hfx_customer_number,
-          contract_id: last.contract_id,
-        },
+        body: { mode: "cleanup", sweep_all: true },
       });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error || "Unbekannter Fehler");
       saveState(null);
       queryClient.invalidateQueries({ queryKey: ["commission-payouts"] });
-      const d = data.deleted ?? {};
-      toast({
-        title: "Testrun aufgeräumt",
-        description: `Gelöscht: ${d.commission_payouts ?? 0} Payouts, ${d.fibu_events ?? 0} FiBu-Events, ${d.invoices ?? 0} Rechnung(en), ${d.contracts ?? 0} Vertrag/Verträge.`,
-      });
+      const contracts = data.contracts_deleted ?? 0;
+      const payouts = data.payouts_deleted ?? 0;
+      const invoices = data.invoices_deleted ?? 0;
+      const fibu = data.fibu_events_deleted ?? 0;
+      if (contracts === 0 && payouts === 0 && invoices === 0 && fibu === 0) {
+        toast({ title: "Keine Test-Fixtures gefunden" });
+      } else {
+        toast({
+          title: "Testrun aufgeräumt",
+          description: `Gelöscht: ${payouts} Payouts, ${fibu} FiBu-Events, ${invoices} Rechnung(en), ${contracts} Vertrag/Verträge.`,
+        });
+      }
     } catch (e: any) {
       toast({ title: "Cleanup fehlgeschlagen", description: e?.message ?? String(e), variant: "destructive" });
     } finally {
