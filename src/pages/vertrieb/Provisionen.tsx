@@ -571,6 +571,34 @@ const Provisionen = () => {
     },
   });
 
+  // ── Bestandskunden: Verbrauchs-Forecast pro laufendem GOÄ-AD-Vertrag ──
+  // Read-only Edge-Function commission-forecast, damit die Freikontingent-/
+  // Effektiv-Netto-Formel nicht im Frontend gespiegelt wird.
+  const { data: forecastRows = [], isLoading: forecastLoading } = useQuery({
+    queryKey: ["commission-forecast", user?.id, isAdmin, isSalesLead, isSalesPartner],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("commission-forecast", { body: {} });
+      if (error) throw error;
+      return ((data as any)?.contracts ?? []) as any[];
+    },
+    enabled: !!user?.id && (isAdmin || isSalesLead || isSalesPartner),
+  });
+
+  // Bisher verdient je Vertrag (echte AD-Verbrauchs-Payouts).
+  const earnedByContract = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of payouts as any[]) {
+      if (p.payout_trigger !== "usage_revenue") continue;
+      if (p.commission_role !== "ad") continue;
+      if (!p.contract_id) continue;
+      // sales_partner darf nur eigene sehen — payouts sind DB-seitig via RLS begrenzt.
+      map.set(p.contract_id, (map.get(p.contract_id) ?? 0) + Number(p.commission_amount || 0));
+    }
+    return map;
+  }, [payouts]);
+
+
+
   const { data: milestones = [], refetch: refetchMilestones } = useQuery({
     queryKey: ["tippgeber-milestones", user?.id, isAdmin, isTippgeber],
     queryFn: async () => {
