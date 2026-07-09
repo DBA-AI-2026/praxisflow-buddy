@@ -445,6 +445,7 @@ const Provisionen = () => {
   const [revokingGroup, setRevokingGroup] = useState<string | null>(null);
   const [resettingGroup, setResettingGroup] = useState<string | null>(null);
   const [resetConfirm, setResetConfirm] = useState<{ month: string; partnerId: string; groupKey: string } | null>(null);
+  const [holdOverride, setHoldOverride] = useState<{ month: string; partnerId: string; groupKey: string; daysLeft: number; release: Date } | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
   const [csvMonth, setCsvMonth] = useState<string>("all");
 
