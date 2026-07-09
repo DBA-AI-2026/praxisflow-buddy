@@ -191,24 +191,61 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Update role if different
-      const { data: currentRole } = await supabaseAdmin
+      // Update role if different (multi-role-safe, Variante C)
+      const { data: activeRoles, error: rolesLookupError } = await supabaseAdmin
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
-        .maybeSingle();
+        .eq("is_active", true);
 
-      if (currentRole?.role !== role) {
-        if (currentRole) {
-          await supabaseAdmin
+      if (rolesLookupError) {
+        console.error("Error loading user roles:", rolesLookupError);
+        return new Response(
+          JSON.stringify({ error: rolesLookupError.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const currentRoles = (activeRoles ?? []).map((r: { role: string }) => r.role);
+
+      if (currentRoles.length === 0) {
+        // No active role → insert desired role
+        const { error: insertRoleError } = await supabaseAdmin
+          .from("user_roles")
+          .insert({ user_id: userId, role });
+        if (insertRoleError) {
+          console.error("Error inserting user role:", insertRoleError);
+          return new Response(
+            JSON.stringify({ error: insertRoleError.message }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } else if (currentRoles.length === 1) {
+        const existing = currentRoles[0];
+        if (existing !== role) {
+          // Row-precise UPDATE with mandatory role filter
+          const { error: updateRoleError } = await supabaseAdmin
             .from("user_roles")
             .update({ role })
-            .eq("user_id", userId);
-        } else {
-          await supabaseAdmin
-            .from("user_roles")
-            .insert({ user_id: userId, role });
+            .eq("user_id", userId)
+            .eq("role", existing);
+          if (updateRoleError) {
+            console.error("Error updating user role:", updateRoleError);
+            return new Response(
+              JSON.stringify({ error: updateRoleError.message }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
         }
+        // else: identical → no-op
+      } else {
+        // >1 active roles → refuse to write, surface clear error
+        return new Response(
+          JSON.stringify({
+            error: `Nutzer hat mehrere aktive Rollen (${currentRoles.join(", ")}). Rollen bitte über die Benutzerverwaltung ändern.`,
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
     } else {
       // Create new user
