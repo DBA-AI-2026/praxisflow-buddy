@@ -97,17 +97,27 @@ const FIBU_CSV_HEADERS = [
 
 // SKR03 Kontenrahmen – Mapping event_type → debit_account / credit_account
 const SKR03_ACCOUNT_MAP: Record<string, { debit: string; credit: string; label: string }> = {
-  invoice_base_fee_created:   { debit: "1200", credit: "8400", label: "Erlös Grundgebühr" },
-  invoice_usage_created:      { debit: "1200", credit: "8400", label: "Erlös Verbrauch" },
-  invoice_created:            { debit: "1200", credit: "8400", label: "Erlös Rechnung" },
-  vendor_cost_created:        { debit: "3300", credit: "1600", label: "Fremdleistung/Kosten" },
-  commission_created:         { debit: "4780", credit: "1600", label: "Provision Vertrieb" },
-  cancellation_created:       { debit: "8400", credit: "1200", label: "Storno/Gutschrift" },
-  correction_created:         { debit: "8400", credit: "1200", label: "Korrektur" },
-  payment_received:           { debit: "1800", credit: "1200", label: "Zahlungseingang" },
-  refund_created:             { debit: "1200", credit: "1800", label: "Erstattung" },
+  invoice_base_fee_created:      { debit: "1200", credit: "8400", label: "Erlös Grundgebühr" },
+  invoice_usage_created:         { debit: "1200", credit: "8400", label: "Erlös Verbrauch" },
+  invoice_created:               { debit: "1200", credit: "8400", label: "Erlös Rechnung" },
+  vendor_cost_created:           { debit: "3300", credit: "1600", label: "Fremdleistung/Kosten" },
+  // TODO: unused event_type, siehe Kontierungs-Audit
+  commission_created:            { debit: "4780", credit: "1600", label: "Provision Vertrieb" },
+  internal_sales_bonus_reference:{ debit: "4780", credit: "1600", label: "Provision Vertrieb" },
+  cancellation_created:          { debit: "8400", credit: "1200", label: "Storno/Gutschrift" },
+  correction_created:            { debit: "8400", credit: "1200", label: "Korrektur" },
+  payment_received:              { debit: "1800", credit: "1200", label: "Zahlungseingang" },
+  refund_created:                { debit: "1200", credit: "1800", label: "Erstattung" },
 };
 const DEFAULT_ACCOUNTS = { debit: "9999", credit: "9999", label: "Sonstiger Vorfall" };
+
+// Nicht-buchungsrelevante Event-Typen — bleiben in DB/Ansicht sichtbar,
+// werden aber NIE in einen Export-Batch oder in die CSV aufgenommen.
+const NON_BOOKABLE_EVENT_TYPES = new Set<string>([
+  "payment_received_reference",
+  "payment_failed_reference",
+  "auto_invoice_charge_failed",
+]);
 
 // Legacy Lexware Kontenrahmen (for legacy direct exports)
 const REVENUE_ACCOUNT = "8400";
@@ -569,7 +579,12 @@ export default function Buchhaltung() {
   const totalCosts = costs.reduce((s: number, c: any) => s + (c.gross_amount ?? 0), 0);
 
   // Exportable fibu events (status=approved AND export_status=open)
-  const exportableFibuEvents = fibuEvents.filter((e: any) => e.status === "approved" && e.export_status === "open");
+  const exportableFibuEvents = fibuEvents.filter(
+    (e: any) =>
+      e.status === "approved" &&
+      e.export_status === "open" &&
+      !NON_BOOKABLE_EVENT_TYPES.has(e.event_type),
+  );
 
   // ── Legacy CSV exports (Direktexport) ──
   const exportRevenues = () => {
@@ -708,6 +723,24 @@ export default function Buchhaltung() {
     setExportConfirmOpen(false);
     if (exportableFibuEvents.length === 0) {
       toast({ title: "Keine exportierbaren Vorfälle", description: "Nur Vorfälle mit Status 'Freigegeben' und Exportstatus 'Offen' können exportiert werden." });
+      return;
+    }
+    // Guard: block export if any freigegebene, buchungsrelevante Events keinen SKR03-Account haben.
+    // DEFAULT_ACCOUNTS (9999) bleibt Konstante, wird aber im Export-Pfad NICHT mehr stillschweigend verwendet.
+    const uncontieredTypes = Array.from(
+      new Set(
+        exportableFibuEvents
+          .filter((e: any) => !SKR03_ACCOUNT_MAP[e.event_type])
+          .map((e: any) => e.event_type as string),
+      ),
+    );
+    if (uncontieredTypes.length > 0) {
+      const count = exportableFibuEvents.filter((e: any) => !SKR03_ACCOUNT_MAP[e.event_type]).length;
+      toast({
+        title: "Export abgebrochen",
+        description: `${count} Vorfälle sind nicht kontiert (Typ: ${uncontieredTypes.join(", ")}). Bitte Kontenzuordnung ergänzen oder Vorfälle sperren.`,
+        variant: "destructive",
+      });
       return;
     }
     try {
