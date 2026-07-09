@@ -464,7 +464,7 @@ const Provisionen = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("commission_payouts")
-        .select("*, contracts:contract_id(customer_name, praxis, hfx_customer_number, product_name)")
+        .select("*, contracts:contract_id(customer_name, praxis, hfx_customer_number, product_name), invoices:invoice_id(invoice_date)")
         .order("period_month", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as CommissionPayout[];
