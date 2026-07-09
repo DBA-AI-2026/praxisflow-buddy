@@ -579,7 +579,12 @@ export default function Buchhaltung() {
   const totalCosts = costs.reduce((s: number, c: any) => s + (c.gross_amount ?? 0), 0);
 
   // Exportable fibu events (status=approved AND export_status=open)
-  const exportableFibuEvents = fibuEvents.filter((e: any) => e.status === "approved" && e.export_status === "open");
+  const exportableFibuEvents = fibuEvents.filter(
+    (e: any) =>
+      e.status === "approved" &&
+      e.export_status === "open" &&
+      !NON_BOOKABLE_EVENT_TYPES.has(e.event_type),
+  );
 
   // ── Legacy CSV exports (Direktexport) ──
   const exportRevenues = () => {
