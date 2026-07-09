@@ -1117,16 +1117,30 @@ const Provisionen = () => {
                      {isAdmin && (
                        <div className="flex gap-2" onClick={e => e.stopPropagation()}>
                          {anyPending && (
-                           <Button
-                             size="sm"
-                             variant="outline"
-                             className="text-blue-700 border-blue-300 hover:bg-blue-50 h-7 text-xs"
-                             disabled={approvingGroup === key}
-                             onClick={() => approveGroup(group.month, group.partnerId, key)}
-                           >
-                             {approvingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
-                             Freigeben
-                           </Button>
+                           <div className="flex flex-col items-end gap-0.5">
+                             <Button
+                               size="sm"
+                               variant="outline"
+                               className="text-blue-700 border-blue-300 hover:bg-blue-50 h-7 text-xs"
+                               disabled={approvingGroup === key || (holdActive && !isAdmin)}
+                               title={holdActive && !isAdmin ? holdTooltip : undefined}
+                               onClick={() => {
+                                 if (holdActive && isAdmin && groupRelease) {
+                                   setHoldOverride({ month: group.month, partnerId: group.partnerId, groupKey: key, daysLeft: groupDaysLeft, release: groupRelease });
+                                 } else {
+                                   approveGroup(group.month, group.partnerId, key);
+                                 }
+                               }}
+                             >
+                               {approvingGroup === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
+                               Freigeben
+                             </Button>
+                             {holdActive && groupRelease && (
+                               <span className="text-[10px] text-muted-foreground">
+                                 Freigabe ab {fmtDate(groupRelease)} (noch {groupDaysLeft} Tage)
+                               </span>
+                             )}
+                           </div>
                           )}
                           {(anyApproved || group.items.some(p => p.status === "paid")) && (
                             <Button
