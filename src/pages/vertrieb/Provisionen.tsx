@@ -231,9 +231,10 @@ async function generateCommissionPdf(
 
   const drawHeader = () => {
     // Logo top-right
+    let logoW = 0;
     if (embeddedLogo) {
       const logoH = 40;
-      const logoW = (embeddedLogo.width / embeddedLogo.height) * logoH;
+      logoW = (embeddedLogo.width / embeddedLogo.height) * logoH;
       const logoY = PAGE_H - 45 - logoH + 10;
       page.drawImage(embeddedLogo, {
         x: PAGE_W - MARGIN_RIGHT - logoW,
@@ -244,7 +245,9 @@ async function generateCommissionPdf(
     }
     // Title + subtitle (Text-Inhalt unverändert)
     let ty = PAGE_H - 60;
-    drawText("Provisionsabrechnung", M, ty, 22, bold, C_NAVY);
+    const logoLeftEdge = embeddedLogo ? (PAGE_W - MARGIN_RIGHT - logoW) : (PAGE_W - MARGIN_RIGHT);
+    const titleMaxW = logoLeftEdge - M - 12;
+    drawText("Provisionsabrechnung", M, ty, 20, bold, C_NAVY, titleMaxW);
     ty -= 18;
     drawText("HFX Sales Portal – Honorarfuchs", M, ty, 10, font, C_MUTED);
     ty -= 12;
