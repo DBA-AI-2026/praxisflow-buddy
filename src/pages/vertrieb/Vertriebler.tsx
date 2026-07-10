@@ -496,8 +496,9 @@ const Vertriebler = () => {
             <AlertDialogHeader>
               <AlertDialogTitle>Vertriebler deaktivieren?</AlertDialogTitle>
               <AlertDialogDescription>
-                <strong>{deleteTarget?.full_name}</strong> ({deleteTarget?.email || "–"}) wird deaktiviert und ist in neuen Formularen nicht mehr auswählbar.
-                Bestehende Verträge und historische Zuordnungen bleiben erhalten.
+                <strong>{deleteTarget?.full_name}</strong> ({deleteTarget?.email || "–"}) wird deaktiviert und ist in neuen Formularen nicht mehr auswählbar. Alle aktiven Rollen werden entzogen. Bestehende Verträge und historische Zuordnungen bleiben erhalten.
+                <br /><br />
+                <span className="text-muted-foreground">Hinweis: Rollen werden einzeln über die <strong>Benutzerverwaltung</strong> vergeben oder entzogen. Eine pauschale Reaktivierung ist hier bewusst nicht möglich.</span>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
