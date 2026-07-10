@@ -100,16 +100,26 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Only admins and sales_leads may trigger price sync
+    // Only admins and sales_leads may trigger price sync.
+    // Multi-role safe: load ALL active roles, then check via includes().
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
-    const { data: roleData } = await supabase
+    const { data: roleRows, error: roleErr } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
-      .in("role", ["admin", "sales_lead"])
-      .maybeSingle();
+      .eq("is_active", true);
 
-    if (!roleData) {
+    if (roleErr) {
+      console.error("Role lookup failed:", roleErr);
+      return new Response(
+        JSON.stringify({ error: "Forbidden: role lookup failed" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const activeRoles = (roleRows ?? []).map((r: { role: string }) => r.role);
+    const allowed = activeRoles.includes("admin") || activeRoles.includes("sales_lead");
+    if (!allowed) {
       return new Response(
         JSON.stringify({ error: "Forbidden: insufficient permissions" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }

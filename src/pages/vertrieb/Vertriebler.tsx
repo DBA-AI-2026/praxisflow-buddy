@@ -85,9 +85,27 @@ const Vertriebler = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // URA counts for regional_leads (to guard against deactivation)
+  const { data: uraCounts = {} } = useQuery<Record<string, number>>({
+    queryKey: ["ura-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_regional_assignments")
+        .select("regional_lead_id");
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      for (const r of data ?? []) {
+        const id = (r as { regional_lead_id: string }).regional_lead_id;
+        counts[id] = (counts[id] ?? 0) + 1;
+      }
+      return counts;
+    },
+  });
+
   const deactivateMutation = useMutation({
     mutationFn: async (userId: string) => {
-      // Soft-delete over ALL role rows of this person — desired behaviour.
+      // Bulk soft-delete over ALL role rows of this person — desired behaviour.
+      // Per-role management happens in the Benutzerverwaltung (Users.tsx).
       const { error } = await supabase
         .from("user_roles")
         .update({ is_active: false })
@@ -106,23 +124,21 @@ const Vertriebler = () => {
     },
   });
 
-  const reactivateMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      const { error } = await supabase
-        .from("user_roles")
-        .update({ is_active: true })
-        .eq("user_id", userId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vertriebler-list"] });
-      queryClient.invalidateQueries({ queryKey: ["sales-profiles-with-roles"] });
-      toast({ title: "Vertriebler reaktiviert" });
-    },
-    onError: (err: any) => {
-      toast({ title: "Fehler", description: err.message, variant: "destructive" });
-    },
-  });
+  const attemptDeactivate = (v: VertrieblerRow) => {
+    // Regional-Lead-Guard: block if the person still leads team members.
+    if (v.roles.includes("regional_lead")) {
+      const count = uraCounts[v.user_id] ?? 0;
+      if (count > 0) {
+        toast({
+          title: "Nicht möglich",
+          description: `Der Regionalleiter führt noch ${count} Teammitglied${count === 1 ? "" : "er"}. Bitte zuerst die Zuordnungen im Team-Dialog auflösen.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    setDeleteTarget(v);
+  };
 
   // Fetch profiles with their roles
   const { data: vertriebler = [], isLoading } = useQuery({
@@ -429,28 +445,28 @@ const Vertriebler = () => {
                                 <Percent className="h-3.5 w-3.5" />
                                 Provisionen
                               </Button>
-                              {/* Deaktivieren / Reaktivieren: nur admin */}
-                              {isAdmin && v.is_active && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  onClick={() => setDeleteTarget(v)}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
-                              {isAdmin && !v.is_active && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-success hover:text-success hover:bg-success/10"
-                                  onClick={() => reactivateMutation.mutate(v.user_id)}
-                                  disabled={reactivateMutation.isPending}
-                                >
-                                  <Check className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
+                              {/* Deaktivieren: nur admin. Reaktivierung erfolgt über die Benutzerverwaltung (Rollen einzeln vergeben). */}
+                              {isAdmin && v.is_active && (() => {
+                                const blocked =
+                                  v.roles.includes("regional_lead") &&
+                                  (uraCounts[v.user_id] ?? 0) > 0;
+                                return (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => attemptDeactivate(v)}
+                                    disabled={blocked}
+                                    title={
+                                      blocked
+                                        ? `Führt noch ${uraCounts[v.user_id]} Teammitglied(er) — Zuordnungen zuerst auflösen.`
+                                        : "Deaktivieren"
+                                    }
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                );
+                              })()}
                             </div>
                           </TableCell>
                         )}
@@ -480,8 +496,9 @@ const Vertriebler = () => {
             <AlertDialogHeader>
               <AlertDialogTitle>Vertriebler deaktivieren?</AlertDialogTitle>
               <AlertDialogDescription>
-                <strong>{deleteTarget?.full_name}</strong> ({deleteTarget?.email || "–"}) wird deaktiviert und ist in neuen Formularen nicht mehr auswählbar.
-                Bestehende Verträge und historische Zuordnungen bleiben erhalten.
+                <strong>{deleteTarget?.full_name}</strong> ({deleteTarget?.email || "–"}) wird deaktiviert und ist in neuen Formularen nicht mehr auswählbar. Alle aktiven Rollen werden entzogen. Bestehende Verträge und historische Zuordnungen bleiben erhalten.
+                <br /><br />
+                <span className="text-muted-foreground">Hinweis: Rollen werden einzeln über die <strong>Benutzerverwaltung</strong> vergeben oder entzogen. Eine pauschale Reaktivierung ist hier bewusst nicht möglich.</span>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
