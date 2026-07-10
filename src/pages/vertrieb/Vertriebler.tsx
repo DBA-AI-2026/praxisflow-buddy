@@ -445,28 +445,28 @@ const Vertriebler = () => {
                                 <Percent className="h-3.5 w-3.5" />
                                 Provisionen
                               </Button>
-                              {/* Deaktivieren / Reaktivieren: nur admin */}
-                              {isAdmin && v.is_active && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  onClick={() => setDeleteTarget(v)}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
-                              {isAdmin && !v.is_active && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-success hover:text-success hover:bg-success/10"
-                                  onClick={() => reactivateMutation.mutate(v.user_id)}
-                                  disabled={reactivateMutation.isPending}
-                                >
-                                  <Check className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
+                              {/* Deaktivieren: nur admin. Reaktivierung erfolgt über die Benutzerverwaltung (Rollen einzeln vergeben). */}
+                              {isAdmin && v.is_active && (() => {
+                                const blocked =
+                                  v.roles.includes("regional_lead") &&
+                                  (uraCounts[v.user_id] ?? 0) > 0;
+                                return (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => attemptDeactivate(v)}
+                                    disabled={blocked}
+                                    title={
+                                      blocked
+                                        ? `Führt noch ${uraCounts[v.user_id]} Teammitglied(er) — Zuordnungen zuerst auflösen.`
+                                        : "Deaktivieren"
+                                    }
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                );
+                              })()}
                             </div>
                           </TableCell>
                         )}
