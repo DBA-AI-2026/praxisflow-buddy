@@ -470,7 +470,7 @@ const Vertriebler = () => {
             onOpenChange={(open) => !open && setSelectedPartner(null)}
             userId={selectedPartner.user_id}
             userName={selectedPartner.full_name}
-            userRole={selectedPartner.role}
+            userRole={selectedPartner.primaryRole}
           />
         )}
 
