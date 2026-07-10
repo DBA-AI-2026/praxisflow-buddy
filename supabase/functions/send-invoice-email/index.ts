@@ -1,5 +1,5 @@
 import { Resend } from "npm:resend@2.0.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireActiveRole } from "../_shared/auth.ts";
 
 /** Returns a Set of German public holiday date strings (YYYY-MM-DD) for a given year */
 function getGermanHolidays(year: number): Set<string> {
