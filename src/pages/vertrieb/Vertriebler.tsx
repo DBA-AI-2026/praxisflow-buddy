@@ -85,9 +85,27 @@ const Vertriebler = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // URA counts for regional_leads (to guard against deactivation)
+  const { data: uraCounts = {} } = useQuery<Record<string, number>>({
+    queryKey: ["ura-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_regional_assignments")
+        .select("regional_lead_id");
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      for (const r of data ?? []) {
+        const id = (r as { regional_lead_id: string }).regional_lead_id;
+        counts[id] = (counts[id] ?? 0) + 1;
+      }
+      return counts;
+    },
+  });
+
   const deactivateMutation = useMutation({
     mutationFn: async (userId: string) => {
-      // Soft-delete over ALL role rows of this person — desired behaviour.
+      // Bulk soft-delete over ALL role rows of this person — desired behaviour.
+      // Per-role management happens in the Benutzerverwaltung (Users.tsx).
       const { error } = await supabase
         .from("user_roles")
         .update({ is_active: false })
@@ -106,23 +124,21 @@ const Vertriebler = () => {
     },
   });
 
-  const reactivateMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      const { error } = await supabase
-        .from("user_roles")
-        .update({ is_active: true })
-        .eq("user_id", userId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vertriebler-list"] });
-      queryClient.invalidateQueries({ queryKey: ["sales-profiles-with-roles"] });
-      toast({ title: "Vertriebler reaktiviert" });
-    },
-    onError: (err: any) => {
-      toast({ title: "Fehler", description: err.message, variant: "destructive" });
-    },
-  });
+  const attemptDeactivate = (v: VertrieblerRow) => {
+    // Regional-Lead-Guard: block if the person still leads team members.
+    if (v.roles.includes("regional_lead")) {
+      const count = uraCounts[v.user_id] ?? 0;
+      if (count > 0) {
+        toast({
+          title: "Nicht möglich",
+          description: `Der Regionalleiter führt noch ${count} Teammitglied${count === 1 ? "" : "er"}. Bitte zuerst die Zuordnungen im Team-Dialog auflösen.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    setDeleteTarget(v);
+  };
 
   // Fetch profiles with their roles
   const { data: vertriebler = [], isLoading } = useQuery({
