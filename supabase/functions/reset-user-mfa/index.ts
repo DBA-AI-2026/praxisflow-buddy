@@ -35,15 +35,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check caller is admin
+    // Check caller is admin — multi-role safe: load all active roles, check via includes().
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
-    const { data: callerRole } = await adminClient
+    const { data: callerRoleRows, error: callerRoleErr } = await adminClient
       .from("user_roles")
       .select("role")
       .eq("user_id", caller.id)
-      .single();
+      .eq("is_active", true);
 
-    if (!callerRole || callerRole.role !== "admin") {
+    if (callerRoleErr) {
+      console.error("Role lookup failed:", callerRoleErr);
+      return new Response(JSON.stringify({ error: "Rollen-Prüfung fehlgeschlagen." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const callerRoles = (callerRoleRows ?? []).map((r: { role: string }) => r.role);
+    if (!callerRoles.includes("admin")) {
       return new Response(JSON.stringify({ error: "Nur Administratoren können MFA zurücksetzen." }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
