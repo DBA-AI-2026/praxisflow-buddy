@@ -215,7 +215,7 @@ Deno.serve(async (req) => {
       .update({
         status: "versendet",
         email_sent_at: now,
-        email_sent_by: user.id,
+        email_sent_by: userId,
       })
       .eq("id", invoiceId);
 
