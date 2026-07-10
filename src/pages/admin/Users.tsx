@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText, UserCog, Clock, Upload, Download, CheckCircle, Mail, Eye, ShieldOff } from "lucide-react";
+import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText, UserCog, Clock, Upload, Download, CheckCircle, Mail, Eye, ShieldOff, Plus, X } from "lucide-react";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { RegionalAssignmentDialog } from "@/components/admin/RegionalAssignmentDialog";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -39,12 +39,45 @@ import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
-interface UserWithRole {
+// Priority order (highest privilege first). Also used for badge ordering and
+// for the "primary role" passed to create-user during a password reset.
+const ROLE_PRIORITY: AppRole[] = [
+  "admin",
+  "sales_lead",
+  "regional_lead",
+  "vertragsabteilung",
+  "sales_partner",
+  "user",
+  "tippgeber",
+];
+
+const ALL_ROLES: AppRole[] = [
+  "admin",
+  "sales_lead",
+  "regional_lead",
+  "vertragsabteilung",
+  "sales_partner",
+  "user",
+  "tippgeber",
+];
+
+function sortByPriority(roles: AppRole[]): AppRole[] {
+  return [...roles].sort(
+    (a, b) => ROLE_PRIORITY.indexOf(a) - ROLE_PRIORITY.indexOf(b)
+  );
+}
+
+function pickPrimary(roles: AppRole[]): AppRole | null {
+  for (const r of ROLE_PRIORITY) if (roles.includes(r)) return r;
+  return null;
+}
+
+interface UserGrouped {
   user_id: string;
-  role: AppRole;
   full_name: string;
   email: string;
-  created_at: string;
+  roles: AppRole[]; // active roles, sorted by priority
+  created_at: string; // earliest role creation
   last_seen_at: string | null;
 }
 
@@ -60,94 +93,146 @@ const roleConfig: Record<AppRole, { label: string; color: string }> = {
 
 export default function AdminUsers() {
   const [search, setSearch] = useState("");
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [agreementDialogOpen, setAgreementDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
-  const [selectedRole, setSelectedRole] = useState<AppRole>("user");
+  const [selectedUser, setSelectedUser] = useState<UserGrouped | null>(null);
+  const [addRoleValue, setAddRoleValue] = useState<AppRole>("user");
   const [uploadingAgreement, setUploadingAgreement] = useState(false);
   const [credentialsPreviewOpen, setCredentialsPreviewOpen] = useState(false);
   const [sendingCredentials, setSendingCredentials] = useState(false);
   const [mfaResetDialogOpen, setMfaResetDialogOpen] = useState(false);
   const [resettingMfa, setResettingMfa] = useState(false);
+  const [confirmLastRoleRemoval, setConfirmLastRoleRemoval] = useState<AppRole | null>(null);
   const agreementInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isAdmin } = useUserRole();
 
-  // Fetch users with roles
-  const { data: users = [], isLoading } = useQuery({
+  // Fetch active roles + profiles, group by user_id
+  const { data: users = [], isLoading } = useQuery<UserGrouped[]>({
     queryKey: ["admin-users"],
     queryFn: async () => {
-      // Get all user roles
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
-        .select("user_id, role, created_at");
-
+        .select("user_id, role, created_at, is_active")
+        .eq("is_active", true);
       if (rolesError) throw rolesError;
 
-      // Get all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("user_id, full_name, email, last_seen_at");
-
       if (profilesError) throw profilesError;
 
-      // Merge roles with profiles
-      const usersWithRoles: UserWithRole[] = roles.map((role) => {
-        const profile = profiles.find((p) => p.user_id === role.user_id);
-        return {
-          user_id: role.user_id,
-          role: role.role,
-          full_name: profile?.full_name || "Unbekannt",
-          email: profile?.email || "-",
-          created_at: role.created_at,
-          last_seen_at: (profile as { last_seen_at?: string | null } | undefined)?.last_seen_at ?? null,
-        };
-      });
+      const map = new Map<string, UserGrouped>();
+      for (const row of roles ?? []) {
+        const profile = profiles?.find((p) => p.user_id === row.user_id);
+        const existing = map.get(row.user_id);
+        if (existing) {
+          if (!existing.roles.includes(row.role as AppRole)) {
+            existing.roles.push(row.role as AppRole);
+          }
+          if (row.created_at < existing.created_at) existing.created_at = row.created_at;
+        } else {
+          map.set(row.user_id, {
+            user_id: row.user_id,
+            full_name: profile?.full_name || "Unbekannt",
+            email: profile?.email || "-",
+            roles: [row.role as AppRole],
+            created_at: row.created_at,
+            last_seen_at:
+              (profile as { last_seen_at?: string | null } | undefined)?.last_seen_at ?? null,
+          });
+        }
+      }
 
-      return usersWithRoles;
+      const list = Array.from(map.values()).map((u) => ({
+        ...u,
+        roles: sortByPriority(u.roles),
+      }));
+      return list;
     },
   });
 
-  // Update role mutation
-  const updateRoleMutation = useMutation({
-    mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
+  // URA counts for regional_leads (to guard against removal)
+  const { data: uraCounts = {} } = useQuery<Record<string, number>>({
+    queryKey: ["ura-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_regional_assignments")
+        .select("regional_lead_id");
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      for (const r of data ?? []) {
+        const id = (r as { regional_lead_id: string }).regional_lead_id;
+        counts[id] = (counts[id] ?? 0) + 1;
+      }
+      return counts;
+    },
+  });
+
+  // Add role
+  const addRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
+      // Pre-check: tippgeber requires partner assignment
+      if (role === "tippgeber") {
+        const { data, error } = await supabase
+          .from("tippgeber_partner_assignments")
+          .select("id")
+          .eq("tippgeber_user_id", userId)
+          .eq("is_active", true)
+          .limit(1);
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          throw new Error(
+            "Tippgeber müssen einem Vertriebspartner zugeordnet sein. Bitte zuerst eine Zuordnung in den Tippgeber-Partnerzuordnungen anlegen."
+          );
+        }
+      }
       const { error } = await supabase
         .from("user_roles")
-        .update({ role: newRole })
-        .eq("user_id", userId);
-
+        .insert({ user_id: userId, role, is_active: true });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      setEditDialogOpen(false);
-      setSelectedUser(null);
-      toast({
-        title: "Rolle aktualisiert",
-        description: "Die Benutzerrolle wurde erfolgreich geändert.",
-      });
+      toast({ title: "Rolle hinzugefügt" });
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Fehler",
-        description: error.message,
-        variant: "destructive",
-      });
+    onError: (e: Error) => {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
     },
   });
 
-  // Delete user mutation (removes role, not the auth user)
-  const deleteUserMutation = useMutation({
+  // Remove single role (row-precise soft delete)
+  const removeRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
+      const { error } = await supabase
+        .from("user_roles")
+        .update({ is_active: false })
+        .eq("user_id", userId)
+        .eq("role", role);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast({ title: "Rolle entzogen" });
+      setConfirmLastRoleRemoval(null);
+    },
+    onError: (e: Error) => {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    },
+  });
+
+  // Bulk soft-delete: alle Rollen entziehen
+  const removeAllRolesMutation = useMutation({
     mutationFn: async (userId: string) => {
       const { error } = await supabase
         .from("user_roles")
-        .delete()
-        .eq("user_id", userId);
-
+        .update({ is_active: false })
+        .eq("user_id", userId)
+        .eq("is_active", true);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -155,16 +240,12 @@ export default function AdminUsers() {
       setDeleteDialogOpen(false);
       setSelectedUser(null);
       toast({
-        title: "Benutzer entfernt",
-        description: "Die Rolle wurde erfolgreich entfernt.",
+        title: "Alle Rollen entzogen",
+        description: "Der Benutzer hat keinen Systemzugriff mehr.",
       });
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Fehler",
-        description: error.message,
-        variant: "destructive",
-      });
+    onError: (e: Error) => {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
     },
   });
 
@@ -174,66 +255,72 @@ export default function AdminUsers() {
       u.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Duplikat-Erkennung
+  // Duplikat-Erkennung auf gruppierten Personen (verschiedene user_id)
   const duplicates = useMemo(() => {
-    const nameCounts: Record<string, string[]> = {};
-    const emailCounts: Record<string, string[]> = {};
+    const nameCounts: Record<string, Set<string>> = {};
+    const emailCounts: Record<string, Set<string>> = {};
     users.forEach((u) => {
       const name = u.full_name.toLowerCase().trim();
       const email = u.email.toLowerCase().trim();
       if (name && name !== "unbekannt") {
-        if (!nameCounts[name]) nameCounts[name] = [];
-        nameCounts[name].push(u.user_id);
+        (nameCounts[name] ||= new Set()).add(u.user_id);
       }
       if (email && email !== "-") {
-        if (!emailCounts[email]) emailCounts[email] = [];
-        emailCounts[email].push(u.user_id);
+        (emailCounts[email] ||= new Set()).add(u.user_id);
       }
     });
     const dupNames = Object.entries(nameCounts)
-      .filter(([, ids]) => ids.length > 1)
-      .map(([name]) => users.find((u) => u.full_name.toLowerCase().trim() === name)?.full_name || name);
+      .filter(([, ids]) => ids.size > 1)
+      .map(
+        ([name]) =>
+          users.find((u) => u.full_name.toLowerCase().trim() === name)?.full_name || name
+      );
     const dupEmails = Object.entries(emailCounts)
-      .filter(([, ids]) => ids.length > 1)
+      .filter(([, ids]) => ids.size > 1)
       .map(([email]) => email);
     return { names: dupNames, emails: dupEmails };
   }, [users]);
 
-  const adminCount = users.filter((u) => u.role === "admin").length;
-  const vertragsabteilungCount = users.filter((u) => u.role === "vertragsabteilung").length;
-  const salesLeadCount = users.filter((u) => u.role === "sales_lead").length;
-  const regionalLeadCount = users.filter((u) => u.role === "regional_lead").length;
-  const salesPartnerCount = users.filter((u) => u.role === "sales_partner").length;
-  const tippgeberCount = users.filter((u) => u.role === "tippgeber").length;
-  const userCount = users.filter((u) => u.role === "user").length;
+  // Personenbasierte Zählung (distinct user_id mit dieser aktiven Rolle)
+  const countRole = (role: AppRole) =>
+    users.filter((u) => u.roles.includes(role)).length;
+  const adminCount = countRole("admin");
+  const vertragsabteilungCount = countRole("vertragsabteilung");
+  const salesLeadCount = countRole("sales_lead");
+  const regionalLeadCount = countRole("regional_lead");
+  const salesPartnerCount = countRole("sales_partner");
+  const tippgeberCount = countRole("tippgeber");
+  const userCount = countRole("user");
 
-  const handleEditClick = (user: UserWithRole) => {
+  const handleManageClick = (user: UserGrouped) => {
     setSelectedUser(user);
-    setSelectedRole(user.role);
-    setEditDialogOpen(true);
+    // preselect first role not yet held
+    const missing = ALL_ROLES.find((r) => !user.roles.includes(r));
+    setAddRoleValue(missing ?? "user");
+    setManageDialogOpen(true);
   };
 
-  const handleDeleteClick = (user: UserWithRole) => {
+  const handleDeleteClick = (user: UserGrouped) => {
     setSelectedUser(user);
     setDeleteDialogOpen(true);
   };
 
-  const handleAssignClick = (user: UserWithRole) => {
+  const handleAssignClick = (user: UserGrouped) => {
     setSelectedUser(user);
     setAssignDialogOpen(true);
   };
 
-  const handleAgreementClick = (user: UserWithRole) => {
+  const handleAgreementClick = (user: UserGrouped) => {
     setSelectedUser(user);
     setAgreementDialogOpen(true);
   };
 
-  const handleSendCredentialsClick = (user: UserWithRole) => {
+  const handleSendCredentialsClick = (user: UserGrouped) => {
     setSelectedUser(user);
     setCredentialsPreviewOpen(true);
   };
 
-  const handleMfaResetClick = (user: UserWithRole) => {
+  const handleMfaResetClick = (user: UserGrouped) => {
     setSelectedUser(user);
     setMfaResetDialogOpen(true);
   };
@@ -262,14 +349,32 @@ export default function AdminUsers() {
 
   const handleSendCredentialsConfirm = async () => {
     if (!selectedUser) return;
+    // Guard: Multi-Role → Passwort-Reset über create-user nicht möglich (409)
+    if (selectedUser.roles.length > 1) {
+      toast({
+        title: "Nicht möglich",
+        description:
+          "Person hat mehrere aktive Rollen, Passwort-Reset über diesen Weg nicht möglich.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const primary = pickPrimary(selectedUser.roles);
+    if (!primary) {
+      toast({
+        title: "Nicht möglich",
+        description: "Person hat keine aktive Rolle.",
+        variant: "destructive",
+      });
+      return;
+    }
     setSendingCredentials(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       const response = await supabase.functions.invoke("create-user", {
         body: {
           email: selectedUser.email,
           fullName: selectedUser.full_name,
-          role: selectedUser.role,
+          role: primary,
           sendEmail: true,
           confirmReset: true,
         },
@@ -316,6 +421,51 @@ export default function AdminUsers() {
     }
   };
 
+  // Attempt to remove a specific role — enforces guards
+  const attemptRemoveRole = (user: UserGrouped, role: AppRole) => {
+    // Guard 2: regional_lead with URA rows → BLOCK
+    if (role === "regional_lead") {
+      const count = uraCounts[user.user_id] ?? 0;
+      if (count > 0) {
+        toast({
+          title: "Rolle kann nicht entzogen werden",
+          description: `Der Regionalleiter führt noch ${count} Teammitglied${count === 1 ? "" : "er"}. Bitte zuerst die Zuordnungen im Team-Dialog auflösen.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    // Guard 1: last active role → confirm
+    if (user.roles.length === 1) {
+      setConfirmLastRoleRemoval(role);
+      return;
+    }
+    removeRoleMutation.mutate({ userId: user.user_id, role });
+  };
+
+  // Bulk removal guard
+  const attemptRemoveAllRoles = (user: UserGrouped) => {
+    if (user.roles.includes("regional_lead")) {
+      const count = uraCounts[user.user_id] ?? 0;
+      if (count > 0) {
+        toast({
+          title: "Nicht möglich",
+          description: `Der Regionalleiter führt noch ${count} Teammitglied${count === 1 ? "" : "er"}. Bitte zuerst die Zuordnungen im Team-Dialog auflösen.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    removeAllRolesMutation.mutate(user.user_id);
+  };
+
+  const availableRolesToAdd = selectedUser
+    ? ALL_ROLES.filter((r) => !selectedUser.roles.includes(r))
+    : [];
+
+  const hasAnyRegionalOrSalesLead = (u: UserGrouped) =>
+    u.roles.includes("regional_lead") || u.roles.includes("sales_lead");
+
   return (
     <MainLayout title="Benutzerverwaltung" subtitle="Benutzer und Rollen verwalten">
       {/* Rollenübersicht */}
@@ -354,6 +504,9 @@ export default function AdminUsers() {
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
           />
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {users.length} Personen · {users.reduce((n, u) => n + u.roles.length, 0)} aktive Rollen
         </div>
         <Button onClick={() => setCreateDialogOpen(true)}>
           <UserPlus className="h-4 w-4 mr-2" />
@@ -397,7 +550,7 @@ export default function AdminUsers() {
               <thead className="bg-muted/50">
                 <tr>
                   <th>Benutzer</th>
-                  <th>Rolle</th>
+                  <th>Rollen</th>
                   <th>Zuletzt online</th>
                   <th>Erstellt am</th>
                   <th className="w-12"></th>
@@ -426,12 +579,17 @@ export default function AdminUsers() {
                       </div>
                     </td>
                     <td>
-                      <Badge
-                        variant="secondary"
-                        className={roleConfig[user.role]?.color || ""}
-                      >
-                        {roleConfig[user.role]?.label || user.role}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1">
+                        {user.roles.map((r) => (
+                          <Badge
+                            key={r}
+                            variant="secondary"
+                            className={roleConfig[r]?.color || ""}
+                          >
+                            {roleConfig[r]?.label || r}
+                          </Badge>
+                        ))}
+                      </div>
                     </td>
                     <td className="text-muted-foreground">
                       {user.last_seen_at ? (
@@ -454,17 +612,17 @@ export default function AdminUsers() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditClick(user)}>
+                          <DropdownMenuItem onClick={() => handleManageClick(user)}>
                              <Pencil className="h-4 w-4 mr-2" />
-                             Rolle ändern
+                             Rollen verwalten
                            </DropdownMenuItem>
-                           {(user.role === "regional_lead" || user.role === "sales_lead") && (
+                           {hasAnyRegionalOrSalesLead(user) && (
                              <DropdownMenuItem onClick={() => handleAssignClick(user)}>
                                <UserCog className="h-4 w-4 mr-2" />
                                Team zuordnen
                              </DropdownMenuItem>
                            )}
-                           {user.role === "tippgeber" && (
+                           {user.roles.includes("tippgeber") && (
                              <DropdownMenuItem onClick={() => handleAgreementClick(user)}>
                                <Upload className="h-4 w-4 mr-2" />
                                Vereinbarung hochladen
@@ -486,7 +644,7 @@ export default function AdminUsers() {
                             onClick={() => handleDeleteClick(user)}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Entfernen
+                            Alle Rollen entziehen
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -499,13 +657,13 @@ export default function AdminUsers() {
         </div>
       </div>
 
-      {/* Edit Role Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+      {/* Manage Roles Dialog */}
+      <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Rolle ändern</DialogTitle>
+            <DialogTitle>Rollen verwalten</DialogTitle>
             <DialogDescription>
-              Ändern Sie die Rolle für diesen Benutzer.
+              Rollen einzeln hinzufügen oder entziehen. Mehrfachrollen sind möglich.
             </DialogDescription>
           </DialogHeader>
 
@@ -517,67 +675,185 @@ export default function AdminUsers() {
               </div>
 
               <div className="space-y-2">
-                <Label>Neue Rolle</Label>
-                <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AppRole)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="user">Gebietsleiter</SelectItem>
-                    <SelectItem value="sales_partner">Vertriebspartner</SelectItem>
-                    <SelectItem value="regional_lead">Regionalleiter</SelectItem>
-                    <SelectItem value="sales_lead">Vertriebsleitung</SelectItem>
-                    <SelectItem value="tippgeber">Tippgeber</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Aktive Rollen</Label>
+                {selectedUser.roles.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Keine aktive Rolle.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedUser.roles.map((r) => {
+                      const isRegionalWithTeam =
+                        r === "regional_lead" && (uraCounts[selectedUser.user_id] ?? 0) > 0;
+                      return (
+                        <div
+                          key={r}
+                          className={`inline-flex items-center gap-1 rounded-full pl-2.5 pr-1 py-1 text-xs font-medium ${roleConfig[r].color}`}
+                        >
+                          <span>{roleConfig[r].label}</span>
+                          <button
+                            type="button"
+                            title={
+                              isRegionalWithTeam
+                                ? `Führt noch ${uraCounts[selectedUser.user_id]} Teammitglied(er) — Zuordnungen zuerst auflösen.`
+                                : "Rolle entziehen"
+                            }
+                            className="rounded-full p-0.5 hover:bg-black/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                            disabled={
+                              isRegionalWithTeam || removeRoleMutation.isPending
+                            }
+                            onClick={() => attemptRemoveRole(selectedUser, r)}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
+
+              {availableRolesToAdd.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Rolle hinzufügen</Label>
+                  <div className="flex gap-2">
+                    <Select
+                      value={addRoleValue}
+                      onValueChange={(v) => setAddRoleValue(v as AppRole)}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableRolesToAdd.map((r) => (
+                          <SelectItem key={r} value={r}>
+                            {roleConfig[r].label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      onClick={() =>
+                        addRoleMutation.mutate({
+                          userId: selectedUser.user_id,
+                          role: addRoleValue,
+                        })
+                      }
+                      disabled={addRoleMutation.isPending}
+                    >
+                      {addRoleMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-1" />
+                          Hinzufügen
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  {addRoleValue === "tippgeber" && (
+                    <p className="text-xs text-muted-foreground">
+                      Hinweis: Tippgeber müssen einem Vertriebspartner zugeordnet sein.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManageDialogOpen(false)}>
+              Schließen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Last-role removal confirmation */}
+      <Dialog
+        open={confirmLastRoleRemoval !== null}
+        onOpenChange={(open) => !open && setConfirmLastRoleRemoval(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Letzte Rolle entziehen?
+            </DialogTitle>
+            <DialogDescription>
+              Dies ist die einzige aktive Rolle dieser Person. Nach dem Entzug hat der Benutzer
+              keinen Systemzugriff mehr.
+            </DialogDescription>
+          </DialogHeader>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setConfirmLastRoleRemoval(null)}>
               Abbrechen
             </Button>
             <Button
+              variant="destructive"
               onClick={() => {
-                if (selectedUser) {
-                  updateRoleMutation.mutate({
+                if (selectedUser && confirmLastRoleRemoval) {
+                  removeRoleMutation.mutate({
                     userId: selectedUser.user_id,
-                    newRole: selectedRole,
+                    role: confirmLastRoleRemoval,
                   });
                 }
               }}
-              disabled={updateRoleMutation.isPending}
+              disabled={removeRoleMutation.isPending}
             >
-              {updateRoleMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Wird gespeichert...
-                </>
+              {removeRoleMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Wird entzogen…</>
               ) : (
-                "Speichern"
+                "Rolle entziehen"
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Bulk soft-delete Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Benutzer entfernen</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Alle Rollen entziehen
+            </DialogTitle>
             <DialogDescription>
-              Sind Sie sicher, dass Sie diesen Benutzer entfernen möchten? 
-              Die Rolle wird entfernt, der Account bleibt jedoch bestehen.
+              Alle aktiven Rollen dieser Person werden deaktiviert (Soft-Delete). Der
+              Auth-Account bleibt bestehen, historische Zuordnungen ebenfalls.
             </DialogDescription>
           </DialogHeader>
 
           {selectedUser && (
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="font-medium">{selectedUser.full_name}</p>
-              <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+            <div className="space-y-3">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="font-medium">{selectedUser.full_name}</p>
+                <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {selectedUser.roles.map((r) => (
+                    <Badge key={r} variant="secondary" className={roleConfig[r].color}>
+                      {roleConfig[r].label}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                <span className="text-base leading-none mt-0.5">⚠️</span>
+                <span>
+                  <strong>Achtung:</strong> Die Person hat danach keinen Systemzugriff mehr.
+                  Rollen können später wieder hinzugefügt werden.
+                </span>
+              </div>
+              {selectedUser.roles.includes("regional_lead") &&
+                (uraCounts[selectedUser.user_id] ?? 0) > 0 && (
+                  <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
+                    <span className="text-base leading-none mt-0.5">⛔</span>
+                    <span>
+                      Der Regionalleiter führt noch {uraCounts[selectedUser.user_id]} Teammitglied
+                      {(uraCounts[selectedUser.user_id] ?? 0) === 1 ? "" : "er"}. Bitte zuerst
+                      die Zuordnungen im Team-Dialog auflösen.
+                    </span>
+                  </div>
+                )}
             </div>
           )}
 
@@ -587,20 +863,17 @@ export default function AdminUsers() {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                if (selectedUser) {
-                  deleteUserMutation.mutate(selectedUser.user_id);
-                }
-              }}
-              disabled={deleteUserMutation.isPending}
+              onClick={() => selectedUser && attemptRemoveAllRoles(selectedUser)}
+              disabled={
+                removeAllRolesMutation.isPending ||
+                (selectedUser?.roles.includes("regional_lead") &&
+                  (uraCounts[selectedUser?.user_id ?? ""] ?? 0) > 0)
+              }
             >
-              {deleteUserMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Wird entfernt...
-                </>
+              {removeAllRolesMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Wird entzogen…</>
               ) : (
-                "Entfernen"
+                "Alle Rollen entziehen"
               )}
             </Button>
           </DialogFooter>
@@ -614,7 +887,15 @@ export default function AdminUsers() {
       <RegionalAssignmentDialog
         open={assignDialogOpen}
         onOpenChange={setAssignDialogOpen}
-        regionalLead={selectedUser}
+        regionalLead={
+          selectedUser
+            ? {
+                user_id: selectedUser.user_id,
+                full_name: selectedUser.full_name,
+                email: selectedUser.email,
+              }
+            : null
+        }
       />
 
       {/* Tippgebervereinbarung Upload Dialog */}
@@ -675,6 +956,7 @@ export default function AdminUsers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {/* Credentials Preview & Send Dialog */}
       <Dialog open={credentialsPreviewOpen} onOpenChange={setCredentialsPreviewOpen}>
         <DialogContent className="sm:max-w-2xl">
@@ -696,9 +978,22 @@ export default function AdminUsers() {
                 </div>
                 <div>
                   <p className="font-medium text-sm">{selectedUser.full_name}</p>
-                  <p className="text-xs text-muted-foreground">{selectedUser.email} · {roleConfig[selectedUser.role]?.label}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedUser.email} ·{" "}
+                    {selectedUser.roles.map((r) => roleConfig[r]?.label).join(", ") || "–"}
+                  </p>
                 </div>
               </div>
+
+              {selectedUser.roles.length > 1 && (
+                <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
+                  <span className="text-base leading-none mt-0.5">⛔</span>
+                  <span>
+                    Person hat mehrere aktive Rollen, Passwort-Reset über diesen Weg nicht möglich.
+                    Bitte Rollen zuerst über „Rollen verwalten" bereinigen.
+                  </span>
+                </div>
+              )}
 
               {/* Email Preview */}
               <div className="border rounded-lg overflow-hidden">
@@ -708,16 +1003,19 @@ export default function AdminUsers() {
                 </div>
                 <div className="p-4 bg-[#f5f5f5]">
                   <div style={{ fontFamily: "verdana, geneva, sans-serif", maxWidth: "500px", margin: "0 auto", backgroundColor: "#ffffff", borderRadius: "8px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-                    {/* Header */}
                     <div style={{ backgroundColor: "#0b367f", padding: "24px 32px", textAlign: "center" }}>
                       <div style={{ color: "#ffffff", fontSize: "20px", fontWeight: "bold", margin: 0 }}>🦊 Willkommen!</div>
                       <div style={{ color: "#c8d8f0", fontSize: "12px", marginTop: "6px" }}>HFX Sales Portal · das Portal für den Vertrieb</div>
                     </div>
-                    {/* Body */}
                     <div style={{ padding: "24px 32px" }}>
                       <p style={{ margin: "0 0 10px 0", fontSize: "13px", color: "#333" }}>Hallo <strong>{selectedUser.full_name}</strong>,</p>
-                      <p style={{ margin: "0 0 18px 0", fontSize: "12px", color: "#555" }}>Ihr Benutzerkonto wurde erfolgreich erstellt. Sie wurden als <strong>{roleConfig[selectedUser.role]?.label}</strong> registriert.</p>
-                      {/* Credentials Box */}
+                      <p style={{ margin: "0 0 18px 0", fontSize: "12px", color: "#555" }}>
+                        Ihr Benutzerkonto wurde erfolgreich erstellt. Sie wurden als{" "}
+                        <strong>
+                          {roleConfig[pickPrimary(selectedUser.roles) ?? "user"]?.label}
+                        </strong>{" "}
+                        registriert.
+                      </p>
                       <div style={{ backgroundColor: "#f0f4f8", borderRadius: "8px", border: "1px solid #d0d5dd", padding: "14px 16px", marginBottom: "18px", lineHeight: "22px" }}>
                         <div style={{ fontSize: "10px", fontWeight: "bold", color: "#0b367f", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "10px" }}>Ihre Zugangsdaten</div>
                         <div style={{ fontSize: "12px", color: "#444" }}>
@@ -727,16 +1025,13 @@ export default function AdminUsers() {
                           <strong>Temporäres Passwort:</strong> <span style={{ background: "#fff", padding: "1px 8px", borderRadius: "4px", fontFamily: "monospace", fontSize: "13px", border: "1px solid #e5e7eb", color: "#9ca3af" }}>wird beim Versand generiert</span>
                         </div>
                       </div>
-                      {/* Button */}
                       <div style={{ textAlign: "center", marginBottom: "16px" }}>
                         <div style={{ display: "inline-block", backgroundColor: "#0b367f", color: "white", padding: "10px 28px", borderRadius: "6px", fontWeight: "bold", fontSize: "12px" }}>Zum Portal anmelden</div>
                       </div>
-                      {/* Warning */}
                       <div style={{ background: "#fff8e1", border: "1px solid #f59e0b", padding: "10px 12px", borderRadius: "6px", fontSize: "11px", color: "#92400e" }}>
                         ⚠️ <strong>Wichtig:</strong> Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung unter Einstellungen → Sicherheit.
                       </div>
                     </div>
-                    {/* Footer */}
                     <div style={{ backgroundColor: "#f8f8f8", padding: "12px 32px", borderTop: "1px solid #eeeeee", textAlign: "center", fontSize: "11px", color: "#aaaaaa" }}>
                       © Honorarfuchs GmbH · Bei Fragen: info@honorarfuchs.de
                     </div>
@@ -755,7 +1050,10 @@ export default function AdminUsers() {
             <Button variant="outline" onClick={() => setCredentialsPreviewOpen(false)}>
               Abbrechen
             </Button>
-            <Button onClick={handleSendCredentialsConfirm} disabled={sendingCredentials}>
+            <Button
+              onClick={handleSendCredentialsConfirm}
+              disabled={sendingCredentials || (selectedUser?.roles.length ?? 0) > 1}
+            >
               {sendingCredentials ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Wird gesendet…</>
               ) : (
@@ -784,7 +1082,10 @@ export default function AdminUsers() {
             <div className="space-y-4">
               <div className="p-4 bg-muted rounded-lg">
                 <p className="font-medium">{selectedUser.full_name}</p>
-                <p className="text-sm text-muted-foreground">{selectedUser.email} · {roleConfig[selectedUser.role]?.label}</p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedUser.email} ·{" "}
+                  {selectedUser.roles.map((r) => roleConfig[r]?.label).join(", ") || "–"}
+                </p>
               </div>
 
               <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
@@ -811,4 +1112,3 @@ export default function AdminUsers() {
     </MainLayout>
   );
 }
-
