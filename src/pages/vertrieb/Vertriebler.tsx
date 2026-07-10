@@ -376,15 +376,30 @@ const Vertriebler = () => {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((v) => {
-                    const style = roleBadgeStyles[v.role] || roleBadgeStyles["sales_partner"];
+                    const primaryStyle =
+                      roleBadgeStyles[v.primaryRole] || roleBadgeStyles["sales_partner"];
+                    const extraRoles = v.roles.slice(1);
                     return (
                       <TableRow key={v.user_id} className={!v.is_active ? "opacity-50" : undefined}>
                         <TableCell className="font-medium">{v.full_name}</TableCell>
                         <TableCell>
-                          <Badge className={cn("gap-1", style.bg)}>
-                            {style.icon}
-                            {roleLabels[v.role] || v.role}
-                          </Badge>
+                          <div className="flex flex-wrap items-center gap-1">
+                            <Badge className={cn("gap-1", primaryStyle.bg)}>
+                              {primaryStyle.icon}
+                              {roleLabels[v.primaryRole] || v.primaryRole}
+                            </Badge>
+                            {extraRoles.length > 0 && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs"
+                                title={extraRoles
+                                  .map((r) => roleLabels[r] || r)
+                                  .join(", ")}
+                              >
+                                +{extraRoles.length}
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant={v.is_active ? "default" : "secondary"} className={v.is_active ? "bg-success/10 text-success border-success/20" : "bg-muted text-muted-foreground"}>
@@ -392,12 +407,13 @@ const Vertriebler = () => {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {v.role === "tippgeber" && v.assigned_partner_name
+                          {v.roles.includes("tippgeber") && v.assigned_partner_name
                             ? `von ${v.assigned_partner_name}`
-                            : v.role === "tippgeber"
+                            : v.roles.includes("tippgeber")
                               ? <span className="text-xs text-destructive">Nicht zugeordnet</span>
                               : "–"}
                         </TableCell>
+
                         <TableCell className="text-sm text-muted-foreground">{v.email || "–"}</TableCell>
                         <TableCell className="text-center font-medium">{v.contract_count}</TableCell>
                         {(isAdmin || isSalesLead) && (
