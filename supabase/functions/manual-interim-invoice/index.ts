@@ -18,8 +18,8 @@
 // TODO: If interim invoices should later trigger commission events, extend here.
 
 import { Resend } from "npm:resend@2.0.0";
-import { createClient } from "npm:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14.21.0";
+import { requireActiveRole } from "../_shared/auth.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
@@ -43,40 +43,12 @@ function fmtDeDate(s: string) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const authHeader = req.headers.get("Authorization") || "";
-  if (!authHeader.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  const guard = await requireActiveRole(req, ["admin"], corsHeaders);
+  if (guard instanceof Response) return guard;
+  const { userId, email: claimEmail, admin: supabase } = guard;
+  const userEmail = claimEmail || "unknown";
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  const userClient = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const token = authHeader.replace("Bearer ", "");
-  const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
-  if (claimsErr || !claimsData?.claims) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-  const userId = claimsData.claims.sub as string;
-  const userEmail = (claimsData.claims.email as string) || "unknown";
-
-  const supabase = createClient(supabaseUrl, serviceKey);
-
-  // Admin role check
-  const { data: roleRow } = await supabase
-    .from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
-  if (!roleRow) {
-    return new Response(JSON.stringify({ error: "Forbidden: admin role required" }), {
-      status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
 
   try {
     const body = await req.json();
