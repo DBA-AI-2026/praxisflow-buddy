@@ -45,11 +45,28 @@ const roleBadgeStyles: Record<string, { bg: string; icon: React.ReactNode }> = {
 const SALES_ROLES = ["sales_partner", "user", "tippgeber", "regional_lead", "sales_lead"] as const;
 type SalesRole = (typeof SALES_ROLES)[number];
 
+// Priority mirrors useUserRole.ts — highest privilege first.
+// Only sales-relevant roles appear in this list; sales_lead sits at the top here.
+const ROLE_PRIORITY: SalesRole[] = [
+  "sales_lead",
+  "regional_lead",
+  "sales_partner",
+  "user",
+  "tippgeber",
+];
+
+function sortByPriority(roles: SalesRole[]): SalesRole[] {
+  return [...roles].sort(
+    (a, b) => ROLE_PRIORITY.indexOf(a) - ROLE_PRIORITY.indexOf(b)
+  );
+}
+
 interface VertrieblerRow {
   user_id: string;
   full_name: string;
   email: string | null;
-  role: string;
+  roles: SalesRole[];        // all active sales roles, priority-sorted
+  primaryRole: SalesRole;    // top-priority role for icon/label fallback
   is_active: boolean;
   contract_count: number;
   assigned_partner_name?: string | null;
@@ -70,6 +87,7 @@ const Vertriebler = () => {
 
   const deactivateMutation = useMutation({
     mutationFn: async (userId: string) => {
+      // Soft-delete over ALL role rows of this person — desired behaviour.
       const { error } = await supabase
         .from("user_roles")
         .update({ is_active: false })
@@ -110,16 +128,25 @@ const Vertriebler = () => {
   const { data: vertriebler = [], isLoading } = useQuery({
     queryKey: ["vertriebler-list"],
     queryFn: async () => {
-      // Get all user roles for sales-relevant roles
+      // Get all ACTIVE sales-relevant role rows.
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id, role, is_active")
+        .eq("is_active", true)
         .in("role", SALES_ROLES);
 
       if (rolesError) throw rolesError;
       if (!roles || roles.length === 0) return [];
 
-      const userIds = [...new Set(roles.map((r) => r.user_id))];
+      // Aggregate: one entry per user_id with ALL their active sales roles.
+      const rolesMap: Record<string, SalesRole[]> = {};
+      for (const r of roles) {
+        const role = r.role as SalesRole;
+        if (!rolesMap[r.user_id]) rolesMap[r.user_id] = [];
+        if (!rolesMap[r.user_id].includes(role)) rolesMap[r.user_id].push(role);
+      }
+
+      const userIds = Object.keys(rolesMap);
 
       // Get profiles for these users
       const { data: profiles, error: profilesError } = await supabase
@@ -152,35 +179,36 @@ const Vertriebler = () => {
         assignmentMap[a.tippgeber_user_id] = a.partner_user_id;
       });
 
-      // Merge data
       const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
-      const resultMap = new Map<string, VertrieblerRow>();
+      const result: VertrieblerRow[] = [];
 
-      for (const role of roles) {
-        if (resultMap.has(role.user_id)) continue;
-
-        const profile = profileMap.get(role.user_id);
+      for (const userId of userIds) {
+        const profile = profileMap.get(userId);
         if (!profile) continue;
 
-        // Resolve assigned partner name for Tippgeber
+        const sortedRoles = sortByPriority(rolesMap[userId]);
+        const primaryRole = sortedRoles[0];
+
+        // Resolve assigned partner name for Tippgeber (only if user is a Tippgeber)
         let assignedPartnerName: string | null = null;
-        if (role.role === "tippgeber" && assignmentMap[role.user_id]) {
-          const partnerProfile = profileMap.get(assignmentMap[role.user_id]);
+        if (sortedRoles.includes("tippgeber") && assignmentMap[userId]) {
+          const partnerProfile = profileMap.get(assignmentMap[userId]);
           assignedPartnerName = partnerProfile?.full_name || null;
         }
 
-        resultMap.set(role.user_id, {
-          user_id: role.user_id,
+        result.push({
+          user_id: userId,
           full_name: profile.full_name,
           email: profile.email,
-          role: role.role,
-          is_active: (role as any).is_active ?? true,
-          contract_count: contractCounts[role.user_id] || 0,
+          roles: sortedRoles,
+          primaryRole,
+          is_active: true, // query already filters is_active=true
+          contract_count: contractCounts[userId] || 0,
           assigned_partner_name: assignedPartnerName,
         });
       }
 
-      return [...resultMap.values()].sort((a, b) => a.full_name.localeCompare(b.full_name));
+      return result.sort((a, b) => a.full_name.localeCompare(b.full_name));
     },
   });
 
@@ -189,18 +217,25 @@ const Vertriebler = () => {
       !searchTerm ||
       v.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (v.email || "").toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === "alle" || v.role === roleFilter;
+    // Multi-role: person matches if ANY of their active roles equals the filter.
+    const matchesRole =
+      roleFilter === "alle" || v.roles.includes(roleFilter as SalesRole);
     return matchesSearch && matchesRole;
   });
 
   const totalContracts = vertriebler.reduce((s, v) => s + v.contract_count, 0);
+  // Person-based role counts: a person with sales_lead + regional_lead is
+  // counted once in each of those buckets.
   const roleCounts = vertriebler.reduce(
     (acc, v) => {
-      acc[v.role] = (acc[v.role] || 0) + 1;
+      for (const r of v.roles) {
+        acc[r] = (acc[r] || 0) + 1;
+      }
       return acc;
     },
     {} as Record<string, number>
   );
+
 
   return (
     <MainLayout title="Vertriebler" subtitle="Übersicht aller Vertriebspartner und Teammitglieder">
@@ -341,15 +376,30 @@ const Vertriebler = () => {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((v) => {
-                    const style = roleBadgeStyles[v.role] || roleBadgeStyles["sales_partner"];
+                    const primaryStyle =
+                      roleBadgeStyles[v.primaryRole] || roleBadgeStyles["sales_partner"];
+                    const extraRoles = v.roles.slice(1);
                     return (
                       <TableRow key={v.user_id} className={!v.is_active ? "opacity-50" : undefined}>
                         <TableCell className="font-medium">{v.full_name}</TableCell>
                         <TableCell>
-                          <Badge className={cn("gap-1", style.bg)}>
-                            {style.icon}
-                            {roleLabels[v.role] || v.role}
-                          </Badge>
+                          <div className="flex flex-wrap items-center gap-1">
+                            <Badge className={cn("gap-1", primaryStyle.bg)}>
+                              {primaryStyle.icon}
+                              {roleLabels[v.primaryRole] || v.primaryRole}
+                            </Badge>
+                            {extraRoles.length > 0 && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs"
+                                title={extraRoles
+                                  .map((r) => roleLabels[r] || r)
+                                  .join(", ")}
+                              >
+                                +{extraRoles.length}
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant={v.is_active ? "default" : "secondary"} className={v.is_active ? "bg-success/10 text-success border-success/20" : "bg-muted text-muted-foreground"}>
@@ -357,12 +407,13 @@ const Vertriebler = () => {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {v.role === "tippgeber" && v.assigned_partner_name
+                          {v.roles.includes("tippgeber") && v.assigned_partner_name
                             ? `von ${v.assigned_partner_name}`
-                            : v.role === "tippgeber"
+                            : v.roles.includes("tippgeber")
                               ? <span className="text-xs text-destructive">Nicht zugeordnet</span>
                               : "–"}
                         </TableCell>
+
                         <TableCell className="text-sm text-muted-foreground">{v.email || "–"}</TableCell>
                         <TableCell className="text-center font-medium">{v.contract_count}</TableCell>
                         {(isAdmin || isSalesLead) && (
@@ -419,7 +470,7 @@ const Vertriebler = () => {
             onOpenChange={(open) => !open && setSelectedPartner(null)}
             userId={selectedPartner.user_id}
             userName={selectedPartner.full_name}
-            userRole={selectedPartner.role}
+            userRole={selectedPartner.primaryRole}
           />
         )}
 
