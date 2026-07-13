@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
 import { requireActiveRole } from "../_shared/auth.ts";
 
