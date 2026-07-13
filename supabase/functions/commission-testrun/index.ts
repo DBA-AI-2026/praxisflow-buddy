@@ -12,8 +12,8 @@
 //   - cleanup      : delete commission_payouts → fibu_events → invoices → contracts
 //                    (all scoped to a contract whose hfx_customer_number LIKE 'TEST-HARNESS%').
 
-import { createClient } from "npm:@supabase/supabase-js@2";
 import { createGoaeCommissions } from "../_shared/goaeCommissions.ts";
+import { requireActiveRole } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
