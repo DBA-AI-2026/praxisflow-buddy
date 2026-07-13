@@ -77,55 +77,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+    const guard = await requireActiveRole(req, ["admin", "sales_lead"], corsHeaders);
+    if (guard instanceof Response) return guard;
+    const supabase = guard.admin;
 
-    // Verify the caller is authenticated
-    const authHeader = req.headers.get("authorization") ?? "";
-    if (!authHeader.startsWith("Bearer ")) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const userClient = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
-      global: { headers: { authorization: authHeader } },
-    });
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Only admins and sales_leads may trigger price sync.
-    // Multi-role safe: load ALL active roles, then check via includes().
-    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
-    const { data: roleRows, error: roleErr } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("is_active", true);
-
-    if (roleErr) {
-      console.error("Role lookup failed:", roleErr);
-      return new Response(
-        JSON.stringify({ error: "Forbidden: role lookup failed" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const activeRoles = (roleRows ?? []).map((r: { role: string }) => r.role);
-    const allowed = activeRoles.includes("admin") || activeRoles.includes("sales_lead");
-    if (!allowed) {
-      return new Response(
-        JSON.stringify({ error: "Forbidden: insufficient permissions" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     // Get the Salesforce connection
     const { data: connection, error: connectionError } = await supabase
