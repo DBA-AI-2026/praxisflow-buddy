@@ -14,7 +14,7 @@
 //
 // Ausschluss: HFX-I01070% (Peter-Test-Cluster) und TEST-HARNESS%.
 
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { requireActiveRole } from "../_shared/auth.ts";
 import { computeEffectiveUsageNet } from "../_shared/freeQuota.ts";
 import { isCarrierContract, isGoaeProduct } from "../_shared/multiLocation.ts";
 
@@ -32,49 +32,20 @@ function addMonths(d: Date, m: number): Date {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const authHeader = req.headers.get("Authorization") || "";
-  if (!authHeader.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  const guard = await requireActiveRole(
+    req,
+    ["admin", "sales_lead", "regional_lead", "user", "sales_partner"],
+    corsHeaders,
+  );
+  if (guard instanceof Response) return guard;
+  const { userId, roles: rolesArr, admin: supabase } = guard;
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-  const userClient = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const token = authHeader.replace("Bearer ", "");
-  const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
-  if (claimsErr || !claimsData?.claims) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-  const userId = claimsData.claims.sub as string;
-
-  const supabase = createClient(supabaseUrl, serviceKey);
-
-  // Rolle bestimmen (aktive Rollen)
-  const { data: roleRows } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .eq("is_active", true);
-  const roles = new Set((roleRows ?? []).map((r: any) => r.role));
+  const roles = new Set(rolesArr);
   const isAdmin = roles.has("admin");
   const isSalesLead = roles.has("sales_lead");
   const isRegionalLead = roles.has("regional_lead");
   const isInternalUser = roles.has("user");
-  const isSalesPartner = roles.has("sales_partner");
-  const hasAccess = isAdmin || isSalesLead || isRegionalLead || isInternalUser || isSalesPartner;
-  if (!hasAccess) {
-    return new Response(JSON.stringify({ error: "Forbidden" }), {
-      status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+
 
   try {
     // 1) Kandidaten-Verträge: aktiv, sales_partner_id gesetzt, Testdaten ausgeschlossen.
