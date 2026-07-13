@@ -12,44 +12,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Auth check
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const userId = user.id;
-
-    // Role check: only admin and sales_lead
-    const { data: roleRows } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-
-    const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
-    if (!roles.includes("admin") && !roles.includes("sales_lead")) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const guard = await requireActiveRole(req, ["admin", "sales_lead"], corsHeaders);
+    if (guard instanceof Response) return guard;
+    const supabase = guard.admin;
 
     // Parse request body
     const body = await req.json().catch(() => ({}));
