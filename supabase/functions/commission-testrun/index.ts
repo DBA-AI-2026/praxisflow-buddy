@@ -39,27 +39,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
 
-  const authHeader = req.headers.get("Authorization") || "";
-  if (!authHeader.startsWith("Bearer ")) return json(401, { error: "Unauthorized" });
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-  const userClient = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const token = authHeader.replace("Bearer ", "");
-  const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
-  if (claimsErr || !claimsData?.claims) return json(401, { error: "Unauthorized" });
-  const userId = claimsData.claims.sub as string;
-
-  const supabase = createClient(supabaseUrl, serviceKey);
-
-  // Admin role check
-  const { data: roleRow } = await supabase
-    .from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
-  if (!roleRow) return json(403, { error: "Forbidden: admin role required" });
+  const guard = await requireActiveRole(req, ["admin"], corsHeaders);
+  if (guard instanceof Response) return guard;
+  const supabase = guard.admin;
 
   let body: any = {};
   try { body = await req.json(); } catch { /* ignore */ }
