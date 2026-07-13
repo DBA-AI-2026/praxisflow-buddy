@@ -9,7 +9,7 @@
 // If both winner and loser have rows in such a table, the action becomes
 // DELETE on the loser row(s) instead of UPDATE, with a warning explaining why.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireActiveRole } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
