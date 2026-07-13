@@ -1,6 +1,6 @@
 // seed-test-usage – Admin-only helper to create simulated GOÄ usage for TEST contracts only.
 // Hard-guarded: only contracts whose customer_name contains "Test" are accepted.
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { requireActiveRole } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
