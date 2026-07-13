@@ -1,4 +1,5 @@
-import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireActiveRole } from "../_shared/auth.ts";
 
 const ALLOWED_ORIGINS = [
   "https://praxisflow-buddy.lovable.app",
