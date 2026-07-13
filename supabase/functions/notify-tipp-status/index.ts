@@ -1,5 +1,6 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
+import { requireActiveRole } from "../_shared/auth.ts";
 
 
 const corsHeaders = {
@@ -25,35 +26,11 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 
-    // Auth: validate calling user is admin or sales_lead
-    const authHeader = req.headers.get("authorization") ?? "";
-    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { authorization: authHeader } },
-    });
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Nicht authentifiziert" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
-
-    // Check role
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id);
-    const userRoles = roles?.map((r: any) => r.role) ?? [];
-    if (!userRoles.includes("admin") && !userRoles.includes("sales_lead")) {
-      return new Response(JSON.stringify({ error: "Keine Berechtigung" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const guard = await requireActiveRole(req, ["admin", "sales_lead"], corsHeaders);
+    if (guard instanceof Response) return guard;
+    const supabase = guard.admin;
 
     const body = await req.json();
     const { tippLeadId, newStatus } = body;

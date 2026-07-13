@@ -1,6 +1,6 @@
 // seed-test-usage – Admin-only helper to create simulated GOÄ usage for TEST contracts only.
 // Hard-guarded: only contracts whose customer_name contains "Test" are accepted.
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { requireActiveRole } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,40 +10,10 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const authHeader = req.headers.get("Authorization") || "";
-  if (!authHeader.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-  const userClient = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const token = authHeader.replace("Bearer ", "");
-  const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
-  if (claimsErr || !claimsData?.claims) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-  const userId = claimsData.claims.sub as string;
-  const userEmail = (claimsData.claims.email as string) || "unknown";
-
-  const admin = createClient(supabaseUrl, serviceKey);
-
-  // Role check
-  const { data: roleRow } = await admin
-    .from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
-  if (!roleRow) {
-    return new Response(JSON.stringify({ error: "Forbidden: admin role required" }), {
-      status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  const guard = await requireActiveRole(req, ["admin"], corsHeaders);
+  if (guard instanceof Response) return guard;
+  const { userId, admin } = guard;
+  const userEmail = guard.email ?? "unknown";
 
   try {
     const body = await req.json();
