@@ -85,12 +85,12 @@ export function ReassignReservationAdDialog({
   const { data: ads = [], isLoading } = useQuery({
     queryKey: ["assignable-ads-for-reservation-reassign"],
     queryFn: async (): Promise<AdOption[]> => {
-      const ALLOWED = ["sales_partner", "user", "regional_lead"] as const;
-      type AllowedRole = (typeof ALLOWED)[number];
+      type AllowedRole = "sales_partner" | "user" | "regional_lead";
+      const ALLOWED: AllowedRole[] = ["sales_partner", "user", "regional_lead"];
       const { data: roles, error } = await supabase
         .from("user_roles")
         .select("user_id, role, is_active")
-        .in("role", ALLOWED as unknown as string[])
+        .in("role", ALLOWED)
         .eq("is_active", true);
       if (error) throw error;
       if (!roles?.length) return [];
