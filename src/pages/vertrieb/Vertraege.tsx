@@ -217,10 +217,16 @@ function SalesPartnerCombobox({
   value: string;
   selectedId: string;
   onChange: (id: string, name: string) => void;
-  profiles: { user_id: string; full_name: string; email: string | null; role?: string | null; is_active?: boolean }[];
+  profiles: { user_id: string; full_name: string; email: string | null; role?: string | null; roles?: string[] }[];
 }) {
-  // Exclude Tippgeber and inactive roles from selection
-  const filteredProfiles = profiles.filter((p) => p.role !== "tippgeber" && p.is_active !== false);
+  // Ausschluss-Regel (multi-role-fest):
+  //   Eine Person ist AD-tauglich, wenn sie mindestens EINE nicht-tippgeber
+  //   Rolle aus der aggregierten Rollenliste hat. Personen mit ausschließlich
+  //   `tippgeber` fallen raus. `is_active`-Filter passiert bereits in der Query.
+  const filteredProfiles = profiles.filter((p) => {
+    const roles = p.roles ?? (p.role ? [p.role] : []);
+    return roles.some((r) => r !== "tippgeber");
+  });
   const [open, setOpen] = useState(false);
   const selected = filteredProfiles.find((p) => p.user_id === selectedId) || filteredProfiles.find((p) => p.full_name === value);
 
