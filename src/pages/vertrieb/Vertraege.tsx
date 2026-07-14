@@ -813,19 +813,19 @@ export default function Vertraege() {
   const { data: allProfiles = [] } = useQuery({
     queryKey: ["sales-profiles-with-roles"],
     queryFn: async () => {
-      // First get user_ids with sales-relevant roles (including is_active)
+      // Nur aktive Rollen — is_active-Filter direkt in der Query,
+      // keine clientseitige activeMap mehr nötig.
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
-        .select("user_id, role, is_active")
-        .in("role", ["sales_partner", "user", "sales_lead", "regional_lead", "admin", "tippgeber"]);
+        .select("user_id, role")
+        .in("role", ["sales_partner", "user", "sales_lead", "regional_lead", "admin", "tippgeber"])
+        .eq("is_active", true);
       if (roleError) throw roleError;
-      const roleMap: Record<string, string> = {};
-      const activeMap: Record<string, boolean> = {};
-      for (const r of roleData || []) {
-        roleMap[r.user_id] = r.role;
-        activeMap[r.user_id] = r.is_active ?? true;
-      }
-      const salesUserIds = Object.keys(roleMap);
+      // Multi-role-fest aggregieren; Anzeige-Rolle nach ROLE_PRIORITY.
+      const grouped = groupRolesByUser(
+        (roleData ?? []) as { user_id: string; role: string }[],
+      );
+      const salesUserIds = Object.keys(grouped);
       if (salesUserIds.length === 0) return [];
       const { data, error } = await supabase
         .from("profiles")
@@ -833,7 +833,14 @@ export default function Vertraege() {
         .in("user_id", salesUserIds)
         .order("full_name");
       if (error) throw error;
-      return (data || []).map((p) => ({ ...p, role: roleMap[p.user_id] || null, is_active: activeMap[p.user_id] ?? true }));
+      return (data || []).map((p) => {
+        const roles = grouped[p.user_id] ?? [];
+        return {
+          ...p,
+          role: pickPrimaryRole(roles) ?? null,
+          roles,
+        };
+      });
     },
   });
 
