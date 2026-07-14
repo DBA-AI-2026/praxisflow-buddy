@@ -34,6 +34,7 @@ import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logCustomerEvent } from "@/lib/customerEvents";
 import { useAuth } from "@/hooks/useAuth";
+import { groupRolesByUser, pickPrimaryRole } from "@/lib/roles";
 
 type AdRole = "sales_partner" | "user" | "sales_lead" | "regional_lead";
 
