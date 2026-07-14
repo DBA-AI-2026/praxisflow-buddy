@@ -21,7 +21,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { ROLE_LABELS as roleLabels } from "@/lib/roles";
+import { ROLE_LABELS as roleLabels, sortRolesByPriority } from "@/lib/roles";
 
 const roleBadgeStyles: Record<string, { bg: string; icon: React.ReactNode }> = {
   sales_partner: { bg: "bg-primary/10 text-primary border-primary/20", icon: <Star className="h-3 w-3" /> },
