@@ -2,9 +2,9 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "./useAuth";
 import { useRolePreview } from "@/contexts/RolePreviewContext";
-import type { Database } from "@/integrations/supabase/types";
+import { pickPrimaryRole, type AppRole } from "@/lib/roles";
 
-export type AppRole = Database["public"]["Enums"]["app_role"];
+export type { AppRole } from "@/lib/roles";
 
 interface UseUserRoleResult {
   role: AppRole | null;
@@ -21,25 +21,6 @@ interface UseUserRoleResult {
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1500;
-
-// Priority for deriving a single "actualRole" from multiple active roles.
-// Highest privilege first.
-const ROLE_PRIORITY: AppRole[] = [
-  "admin",
-  "sales_lead",
-  "regional_lead",
-  "vertragsabteilung",
-  "sales_partner",
-  "user",
-  "tippgeber",
-];
-
-function pickPrimaryRole(roles: AppRole[]): AppRole | null {
-  for (const r of ROLE_PRIORITY) {
-    if (roles.includes(r)) return r;
-  }
-  return null;
-}
 
 export function useUserRole(): UseUserRoleResult & { actualRole: AppRole | null; actualRoles: AppRole[]; roleError: boolean; retryRoleFetch: () => void } {
   const { user, isLoading: authLoading } = useAuth();
