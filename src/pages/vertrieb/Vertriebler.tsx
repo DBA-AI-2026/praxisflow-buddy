@@ -21,15 +21,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const roleLabels: Record<string, string> = {
-  admin: "Administrator",
-  sales_partner: "Vertriebspartner",
-  sales_lead: "Vertriebsleitung",
-  regional_lead: "Regionalleiter",
-  vertragsabteilung: "Vertragsabteilung",
-  tippgeber: "Tippgeber",
-  user: "Gebietsleiter",
-};
+import { ROLE_LABELS as roleLabels } from "@/lib/roles";
 
 const roleBadgeStyles: Record<string, { bg: string; icon: React.ReactNode }> = {
   sales_partner: { bg: "bg-primary/10 text-primary border-primary/20", icon: <Star className="h-3 w-3" /> },
