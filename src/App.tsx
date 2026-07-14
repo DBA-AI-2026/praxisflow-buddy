@@ -44,6 +44,7 @@ import PraxenJourney from "./pages/PraxenJourney";
 import DemoSuccess from "./pages/DemoSuccess";
 import ContractConfirmation from "./pages/ContractConfirmation";
 import MandateSuccess from "./pages/MandateSuccess";
+import MandateInfo from "./pages/MandateInfo";
 import Buchen from "./pages/Buchen";
 import QodiaVerbrauch from "./pages/QodiaVerbrauch";
 import AgbManagement from "./pages/admin/AgbManagement";
@@ -71,6 +72,7 @@ const App = () => (
             <Route path="/demo-cancel" element={<NotFound />} />
             <Route path="/vertrag-bestaetigen" element={<ContractConfirmation />} />
             <Route path="/mandate-success" element={<MandateSuccess />} />
+            <Route path="/mandate-info" element={<MandateInfo />} />
             <Route path="/buchen" element={<Buchen />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/pipeline" element={<ProtectedRoute><PraxenJourney /></ProtectedRoute>} />

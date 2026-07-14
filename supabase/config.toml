@@ -59,3 +59,5 @@ project_id = "gvsxentbbzuyanqbqvea"
     verify_jwt = false
   [functions.commission-testrun]
     verify_jwt = false
+  [functions.mandate-link]
+    verify_jwt = false
