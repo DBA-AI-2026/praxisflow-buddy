@@ -1,6 +1,7 @@
 import Stripe from "npm:stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isGoaeProduct, isStandortHfx } from "../_shared/multiLocation.ts";
+import { ensureCarrierCustomer } from "../_shared/ensureCarrierCustomer.ts";
 import { formatStripeMaskedIban } from "../_shared/formatStripeMaskedIban.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
