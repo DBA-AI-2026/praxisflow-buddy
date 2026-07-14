@@ -125,7 +125,7 @@ export default function AdminUsers() {
 
       const list = Array.from(map.values()).map((u) => ({
         ...u,
-        roles: sortByPriority(u.roles),
+        roles: sortRolesByPriority(u.roles),
       }));
       return list;
     },
@@ -334,7 +334,7 @@ export default function AdminUsers() {
       });
       return;
     }
-    const primary = pickPrimary(selectedUser.roles);
+    const primary = pickPrimaryRole(selectedUser.roles);
     if (!primary) {
       toast({
         title: "Nicht möglich",
@@ -987,7 +987,7 @@ export default function AdminUsers() {
                       <p style={{ margin: "0 0 18px 0", fontSize: "12px", color: "#555" }}>
                         Ihr Benutzerkonto wurde erfolgreich erstellt. Sie wurden als{" "}
                         <strong>
-                          {roleConfig[pickPrimary(selectedUser.roles) ?? "user"]?.label}
+                          {roleConfig[pickPrimaryRole(selectedUser.roles) ?? "user"]?.label}
                         </strong>{" "}
                         registriert.
                       </p>
