@@ -39,6 +39,7 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/comp
 // generateContractPdf: lazy via dynamic import (C.3a)
 
 import { openPdfBlob } from "@/lib/openPdfBlob";
+import { groupRolesByUser, pickPrimaryRole } from "@/lib/roles";
 import { validateIban } from "@/lib/validateIban";
 import { validateBic } from "@/lib/validateBic";
 import { lookupBicFromIban } from "@/lib/lookupBic";
