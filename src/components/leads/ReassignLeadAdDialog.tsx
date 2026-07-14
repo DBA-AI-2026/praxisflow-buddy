@@ -34,6 +34,7 @@ import {
 import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logAuditEvent } from "@/hooks/useAuditLog";
+import { groupRolesByUser, pickPrimaryRole } from "@/lib/roles";
 
 type AdOption = {
   user_id: string;
@@ -82,28 +83,37 @@ export function ReassignLeadAdDialog({
   const { data: ads = [], isLoading } = useQuery({
     queryKey: ["assignable-ads-for-lead-reassign"],
     queryFn: async (): Promise<AdOption[]> => {
+      type AllowedRole = "sales_partner" | "user" | "regional_lead";
+      const ALLOWED: AllowedRole[] = ["sales_partner", "user", "regional_lead"];
       const { data: roles, error } = await supabase
         .from("user_roles")
         .select("user_id, role, is_active")
-        .in("role", ["sales_partner", "user", "regional_lead"])
+        .in("role", ALLOWED)
         .eq("is_active", true);
       if (error) throw error;
       if (!roles?.length) return [];
-      const roleMap: Record<string, "sales_partner" | "user" | "regional_lead"> = {};
-      for (const r of roles) roleMap[r.user_id] = r.role as "sales_partner" | "user" | "regional_lead";
-      const ids = roles.map((r) => r.user_id);
+      // Multi-role-fest: alle aktiven Rollen je Person aggregieren, dann
+      // Anzeige-Rolle nach ROLE_PRIORITY wählen.
+      const grouped = groupRolesByUser(
+        (roles as { user_id: string; role: AllowedRole }[]),
+      );
+      const ids = Object.keys(grouped);
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, full_name, email")
         .in("user_id", ids);
       return (profiles || [])
-        .map((p) => ({
-          user_id: p.user_id,
-          full_name: p.full_name || p.email || "Unbenannt",
-          email: p.email,
-          role: roleMap[p.user_id],
-        }))
-        .filter((o) => !!o.role)
+        .map((p) => {
+          const primary = pickPrimaryRole(grouped[p.user_id] ?? []);
+          if (!primary) return null;
+          return {
+            user_id: p.user_id,
+            full_name: p.full_name || p.email || "Unbenannt",
+            email: p.email,
+            role: primary,
+          } as AdOption;
+        })
+        .filter((o): o is AdOption => !!o)
         .sort((a, b) => a.full_name.localeCompare(b.full_name, "de"));
     },
     enabled: open,

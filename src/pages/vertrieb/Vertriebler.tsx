@@ -41,24 +41,15 @@ const roleBadgeStyles: Record<string, { bg: string; icon: React.ReactNode }> = {
   vertragsabteilung: { bg: "bg-gray-500/10 text-gray-700 border-gray-500/20", icon: <Users className="h-3 w-3" /> },
 };
 
+import { sortRolesByPriority } from "@/lib/roles";
+
 // Relevant sales-related roles to display
 const SALES_ROLES = ["sales_partner", "user", "tippgeber", "regional_lead", "sales_lead"] as const;
 type SalesRole = (typeof SALES_ROLES)[number];
 
-// Priority mirrors useUserRole.ts — highest privilege first.
-// Only sales-relevant roles appear in this list; sales_lead sits at the top here.
-const ROLE_PRIORITY: SalesRole[] = [
-  "sales_lead",
-  "regional_lead",
-  "sales_partner",
-  "user",
-  "tippgeber",
-];
-
+// Priorisierte Sortierung nutzt den zentralen Helper (src/lib/roles.ts).
 function sortByPriority(roles: SalesRole[]): SalesRole[] {
-  return [...roles].sort(
-    (a, b) => ROLE_PRIORITY.indexOf(a) - ROLE_PRIORITY.indexOf(b)
-  );
+  return sortRolesByPriority(roles);
 }
 
 interface VertrieblerRow {

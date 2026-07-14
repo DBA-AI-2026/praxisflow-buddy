@@ -34,6 +34,7 @@ import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logCustomerEvent } from "@/lib/customerEvents";
 import { useAuth } from "@/hooks/useAuth";
+import { groupRolesByUser, pickPrimaryRole } from "@/lib/roles";
 
 type AdRole = "sales_partner" | "user" | "sales_lead" | "regional_lead";
 
@@ -86,29 +87,32 @@ export function ReassignContractAdDialog({
   const { data: ads = [], isLoading } = useQuery({
     queryKey: ["assignable-ads-for-contract-reassign"],
     queryFn: async (): Promise<AdOption[]> => {
+      const ALLOWED: AdRole[] = ["sales_partner", "user", "sales_lead", "regional_lead"];
       const { data: roles, error } = await supabase
         .from("user_roles")
         .select("user_id, role, is_active")
-        .in("role", ["sales_partner", "user", "sales_lead", "regional_lead"])
+        .in("role", ALLOWED)
         .eq("is_active", true);
       if (error) throw error;
       if (!roles?.length) return [];
-      const roleMap = new Map<string, AdRole>();
-      for (const r of roles) roleMap.set(r.user_id, r.role as AdRole);
-      const ids = Array.from(roleMap.keys());
+      // Multi-role-fest: pro Person nach ROLE_PRIORITY die anzuzeigende Rolle wählen.
+      const grouped = groupRolesByUser(
+        (roles as { user_id: string; role: AdRole }[]),
+      );
+      const ids = Object.keys(grouped);
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, full_name, email")
         .in("user_id", ids);
       return (profiles || [])
         .map((p) => {
-          const role = roleMap.get(p.user_id);
-          if (!role) return null;
+          const primary = pickPrimaryRole(grouped[p.user_id] ?? []);
+          if (!primary) return null;
           return {
             user_id: p.user_id,
             full_name: p.full_name || p.email || "Unbenannt",
             email: p.email,
-            role,
+            role: primary,
           } as AdOption;
         })
         .filter((o): o is AdOption => !!o)

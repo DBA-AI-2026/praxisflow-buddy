@@ -1,25 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
-import type { Database } from "@/integrations/supabase/types";
-
-type AppRole = Database["public"]["Enums"]["app_role"];
-
-// Priority mirrors useUserRole.ts — highest privilege first.
-const ROLE_PRIORITY: AppRole[] = [
-  "admin",
-  "sales_lead",
-  "regional_lead",
-  "vertragsabteilung",
-  "sales_partner",
-  "user",
-  "tippgeber",
-];
-
-function pickPrimaryRole(roles: AppRole[]): AppRole | null {
-  for (const r of ROLE_PRIORITY) {
-    if (roles.includes(r)) return r;
-  }
-  return null;
-}
+import { pickPrimaryRole, type AppRole } from "@/lib/roles";
 
 interface AuditLogEntry {
   action: string;
