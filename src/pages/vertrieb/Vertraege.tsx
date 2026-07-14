@@ -197,15 +197,8 @@ function AgbAcceptanceSection({ contractId }: { contractId: string }) {
 }
 
 
-// Role display labels
-const roleLabels: Record<string, string> = {
-  admin: "Admin",
-  sales_lead: "Sales Lead",
-  regional_lead: "Gebietsleiter",
-  sales_partner: "Vertriebspartner",
-  user: "Gebietsleiter",
-  tippgeber: "Tippgeber",
-};
+// Rollen-Anzeigelabels — zentral aus @/lib/roles (SSOT).
+import { ROLE_LABELS as roleLabels } from "@/lib/roles";
 
 // Searchable combobox for sales partner selection (excludes Tippgeber — they cannot be contract-responsible)
 // Returns both user_id and full_name so contracts store the correct sales_partner_id.

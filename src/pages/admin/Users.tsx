@@ -35,42 +35,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabaseClient";
-import type { Database } from "@/integrations/supabase/types";
+import {
+  ROLE_PRIORITY,
+  sortRolesByPriority,
+  pickPrimaryRole,
+  type AppRole,
+} from "@/lib/roles";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
-
-// Priority order (highest privilege first). Also used for badge ordering and
-// for the "primary role" passed to create-user during a password reset.
-const ROLE_PRIORITY: AppRole[] = [
-  "admin",
-  "sales_lead",
-  "regional_lead",
-  "vertragsabteilung",
-  "sales_partner",
-  "user",
-  "tippgeber",
-];
-
-const ALL_ROLES: AppRole[] = [
-  "admin",
-  "sales_lead",
-  "regional_lead",
-  "vertragsabteilung",
-  "sales_partner",
-  "user",
-  "tippgeber",
-];
-
-function sortByPriority(roles: AppRole[]): AppRole[] {
-  return [...roles].sort(
-    (a, b) => ROLE_PRIORITY.indexOf(a) - ROLE_PRIORITY.indexOf(b)
-  );
-}
-
-function pickPrimary(roles: AppRole[]): AppRole | null {
-  for (const r of ROLE_PRIORITY) if (roles.includes(r)) return r;
-  return null;
-}
+// ALL_ROLES: inhaltlich identisch zu ROLE_PRIORITY — daselbe Set in derselben
+// Anzeige-Reihenfolge. Bewusst als Alias belassen, damit Aufrufstellen (Add-
+// Role-Select, "fehlende Rolle finden") klar lesbar bleiben.
+const ALL_ROLES: readonly AppRole[] = ROLE_PRIORITY;
 
 interface UserGrouped {
   user_id: string;
@@ -150,7 +125,7 @@ export default function AdminUsers() {
 
       const list = Array.from(map.values()).map((u) => ({
         ...u,
-        roles: sortByPriority(u.roles),
+        roles: sortRolesByPriority(u.roles),
       }));
       return list;
     },
@@ -359,7 +334,7 @@ export default function AdminUsers() {
       });
       return;
     }
-    const primary = pickPrimary(selectedUser.roles);
+    const primary = pickPrimaryRole(selectedUser.roles);
     if (!primary) {
       toast({
         title: "Nicht möglich",
@@ -1012,7 +987,7 @@ export default function AdminUsers() {
                       <p style={{ margin: "0 0 18px 0", fontSize: "12px", color: "#555" }}>
                         Ihr Benutzerkonto wurde erfolgreich erstellt. Sie wurden als{" "}
                         <strong>
-                          {roleConfig[pickPrimary(selectedUser.roles) ?? "user"]?.label}
+                          {roleConfig[pickPrimaryRole(selectedUser.roles) ?? "user"]?.label}
                         </strong>{" "}
                         registriert.
                       </p>
