@@ -33,7 +33,7 @@ const roleBadgeStyles: Record<string, { bg: string; icon: React.ReactNode }> = {
   vertragsabteilung: { bg: "bg-gray-500/10 text-gray-700 border-gray-500/20", icon: <Users className="h-3 w-3" /> },
 };
 
-import { sortRolesByPriority } from "@/lib/roles";
+
 
 // Relevant sales-related roles to display
 const SALES_ROLES = ["sales_partner", "user", "tippgeber", "regional_lead", "sales_lead"] as const;
