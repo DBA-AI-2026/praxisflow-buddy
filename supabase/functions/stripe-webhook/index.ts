@@ -1014,6 +1014,42 @@ async function handleSepaMandateSetup(
     log("sepa_mandate_setup: status not changed (current)", existing?.status);
   }
 
+  // ── [REVIEW REQUIRED] Weg D: Kundenanlage (3-Tier-Ensure) ────────────────────
+  // Idempotent, non-blocking. Erzwingt alle vier Invarianten (customers-Zeile,
+  // customers.stripe_customer_id, customers.base_fee_contract_id GOÄ-gebunden,
+  // contract.customer_id). Phantom-Guard im Helper schützt Standorte.
+  // Rollback: Aufruf entfernen + ensureCarrierCustomer.ts revert.
+  if (carrierJustActivated && existing) {
+    try {
+      const ensureRes = await ensureCarrierCustomer(supabase, {
+        id: contractId,
+        hfx_customer_number: (existing as any).hfx_customer_number ?? null,
+        customer_id: (existing as any).customer_id ?? null,
+        stripe_customer_id: stripeCustomerId,
+        product_name: (existing as any).product_name ?? null,
+        praxis: (existing as any).praxis ?? null,
+        customer_name: (existing as any).customer_name ?? null,
+        vorname: (existing as any).vorname ?? null,
+        nachname: (existing as any).nachname ?? null,
+        email: (existing as any).email ?? null,
+        telefon: (existing as any).telefon ?? null,
+        adresse: (existing as any).adresse ?? null,
+        plz: (existing as any).plz ?? null,
+        ort: (existing as any).ort ?? null,
+        bsnr: (existing as any).bsnr ?? null,
+        lanr: (existing as any).lanr ?? null,
+        mp_nr: (existing as any).mp_nr ?? null,
+      });
+      // Sweep-Ordering: frisch verknüpfte customer_id in existing spiegeln,
+      // damit der nachgelagerte Sibling-Sweep bei Erstaktivierung feuert.
+      if (ensureRes.customerId && !(existing as any).customer_id) {
+        (existing as any).customer_id = ensureRes.customerId;
+      }
+    } catch (ensureEx) {
+      log("WARN: ensureCarrierCustomer raised (non-fatal)", String(ensureEx));
+    }
+  }
+
   // ── Multi-Standort: Geschwister-Sweep ────────────────────────────────────────
   // Nur bei echter Träger-Aktivierung dieses Events (S1). Streng kunden-gescoped
   // (S4: customer_id IS NOT NULL). Niemals über stripe_customer_id.
