@@ -39,6 +39,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, UserPlus, Mail, Package, Users, Heart, ChevronsUpDown, Check, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { groupRolesByUser, pickPrimaryRole } from "@/lib/roles";
 
 const schema = z.object({
   praxis_name: z.string().trim().min(2, "Pflichtfeld").max(200),
