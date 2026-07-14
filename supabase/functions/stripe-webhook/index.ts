@@ -796,49 +796,36 @@ async function handleContractActivation(
     }
   }
 
-  // 3-Tier: customers-Eintrag sicherstellen.
-  // Phantom-Guard (Phase 1b): wenn contract.customer_id bereits gesetzt ist
-  // (z. B. Standort-Anlage über locationContext), den gesamten Customer-Ensure
-  // -/customer_id-Overwrite-Block überspringen — sonst entsteht unter der
-  // Standort-HFX ({base}-NN) ein zweiter Kunde und die Hierarchie zerbricht.
-  if (contract?.customer_id) {
-    log("customer_id already set — skipping HFX-based customers upsert (Phase 1b guard)", contract.customer_id);
-  } else if (contract?.hfx_customer_number) {
-    const { error: custErr } = await supabase
-      .from("customers")
-      .upsert(
-        {
-          hfx_customer_number: contract.hfx_customer_number,
-          praxis_name: contract.praxis || contract.customer_name || null,
-          vorname: contract.vorname || null,
-          nachname: contract.nachname || null,
-          email: contract.email || null,
-          telefon: contract.telefon || null,
-          adresse: contract.adresse || null,
-          plz: contract.plz || null,
-          ort: contract.ort || null,
-          bsnr: contract.bsnr || null,
-          lanr: contract.lanr || null,
-          mp_nr: contract.mp_nr || null,
-        },
-        { onConflict: "hfx_customer_number", ignoreDuplicates: false }
-      );
-    if (custErr) {
-      log("WARN: customers upsert failed", custErr.message);
-    } else {
-      log("customers record ensured", contract.hfx_customer_number);
-
-      const { data: custRecord } = await supabase
-        .from("customers")
-        .select("id")
-        .eq("hfx_customer_number", contract.hfx_customer_number)
-        .maybeSingle();
-      if (custRecord?.id) {
-        await supabase
-          .from("contracts")
-          .update({ customer_id: custRecord.id } as any)
-          .eq("id", contractId);
+  // [REVIEW REQUIRED] Weg D: 3-Tier-Kundenanlage konsolidiert über
+  // ensureCarrierCustomer (single source of truth). Phantom-Guard, GOÄ-gebundenes
+  // base_fee_contract_id, NULL-only customer_id-Link sind im Helper.
+  // Rollback: diesen Block durch alten Inline-Upsert ersetzen (Git-Historie).
+  if (contract) {
+    try {
+      const ensureRes = await ensureCarrierCustomer(supabase, {
+        id: contractId,
+        hfx_customer_number: contract.hfx_customer_number ?? null,
+        customer_id: contract.customer_id ?? null,
+        stripe_customer_id: stripeCustomerId,
+        product_name: contract.product_name ?? null,
+        praxis: contract.praxis ?? null,
+        customer_name: contract.customer_name ?? null,
+        vorname: contract.vorname ?? null,
+        nachname: contract.nachname ?? null,
+        email: contract.email ?? null,
+        telefon: contract.telefon ?? null,
+        adresse: contract.adresse ?? null,
+        plz: contract.plz ?? null,
+        ort: contract.ort ?? null,
+        bsnr: contract.bsnr ?? null,
+        lanr: contract.lanr ?? null,
+        mp_nr: contract.mp_nr ?? null,
+      });
+      if (ensureRes.customerId && !contract.customer_id) {
+        (contract as any).customer_id = ensureRes.customerId;
       }
+    } catch (ensureEx) {
+      log("WARN: ensureCarrierCustomer (contract_activation) raised (non-fatal)", String(ensureEx));
     }
   }
 
