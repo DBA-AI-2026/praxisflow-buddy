@@ -72,6 +72,7 @@ const App = () => (
             <Route path="/demo-cancel" element={<NotFound />} />
             <Route path="/vertrag-bestaetigen" element={<ContractConfirmation />} />
             <Route path="/mandate-success" element={<MandateSuccess />} />
+            <Route path="/mandate-info" element={<MandateInfo />} />
             <Route path="/buchen" element={<Buchen />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/pipeline" element={<ProtectedRoute><PraxenJourney /></ProtectedRoute>} />
