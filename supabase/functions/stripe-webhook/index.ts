@@ -1,6 +1,7 @@
 import Stripe from "npm:stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isGoaeProduct, isStandortHfx } from "../_shared/multiLocation.ts";
+import { ensureCarrierCustomer } from "../_shared/ensureCarrierCustomer.ts";
 import { formatStripeMaskedIban } from "../_shared/formatStripeMaskedIban.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
@@ -795,49 +796,36 @@ async function handleContractActivation(
     }
   }
 
-  // 3-Tier: customers-Eintrag sicherstellen.
-  // Phantom-Guard (Phase 1b): wenn contract.customer_id bereits gesetzt ist
-  // (z. B. Standort-Anlage über locationContext), den gesamten Customer-Ensure
-  // -/customer_id-Overwrite-Block überspringen — sonst entsteht unter der
-  // Standort-HFX ({base}-NN) ein zweiter Kunde und die Hierarchie zerbricht.
-  if (contract?.customer_id) {
-    log("customer_id already set — skipping HFX-based customers upsert (Phase 1b guard)", contract.customer_id);
-  } else if (contract?.hfx_customer_number) {
-    const { error: custErr } = await supabase
-      .from("customers")
-      .upsert(
-        {
-          hfx_customer_number: contract.hfx_customer_number,
-          praxis_name: contract.praxis || contract.customer_name || null,
-          vorname: contract.vorname || null,
-          nachname: contract.nachname || null,
-          email: contract.email || null,
-          telefon: contract.telefon || null,
-          adresse: contract.adresse || null,
-          plz: contract.plz || null,
-          ort: contract.ort || null,
-          bsnr: contract.bsnr || null,
-          lanr: contract.lanr || null,
-          mp_nr: contract.mp_nr || null,
-        },
-        { onConflict: "hfx_customer_number", ignoreDuplicates: false }
-      );
-    if (custErr) {
-      log("WARN: customers upsert failed", custErr.message);
-    } else {
-      log("customers record ensured", contract.hfx_customer_number);
-
-      const { data: custRecord } = await supabase
-        .from("customers")
-        .select("id")
-        .eq("hfx_customer_number", contract.hfx_customer_number)
-        .maybeSingle();
-      if (custRecord?.id) {
-        await supabase
-          .from("contracts")
-          .update({ customer_id: custRecord.id } as any)
-          .eq("id", contractId);
+  // [REVIEW REQUIRED] Weg D: 3-Tier-Kundenanlage konsolidiert über
+  // ensureCarrierCustomer (single source of truth). Phantom-Guard, GOÄ-gebundenes
+  // base_fee_contract_id, NULL-only customer_id-Link sind im Helper.
+  // Rollback: diesen Block durch alten Inline-Upsert ersetzen (Git-Historie).
+  if (contract) {
+    try {
+      const ensureRes = await ensureCarrierCustomer(supabase, {
+        id: contractId,
+        hfx_customer_number: contract.hfx_customer_number ?? null,
+        customer_id: contract.customer_id ?? null,
+        stripe_customer_id: stripeCustomerId,
+        product_name: contract.product_name ?? null,
+        praxis: contract.praxis ?? null,
+        customer_name: contract.customer_name ?? null,
+        vorname: contract.vorname ?? null,
+        nachname: contract.nachname ?? null,
+        email: contract.email ?? null,
+        telefon: contract.telefon ?? null,
+        adresse: contract.adresse ?? null,
+        plz: contract.plz ?? null,
+        ort: contract.ort ?? null,
+        bsnr: contract.bsnr ?? null,
+        lanr: contract.lanr ?? null,
+        mp_nr: contract.mp_nr ?? null,
+      });
+      if (ensureRes.customerId && !contract.customer_id) {
+        (contract as any).customer_id = ensureRes.customerId;
       }
+    } catch (ensureEx) {
+      log("WARN: ensureCarrierCustomer (contract_activation) raised (non-fatal)", String(ensureEx));
     }
   }
 
@@ -907,9 +895,12 @@ async function handleSepaMandateSetup(
   }
 
   // Idempotenz: stripe_customer_id bereits gesetzt?
+  // [REVIEW REQUIRED] Weg D: Feld-Umfang erweitert um Stammdaten (praxis, telefon,
+  // adresse, plz, ort, bsnr, lanr, product_name), damit ensureCarrierCustomer
+  // die customers-Zeile mit vollen Stammdaten hydrieren kann.
   const { data: existing } = await supabase
     .from("contracts")
-    .select("stripe_customer_id, status, email, confirmation_email_sent_at, customer_id, customer_name, vorname, nachname, rechnungs_email, hfx_customer_number, mp_nr")
+    .select("stripe_customer_id, status, email, confirmation_email_sent_at, customer_id, customer_name, vorname, nachname, rechnungs_email, hfx_customer_number, mp_nr, product_name, praxis, telefon, adresse, plz, ort, bsnr, lanr")
     .eq("id", contractId)
     .maybeSingle();
 
@@ -1008,6 +999,42 @@ async function handleSepaMandateSetup(
     }
   } else {
     log("sepa_mandate_setup: status not changed (current)", existing?.status);
+  }
+
+  // ── [REVIEW REQUIRED] Weg D: Kundenanlage (3-Tier-Ensure) ────────────────────
+  // Idempotent, non-blocking. Erzwingt alle vier Invarianten (customers-Zeile,
+  // customers.stripe_customer_id, customers.base_fee_contract_id GOÄ-gebunden,
+  // contract.customer_id). Phantom-Guard im Helper schützt Standorte.
+  // Rollback: Aufruf entfernen + ensureCarrierCustomer.ts revert.
+  if (carrierJustActivated && existing) {
+    try {
+      const ensureRes = await ensureCarrierCustomer(supabase, {
+        id: contractId,
+        hfx_customer_number: (existing as any).hfx_customer_number ?? null,
+        customer_id: (existing as any).customer_id ?? null,
+        stripe_customer_id: stripeCustomerId,
+        product_name: (existing as any).product_name ?? null,
+        praxis: (existing as any).praxis ?? null,
+        customer_name: (existing as any).customer_name ?? null,
+        vorname: (existing as any).vorname ?? null,
+        nachname: (existing as any).nachname ?? null,
+        email: (existing as any).email ?? null,
+        telefon: (existing as any).telefon ?? null,
+        adresse: (existing as any).adresse ?? null,
+        plz: (existing as any).plz ?? null,
+        ort: (existing as any).ort ?? null,
+        bsnr: (existing as any).bsnr ?? null,
+        lanr: (existing as any).lanr ?? null,
+        mp_nr: (existing as any).mp_nr ?? null,
+      });
+      // Sweep-Ordering: frisch verknüpfte customer_id in existing spiegeln,
+      // damit der nachgelagerte Sibling-Sweep bei Erstaktivierung feuert.
+      if (ensureRes.customerId && !(existing as any).customer_id) {
+        (existing as any).customer_id = ensureRes.customerId;
+      }
+    } catch (ensureEx) {
+      log("WARN: ensureCarrierCustomer raised (non-fatal)", String(ensureEx));
+    }
   }
 
   // ── Multi-Standort: Geschwister-Sweep ────────────────────────────────────────
