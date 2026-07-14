@@ -113,10 +113,12 @@ export default function PlzMapping() {
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id")
-        .in("role", ["user", "sales_partner", "sales_lead", "regional_lead"]);
+        .in("role", ["user", "regional_lead"])
+        .eq("is_active", true);
       if (rolesError) throw rolesError;
       if (!roles || roles.length === 0) return [];
-      const userIds = roles.map((r) => r.user_id);
+      // Dedup: eine Person kann sowohl 'user' als auch 'regional_lead' haben
+      const userIds = [...new Set(roles.map((r) => r.user_id))];
       const { data: profs, error: profError } = await supabase
         .from("profiles")
         .select("user_id, full_name, email")
