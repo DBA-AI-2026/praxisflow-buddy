@@ -202,21 +202,28 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
   const { data: salesPartners = [] } = useQuery({
     queryKey: ["sales-partners-for-lead"],
     queryFn: async () => {
+      type AllowedRole = "sales_partner" | "user" | "regional_lead";
+      const ALLOWED: AllowedRole[] = ["sales_partner", "user", "regional_lead"];
       const { data, error } = await supabase
         .from("user_roles")
         .select("user_id, role, is_active")
-        .in("role", ["sales_partner", "user", "regional_lead"])
+        .in("role", ALLOWED)
         .eq("is_active", true);
       if (error) throw error;
       if (!data?.length) return [];
-      const roleMap: Record<string, string> = {};
-      for (const r of data) roleMap[r.user_id] = r.role;
-      const userIds = data.map((r) => r.user_id);
+      // Multi-role-fest: pro Person Anzeige-Rolle nach ROLE_PRIORITY wählen.
+      const grouped = groupRolesByUser(
+        (data as { user_id: string; role: AllowedRole }[]),
+      );
+      const userIds = Object.keys(grouped);
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, full_name, email")
         .in("user_id", userIds);
-      return (profiles || []).map((p) => ({ ...p, role: roleMap[p.user_id] || undefined }));
+      return (profiles || []).map((p) => ({
+        ...p,
+        role: pickPrimaryRole(grouped[p.user_id] ?? []) ?? undefined,
+      }));
     },
     enabled: canAssign,
   });
