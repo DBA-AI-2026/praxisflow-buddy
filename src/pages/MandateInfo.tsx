@@ -1,6 +1,6 @@
 import { Info, Mail, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import logoUrl from "@/assets/logo.png";
+import logoUrl from "@/assets/fuchs-bildmarke.png";
 
 /**
  * MandateInfo — Neutrale Info-Seite, auf die der öffentliche
@@ -19,7 +19,7 @@ export default function MandateInfo() {
           <img
             src={logoUrl}
             alt="HFX Honorarfuchs Logo"
-            className="w-16 h-16 rounded-full object-cover mx-auto mb-4 border-2 border-white/30"
+            className="w-16 h-16 rounded-full object-contain bg-white p-1 mx-auto mb-4"
           />
           <h1 className="text-white text-2xl font-bold">HFX Honorarfuchs</h1>
           <p className="text-blue-200 text-sm mt-1">SEPA-Lastschriftmandat</p>
