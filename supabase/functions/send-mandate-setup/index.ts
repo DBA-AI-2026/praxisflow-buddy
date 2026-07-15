@@ -233,9 +233,10 @@ Deno.serve(async (req) => {
     // 4) Mail 1 mit AGB-Anhang + Kopplungssatz
     const anrede = [contract.vorname, contract.nachname].filter(Boolean).join(" ").trim();
     const greeting = anrede ? `Sehr geehrte/r ${anrede}` : "Sehr geehrte Damen und Herren";
+    const mandateUrl = `https://sales.hfx-honorarfuchs.de/mandat?contract_id=${contract.id}`;
     const { html, text } = buildMandateSetupEmail({
       greeting,
-      setupUrl: setupSession.url!,
+      mandateUrl,
       agbUrl: agb.downloadUrl,
     });
 
