@@ -32,7 +32,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14.21.0";
 
-const APP_URL = "https://praxisflow-buddy.lovable.app";
+// Produktivdomain — liefert denselben Build wie die Lovable-Preview.
+// In Kundenmails sichtbar (Info-Seite, Stripe success_url/cancel_url).
+const APP_URL = "https://sales.hfx-honorarfuchs.de";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
