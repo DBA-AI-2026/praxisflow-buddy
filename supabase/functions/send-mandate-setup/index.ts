@@ -35,10 +35,10 @@ const AGB_COUPLING_SENTENCE_TEXT =
 
 function buildMandateSetupEmail(params: {
   greeting: string;
-  setupUrl: string;
+  mandateUrl: string;
   agbUrl: string;
 }): { html: string; text: string } {
-  const { greeting, setupUrl, agbUrl } = params;
+  const { greeting, mandateUrl, agbUrl } = params;
   const couplingHtml = AGB_COUPLING_SENTENCE_HTML.replaceAll("{{AGB_URL}}", agbUrl);
   const couplingText = AGB_COUPLING_SENTENCE_TEXT.replaceAll("{{AGB_URL}}", agbUrl);
   const html = `<!DOCTYPE html>
