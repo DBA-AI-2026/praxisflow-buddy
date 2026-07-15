@@ -20,7 +20,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const APP_URL = "https://praxisflow-buddy.lovable.app";
+const APP_URL = "https://sales.hfx-honorarfuchs.de";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // KOPPLUNGSSATZ (Platzhalter — finaler Wortlaut vor Go-live durch Anwalt).
@@ -233,7 +233,7 @@ Deno.serve(async (req) => {
     // 4) Mail 1 mit AGB-Anhang + Kopplungssatz
     const anrede = [contract.vorname, contract.nachname].filter(Boolean).join(" ").trim();
     const greeting = anrede ? `Sehr geehrte/r ${anrede}` : "Sehr geehrte Damen und Herren";
-    const mandateUrl = `https://sales.hfx-honorarfuchs.de/mandat?contract_id=${contract.id}`;
+    const mandateUrl = `${APP_URL}/mandat?contract_id=${contract.id}`;
     const { html, text } = buildMandateSetupEmail({
       greeting,
       mandateUrl,
