@@ -49,47 +49,13 @@ const log = (step: string, details?: unknown) => {
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const INFO_HTML = `<!doctype html>
-<html lang="de">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<meta name="robots" content="noindex,nofollow" />
-<title>HFX Honorarfuchs</title>
-<style>
-  html,body{margin:0;padding:0;background:#ffffff;color:#111827;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
-  .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
-  .card{max-width:520px;width:100%;text-align:center;}
-  h1{color:#0b367f;font-size:22px;margin:0 0 16px;font-weight:700;}
-  p{font-size:15px;line-height:1.55;margin:0 0 12px;color:#374151;}
-  .mail{color:#0b367f;font-weight:600;text-decoration:none;}
-  .foot{margin-top:32px;font-size:12px;color:#9ca3af;}
-</style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="card">
-      <h1>Dieser Link ist nicht mehr aktiv.</h1>
-      <p>Ihr Vertrag ist entweder bereits aktiviert oder der Link ist nicht mehr gültig.</p>
-      <p>Bei Fragen erreichen Sie uns unter
-        <a class="mail" href="mailto:info@hfx-honorarfuchs.de">info@hfx-honorarfuchs.de</a>.
-      </p>
-      <div class="foot">HFX Honorarfuchs — eine Marke der MCC Medical CareCapital GmbH</div>
-    </div>
-  </div>
-</body>
-</html>`;
+const INFO_URL = `${APP_URL}/mandate-info`;
 
-const infoResponse = (reason: string) => {
-  log("info_response", { reason });
-  return new Response(INFO_HTML, {
-    status: 200,
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "no-store",
-    },
+const redirectToInfo = (reason: string) => {
+  log("redirect_info", { reason });
+  return new Response(null, {
+    status: 302,
+    headers: { ...corsHeaders, Location: INFO_URL, "Cache-Control": "no-store" },
   });
 };
 
