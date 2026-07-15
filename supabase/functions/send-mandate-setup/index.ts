@@ -81,7 +81,7 @@ function buildMandateSetupEmail(params: {
     "",
     couplingText,
     "",
-    `Bankverbindung hinterlegen: ${setupUrl}`,
+    `Bankverbindung hinterlegen: ${mandateUrl}`,
     "",
     `Die AGB finden Sie im Anhang dieser E-Mail sowie unter: ${agbUrl}`,
     "",
