@@ -15,9 +15,14 @@
 //   in `customer_events` geschrieben (non-blocking, Fehler nur geloggt).
 // - Alles andere (kein contract_id, ungültige UUID, nicht gefunden,
 //   falscher Status, kein stripe_customer_id, DB-/Stripe-Fehler) →
-//   identische 200 text/html Inline-Antwort. Keine Details, keine PII,
-//   keine Enumeration. Bewusst kein Redirect auf eine Frontend-Route,
-//   damit der Fehler-Pfad nicht vom Frontend-Build abhängt.
+//   302 Redirect auf ${APP_URL}/mandate-info. Keine Details, keine PII,
+//   keine Enumeration, kein Anhängen von contract_id.
+//
+// HINWEIS: Inline-HTML ist auf der Functions-Domain NICHT möglich —
+// das Gateway erzwingt Content-Type: text/plain + nosniff + CSP-Sandbox.
+// Der Info-Fall MUSS auf die Frontend-Route /mandate-info redirecten.
+// (Gemessen 15.07.2026: text/html wird zu text/plain umgeschrieben,
+// Cache-Control aus demselben Header-Objekt kommt durch.)
 //
 // Ausdrücklich NICHT: Customer anlegen, Vertrag mutieren, Mail versenden,
 // Rate-Limit. Phase 3 (Token-Härtung) räumt den offenen Angriffspfad
