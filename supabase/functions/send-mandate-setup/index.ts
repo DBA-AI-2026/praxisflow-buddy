@@ -65,7 +65,7 @@ function buildMandateSetupEmail(params: {
     <p style="margin:0 0 14px;color:#555;">Sobald Sie das SEPA-Mandat hinterlegt haben, erhalten Sie in einer zweiten E-Mail Ihre Vertragsunterlagen.</p>
     <p style="margin:0 0 14px;color:#555;">Bei Fragen erreichen Sie uns unter <a href="mailto:info@hfx-honorarfuchs.de" style="color:#0b367f;">info@hfx-honorarfuchs.de</a>.</p>
     <p style="margin:18px 0 0;">Mit freundlichen Grüßen<br/><strong>Ihr Honorarfuchs-Team</strong></p>
-    <p style="margin:14px 0 0;color:#888;font-size:11px;">Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br/><a href="${setupUrl}" style="color:#0b367f;word-break:break-all;">${setupUrl}</a></p>
+    <p style="margin:14px 0 0;color:#888;font-size:11px;">Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br/><a href="${mandateUrl}" style="color:#0b367f;word-break:break-all;">${mandateUrl}</a></p>
   </div>
   <div style="background:#f9fafb;padding:14px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
     <p style="font-size:11px;color:#9ca3af;margin:0;">HFX Honorarfuchs — eine Marke der MCC Medical CareCapital GmbH</p>
