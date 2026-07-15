@@ -506,8 +506,8 @@ Deno.serve(async (req) => {
                 mode: "setup",
                 customer: stripeCustomer.id,
                 payment_method_types: ["sepa_debit"],
-                success_url: "https://praxisflow-buddy.lovable.app/mandate-success?session_id={CHECKOUT_SESSION_ID}",
-                cancel_url: "https://praxisflow-buddy.lovable.app/",
+                success_url: "https://sales.hfx-honorarfuchs.de/mandate-success?session_id={CHECKOUT_SESSION_ID}",
+                cancel_url: "https://sales.hfx-honorarfuchs.de/mandate-success?cancelled=1",
                 metadata: {
                   source: "sepa_mandate_setup",
                   contract_id: contract.id,
