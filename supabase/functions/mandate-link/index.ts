@@ -69,10 +69,10 @@ Deno.serve(async (req) => {
     // Gate 1: contract_id vorhanden
     const url = new URL(req.url);
     const contractId = url.searchParams.get("contract_id");
-    if (!contractId) return infoResponse("no_contract_id");
+    if (!contractId) return redirectToInfo("no_contract_id");
 
     // Gate 2: UUID-Format
-    if (!UUID_RE.test(contractId)) return infoResponse("invalid_uuid");
+    if (!UUID_RE.test(contractId)) return redirectToInfo("invalid_uuid");
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -90,17 +90,17 @@ Deno.serve(async (req) => {
 
     if (cErr) {
       log("db error", { message: cErr.message });
-      return infoResponse("db_error");
+      return redirectToInfo("db_error");
     }
     const contract = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
-    if (!contract) return infoResponse("not_found_or_wrong_status");
+    if (!contract) return redirectToInfo("not_found_or_wrong_status");
 
     // Gate 5: stripe_customer_id muss existieren. Diese Route legt niemals
     // selbst einen Customer an. `send-mandate-setup` (Mail 1) hat das
     // bereits erledigt; ein aktivierbarer Vertrag ohne Customer ist
     // pathologisch und wird still auf die Info-Seite umgeleitet.
     const stripeCustomerId = (contract as any).stripe_customer_id as string | null;
-    if (!stripeCustomerId) return infoResponse("no_stripe_customer");
+    if (!stripeCustomerId) return redirectToInfo("no_stripe_customer");
 
     // Stripe-Setup-Session minten. Metadata EXAKT gespiegelt zu
     // `send-mandate-setup` — der Webhook `handleSepaMandateSetup`
@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
       Deno.env.get("STRIPE_SECRET_KEY_V2") || Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
       log("missing stripe key");
-      return infoResponse("stripe_key_missing");
+      return redirectToInfo("stripe_key_missing");
     }
     const stripe = new Stripe(stripeKey, { apiVersion: "2024-06-20" });
 
@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
 
     if (!session.url) {
       log("stripe returned no url", { session_id: session.id });
-      return infoResponse("stripe_no_url");
+      return redirectToInfo("stripe_no_url");
     }
 
     // Non-blocking Event — Signal "Kunde klickt (spät)". Nur im Erfolgsfall.
@@ -154,6 +154,6 @@ Deno.serve(async (req) => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     log("ERROR", { message: msg });
-    return infoResponse("exception");
+    return redirectToInfo("exception");
   }
 });
