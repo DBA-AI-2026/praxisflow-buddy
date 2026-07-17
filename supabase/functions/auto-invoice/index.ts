@@ -494,10 +494,11 @@ Deno.serve(async (req) => {
                 metadata: { hfx_contract_id: contract.id, hfx_customer_number: contract.hfx_customer_number || "" },
               });
 
-              await supabase
+              const { error: scErr } = await supabase
                 .from("contracts")
                 .update({ stripe_customer_id: stripeCustomer.id } as any)
                 .eq("id", contract.id);
+              if (scErr) throw new Error(`stripe_customer_id persist failed: ${scErr.message}`);
 
               // Multi-Standort Self-Heal (NULL-only, kein breites WHERE):
               await healCustomerStripeId(supabase, contract.customer_id, stripeCustomer.id);
@@ -515,10 +516,16 @@ Deno.serve(async (req) => {
                 },
               });
 
+              // Stabiler HFX-Mandat-Link. Verfällt nie — `mandate-link` mintet bei
+              // jedem Klick eine frische Stripe-Session (Thread #16, Phase A/B).
+              // Gate 6 in `mandate-link` lässt aktive Verträge nur durch, solange der
+              // Customer keine SEPA-Zahlungsmethode hat — genau dieser Recovery-Fall.
+              const mandateUrl = `https://sales.hfx-honorarfuchs.de/mandat?contract_id=${contract.id}`;
+
               const mandateEmailHtml = buildMandateRequestEmail({
                 customerName: contract.customer_name,
                 productName: contract.product_name,
-                setupUrl: setupSession.url!,
+                mandateUrl,
                 billingPeriod,
               });
               await resend.emails.send({
@@ -1136,10 +1143,10 @@ Deno.serve(async (req) => {
 function buildMandateRequestEmail(params: {
   customerName: string;
   productName: string;
-  setupUrl: string;
+  mandateUrl: string;
   billingPeriod: string;
 }) {
-  const { customerName, productName, setupUrl, billingPeriod } = params;
+  const { customerName, productName, mandateUrl, billingPeriod } = params;
   return `<!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f4f6fa;font-family:Arial,sans-serif;">
@@ -1155,9 +1162,9 @@ function buildMandateRequestEmail(params: {
     <p style="color:#555;font-size:14px;line-height:1.6;">für Ihren Vertrag <strong>${productName}</strong> (Abrechnungszeitraum: ${billingPeriod}) benötigen wir Ihre SEPA-Zahlungsdaten, um den monatlichen Einzug zu ermöglichen.</p>
     <p style="color:#555;font-size:14px;">Bitte klicken Sie auf den folgenden Button, um Ihre Zahlungsmethode sicher zu hinterlegen:</p>
     <div style="text-align:center;margin:24px 0;">
-      <a href="${setupUrl}" style="background:#0b367f;color:#fff;padding:14px 28px;border-radius:8px;font-size:16px;text-decoration:none;display:inline-block;font-weight:bold;">Zahlungsmethode hinterlegen</a>
+      <a href="${mandateUrl}" style="background:#0b367f;color:#fff;padding:14px 28px;border-radius:8px;font-size:16px;text-decoration:none;display:inline-block;font-weight:bold;">Zahlungsmethode hinterlegen</a>
     </div>
-    <p style="color:#888;font-size:12px;">Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br/><a href="${setupUrl}" style="color:#0b367f;word-break:break-all;">${setupUrl}</a></p>
+    <p style="color:#888;font-size:12px;">Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br/><a href="${mandateUrl}" style="color:#0b367f;word-break:break-all;">${mandateUrl}</a></p>
   </div>
   <div style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
     <p style="font-size:11px;color:#9ca3af;margin:0;">© Honorarfuchs – HFX Sales Portal</p>
