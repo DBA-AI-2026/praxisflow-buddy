@@ -177,7 +177,11 @@ Deno.serve(async (req) => {
         hfx_customer_number: (contract as any).hfx_customer_number ?? null,
         contract_id: contract.id,
         created_by: null,
-        event_data: { status: (contract as any).status, source: "mandate_link" },
+        event_data: {
+          status: (contract as any).status,
+          source: "mandate_link",
+          recovery: String((contract as any).status) === "aktiv",
+        },
       });
     } catch (ex) {
       log("WARN: customer_events insert failed (non-blocking)", String(ex));
