@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encode as base64UrlEncode } from "https://deno.land/std@0.208.0/encoding/base64url.ts";
 
 const ALLOWED_ORIGINS = [
+  "https://sales.hfx-honorarfuchs.de",
   "https://praxisflow-buddy.lovable.app",
   "https://id-preview--f9dcf8ed-b381-4f00-af4c-2993b99115fa.lovable.app",
   "http://localhost:5173",

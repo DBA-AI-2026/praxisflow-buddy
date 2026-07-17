@@ -1,4 +1,5 @@
 const ALLOWED_ORIGINS = [
+  "https://sales.hfx-honorarfuchs.de",
   "https://praxisflow-buddy.lovable.app",
   "https://id-preview--f9dcf8ed-b381-4f00-af4c-2993b99115fa.lovable.app",
   "http://localhost:5173",
