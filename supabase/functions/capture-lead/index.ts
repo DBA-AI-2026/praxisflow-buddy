@@ -244,7 +244,7 @@ ${nachrichtSection}` : ""}
     nachricht ? `Nachricht: ${nachricht}` : null,
   ].filter(Boolean).join("\n");
 
-  return renderBrandedEmail({ bodyHtml, bodyText });
+  return renderBrandedEmail({ subheadline: "Ihre Zugangsdaten", bodyHtml, bodyText });
 }
 
 Deno.serve(async (req) => {
