@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
 
 /**
  * notify-demo-limit
@@ -21,6 +22,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-api-key, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+const FALLBACK_CTA_TEXT =
+  "Möchten Sie HFX weiter nutzen? Sprechen Sie uns an – wir erstellen Ihnen gerne ein individuelles Angebot.";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -144,7 +148,6 @@ Deno.serve(async (req) => {
 
     // ── Optional: send immediate reminder email via Resend ──────────────
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY_V2");
 
     // Load email notification settings
     const { data: emailSettings } = await supabase
@@ -155,83 +158,15 @@ Deno.serve(async (req) => {
       (emailSettings ?? []).find((s: any) => s.setting_key === "demo_expiry_customer_reminder")?.is_enabled !== false;
 
     if (RESEND_API_KEY && demo.email && customerReminderEnabled) {
-      // Build Stripe checkout URL if possible.
-      // IMPORTANT: These price IDs are the LIVE production IDs from src/lib/stripeProducts.ts
-      // HFX EBM:              price_1TERRU50U5wLsXk2vhiRszuy
-      // HFX GOÄ:              price_1TERR350U5wLsXk2G6CMcuGV
-      // HFX GOÄ/GOZ Live-Check: price_1TERZH50U5wLsXk2FzJL0VSl
-      const STRIPE_PRODUCT_MAP: Record<string, { price_id: string; recurring: boolean }> = {
-        "HFX EBM": { price_id: "price_1TERRU50U5wLsXk2vhiRszuy", recurring: true },
-        "HFX GOÄ - die KI für ihre Privatabrechnung": { price_id: "price_1TERR350U5wLsXk2G6CMcuGV", recurring: true },
-        "HFX GOÄ/GOZ Live-Check": { price_id: "price_1TERZH50U5wLsXk2FzJL0VSl", recurring: false },
-      };
-
-      let stripeCheckoutUrl: string | null = null;
-      // DEPRECATED — alte Stripe-Welt, abgeklemmt am 08.05.2026.
-      // Stripe-Checkout-Erstellung deaktiviert; CTA-Block fällt unten weg.
-      // Mail-Versand bleibt vorerst aktiv ohne Buchungs-Link
-      // (wird in Schritt 3 als 410 Gone vollständig entkernt).
-      if (false && STRIPE_SECRET_KEY && demo.product_name && STRIPE_PRODUCT_MAP[demo.product_name]) {
-        try {
-          const { default: Stripe } = await import("npm:stripe@14.21.0");
-          const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2025-08-27.basil" });
-          const priceInfo = STRIPE_PRODUCT_MAP[demo.product_name];
-          const session = await stripe.checkout.sessions.create({
-            customer_email: demo.email,
-            line_items: [{ price: priceInfo.price_id, quantity: 1 }],
-            mode: priceInfo.recurring ? "subscription" : "payment",
-            payment_method_types: ["card", "sepa_debit"],
-            success_url: "https://sales.hfx-honorarfuchs.de/demo-success?session_id={CHECKOUT_SESSION_ID}",
-            cancel_url: "https://sales.hfx-honorarfuchs.de/demo-cancel",
-            metadata: { source: "demo_limit_reached", demo_id: demo.id },
-            subscription_data: priceInfo.recurring ? { metadata: { demo_id: demo.id } } : undefined,
-          });
-          stripeCheckoutUrl = session.url;
-        } catch (e) {
-          console.error("[notify-demo-limit] Stripe session error:", e);
-        }
-      }
-
-      const ctaSection = stripeCheckoutUrl
-        ? `<tr><td style="padding:0 40px 32px;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#f0f7ff,#e8f0fe);border-radius:8px;border:1px solid #bfdbfe;">
-              <tr><td style="padding:24px;">
-                <p style="color:#1e40af;font-size:16px;font-weight:700;margin:0 0 8px;">🚀 Jetzt direkt weiterbuchen</p>
-                <p style="color:#374151;font-size:14px;line-height:1.5;margin:0 0 16px;">
-                  Gefällt Ihnen <strong>${demo.product_name}</strong>? Buchen Sie jetzt und nutzen Sie das Produkt weiter.
-                </p>
-                <table cellpadding="0" cellspacing="0">
-                  <tr><td style="background:#0b367f;border-radius:6px;padding:14px 28px;">
-                    <a href="${stripeCheckoutUrl}" style="color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;display:block;">
-                      ✅ Jetzt kostenpflichtig buchen →
-                    </a>
-                  </td></tr>
-                </table>
-                <p style="color:#6b7280;font-size:12px;margin:10px 0 0;">Sichere Zahlung per Kreditkarte oder SEPA-Lastschrift über Stripe.</p>
-              </td></tr>
-            </table>
-          </td></tr>`
-        : `<tr><td style="padding:0 40px 32px;">
+      const ctaSection = `<tr><td style="padding:0 0 24px;">
             <p style="color:#374151;font-size:15px;line-height:1.6;margin:0;">
-              Möchten Sie HFX weiter nutzen? Sprechen Sie uns an – wir erstellen Ihnen gerne ein individuelles Angebot.
+              ${FALLBACK_CTA_TEXT}
             </p>
           </td></tr>`;
 
-      const html = `<!DOCTYPE html>
-<html lang="de">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f4f6fa;font-family:Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fa;padding:40px 0;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+      const bodyHtml = `<table width="100%" cellpadding="0" cellspacing="0">
         <tr>
-          <td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:32px 40px;text-align:center;">
-            <p style="color:#ffffff;font-size:22px;font-weight:700;margin:0;">HFX Honorarfuchs</p>
-            <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:4px 0 0;">Ihre Testphase ist abgelaufen</p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:40px 40px 24px;">
+          <td style="padding:0 0 24px;">
             <p style="color:#1a1a2e;font-size:16px;margin:0 0 16px;">Guten Tag,</p>
             <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 16px;">
               Ihre kostenlose Testphase für <strong>${demo.product_name ?? "HFX-Produkt"}</strong> ist beendet –
@@ -239,7 +174,7 @@ Deno.serve(async (req) => {
             </p>
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;margin:0 0 24px;">
               <tr><td style="padding:16px 20px;">
-                <p style="color:#856404;font-size:14px;font-weight:700;margin:0 0 4px;">ℹ️ Testphase abgelaufen</p>
+                <p style="color:#856404;font-size:14px;font-weight:700;margin:0 0 4px;">Testphase abgelaufen</p>
                 <p style="color:#533f03;font-size:13px;margin:0;">
                   Das kostenlose Kontingent von 20 Testrechnungen ist ausgeschöpft. Um weiterhin unbegrenzt Rechnungen zu erstellen, buchen Sie jetzt die Vollversion.
                 </p>
@@ -249,23 +184,33 @@ Deno.serve(async (req) => {
         </tr>
         ${ctaSection}
         <tr>
-          <td style="padding:0 40px 32px;">
+          <td style="padding:0;">
             <p style="color:#374151;font-size:15px;line-height:1.6;margin:0;">
               Mit freundlichen Grüßen,<br>
               <strong>Ihr HFX Honorarfuchs Team</strong>
             </p>
           </td>
         </tr>
-        <tr>
-          <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
-            <p style="color:#9ca3af;font-size:12px;margin:0;">HFX Honorarfuchs • Diese E-Mail wurde automatisch generiert.</p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+      </table>`;
+
+      const bodyText = [
+        "Guten Tag,",
+        "",
+        `Ihre kostenlose Testphase für ${demo.product_name ?? "HFX-Produkt"} ist beendet – Sie haben das Limit von 20 Testrechnungen erreicht.`,
+        "",
+        FALLBACK_CTA_TEXT,
+        "",
+        "Mit freundlichen Grüßen,",
+        "Ihr HFX Honorarfuchs Team",
+        "",
+        "Bei Fragen: info@hfx-honorarfuchs.de",
+      ].join("\n");
+
+      const { html, text } = renderBrandedEmail({
+        subheadline: "Ihre Testphase ist abgelaufen",
+        bodyHtml,
+        bodyText,
+      });
 
       await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -274,22 +219,9 @@ Deno.serve(async (req) => {
           from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
           reply_to: "info@hfx-honorarfuchs.de",
           to: [demo.email],
-          subject: `⚠️ Ihre Testphase für ${demo.product_name ?? "HFX"} ist abgelaufen`,
+          subject: `Ihre Testphase für ${demo.product_name ?? "HFX"} ist abgelaufen`,
           html,
-          text: [
-            "Guten Tag,",
-            "",
-            `Ihre kostenlose Testphase für ${demo.product_name ?? "HFX-Produkt"} ist beendet – Sie haben das Limit von 20 Testrechnungen erreicht.`,
-            "",
-            stripeCheckoutUrl
-              ? `Jetzt direkt weiterbuchen: ${stripeCheckoutUrl}`
-              : "Möchten Sie HFX weiter nutzen? Sprechen Sie uns an – wir erstellen Ihnen gerne ein individuelles Angebot.",
-            "",
-            "Mit freundlichen Grüßen,",
-            "Ihr HFX Honorarfuchs Team",
-            "",
-            "Bei Fragen: info@hfx-honorarfuchs.de",
-          ].join("\n"),
+          text,
         }),
       });
 
