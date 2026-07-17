@@ -508,7 +508,7 @@ Deno.serve(async (req) => {
           console.error("RESEND_API_KEY not configured – skipping confirmation email");
         } else {
           const resend = new Resend(resendApiKey);
-          const emailHtml = buildConfirmationEmailHtml({ praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht, hfx_customer_number: lead.hfx_customer_number, generated_password: generatedPassword });
+          const { html: emailHtml, text: emailText } = buildConfirmationEmail({ praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht, hfx_customer_number: lead.hfx_customer_number, generated_password: generatedPassword });
 
           console.log(`Attempting to send confirmation email to ${email} from noreply@hfx-honorarfuchs.de`);
           const sendResult = await resend.emails.send({
@@ -516,6 +516,7 @@ Deno.serve(async (req) => {
             to: [email],
             subject: `Danke für Ihr Interesse am Honorarfuchs!`,
             html: emailHtml,
+            text: emailText,
           });
 
           if (sendResult.error) {
