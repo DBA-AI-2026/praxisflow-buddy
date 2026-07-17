@@ -71,7 +71,10 @@ function generatePassword(length = 12): string {
   return result.join("");
 }
 
-function buildConfirmationEmailHtml(fields: {
+const DOWNLOAD_URL_MAC = "https://download.qodia.de/production/hfx/latest/mac/hfx-desktop.dmg";
+const DOWNLOAD_URL_WIN = "https://download.qodia.de/production/hfx/latest/windows/hfx-desktop.exe";
+
+function buildConfirmationEmail(fields: {
   praxis_name: string;
   vorname: string;
   nachname: string;
@@ -83,7 +86,7 @@ function buildConfirmationEmailHtml(fields: {
   nachricht?: string | null;
   hfx_customer_number: string;
   generated_password: string;
-}): string {
+}): { html: string; text: string } {
   const { praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht, hfx_customer_number, generated_password } = fields;
 
   const mpSection = mp_nummer ? `<tr>
@@ -96,15 +99,7 @@ function buildConfirmationEmailHtml(fields: {
     <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${nachricht}&nbsp;</td>
   </tr>` : "";
 
-  return `<table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="600">
-<tr><td align="center" valign="top" bgcolor="#ffffff">
-<img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/Mailheader-Neutral-hfx-1200px.png" alt="Honorarfuchs" width="600" height="80" border="0" style="border-width:0px;" />
-</td></tr>
-<tr><td bgcolor="#ffffff" align="center">
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="600"><tbody><tr><td style="width:10px;"></td><td style="width:580px;">
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="580">
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="90">&nbsp;</td></tr>
+  const bodyHtml = `<table align="center" border="0" cellpadding="0" cellspacing="0" width="100%">
 <tr><td align="left" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#444444;">
 <strong>Danke für Ihr Interesse am Honorarfuchs!<br>Entdecken Sie, was KI aus Ihrer Privatabrechnung holt.</strong>
 </td></tr>
@@ -136,22 +131,22 @@ function buildConfirmationEmailHtml(fields: {
 <tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:10pt; line-height:12pt; color:#444444;">Sie benötigen dafür eine PAD/PAD.next-Schnittstelle.</td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="15">&nbsp;</td></tr>
 <tr><td>
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="580"><tr>
-<td align="center" valign="top" width="290" style="padding: 10px;">
+<table align="center" border="0" cellpadding="0" cellspacing="0" width="100%"><tr>
+<td align="center" valign="top" width="50%" style="padding: 10px;">
 <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border: 1px solid #6d6d6d; border-radius: 6px; width: 100%;"><tr><td align="center" style="padding:0;">
-<a href="https://download.qodia.de/production/hfx/latest/mac/hfx-desktop.dmg" target="_blank" rel="noopener noreferrer" style="display:block; padding:20px 10px; text-decoration:none; color:#444444; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; line-height:16pt;">
+<a href="${DOWNLOAD_URL_MAC}" target="_blank" rel="noopener noreferrer" style="display:block; padding:20px 10px; text-decoration:none; color:#444444; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; line-height:16pt;">
 <img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/apple-100.png" width="25" height="25" alt="" style="vertical-align:middle; border:0; margin-right:10px;">Download MacOS
 </a>
 </td></tr></table></td>
-<td align="center" valign="top" width="290" style="padding: 10px;">
+<td align="center" valign="top" width="50%" style="padding: 10px;">
 <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border: 1px solid #6d6d6d; border-radius: 6px; width: 100%;"><tr><td align="center" style="padding:0;">
-<a href="https://download.qodia.de/production/hfx/latest/windows/hfx-desktop.exe" target="_blank" rel="noopener noreferrer" style="display:block; padding:20px 10px; text-decoration:none; color:#444444; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; line-height:16pt;">
+<a href="${DOWNLOAD_URL_WIN}" target="_blank" rel="noopener noreferrer" style="display:block; padding:20px 10px; text-decoration:none; color:#444444; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; line-height:16pt;">
 <img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/Windows.png" width="25" height="25" alt="" style="vertical-align:middle; border:0; margin-right:10px;">Download Windows
 </a>
 </td></tr></table></td>
 </tr></table>
 </td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="80">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="60">&nbsp;</td></tr>
 <tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#0b367f;"><strong>So funktioniert HFX.GOÄ</strong></td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="6">&nbsp;</td></tr>
 <tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:10pt; color:#888888;">In 5 einfachen Schritten zur optimierten Abrechnung</td></tr>
@@ -167,12 +162,11 @@ function buildConfirmationEmailHtml(fields: {
 </td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td></tr>
 <tr><td align="center" valign="top" style="background:#0b367f; border-radius:8px; padding:14px 20px; color:#ffffff; font-family:verdana, geneva, sans-serif; font-size:11pt; line-height:18pt;"><strong>Alle Schritte erfolgen lokal und nachvollziehbar!<br>Sie behalten jederzeit die volle Kontrolle über Ihre Abrechnungsdaten.</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="60">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="60">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td></tr>
 <tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Folgende Daten haben Sie an uns übermittelt:</strong></td></tr>
 <tr><td>
 <table border="0" cellpadding="3" cellspacing="0" width="100%"><tbody>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td><td align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td></tr>
 <tr>
 <td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"><strong>Praxisdaten</strong></td>
 <td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"></td>
@@ -201,7 +195,7 @@ function buildConfirmationEmailHtml(fields: {
 <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Mobilnummer:</td>
 <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${mobilnummer}&nbsp;</td>
 </tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td><td align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td></tr>
 <tr>
 <td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"><strong>Abrechnungszentrum</strong></td>
 <td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"></td>
@@ -211,34 +205,46 @@ function buildConfirmationEmailHtml(fields: {
 <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${abrechnungszentrum}&nbsp;</td>
 </tr>
 ${mpSection}
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td></tr>
+${nachricht ? `<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td><td align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td></tr>
 <tr>
 <td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"><strong>Nachricht</strong></td>
 <td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"></td>
 </tr>
-${nachrichtSection}
+${nachrichtSection}` : ""}
 </tbody></table>
 </td></tr>
-<tr><td align="center" valign="top" style="font-size:0; line-height:0;" height="120">&nbsp;</td></tr>
-<tr><td bgcolor="#ffffff" align="center" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:10pt; font-weight:400;">
-<img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/8270-Logo-RZ-Honorarfuchs-HFX.png" alt="Honorarfuchs" style="display:block;max-width:280px;height:auto;margin:0 auto;border:0;" />
-</td></tr>
-<tr><td bgcolor="#ffffff" align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td></tr>
-<tr><td bgcolor="#f8f8f8" align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td></tr>
-<tr><td bgcolor="#f8f8f8" align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:8pt; line-height:12pt; color:#444444;">
-Honorarfuchs ist ein Produkt der MCC Medical CareCapital GmbH<br />Hohenzollernstr. 47 · 47799 Krefeld<br />
-<a href="https://www.honorarfuchs.de" target="_blank"><strong style="color:#444444; font-weight:normal;">Zur Webseite</strong></a>
-</td></tr>
-<tr><td bgcolor="#f8f8f8" style="font-size:0; line-height:0;" height="18">&nbsp;</td></tr>
-<tr><td bgcolor="#f8f8f8" align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:8pt; line-height:12pt; color:#444444;">
-Geschäftsführer:<br />Olaf Hagelkruys, Thilo Wiers-Keiser und Robbin Zielke<br />Registergericht: Amtsgericht Krefeld · HRB 14709<br />Umsatzsteueridentifikationsnummer gemäß §27a Umsatzsteuergesetz: DE 227 420 712
-</td></tr>
-<tr><td bgcolor="#f8f8f8" style="font-size:0; line-height:0;" height="20">&nbsp;</td></tr>
-</table>
-</td><td style="width:10px;"></td></tr></tbody></table>
-</td></tr>
-</table>
-</td></tr></table>`;
+</table>`;
+
+  const bodyText = [
+    "Danke für Ihr Interesse am Honorarfuchs!",
+    "Entdecken Sie, was KI aus Ihrer Privatabrechnung holt.",
+    "",
+    "Mit HFX.GOÄ gewinnen Sie schnell Klarheit über Ihre Abrechnung. Erkennen Sie Optimierungspotenziale, prüfen Sie Ihre Daten strukturiert und verschaffen Sie sich ein besseres Gefühl für Ihre Privatliquidation – ganz ohne Aufwand.",
+    "",
+    "Ihre Zugangsdaten für HFX.GOÄ:",
+    `Registrierte E-Mail-Adresse: ${email}`,
+    `Benutzername: ${hfx_customer_number}`,
+    `Passwort: ${generated_password}`,
+    "",
+    "Bitte bewahren Sie diese Zugangsdaten sicher auf. Sie benötigen sie für die Anmeldung in HFX.GOÄ.",
+    "",
+    "Jetzt Testversion downloaden und starten (PAD/PAD.next-Schnittstelle erforderlich):",
+    `Download MacOS: ${DOWNLOAD_URL_MAC}`,
+    `Download Windows: ${DOWNLOAD_URL_WIN}`,
+    "",
+    "Folgende Daten haben Sie an uns übermittelt:",
+    `Praxisname: ${praxis_name}`,
+    `Vorname: ${vorname}`,
+    `Nachname: ${nachname}`,
+    `E-Mail: ${email}`,
+    `PLZ: ${plz}`,
+    `Mobilnummer: ${mobilnummer}`,
+    `Abrechnungszentrum: ${abrechnungszentrum}`,
+    mp_nummer ? `Medizinpartner-Nummer: ${mp_nummer}` : null,
+    nachricht ? `Nachricht: ${nachricht}` : null,
+  ].filter(Boolean).join("\n");
+
+  return renderBrandedEmail({ bodyHtml, bodyText });
 }
 
 Deno.serve(async (req) => {
