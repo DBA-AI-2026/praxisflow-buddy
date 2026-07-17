@@ -101,9 +101,9 @@ Deno.serve(async (req) => {
     // Primary Key läuft (immer max. eine Zeile).
     const { data: rows, error: cErr } = await admin
       .from("contracts")
-      .select("id, status, stripe_customer_id, hfx_customer_number")
+      .select("id, status, stripe_customer_id, hfx_customer_number, iban_masked")
       .eq("id", contractId)
-      .in("status", ["eingegangen", "wartend_auf_mandat"]);
+      .in("status", ["eingegangen", "wartend_auf_mandat", "aktiv"]);
 
     if (cErr) {
       log("db error", { message: cErr.message });
