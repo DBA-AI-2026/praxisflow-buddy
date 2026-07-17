@@ -343,7 +343,7 @@ Deno.serve(async (req) => {
         if (resendApiKey) {
           const resend = new Resend(resendApiKey);
           const existingPassword = existingLead.generated_password || "(gespeichertes Passwort nicht verfügbar)";
-          const emailHtml = buildConfirmationEmailHtml({
+          const { html: emailHtml, text: emailText } = buildConfirmationEmail({
             praxis_name: existingLead.praxis_name,
             vorname: existingLead.vorname,
             nachname: existingLead.nachname,
@@ -362,6 +362,7 @@ Deno.serve(async (req) => {
             to: [normalizedEmail],
             subject: `Ihre bestehenden Zugangsdaten – Honorarfuchs`,
             html: emailHtml,
+            text: emailText,
           });
           console.log(`Existing credentials resent to ${normalizedEmail}`);
         }
