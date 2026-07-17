@@ -24,6 +24,7 @@ interface ProductForm {
   name: string;
   monthly_price: number;
   one_time_fee: number;
+  cancellation_period_months: number;
   price_per_unit: number | null;
   price_per_unit_label: string;
   price_per_unit_3m: number | null;
@@ -44,6 +45,7 @@ const emptyForm: ProductForm = {
   name: "",
   monthly_price: 0,
   one_time_fee: 0,
+  cancellation_period_months: 6,
   price_per_unit: null,
   price_per_unit_label: "",
   price_per_unit_3m: null,
@@ -84,6 +86,7 @@ export default function AdminProducts() {
     mutationFn: async (data: ProductForm) => {
       const payload = {
         ...data,
+        cancellation_period_months: Number.isFinite(data.cancellation_period_months) ? data.cancellation_period_months : 6,
         price_per_unit: data.price_per_unit || null,
         price_per_unit_label: data.price_per_unit_label || null,
         price_per_unit_3m: data.price_per_unit_3m || null,
@@ -138,6 +141,7 @@ export default function AdminProducts() {
       name: product.name,
       monthly_price: product.monthly_price,
       one_time_fee: product.one_time_fee,
+      cancellation_period_months: product.cancellation_period_months ?? 6,
       price_per_unit: product.price_per_unit ?? null,
       price_per_unit_label: product.price_per_unit_label || "",
       price_per_unit_3m: product.price_per_unit_3m ?? null,
@@ -337,6 +341,20 @@ export default function AdminProducts() {
                 <Label>Einmalgebühr (€)</Label>
                 <Input type="number" min={0} step="0.01" value={form.one_time_fee} onChange={(e) => set("one_time_fee", Number(e.target.value))} />
               </div>
+            </div>
+
+            <div>
+              <Label>Kündigungsfrist (Monate)</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={form.cancellation_period_months}
+                onChange={(e) => set("cancellation_period_months", Number(e.target.value))}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                0 = monatlich kündbar zum Monatsende
+              </p>
             </div>
 
             {/* Stückpreis */}
