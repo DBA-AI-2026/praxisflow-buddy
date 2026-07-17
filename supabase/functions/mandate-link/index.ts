@@ -130,6 +130,26 @@ Deno.serve(async (req) => {
     }
     const stripe = new Stripe(stripeKey, { apiVersion: "2024-06-20" });
 
+    // Gate 6: Bei bereits aktiven Verträgen darf nur dann ein Mandat gemintet
+    // werden, wenn der Customer noch KEINE SEPA-Zahlungsmethode hat.
+    // Grund: Ein zweites SEPA-PM am selben Customer macht den Einzug
+    // mehrdeutig (vgl. SKIP_AMBIGUOUS in backfill-sepa-iban). Der einzige
+    // legitime aktiv-Fall ist der auto-invoice-Recovery-Pfad: dort wurde der
+    // Customer gerade frisch erzeugt und hat null PMs.
+    // Stripe ist hier die Wahrheit, NICHT iban_masked — Altbestandsverträge
+    // haben ein Mandat, aber kein iban_masked (deshalb existiert backfill-sepa-iban).
+    // Kein eigener try/catch: wirft der Stripe-Aufruf, greift der äußere
+    // catch → redirectToInfo("exception"). Im Zweifel keine Session minten.
+    if (String((contract as any).status) === "aktiv") {
+      const pms = await stripe.paymentMethods.list({
+        customer: stripeCustomerId,
+        type: "sepa_debit",
+      });
+      if (pms.data.length > 0) {
+        return redirectToInfo("active_with_existing_mandate");
+      }
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "setup",
       customer: stripeCustomerId,
