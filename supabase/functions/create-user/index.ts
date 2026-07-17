@@ -8,6 +8,10 @@ const corsHeaders = {
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
+// Produktivdomain — liefert denselben Build wie die Lovable-Preview.
+// In der Zugangsdaten-Mail kundensichtbar (Login-Button).
+const PORTAL_URL = "https://sales.hfx-honorarfuchs.de";
+
 const roleLabels: Record<string, string> = {
   admin: "Administrator",
   sales_partner: "Vertriebspartner",
@@ -130,7 +134,6 @@ Deno.serve(async (req) => {
       // Send notification email before reset if requested
       if (notifyBeforeReset) {
         try {
-          const portalUrl = "https://praxisflow-buddy.lovable.app";
           await resend.emails.send({
             from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
             to: [email],
@@ -287,7 +290,6 @@ Deno.serve(async (req) => {
     let emailSent = false;
     if (sendEmail) {
       try {
-        const portalUrl = "https://praxisflow-buddy.lovable.app";
         const roleLabel = roleLabels[role] || role;
 
         const emailResponse = await resend.emails.send({
@@ -320,7 +322,7 @@ Deno.serve(async (req) => {
       </table>
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">
         <tr><td align="center">
-          <a href="${portalUrl}" style="display:inline-block;background-color:#0b367f;color:#ffffff;font-family:verdana,geneva,sans-serif;font-size:12pt;font-weight:bold;padding:12px 32px;border-radius:6px;text-decoration:none;">Zum Portal anmelden</a>
+          <a href="${PORTAL_URL}" style="display:inline-block;background-color:#0b367f;color:#ffffff;font-family:verdana,geneva,sans-serif;font-size:12pt;font-weight:bold;padding:12px 32px;border-radius:6px;text-decoration:none;">Zum Portal anmelden</a>
         </td></tr>
       </table>
       <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background:#fff8e1;border-radius:6px;border:1px solid #f59e0b;">
