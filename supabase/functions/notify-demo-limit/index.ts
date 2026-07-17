@@ -181,8 +181,8 @@ Deno.serve(async (req) => {
             line_items: [{ price: priceInfo.price_id, quantity: 1 }],
             mode: priceInfo.recurring ? "subscription" : "payment",
             payment_method_types: ["card", "sepa_debit"],
-            success_url: "https://praxisflow-buddy.lovable.app/demo-success?session_id={CHECKOUT_SESSION_ID}",
-            cancel_url: "https://praxisflow-buddy.lovable.app/demo-cancel",
+            success_url: "https://sales.hfx-honorarfuchs.de/demo-success?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url: "https://sales.hfx-honorarfuchs.de/demo-cancel",
             metadata: { source: "demo_limit_reached", demo_id: demo.id },
             subscription_data: priceInfo.recurring ? { metadata: { demo_id: demo.id } } : undefined,
           });
