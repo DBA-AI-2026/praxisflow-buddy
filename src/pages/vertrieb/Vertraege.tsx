@@ -48,6 +48,7 @@ import { logCustomerStatusChange } from "@/lib/customerEvents";
 import { sendStandortCredentials } from "@/lib/standortActions";
 import { DEFAULT_QODIA_UNIT_PRICE } from "@/lib/promoStatus";
 import { isGoaeProduct, isStandortHfx } from "@/lib/multiLocation";
+import { getCancellationPeriodForProducts } from "@/lib/contractLifecycle";
 import { CreditCard } from "lucide-react"; // CreditCard used for payment section
 import foxLogoUrl from "@/assets/logo.png";
 import { useAuth } from "@/hooks/useAuth";
@@ -376,6 +377,8 @@ const emptyForm: ContractFormData = {
   lanr_count: 3,
   start_date: new Date().toISOString().split("T")[0],
   duration_months: 0, // unbefristet
+  // Nicht mehr load-bearing: alle Inserts leiten den Wert aus dem gewählten
+  // Produkt via getCancellationPeriodForProducts() ab. Neutraler Platzhalter.
   cancellation_period_months: 6,
   auto_renewal: false,
   monthly_price: 0,
@@ -1003,7 +1006,7 @@ export default function Vertraege() {
         start_date: data.start_date,
         duration_months: 0, // unbefristet
         end_date: "2099-12-31",
-        cancellation_period_months: 6,
+        cancellation_period_months: getCancellationPeriodForProducts(data.selected_products, products),
         auto_renewal: false,
         monthly_price: data.monthly_price,
         one_time_fee: data.one_time_fee,
@@ -1098,6 +1101,11 @@ export default function Vertraege() {
         // (Guard-Trigger blockt sonst jeden Edit von Nicht-Admins/-Sales-Leads durch null-Rewrite).
         delete (restRecord as any).sales_partner_id;
         delete (restRecord as any).sales_partner_name;
+        // Kündigungsfrist ist set-once-at-creation. Ein späteres Bearbeiten-
+        // Speichern (z. B. E-Mail/IBAN) darf den DB-Wert nicht überschreiben —
+        // schützt die spätere Bestandskorrektur vor stillem Reset auf den
+        // aktuellen Produktwert.
+        delete (restRecord as any).cancellation_period_months;
         const { error } = await supabase.from("contracts").update(restRecord).eq("id", editId);
         if (error) throw error;
       } else {
@@ -1654,7 +1662,7 @@ export default function Vertraege() {
         start_date: extensionForm.start_date,
         end_date: "2099-12-31",
         duration_months: 0, // unbefristet
-        cancellation_period_months: 6,
+        cancellation_period_months: getCancellationPeriodForProducts([extensionForm.product_name], products),
         auto_renewal: false,
         discount_percent: 0,
         payment_interval: base.payment_interval || "monatlich",
@@ -1912,7 +1920,7 @@ export default function Vertraege() {
           start_date: form.start_date,
           duration_months: 0,
           end_date: "2099-12-31",
-          cancellation_period_months: 6,
+          cancellation_period_months: getCancellationPeriodForProducts(form.selected_products, products),
           auto_renewal: false,
           monthly_price: form.monthly_price,
           one_time_fee: form.one_time_fee,
