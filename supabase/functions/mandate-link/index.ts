@@ -1,22 +1,37 @@
 // mandate-link
 // Öffentliche GET-Route für den Mandat-Aktivierungslink aus Mail 1
-// (`send-mandate-setup`). Ziel: Der Kunde klickt einen stabilen Link
-// mit ?contract_id=... und wird auf eine frisch gemintete Stripe-Setup-
-// Session weitergeleitet.
+// (`send-mandate-setup`) UND aus dem auto-invoice-Recovery-Pfad (Mail an
+// aktive Verträge ohne SEPA-Mandat). Ziel: Der Kunde klickt einen stabilen
+// Link mit ?contract_id=... und wird auf eine frisch gemintete Stripe-
+// Setup-Session weitergeleitet.
 //
 // Verhalten:
-// - Vertrag existiert + Status ∈ {'eingegangen','wartend_auf_mandat'} +
-//   stripe_customer_id gesetzt → neue Stripe-Setup-Session anlegen und
+// - Vertrag existiert + Status ∈ {'eingegangen','wartend_auf_mandat','aktiv'}
+//   + stripe_customer_id gesetzt → neue Stripe-Setup-Session anlegen und
 //   per 302 dorthin weiterleiten. Metadata exakt wie `send-mandate-setup`:
 //     { source: "sepa_mandate_setup", contract_id, hfx_customer_number }
 //   (Der Stripe-Webhook `handleSepaMandateSetup` findet den Vertrag
 //   ausschließlich hierüber; er aktiviert beide Status.)
 //   Nur im Erfolgsfall wird zusätzlich ein `MANDATE_LINK_OPENED`-Event
-//   in `customer_events` geschrieben (non-blocking, Fehler nur geloggt).
+//   in `customer_events` geschrieben (non-blocking, Fehler nur geloggt);
+//   das Event trägt `recovery: true`, wenn der Klick aus dem aktiv-Zweig
+//   kommt (auto-invoice-Recovery), sonst `false` (Mail 1).
 // - Alles andere (kein contract_id, ungültige UUID, nicht gefunden,
 //   falscher Status, kein stripe_customer_id, DB-/Stripe-Fehler) →
 //   302 Redirect auf ${APP_URL}/mandate-info. Keine Details, keine PII,
 //   keine Enumeration, kein Anhängen von contract_id.
+//
+// Gate 6 (nur für status === "aktiv"): Bevor eine Setup-Session gemintet
+// wird, prüfen wir bei Stripe, ob der Customer schon eine SEPA-Zahlungs-
+// methode hat. Wenn ja → redirectToInfo("active_with_existing_mandate").
+// Grund: Ein zweites SEPA-PM am selben Customer macht den Einzug mehr-
+// deutig (vgl. SKIP_AMBIGUOUS in backfill-sepa-iban). Der einzige
+// legitime aktiv-Fall ist der auto-invoice-Recovery-Pfad, wo der Customer
+// gerade frisch angelegt wurde und null PMs hat. Wir fragen bewusst
+// Stripe und NICHT `contracts.iban_masked`: Altbestandsverträge haben ein
+// gültiges Mandat, aber kein iban_masked (deshalb existiert überhaupt
+// die `backfill-sepa-iban`-Function). iban_masked ist damit kein
+// verlässliches „hat-Mandat"-Signal — Stripe ist die Wahrheit.
 //
 // HINWEIS: Inline-HTML ist auf der Functions-Domain NICHT möglich —
 // das Gateway erzwingt Content-Type: text/plain + nosniff + CSP-Sandbox.
@@ -25,9 +40,9 @@
 // Cache-Control aus demselben Header-Objekt kommt durch.)
 //
 // Ausdrücklich NICHT: Customer anlegen, Vertrag mutieren, Mail versenden,
-// Rate-Limit. Phase 3 (Token-Härtung) räumt den offenen Angriffspfad
-// "Jemand mit gültiger UUID mintet wiederholt Sessions" mit ab — hier
-// bewusst nicht gelöst.
+// Rate-Limit, Mandatswechsel/-widerruf. Phase 3 (Token-Härtung) räumt
+// den offenen Angriffspfad "Jemand mit gültiger UUID mintet wiederholt
+// Sessions" mit ab — hier bewusst nicht gelöst.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14.21.0";
@@ -86,9 +101,9 @@ Deno.serve(async (req) => {
     // Primary Key läuft (immer max. eine Zeile).
     const { data: rows, error: cErr } = await admin
       .from("contracts")
-      .select("id, status, stripe_customer_id, hfx_customer_number")
+      .select("id, status, stripe_customer_id, hfx_customer_number, iban_masked")
       .eq("id", contractId)
-      .in("status", ["eingegangen", "wartend_auf_mandat"]);
+      .in("status", ["eingegangen", "wartend_auf_mandat", "aktiv"]);
 
     if (cErr) {
       log("db error", { message: cErr.message });
@@ -114,6 +129,26 @@ Deno.serve(async (req) => {
       return redirectToInfo("stripe_key_missing");
     }
     const stripe = new Stripe(stripeKey, { apiVersion: "2024-06-20" });
+
+    // Gate 6: Bei bereits aktiven Verträgen darf nur dann ein Mandat gemintet
+    // werden, wenn der Customer noch KEINE SEPA-Zahlungsmethode hat.
+    // Grund: Ein zweites SEPA-PM am selben Customer macht den Einzug
+    // mehrdeutig (vgl. SKIP_AMBIGUOUS in backfill-sepa-iban). Der einzige
+    // legitime aktiv-Fall ist der auto-invoice-Recovery-Pfad: dort wurde der
+    // Customer gerade frisch erzeugt und hat null PMs.
+    // Stripe ist hier die Wahrheit, NICHT iban_masked — Altbestandsverträge
+    // haben ein Mandat, aber kein iban_masked (deshalb existiert backfill-sepa-iban).
+    // Kein eigener try/catch: wirft der Stripe-Aufruf, greift der äußere
+    // catch → redirectToInfo("exception"). Im Zweifel keine Session minten.
+    if (String((contract as any).status) === "aktiv") {
+      const pms = await stripe.paymentMethods.list({
+        customer: stripeCustomerId,
+        type: "sepa_debit",
+      });
+      if (pms.data.length > 0) {
+        return redirectToInfo("active_with_existing_mandate");
+      }
+    }
 
     const session = await stripe.checkout.sessions.create({
       mode: "setup",
@@ -142,7 +177,11 @@ Deno.serve(async (req) => {
         hfx_customer_number: (contract as any).hfx_customer_number ?? null,
         contract_id: contract.id,
         created_by: null,
-        event_data: { status: (contract as any).status, source: "mandate_link" },
+        event_data: {
+          status: (contract as any).status,
+          source: "mandate_link",
+          recovery: String((contract as any).status) === "aktiv",
+        },
       });
     } catch (ex) {
       log("WARN: customer_events insert failed (non-blocking)", String(ex));
