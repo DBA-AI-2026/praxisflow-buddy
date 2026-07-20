@@ -198,9 +198,6 @@ ${invoice.notes ? `<p style="color:#6b7280;font-size:14px;margin-top:12px;">${in
         `Einzugsdatum: ${collectionDateFormatted}`,
         "",
         invoice.notes ? invoice.notes : null,
-        "",
-        "Diese Rechnung wurde automatisch aus dem HFX Sales Portal erstellt.",
-        "© Honorarfuchs – HFX Sales Portal",
       ].filter(Boolean).join("\n"),
     });
 
