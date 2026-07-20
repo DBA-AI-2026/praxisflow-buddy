@@ -723,7 +723,7 @@ Deno.serve(async (req) => {
       "Bei Fragen stehen wir Ihnen unter info@hfx-honorarfuchs.de zur Verfügung.",
       "",
       "Mit freundlichen Grüßen",
-      "Ihr Honorarfuchs-Team",
+      "Ihr HFX Honorarfuchs Team",
     ].join("\n");
 
     const { html, text } = renderBrandedEmail({
