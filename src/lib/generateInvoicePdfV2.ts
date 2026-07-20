@@ -153,7 +153,7 @@ export async function generateInvoicePdfV2(
     page.drawImage(embeddedLogo, { x: logoX, y: headerTop - logoH + 10, width: logoW, height: logoH });
   } else {
     text("HFX Honorarfuchs", ML, headerTop, 18, fontBold, C_NAVY);
-    text("ein Geschäftsbereich der MCC Medical CareCapital GmbH", ML, headerTop - 16, 7, font, C_MUTED);
+    text("eine Marke der MCC Medical CareCapital GmbH", ML, headerTop - 16, 7, font, C_MUTED);
   }
 
   // Status badge removed

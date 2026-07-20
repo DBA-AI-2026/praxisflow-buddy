@@ -231,7 +231,7 @@ export function AnleitungDialog({ open, onOpenChange }: AnleitungDialogProps) {
                 </div>
 
                 <p className="text-xs text-muted-foreground pt-2">
-                  Bei Fragen: <a href="mailto:info@honorarfuchs.de" className="text-primary hover:underline">info@honorarfuchs.de</a>
+                  Bei Fragen: <a href="mailto:info@hfx-honorarfuchs.de" className="text-primary hover:underline">info@hfx-honorarfuchs.de</a>
                 </p>
               </TabsContent>
             </div>
