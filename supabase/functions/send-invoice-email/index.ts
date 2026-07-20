@@ -176,7 +176,7 @@ ${invoice.notes ? `<p style="color:#6b7280;font-size:14px;margin-top:12px;">${in
       : [];
 
     const result = await resend.emails.send({
-      from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+      from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
       reply_to: "info@hfx-honorarfuchs.de",
       to: [invoice.rechnungs_email],
       subject: `Rechnung ${invoice.invoice_number} – ${invoice.customer_name}`,
