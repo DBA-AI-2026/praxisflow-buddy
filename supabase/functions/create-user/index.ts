@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
+import { renderBrandedEmail, renderBrandedButton } from "../_shared/email-templates/baseEmailLayout.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
