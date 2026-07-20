@@ -1,5 +1,6 @@
 import { Resend } from "npm:resend@2.0.0";
 import { requireActiveRole } from "../_shared/auth.ts";
+import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
 
 /** Returns a Set of German public holiday date strings (YYYY-MM-DD) for a given year */
 function getGermanHolidays(year: number): Set<string> {
