@@ -1,5 +1,6 @@
 import { Resend } from "npm:resend@2.0.0";
 import { requireActiveRole } from "../_shared/auth.ts";
+import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
 
 /** Returns a Set of German public holiday date strings (YYYY-MM-DD) for a given year */
 function getGermanHolidays(year: number): Set<string> {
@@ -118,61 +119,57 @@ Deno.serve(async (req) => {
       ? "Der Betrag wird automatisch per SEPA-Lastschrift von Ihrem Konto eingezogen."
       : "Der Betrag wird automatisch über Stripe von Ihrem hinterlegten Zahlungsmittel eingezogen.";
 
-    const invoiceHtml = `<!DOCTYPE html>
-<html><head><style>
-  body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #ffffff; }
-  .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-  .header { background: linear-gradient(135deg, #0b367f, #1a4a9e); color: white; padding: 30px 20px; border-radius: 8px 8px 0 0; text-align: center; }
-  .content { background: #f9fafb; padding: 30px 20px; border: 1px solid #e5e7eb; border-top: none; }
-  .totals { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-top: 20px; }
-  .footer { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; font-size: 12px; color: #6b7280; }
-  table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
-  th { background: #0b367f; color: white; padding: 10px 12px; text-align: left; }
-  th:last-child, td:last-child { text-align: right; }
-</style></head><body>
-<div class="container">
-  <div class="header">
-    <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg"
-      alt="Honorarfuchs Logo" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin-bottom:12px;" />
-    <h1 style="margin:0;font-size:26px;">Rechnung ${invoice.invoice_number}</h1>
-    <p style="margin:8px 0 0;opacity:0.9;">Honorarfuchs – HFX Sales Portal</p>
-  </div>
-  <div class="content">
-    <p style="font-size:16px;">Sehr geehrte Damen und Herren,</p>
-    <p>anbei erhalten Sie Ihre Rechnung <strong>${invoice.invoice_number}</strong> vom <strong>${new Date(invoice.invoice_date).toLocaleDateString("de-DE")}</strong>.</p>
-    <p><strong>Rechnungsempfänger:</strong> ${invoice.customer_name}${invoice.customer_number ? ` (${invoice.customer_number})` : ""}</p>
-    ${invoice.adresse ? `<p><strong>Adresse:</strong> ${invoice.adresse}${invoice.plz ? `, ${invoice.plz}` : ""}${invoice.ort ? ` ${invoice.ort}` : ""}</p>` : ""}
+    const bodyHtml = `<p style="font-size:16px;">Sehr geehrte Damen und Herren,</p>
+<p>anbei erhalten Sie Ihre Rechnung <strong>${invoice.invoice_number}</strong> vom <strong>${new Date(invoice.invoice_date).toLocaleDateString("de-DE")}</strong>.</p>
+<p><strong>Rechnungsempfänger:</strong> ${invoice.customer_name}${invoice.customer_number ? ` (${invoice.customer_number})` : ""}</p>
+${invoice.adresse ? `<p><strong>Adresse:</strong> ${invoice.adresse}${invoice.plz ? `, ${invoice.plz}` : ""}${invoice.ort ? ` ${invoice.ort}` : ""}</p>` : ""}
 
-    <table style="margin-top:20px;">
-      <thead><tr>
-        <th>Beschreibung</th><th style="text-align:right;">Menge</th>
-        <th style="text-align:right;">Einzelpreis</th><th style="text-align:right;">Gesamt</th>
-      </tr></thead>
-      <tbody>${positionsHtml}</tbody>
-    </table>
+<table style="width:100%;border-collapse:collapse;background:#ffffff;border-radius:8px;overflow:hidden;margin-top:20px;">
+  <thead><tr>
+    <th style="background:#0b367f;color:#ffffff;padding:10px 12px;text-align:left;">Beschreibung</th>
+    <th style="background:#0b367f;color:#ffffff;padding:10px 12px;text-align:right;">Menge</th>
+    <th style="background:#0b367f;color:#ffffff;padding:10px 12px;text-align:right;">Einzelpreis</th>
+    <th style="background:#0b367f;color:#ffffff;padding:10px 12px;text-align:right;">Gesamt</th>
+  </tr></thead>
+  <tbody>${positionsHtml}</tbody>
+</table>
 
-    <div class="totals">
-      <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Nettobetrag:</span><strong>${Number(invoice.net_amount).toFixed(2)} €</strong></div>
-      <div style="display:flex;justify-content:space-between;padding:4px 0;color:#6b7280;"><span>MwSt. (${invoice.tax_rate}%):</span><span>${Number(invoice.tax_amount).toFixed(2)} €</span></div>
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #0b367f;margin-top:8px;font-size:18px;"><span><strong>Gesamtbetrag:</strong></span><strong style="color:#0b367f;">${Number(invoice.gross_amount).toFixed(2)} €</strong></div>
-    </div>
-
-    <div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
-      <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug</strong></p>
-      <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">${paymentMethodNote}</p>
-      <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">📅 <strong>Einzugsdatum:</strong> ${collectionDateFormatted}</p>
-    </div>
-    ${invoice.notes ? `<p style="color:#6b7280;font-size:14px;margin-top:12px;">${invoice.notes}</p>` : ""}
-  </div>
-  <div class="footer">
-    <p style="font-weight:600;color:#374151;">HFX Honorarfuchs – ein Geschäftsbereich von MCC Medical CareCapital GmbH</p>
-    <p>Hohenzollernstr. 47, 47799 Krefeld</p>
-    <p>Geschäftsführung: Olaf Hagelkruys, Thilo Wiers-Keiser, Robbin Zielke &nbsp;·&nbsp; Amtsgericht Krefeld, HRB 14709</p>
-    <p>USt-Id-Nr: DE 227 420 712 &nbsp;·&nbsp; <a href="https://www.hfx-honorarfuchs.de" style="color:#0b367f;">www.hfx-honorarfuchs.de</a></p>
-    <p style="margin-top:8px;color:#9ca3af;">Diese Rechnung wurde automatisch aus dem HFX Sales Portal erstellt.</p>
-  </div>
+<div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-top:20px;">
+  <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Nettobetrag:</span><strong>${Number(invoice.net_amount).toFixed(2)} €</strong></div>
+  <div style="display:flex;justify-content:space-between;padding:4px 0;color:#6b7280;"><span>MwSt. (${invoice.tax_rate}%):</span><span>${Number(invoice.tax_amount).toFixed(2)} €</span></div>
+  <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #0b367f;margin-top:8px;font-size:18px;"><span><strong>Gesamtbetrag:</strong></span><strong style="color:#0b367f;">${Number(invoice.gross_amount).toFixed(2)} €</strong></div>
 </div>
-</body></html>`;
+
+<div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
+  <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>Automatischer Einzug</strong></p>
+  <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">${paymentMethodNote}</p>
+  <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;"><strong>Einzugsdatum:</strong> ${collectionDateFormatted}</p>
+</div>
+${invoice.notes ? `<p style="color:#6b7280;font-size:14px;margin-top:12px;">${invoice.notes}</p>` : ""}`;
+
+    const bodyText = [
+      "Sehr geehrte Damen und Herren,",
+      "",
+      `anbei erhalten Sie Ihre Rechnung ${invoice.invoice_number} vom ${new Date(invoice.invoice_date).toLocaleDateString("de-DE")}.`,
+      "",
+      `Rechnungsempfänger: ${invoice.customer_name}${invoice.customer_number ? ` (${invoice.customer_number})` : ""}`,
+      invoice.adresse ? `Adresse: ${invoice.adresse}${invoice.plz ? `, ${invoice.plz}` : ""}${invoice.ort ? ` ${invoice.ort}` : ""}` : null,
+      "",
+      `Nettobetrag: ${Number(invoice.net_amount).toFixed(2)} €`,
+      `MwSt. (${invoice.tax_rate}%): ${Number(invoice.tax_amount).toFixed(2)} €`,
+      `Gesamtbetrag: ${Number(invoice.gross_amount).toFixed(2)} €`,
+      "",
+      `${paymentMethodNote}`,
+      `Einzugsdatum: ${collectionDateFormatted}`,
+      "",
+      invoice.notes ? invoice.notes : null,
+    ].filter(Boolean).join("\n");
+
+    const { html: invoiceHtml } = renderBrandedEmail({
+      subheadline: "Ihre Rechnung",
+      bodyHtml,
+      bodyText,
+    });
 
     const attachment = pdfBase64
       ? [{ filename: `Rechnung-${invoice.invoice_number}.pdf`, content: pdfBase64 }]
@@ -185,26 +182,7 @@ Deno.serve(async (req) => {
       subject: `Rechnung ${invoice.invoice_number} – ${invoice.customer_name}`,
       html: invoiceHtml,
       attachments: attachment,
-      text: [
-        "Sehr geehrte Damen und Herren,",
-        "",
-        `anbei erhalten Sie Ihre Rechnung ${invoice.invoice_number} vom ${new Date(invoice.invoice_date).toLocaleDateString("de-DE")}.`,
-        "",
-        `Rechnungsempfänger: ${invoice.customer_name}${invoice.customer_number ? ` (${invoice.customer_number})` : ""}`,
-        invoice.adresse ? `Adresse: ${invoice.adresse}${invoice.plz ? `, ${invoice.plz}` : ""}${invoice.ort ? ` ${invoice.ort}` : ""}` : null,
-        "",
-        `Nettobetrag: ${Number(invoice.net_amount).toFixed(2)} €`,
-        `MwSt. (${invoice.tax_rate}%): ${Number(invoice.tax_amount).toFixed(2)} €`,
-        `Gesamtbetrag: ${Number(invoice.gross_amount).toFixed(2)} €`,
-        "",
-        `${paymentMethodNote}`,
-        `Einzugsdatum: ${collectionDateFormatted}`,
-        "",
-        invoice.notes ? invoice.notes : null,
-        "",
-        "Diese Rechnung wurde automatisch aus dem HFX Sales Portal erstellt.",
-        "© Honorarfuchs – HFX Sales Portal",
-      ].filter(Boolean).join("\n"),
+      text: bodyText,
     });
 
     // Phase 2: customer_revenues INSERT entfernt – invoices ist die führende Quelle.
