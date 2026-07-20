@@ -182,23 +182,7 @@ ${invoice.notes ? `<p style="color:#6b7280;font-size:14px;margin-top:12px;">${in
       subject: `Rechnung ${invoice.invoice_number} – ${invoice.customer_name}`,
       html: invoiceHtml,
       attachments: attachment,
-      text: [
-        "Sehr geehrte Damen und Herren,",
-        "",
-        `anbei erhalten Sie Ihre Rechnung ${invoice.invoice_number} vom ${new Date(invoice.invoice_date).toLocaleDateString("de-DE")}.`,
-        "",
-        `Rechnungsempfänger: ${invoice.customer_name}${invoice.customer_number ? ` (${invoice.customer_number})` : ""}`,
-        invoice.adresse ? `Adresse: ${invoice.adresse}${invoice.plz ? `, ${invoice.plz}` : ""}${invoice.ort ? ` ${invoice.ort}` : ""}` : null,
-        "",
-        `Nettobetrag: ${Number(invoice.net_amount).toFixed(2)} €`,
-        `MwSt. (${invoice.tax_rate}%): ${Number(invoice.tax_amount).toFixed(2)} €`,
-        `Gesamtbetrag: ${Number(invoice.gross_amount).toFixed(2)} €`,
-        "",
-        `${paymentMethodNote}`,
-        `Einzugsdatum: ${collectionDateFormatted}`,
-        "",
-        invoice.notes ? invoice.notes : null,
-      ].filter(Boolean).join("\n"),
+      text: bodyText,
     });
 
     // Phase 2: customer_revenues INSERT entfernt – invoices ist die führende Quelle.
