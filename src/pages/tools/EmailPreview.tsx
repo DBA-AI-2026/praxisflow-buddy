@@ -1463,11 +1463,35 @@ export default function EmailPreview() {
                 {groupTemplates.map((tpl) => (
                   <div key={tpl.id} className="rounded-xl border border-border bg-card p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         {tpl.type === "pdf" ? <FileText className="w-4 h-4 text-primary" /> : <Mail className="w-4 h-4 text-primary" />}
                         <span className="font-semibold text-foreground">{tpl.label}</span>
-                        {(hasCustom(tpl, "email") || (tpl.id === "invoice" && hasCustom(tpl, "pdf"))) && (
-                          <span className="ml-auto text-[10px] font-medium bg-warning/20 text-warning-foreground px-1.5 py-0.5 rounded border border-warning/30">Bearbeitet</span>
+                        {WIRED_IDS.has(tpl.id) && (
+                          <span
+                            className="ml-auto text-[10px] font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30"
+                            title="Vorschau kommt aus dem Live-SSOT (renderBrandedEmail)."
+                          >
+                            Live-SSOT
+                          </span>
+                        )}
+                        {STALE_IDS.has(tpl.id) && (
+                          <span
+                            className="ml-auto text-[10px] font-medium bg-amber-500/15 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/40"
+                            title="Diese Vorschau ist ein Mock — die echte Live-Mail wurde noch nicht auf renderBrandedEmail umgestellt."
+                          >
+                            Vorschau veraltet — Live-Mail noch nicht umgestellt
+                          </span>
+                        )}
+                        {NO_LIVE_IDS.has(tpl.id) && (
+                          <span
+                            className="ml-auto text-[10px] font-medium bg-muted text-muted-foreground px-1.5 py-0.5 rounded border border-border"
+                            title="Für diese Vorlage gibt es keine echte Live-Mail (Leiche oder reine PDF-Vorschau)."
+                          >
+                            Kein Live-Pendant
+                          </span>
+                        )}
+                        {!WIRED_IDS.has(tpl.id) && (hasCustom(tpl, "email") || (tpl.id === "invoice" && hasCustom(tpl, "pdf"))) && (
+                          <span className="text-[10px] font-medium bg-warning/20 text-warning-foreground px-1.5 py-0.5 rounded border border-warning/30">Bearbeitet</span>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">{tpl.description}</p>
@@ -1476,8 +1500,9 @@ export default function EmailPreview() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-6 px-2 text-muted-foreground hover:text-destructive"
-                          title="Vorlage löschen"
+                          className="h-6 px-2 text-muted-foreground hover:text-destructive disabled:opacity-40 disabled:cursor-not-allowed"
+                          title={WIRED_IDS.has(tpl.id) ? "Vorschau ist an den Live-SSOT gebunden" : "Vorlage löschen"}
+                          disabled={WIRED_IDS.has(tpl.id)}
                           onClick={() => setDeleteConfirmId(tpl.id)}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1502,7 +1527,9 @@ export default function EmailPreview() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="gap-1.5"
+                            className="gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                            disabled={WIRED_IDS.has(tpl.id)}
+                            title={WIRED_IDS.has(tpl.id) ? "Vorschau ist an den Live-SSOT gebunden" : undefined}
                             onClick={() => openAiEditor(tpl, "email")}
                           >
                             <Sparkles className="w-3.5 h-3.5" />
@@ -1511,7 +1538,9 @@ export default function EmailPreview() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="gap-1.5"
+                            className="gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                            disabled={WIRED_IDS.has(tpl.id)}
+                            title={WIRED_IDS.has(tpl.id) ? "Vorschau ist an den Live-SSOT gebunden" : undefined}
                             onClick={() => openEdit(tpl, "email")}
                           >
                             <Pencil className="w-3.5 h-3.5" />
@@ -1521,8 +1550,9 @@ export default function EmailPreview() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="px-2 text-muted-foreground"
-                              title="Zurücksetzen"
+                              className="px-2 text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                              title={WIRED_IDS.has(tpl.id) ? "Vorschau ist an den Live-SSOT gebunden" : "Zurücksetzen"}
+                              disabled={WIRED_IDS.has(tpl.id)}
                               onClick={() => resetTemplate(tpl, "email")}
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
@@ -1532,6 +1562,7 @@ export default function EmailPreview() {
                       )}
                     </div>
                     )}
+
 
 
                     {/* PDF row – live pdf-lib preview (booking-link, post-payment-contract-pdf, invoice) */}
