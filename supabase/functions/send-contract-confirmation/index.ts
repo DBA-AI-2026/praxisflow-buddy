@@ -25,6 +25,7 @@ import {
   hexToRgb01,
 } from "../_shared/pdfDesignTokens.ts";
 import { resolveAgbForCandidates } from "../_shared/agbResolver.ts";
+import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
 
 
 const corsHeaders = {
@@ -677,69 +678,59 @@ Deno.serve(async (req) => {
     const greeting = anrede ? `Sehr geehrte/r ${anrede}` : "Sehr geehrte Damen und Herren";
     const hfxNr = contract.hfx_customer_number || "–";
 
-    let html: string;
-    {
-      // Default hardcoded template (Brücken-Mitteilung, ohne Buchungs-Link)
-      console.log("[send-contract-confirmation] Using activated-contract template (Variant B)");
+    console.log("[send-contract-confirmation] Using activated-contract template (Variant B)");
 
-      html = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="de">
-<head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ihr Vertrag ist aktiviert</title>
-</head>
-<body style="margin:0;padding:0;background-color:#f4f6fa;font-family:Arial,Verdana,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f6fa;">
-    <tr><td align="center" style="padding:40px 10px;">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="background-color:#ffffff;max-width:600px;width:100%;">
-        <tr>
-          <td align="center" style="background-color:#0b367f;padding:36px 40px;">
-            <p style="color:#ffffff;font-size:24px;font-weight:700;margin:0;">HFX Honorarfuchs</p>
-            <p style="color:#cccccc;font-size:13px;margin:6px 0 0;">Ihr Vertrag ist aktiviert</p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:36px 40px 24px;">
-            <p style="color:#1a1a2e;font-size:16px;margin:0 0 16px;">${greeting},</p>
-            <p style="color:#374151;font-size:14px;line-height:22px;margin:0 0 16px;">
-              vielen Dank f&uuml;r Ihren Vertragsabschluss bei Honorarfuchs. Ihre SEPA-Bankverbindung haben wir erhalten und Ihr Vertrag ist nun aktiviert. Im Anhang finden Sie Ihre Vertrags&uuml;bersicht sowie unsere AGB als PDF.
-            </p>
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;margin:8px 0 18px;">
-              <tr><td style="padding:14px 18px;color:#374151;font-size:13px;line-height:20px;">
-                <strong>Vertragsnummer:</strong> ${hfxNr}<br/>
-                <strong>Produkt:</strong> ${contract.product_name || "–"}<br/>
-                <strong>Monatlicher Gesamtbetrag:</strong> ${(Number(contract.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} &euro;
-              </td></tr>
-            </table>
-            <p style="color:#374151;font-size:14px;line-height:22px;margin:0 0 16px;">
-              Erste Lastschrift erfolgt zum 1. des kommenden Monats.
-            </p>
-            <p style="color:#374151;font-size:14px;line-height:22px;margin:0 0 16px;">
-              Die AGB und Ihre Vertrags&uuml;bersicht finden Sie als PDF im Anhang dieser E-Mail.
-            </p>
-            <p style="color:#374151;font-size:14px;line-height:22px;margin:0 0 16px;">
-              Bei Fragen stehen wir Ihnen unter <a href="mailto:info@hfx-honorarfuchs.de" style="color:#0b367f;">info@hfx-honorarfuchs.de</a> zur Verf&uuml;gung.
-            </p>
-            <p style="color:#374151;font-size:14px;line-height:22px;margin:24px 0 0;">
-              Mit freundlichen Gr&uuml;&szlig;en<br />
-              <strong>Ihr Honorarfuchs-Team</strong>
-            </p>
-          </td>
-        </tr>
-        <tr>
-          <td style="background-color:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
-            <p style="color:#9ca3af;font-size:11px;margin:0;">
-              HFX Honorarfuchs &mdash; eine Marke der MCC Medical CareCapital GmbH
-            </p>
-          </td>
-        </tr>
+    const monthlyFormatted = (Number(contract.monthly_price) || 0).toLocaleString("de-DE", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+    const bodyHtml = `
+      <p style="margin:0 0 16px 0;">${greeting},</p>
+      <p style="margin:0 0 16px 0;">
+        vielen Dank f&uuml;r Ihren Vertragsabschluss bei Honorarfuchs. Ihre SEPA-Bankverbindung haben wir erhalten und Ihr Vertrag ist nun aktiviert. Im Anhang finden Sie Ihre Vertrags&uuml;bersicht sowie unsere AGB als PDF.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;margin:8px 0 18px;">
+        <tr><td style="padding:14px 18px;color:#374151;font-size:11pt;line-height:1.5;font-family:verdana,geneva,sans-serif;">
+          <strong>Vertragsnummer:</strong> ${hfxNr}<br/>
+          <strong>Produkt:</strong> ${contract.product_name || "–"}<br/>
+          <strong>Monatlicher Gesamtbetrag:</strong> ${monthlyFormatted} &euro;
+        </td></tr>
       </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
-    }
+      <p style="margin:0 0 16px 0;">Erste Lastschrift erfolgt zum 1. des kommenden Monats.</p>
+      <p style="margin:0 0 16px 0;">Die AGB und Ihre Vertrags&uuml;bersicht finden Sie als PDF im Anhang dieser E-Mail.</p>
+      <p style="margin:0 0 16px 0;">
+        Bei Fragen stehen wir Ihnen unter <a href="mailto:info@hfx-honorarfuchs.de" style="color:#0b367f;">info@hfx-honorarfuchs.de</a> zur Verf&uuml;gung.
+      </p>
+      <p style="margin:24px 0 0 0;">
+        Mit freundlichen Gr&uuml;&szlig;en<br />
+        <strong>Ihr Honorarfuchs-Team</strong>
+      </p>`;
+
+    const bodyText = [
+      `${greeting},`,
+      "",
+      "vielen Dank für Ihren Vertragsabschluss bei Honorarfuchs. Ihre SEPA-Bankverbindung haben wir erhalten und Ihr Vertrag ist nun aktiviert. Im Anhang finden Sie Ihre Vertragsübersicht sowie unsere AGB als PDF.",
+      "",
+      `Vertragsnummer: ${hfxNr}`,
+      `Produkt: ${contract.product_name || "–"}`,
+      `Monatlicher Gesamtbetrag: ${monthlyFormatted} €`,
+      "",
+      "Erste Lastschrift erfolgt zum 1. des kommenden Monats.",
+      "",
+      "Die AGB und Ihre Vertragsübersicht finden Sie als PDF im Anhang dieser E-Mail.",
+      "",
+      "Bei Fragen stehen wir Ihnen unter info@hfx-honorarfuchs.de zur Verfügung.",
+      "",
+      "Mit freundlichen Grüßen",
+      "Ihr Honorarfuchs-Team",
+    ].join("\n");
+
+    const { html, text } = renderBrandedEmail({
+      subheadline: "Ihr Vertrag ist aktiviert",
+      bodyHtml,
+      bodyText,
+    });
 
     // Build attachments
     const attachments: Array<{ filename: string; content: string }> = [
@@ -761,26 +752,7 @@ Deno.serve(async (req) => {
         to: [contract.email],
         subject: `Ihre Vertragsbestätigung — SEPA-Lastschrift eingerichtet${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}`,
         html,
-        text: [
-          `${greeting},`,
-          "",
-          "vielen Dank für Ihren Vertragsabschluss bei Honorarfuchs. Ihre SEPA-Bankverbindung haben wir erhalten und Ihr Vertrag ist nun aktiviert. Im Anhang finden Sie Ihre Vertragsübersicht sowie unsere AGB als PDF.",
-          "",
-          `Vertragsnummer: ${hfxNr}`,
-          `Produkt: ${contract.product_name || "–"}`,
-          `Monatlicher Gesamtbetrag: ${(Number(contract.monthly_price) || 0).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`,
-          "",
-          "Erste Lastschrift erfolgt zum 1. des kommenden Monats.",
-          "",
-          "Die AGB und Ihre Vertragsübersicht finden Sie als PDF im Anhang dieser E-Mail.",
-          "",
-          "Bei Fragen stehen wir Ihnen unter info@hfx-honorarfuchs.de zur Verfügung.",
-          "",
-          "Mit freundlichen Grüßen",
-          "Ihr Honorarfuchs-Team",
-          "",
-          "HFX Honorarfuchs — eine Marke der MCC Medical CareCapital GmbH",
-        ].join("\n"),
+        text,
         attachments,
       }),
     });
