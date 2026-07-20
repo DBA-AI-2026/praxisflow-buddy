@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
   </tr>
   <tr>
     <td style="background-color:#f8f8f8;padding:16px 40px;border-top:1px solid #eeeeee;text-align:center;">
-      <p style="font-size:9pt;color:#aaaaaa;margin:0;">© Honorarfuchs GmbH · Bei Fragen: info@honorarfuchs.de</p>
+      <p style="font-size:9pt;color:#aaaaaa;margin:0;">© 2026 HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH · Bei Fragen: info@hfx-honorarfuchs.de</p>
     </td>
   </tr>
 </table>
@@ -334,7 +334,7 @@ Deno.serve(async (req) => {
   </tr>
   <tr>
     <td style="background-color:#f8f8f8;padding:16px 40px;border-top:1px solid #eeeeee;text-align:center;">
-      <p style="font-size:9pt;color:#aaaaaa;margin:0;">© Honorarfuchs GmbH · Bei Fragen: info@honorarfuchs.de</p>
+      <p style="font-size:9pt;color:#aaaaaa;margin:0;">© 2026 HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH · Bei Fragen: info@hfx-honorarfuchs.de</p>
     </td>
   </tr>
 </table>
