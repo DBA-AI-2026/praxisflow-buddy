@@ -23,14 +23,43 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
 import { showPdfInViewer } from "@/lib/pdfViewerState";
 import { Textarea } from "@/components/ui/textarea";
+import { renderBrandedEmail, renderBrandedButton } from "@/lib/emailLayout";
 
-// ─── Logo URLs ────────────────────────────────────────────────────────────────
+// ─── Logo URLs (Legacy — nur noch für STALE/NO_LIVE-Vorschauen relevant) ──────
 const LOGO_OLD = "https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg";
 const LOGO_NEW = "https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fuchs-bildmarke.png";
 
 function patchLogo(html: string): string {
   return html.split(LOGO_OLD).join(LOGO_NEW);
 }
+
+// IDs, deren Vorschau ECHT über renderBrandedEmail (SSOT) gebaut wird.
+// Für diese: kein patchLogo, kein Editor, kein KI, kein Löschen, kein Reset.
+const WIRED_IDS: ReadonlySet<string> = new Set([
+  "lead-confirmation",
+  "invoice",
+  "dashboard-credentials",
+  "ad-new-lead",
+]);
+
+// STALE: Live-Mail existiert, aber wurde noch nicht auf renderBrandedEmail migriert.
+const STALE_IDS: ReadonlySet<string> = new Set([
+  "contract-customer",
+  "contract-customer-pdf-send",
+  "contract-partner",
+  "demo-expiry-customer",
+  "ad-tipp-lead",
+  "ad-demo-reminder",
+  "ad-lead-assignment",
+  "admin-access-request",
+]);
+
+// NO_LIVE: Kein Live-Mail-Pendant (Leiche oder PDF-Vorschau).
+const NO_LIVE_IDS: ReadonlySet<string> = new Set([
+  "contract-paper-confirmation",
+  "booking-link",
+  "invoice-pdf",
+]);
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK = {
@@ -211,171 +240,34 @@ const TEMPLATES: Template[] = [
 // ─── HTML builders ────────────────────────────────────────────────────────────
 function buildLeadConfirmationHtml() {
   const { hfx_customer_number, generated_password, praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum } = MOCK;
-  return `<table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="600">
-<tr><td align="center" valign="top" bgcolor="#ffffff">
-<img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/Mailheader-Neutral-hfx-1200px.png" alt="Honorarfuchs" width="600" height="80" border="0" style="border-width:0px;" />
-</td></tr>
-<tr><td bgcolor="#ffffff" align="center">
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="600"><tbody><tr><td style="width:10px;"></td><td style="width:580px;">
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="580">
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="90">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#444444;">
-<strong>Danke für Ihr Interesse am Honorarfuchs!<br>Entdecken Sie, was KI aus Ihrer Privatabrechnung holt.</strong>
-</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="30">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Mit HFX.GOÄ gewinnen Sie schnell Klarheit über Ihre Abrechnung. Erkennen Sie Optimierungspotenziale, prüfen Sie Ihre Daten strukturiert und verschaffen Sie sich ein besseres Gefühl für Ihre Privatliquidation – ganz ohne Aufwand.</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Das erwartet Sie:</strong><br>Einfacher Import Ihrer Abrechnungsdaten<br>Verständliche Analyse statt komplizierter Prüfung<br>Mehr Transparenz und Sicherheit bei der GOÄ-Abrechnung</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Sie nutzen noch kein Abrechnungszentrum?</strong><br>Für die Nutzung von HFX.GOÄ benötigen Sie eine PAD- oder PADnext-Datei. Wenn Ihnen das gerade nichts sagt, kümmern wir uns darum: Ein Mitarbeiter meldet sich zeitnah bei Ihnen und begleitet Sie Schritt für Schritt durch die technischen Voraussetzungen.</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="30">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Ihre Zugangsdaten für HFX.GOÄ:</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td>
-<table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8; border-radius:8px; border:1px solid #d0d5dd;">
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;">
-<strong>E-Mail:</strong> ${email}<br>
-<strong>Passwort:</strong> <code style="background:#fff; padding:2px 8px; border-radius:4px; font-size:13pt; letter-spacing:1px;">${generated_password}</code><br>
-<strong>Name (Kundennummer):</strong> ${hfx_customer_number}
-</td></tr></table>
-</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#888888; font-family:verdana, geneva, sans-serif; font-size:10pt; line-height:14pt;"><em>Bitte bewahren Sie diese Zugangsdaten sicher auf. Sie benötigen sie für die Anmeldung in HFX.GOÄ.</em></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td></tr>
-<tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#444444;"><strong>Jetzt Testversion downloaden und starten!</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="5">&nbsp;</td></tr>
-<tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:10pt; line-height:12pt; color:#444444;">Sie benötigen dafür eine PAD/PAD.next-Schnittstelle.</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="15">&nbsp;</td></tr>
-<tr><td>
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="580"><tr>
-<td align="center" valign="top" width="290" style="padding: 10px;">
-<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border: 1px solid #6d6d6d; border-radius: 6px; width: 100%;"><tr><td align="center" style="padding:0;">
-<a href="https://download.qodia.de/production/hfx/latest/mac/hfx-desktop.dmg" target="_blank" rel="noopener noreferrer" style="display:block; padding:20px 10px; text-decoration:none; color:#444444; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; line-height:16pt;">
-<img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/apple-100.png" width="25" height="25" alt="" style="vertical-align:middle; border:0; margin-right:10px;">Download MacOS
-</a>
-</td></tr></table></td>
-<td align="center" valign="top" width="290" style="padding: 10px;">
-<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border: 1px solid #6d6d6d; border-radius: 6px; width: 100%;"><tr><td align="center" style="padding:0;">
-<a href="https://download.qodia.de/production/hfx/latest/windows/hfx-desktop.exe" target="_blank" rel="noopener noreferrer" style="display:block; padding:20px 10px; text-decoration:none; color:#444444; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; line-height:16pt;">
-<img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/Windows.png" width="25" height="25" alt="" style="vertical-align:middle; border:0; margin-right:10px;">Download Windows
-</a>
-</td></tr></table></td>
-</tr></table>
-</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="60">&nbsp;</td></tr>
-<tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#0b367f;"><strong>So funktioniert HFX.GOÄ</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="6">&nbsp;</td></tr>
-<tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:10pt; color:#888888;">In 5 einfachen Schritten zur optimierten Abrechnung</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="24">&nbsp;</td></tr>
-<tr><td>
-<table border="0" cellpadding="0" cellspacing="0" width="100%">
-
-<tr><td style="padding-bottom:10px;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f5ff; border-radius:8px; border-left:4px solid #0b367f;">
-<tr>
-  <td width="52" align="center" valign="top" style="padding:14px 0 14px 14px;">
-    <div style="background:#0b367f; color:#ffffff; font-family:verdana,sans-serif; font-size:13pt; font-weight:bold; width:32px; height:32px; border-radius:50%; text-align:center; line-height:32px;">1</div>
-  </td>
-  <td valign="top" style="padding:14px 14px 14px 10px; font-family:verdana, geneva, sans-serif; font-size:11pt; color:#333333; line-height:18pt;">
-    <strong style="color:#0b367f;">Vorbereitung – Daten bereitstellen</strong><br>
-    Patientenverwaltungssystem kurz offline nehmen<br>
-    PAD-Datei aus dem PVS exportieren<br>
-    <span style="color:#0b367f;">→ Saubere Ausgangsbasis für die Analyse</span>
-  </td>
-</tr>
-</table>
-</td></tr>
-
-<tr><td style="padding-bottom:10px;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f5ff; border-radius:8px; border-left:4px solid #0b367f;">
-<tr>
-  <td width="52" align="center" valign="top" style="padding:14px 0 14px 14px;">
-    <div style="background:#0b367f; color:#ffffff; font-family:verdana,sans-serif; font-size:13pt; font-weight:bold; width:32px; height:32px; border-radius:50%; text-align:center; line-height:32px;">2</div>
-  </td>
-  <td valign="top" style="padding:14px 14px 14px 10px; font-family:verdana, geneva, sans-serif; font-size:11pt; color:#333333; line-height:18pt;">
-    <strong style="color:#0b367f;">Import – Daten in HFX.GOÄ laden</strong><br>
-    PAD-Datei hochladen<br>
-    Keine Einrichtung notwendig<br>
-    <span style="color:#0b367f;">→ Der Import erfolgt in wenigen Sekunden</span>
-  </td>
-</tr>
-</table>
-</td></tr>
-
-<tr><td style="padding-bottom:10px;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f5ff; border-radius:8px; border-left:4px solid #0b367f;">
-<tr>
-  <td width="52" align="center" valign="top" style="padding:14px 0 14px 14px;">
-    <div style="background:#0b367f; color:#ffffff; font-family:verdana,sans-serif; font-size:13pt; font-weight:bold; width:32px; height:32px; border-radius:50%; text-align:center; line-height:32px;">3</div>
-  </td>
-  <td valign="top" style="padding:14px 14px 14px 10px; font-family:verdana, geneva, sans-serif; font-size:11pt; color:#333333; line-height:18pt;">
-    <strong style="color:#0b367f;">Analyse – Abrechnung prüfen lassen</strong><br>
-    Analyse per Klick starten<br>
-    Auffälligkeiten &amp; Potenziale erkennen<br>
-    <span style="color:#0b367f;">→ Automatisiert, strukturiert, nachvollziehbar</span>
-  </td>
-</tr>
-</table>
-</td></tr>
-
-<tr><td style="padding-bottom:10px;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f5ff; border-radius:8px; border-left:4px solid #0b367f;">
-<tr>
-  <td width="52" align="center" valign="top" style="padding:14px 0 14px 14px;">
-    <div style="background:#0b367f; color:#ffffff; font-family:verdana,sans-serif; font-size:13pt; font-weight:bold; width:32px; height:32px; border-radius:50%; text-align:center; line-height:32px;">4</div>
-  </td>
-  <td valign="top" style="padding:14px 14px 14px 10px; font-family:verdana, geneva, sans-serif; font-size:11pt; color:#333333; line-height:18pt;">
-    <strong style="color:#0b367f;">Entscheidung – Optimierungen bewerten</strong><br>
-    Vorschläge prüfen &amp; Entscheidungen selbst treffen<br>
-    Keine automatischen Änderungen<br>
-    <span style="color:#0b367f;">→ Sie behalten jederzeit die Kontrolle</span>
-  </td>
-</tr>
-</table>
-</td></tr>
-
-<tr><td style="padding-bottom:0;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f5ff; border-radius:8px; border-left:4px solid #0b367f;">
-<tr>
-  <td width="52" align="center" valign="top" style="padding:14px 0 14px 14px;">
-    <div style="background:#0b367f; color:#ffffff; font-family:verdana,sans-serif; font-size:13pt; font-weight:bold; width:32px; height:32px; border-radius:50%; text-align:center; line-height:32px;">5</div>
-  </td>
-  <td valign="top" style="padding:14px 14px 14px 10px; font-family:verdana, geneva, sans-serif; font-size:11pt; color:#333333; line-height:18pt;">
-    <strong style="color:#0b367f;">Abschluss – Optimierte Abrechnung übergeben</strong><br>
-    Neue PAD-Datei speichern &amp; optional ins PVS laden<br>
-    Übergabe an Ihr Abrechnungszentrum<br>
-    <span style="color:#0b367f;">→ Abrechnung wie gewohnt – nur optimiert</span>
-  </td>
-</tr>
-</table>
-</td></tr>
-
-</table>
-</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="24">&nbsp;</td></tr>
-<tr><td align="center" valign="top" style="background:#0b367f; border-radius:8px; padding:14px 20px; color:#ffffff; font-family:verdana, geneva, sans-serif; font-size:11pt; line-height:18pt;"><strong>Alle Schritte erfolgen lokal und nachvollziehbar!<br>Sie behalten jederzeit die volle Kontrolle über Ihre Abrechnungsdaten.</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="60">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Folgende Daten haben Sie an uns übermittelt:</strong></td></tr>
-<tr><td>
-<table border="0" cellpadding="3" cellspacing="0" width="100%"><tbody>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"><strong>Praxisdaten</strong></td><td></td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Praxisname:</td><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${praxis_name}&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Vorname:</td><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${vorname}&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Nachname:</td><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${nachname}&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">E-Mail:</td><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${email}&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">PLZ:</td><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${plz}&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Mobilnummer:</td><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${mobilnummer}&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td><td></td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"><strong>Abrechnungszentrum</strong></td><td></td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Nutzen Sie ein Abrechnungszentrum?</td><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${abrechnungszentrum}&nbsp;</td></tr>
-</tbody></table>
-</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="60">&nbsp;</td></tr>
-<tr><td align="center" valign="top" style="color:#888888; font-family:verdana, geneva, sans-serif; font-size:9pt;">© ${new Date().getFullYear()} Honorarfuchs · Qodia GmbH</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td></tr>
-</table></td></tr></table></td></tr></table></td></tr></table>`;
+  const bodyHtml = `
+    <p style="margin:0 0 16px 0;font-size:16pt;line-height:24pt;color:#444;"><strong>Danke für Ihr Interesse an HFX Honorarfuchs!</strong><br>Entdecken Sie, was KI aus Ihrer Privatabrechnung holt.</p>
+    <p style="margin:0 0 16px 0;font-size:12pt;line-height:18pt;color:#444;">Mit HFX.GOÄ gewinnen Sie schnell Klarheit über Ihre Abrechnung. Erkennen Sie Optimierungspotenziale, prüfen Sie Ihre Daten strukturiert und verschaffen Sie sich ein besseres Gefühl für Ihre Privatliquidation – ganz ohne Aufwand.</p>
+    <p style="margin:0 0 8px 0;font-size:12pt;line-height:18pt;color:#444;"><strong>Ihre Zugangsdaten für HFX.GOÄ:</strong></p>
+    <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8;border-radius:8px;border:1px solid #d0d5dd;margin-bottom:16px;">
+      <tr><td style="color:#444;font-size:12pt;line-height:20pt;">
+        <strong>E-Mail:</strong> ${email}<br>
+        <strong>Passwort:</strong> <code style="background:#fff;padding:2px 8px;border-radius:4px;font-size:13pt;letter-spacing:1px;">${generated_password}</code><br>
+        <strong>Name (Kundennummer):</strong> ${hfx_customer_number}
+      </td></tr>
+    </table>
+    <p style="margin:0 0 24px 0;font-size:10pt;color:#888;"><em>Bitte bewahren Sie diese Zugangsdaten sicher auf.</em></p>
+    <p style="margin:0 0 8px 0;font-size:12pt;color:#444;"><strong>Folgende Daten haben Sie an uns übermittelt:</strong></p>
+    <table border="0" cellpadding="4" cellspacing="0" width="100%" style="font-size:12pt;color:#444;">
+      <tr><td>Praxisname:</td><td>${praxis_name}</td></tr>
+      <tr><td>Vorname:</td><td>${vorname}</td></tr>
+      <tr><td>Nachname:</td><td>${nachname}</td></tr>
+      <tr><td>E-Mail:</td><td>${email}</td></tr>
+      <tr><td>PLZ:</td><td>${plz}</td></tr>
+      <tr><td>Mobilnummer:</td><td>${mobilnummer}</td></tr>
+      <tr><td>Abrechnungszentrum:</td><td>${abrechnungszentrum}</td></tr>
+    </table>
+  `;
+  return renderBrandedEmail({
+    subheadline: "Ihre Zugangsdaten",
+    bodyHtml,
+    bodyText: `Ihre Zugangsdaten für HFX.GOÄ\nE-Mail: ${email}\nPasswort: ${generated_password}\nName: ${hfx_customer_number}`,
+  }).html;
 }
 
 function buildDemoExpiryCustomerHtml() {
@@ -474,7 +366,7 @@ function buildDemoExpiryCustomerHtml() {
   <!-- Footer -->
   <tr>
     <td style="background-color:#f8f8f8;padding:16px 40px;border-top:1px solid #eeeeee;text-align:center;">
-      <p style="font-size:9pt;color:#aaaaaa;margin:0;font-family:verdana,geneva,sans-serif;">© Honorarfuchs GmbH · Bei Fragen: info@honorarfuchs.de</p>
+      <p style="font-size:9pt;color:#aaaaaa;margin:0;font-family:verdana,geneva,sans-serif;">© HFX Honorarfuchs · Bei Fragen: info@hfx-honorarfuchs.de</p>
     </td>
   </tr>
 </table>
@@ -511,7 +403,7 @@ function buildContractCustomerHtml() {
   <p style="font-family:Arial,sans-serif;font-size:14px;color:#555;">Mit freundlichen Grüßen,<br/><strong>Das HFX Team</strong></p>
 </td></tr>
 <tr><td style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
-  <p style="font-family:Arial,sans-serif;font-size:11px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} Honorarfuchs – HFX Sales Portal</p>
+  <p style="font-family:Arial,sans-serif;font-size:11px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} HFX Honorarfuchs</p>
 </td></tr>
 </table></td></tr></table>
 </body></html>`;
@@ -543,7 +435,7 @@ function buildContractPartnerHtml() {
   <p style="font-family:Arial,sans-serif;font-size:14px;color:#555;">Herzlichen Glückwunsch zum Abschluss!</p>
 </td></tr>
 <tr><td style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
-  <p style="font-family:Arial,sans-serif;font-size:11px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} Honorarfuchs – HFX Sales Portal</p>
+  <p style="font-family:Arial,sans-serif;font-size:11px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} HFX Honorarfuchs</p>
 </td></tr>
 </table></td></tr></table>
 </body></html>`;
@@ -551,48 +443,44 @@ function buildContractPartnerHtml() {
 
 function buildInvoiceHtml() {
   const { invoice_number, customer_name, invoice_date, due_date, net_amount, tax_amount, gross_amount } = MOCK;
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head><body style="margin:0;padding:0;background:#fff;">
-<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;">
-  <div style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:30px 20px;border-radius:8px 8px 0 0;text-align:center;">
-    <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg" alt="HFX Logo" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;"/>
-    <h1 style="color:#fff;margin:0;font-size:22px;">Rechnung ${invoice_number}</h1>
-    <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:13px;">Honorarfuchs – HFX Sales Portal</p>
-  </div>
-  <div style="background:#f9fafb;padding:30px 20px;border:1px solid #e5e7eb;border-top:none;">
-    <p style="font-size:15px;color:#333;">Sehr geehrte Damen und Herren,</p>
-    <p style="font-size:14px;color:#555;line-height:1.6;">anbei erhalten Sie Ihre Rechnung <strong>${invoice_number}</strong> vom <strong>${invoice_date}</strong>.</p>
-    <p style="font-size:14px;color:#555;"><strong>Rechnungsempfänger:</strong> ${customer_name}</p>
-    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;margin-top:20px;">
+  const bodyHtml = `
+    <p style="margin:0 0 12px 0;font-size:12pt;color:#333;">Sehr geehrte Damen und Herren,</p>
+    <p style="margin:0 0 16px 0;font-size:11pt;color:#555;line-height:1.6;">anbei erhalten Sie Ihre Rechnung <strong>${invoice_number}</strong> vom <strong>${invoice_date}</strong>.</p>
+    <p style="margin:0 0 16px 0;font-size:11pt;color:#555;"><strong>Rechnungsempfänger:</strong> ${customer_name}</p>
+    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:0 0 16px 0;">
       <thead><tr style="background:#0b367f;">
-        <th style="padding:10px 12px;text-align:left;color:#fff;font-size:12px;">Beschreibung</th>
-        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:12px;">Menge</th>
-        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:12px;">Einzelpreis</th>
-        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:12px;">Gesamt</th>
+        <th style="padding:10px 12px;text-align:left;color:#fff;font-size:11pt;">Beschreibung</th>
+        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:11pt;">Menge</th>
+        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:11pt;">Einzelpreis</th>
+        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:11pt;">Gesamt</th>
       </tr></thead>
       <tbody>
-        <tr><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;">HFX EBM Lizenz – Februar 2026</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px;">1</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px;">150,00 €</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px;">150,00 €</td></tr>
+        <tr>
+          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:11pt;">HFX EBM Lizenz – Februar 2026</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:11pt;">1</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:11pt;">150,00 €</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:11pt;">150,00 €</td>
+        </tr>
       </tbody>
     </table>
-    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-top:20px;">
-      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span>Nettobetrag:</span><strong>${net_amount}</strong></div>
-      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#6b7280;"><span>MwSt. (19%):</span><span>${tax_amount}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #0b367f;margin-top:8px;font-size:16px;"><span><strong>Gesamtbetrag:</strong></span><strong style="color:#0b367f;">${gross_amount}</strong></div>
-    </div>
-    <p style="margin-top:20px;font-size:14px;color:#555;"><strong>Zahlungsziel:</strong> ${due_date}</p>
-    <p style="font-size:12px;color:#6b7280;margin-top:4px;">📎 Das PDF dieser Rechnung ist als Anhang beigefügt.</p>
-  </div>
-  <div style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
-    <p style="font-size:11px;color:#374151;font-weight:600;margin:0;">HFX Honorarfuchs – ein Geschäftsbereich von MCC Medical CareCapital GmbH</p>
-    <p style="font-size:11px;color:#6b7280;margin:4px 0 0;">Hohenzollernstr. 47, 47799 Krefeld</p>
-    <p style="font-size:11px;color:#6b7280;margin:4px 0 0;">Geschäftsführung: Olaf Hagelkruys, Thilo Wiers-Keiser, Robbin Zielke &nbsp;·&nbsp; Amtsgericht Krefeld, HRB 14709</p>
-    <p style="font-size:11px;color:#6b7280;margin:4px 0 0;">USt-Id-Nr: DE 227 420 712 &nbsp;·&nbsp; <a href="https://www.hfx-honorarfuchs.de" style="color:#0b367f;">www.hfx-honorarfuchs.de</a></p>
-    <p style="font-size:10px;color:#9ca3af;margin:8px 0 0;">Diese Rechnung wurde automatisch aus dem HFX Sales Portal erstellt.</p>
-  </div>
-</div>
-</body></html>`;
+    <table width="100%" border="0" cellpadding="4" cellspacing="0" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;font-size:11pt;">
+      <tr><td>Nettobetrag:</td><td align="right"><strong>${net_amount}</strong></td></tr>
+      <tr><td style="color:#6b7280;">MwSt. (19%):</td><td align="right" style="color:#6b7280;">${tax_amount}</td></tr>
+      <tr><td style="border-top:2px solid #0b367f;padding-top:8px;"><strong>Gesamtbetrag:</strong></td><td align="right" style="border-top:2px solid #0b367f;padding-top:8px;color:#0b367f;"><strong>${gross_amount}</strong></td></tr>
+    </table>
+    <p style="margin:16px 0 4px 0;font-size:11pt;color:#555;"><strong>Zahlungsziel:</strong> ${due_date}</p>
+    <table border="0" cellpadding="12" cellspacing="0" width="100%" style="background:#f0f4f8;border-radius:6px;border:1px solid #d0d5dd;margin-top:16px;">
+      <tr><td style="font-size:10pt;color:#0b367f;">
+        <strong>Automatischer Einzug:</strong> Der Rechnungsbetrag wird bequem per SEPA-Lastschrift eingezogen. Sie müssen nichts weiter veranlassen.
+      </td></tr>
+    </table>
+    <p style="margin:12px 0 0 0;font-size:10pt;color:#6b7280;">Das PDF dieser Rechnung ist als Anhang beigefügt.</p>
+  `;
+  return renderBrandedEmail({
+    subheadline: "Ihre Rechnung",
+    bodyHtml,
+    bodyText: `Rechnung ${invoice_number} vom ${invoice_date}\nGesamtbetrag: ${gross_amount}\nZahlungsziel: ${due_date}\nEinzug automatisch per SEPA-Lastschrift.`,
+  }).html;
 }
 
 function buildInvoicePdfPreviewHtml() {
@@ -624,7 +512,7 @@ function buildInvoicePdfPreviewHtml() {
   <div class="header">
     <div>
       <h1>Rechnung ${invoice_number}</h1>
-      <p>HFX Honorarfuchs GmbH</p>
+      <p>HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH</p>
     </div>
     <span class="badge">ENTWURF</span>
   </div>
@@ -660,7 +548,7 @@ function buildInvoicePdfPreviewHtml() {
     <p style="font-size:10px;color:#9ca3af;margin-top:4px;">Im ausgewiesenen Betrag sind 28,50 € Umsatzsteuer (19%) enthalten.</p>
   </div>
   <div class="footer">
-    <p style="margin:0;font-weight:600;color:#374151;">HFX Honorarfuchs – ein Geschäftsbereich von MCC Medical CareCapital GmbH</p>
+    <p style="margin:0;font-weight:600;color:#374151;">HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH</p>
     <p style="margin:3px 0 0;">Hohenzollernstr. 47, 47799 Krefeld</p>
     <p style="margin:3px 0 0;">Geschäftsführung: Olaf Hagelkruys, Thilo Wiers-Keiser, Robbin Zielke &nbsp;·&nbsp; Amtsgericht Krefeld, HRB 14709</p>
     <p style="margin:3px 0 0;">USt-Id-Nr: DE 227 420 712 &nbsp;·&nbsp; www.hfx-honorarfuchs.de</p>
@@ -672,54 +560,30 @@ function buildInvoicePdfPreviewHtml() {
 function buildDashboardCredentialsHtml() {
   const { full_name, email } = { full_name: "Max Mustermann", email: MOCK.email };
   const roleLabel = "Vertriebspartner";
-  const portalUrl = "https://praxisflow-buddy.lovable.app";
+  const portalUrl = "https://sales.hfx-honorarfuchs.de";
   const password = "Ax7$kP2mQz9wLn3R";
-  return `<!DOCTYPE html>
-<html lang="de">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:verdana,geneva,sans-serif;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f5f5f5;padding:20px 0;">
-<tr><td align="center">
-<table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-  <tr>
-    <td style="background-color:#0b367f;padding:30px 40px;text-align:center;">
-      <h1 style="color:#ffffff;font-size:22pt;margin:0;font-family:verdana,geneva,sans-serif;">🦊 Willkommen!</h1>
-      <p style="color:#c8d8f0;font-size:11pt;margin:8px 0 0 0;">HFX Sales Portal · das Portal für den Vertrieb</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:32px 40px;">
-      <p style="font-size:12pt;color:#333333;margin:0 0 12px 0;">Hallo <strong>${full_name}</strong>,</p>
-      <p style="font-size:11pt;color:#555555;margin:0 0 24px 0;">Ihr Benutzerkonto wurde erfolgreich erstellt. Sie wurden als <strong>${roleLabel}</strong> registriert.</p>
-      <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8;border-radius:8px;border:1px solid #d0d5dd;margin-bottom:24px;">
-        <tr><td align="left" valign="top" style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:20pt;">
-          <strong style="font-size:10pt;color:#0b367f;text-transform:uppercase;letter-spacing:0.5px;">Ihre Zugangsdaten</strong><br><br>
-          <strong>Registrierte E-Mail-Adresse:</strong> ${email}<br>
-          <strong>Temporäres Passwort:</strong> <code style="background:#fff;padding:2px 8px;border-radius:4px;font-size:13pt;letter-spacing:1px;">${password}</code>
-        </td></tr>
-      </table>
-      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">
-        <tr><td align="center">
-          <a href="${portalUrl}" style="display:inline-block;background-color:#0b367f;color:#ffffff;font-family:verdana,geneva,sans-serif;font-size:12pt;font-weight:bold;padding:12px 32px;border-radius:6px;text-decoration:none;">Zum Portal anmelden</a>
-        </td></tr>
-      </table>
-      <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background:#fff8e1;border-radius:6px;border:1px solid #f59e0b;">
-        <tr><td style="font-size:10pt;color:#92400e;font-family:verdana,geneva,sans-serif;">
-          ⚠️ <strong>Wichtig:</strong> Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung unter Einstellungen → Sicherheit.
-        </td></tr>
-      </table>
-    </td>
-  </tr>
-  <tr>
-    <td style="background-color:#f8f8f8;padding:16px 40px;border-top:1px solid #eeeeee;text-align:center;">
-      <p style="font-size:9pt;color:#aaaaaa;margin:0;">© Honorarfuchs GmbH · Bei Fragen: info@honorarfuchs.de</p>
-    </td>
-  </tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+  const bodyHtml = `
+    <p style="margin:0 0 12px 0;font-size:12pt;color:#333;">Hallo <strong>${full_name}</strong>,</p>
+    <p style="margin:0 0 24px 0;font-size:11pt;color:#555;">Ihr Benutzerkonto wurde erfolgreich erstellt. Sie wurden als <strong>${roleLabel}</strong> registriert.</p>
+    <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8;border-radius:8px;border:1px solid #d0d5dd;margin-bottom:8px;">
+      <tr><td style="color:#444;font-size:12pt;line-height:20pt;">
+        <strong style="font-size:10pt;color:#0b367f;text-transform:uppercase;letter-spacing:0.5px;">Ihre Zugangsdaten</strong><br><br>
+        <strong>Registrierte E-Mail-Adresse:</strong> ${email}<br>
+        <strong>Temporäres Passwort:</strong> <code style="background:#fff;padding:2px 8px;border-radius:4px;font-size:13pt;letter-spacing:1px;">${password}</code>
+      </td></tr>
+    </table>
+    ${renderBrandedButton({ href: portalUrl, label: "Zum Portal anmelden" })}
+    <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background:#fff8e1;border-radius:6px;border:1px solid #f59e0b;">
+      <tr><td style="font-size:10pt;color:#92400e;">
+        <strong>Wichtig:</strong> Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung unter Einstellungen &rarr; Sicherheit.
+      </td></tr>
+    </table>
+  `;
+  return renderBrandedEmail({
+    subheadline: "Ihre Zugangsdaten",
+    bodyHtml,
+    bodyText: `Hallo ${full_name},\n\nIhre Zugangsdaten:\nE-Mail: ${email}\nTemporäres Passwort: ${password}\n\nPortal: ${portalUrl}`,
+  }).html;
 }
 
 function buildAdTippLeadHtml() {
@@ -768,7 +632,7 @@ function buildAdTippLeadHtml() {
       </td></tr>
       <tr><td style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center;">
         <p style="margin:0;font-size:12px;color:#9ca3af;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
-        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${year} HFX Honorarfuchs GmbH</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${year} HFX Honorarfuchs</p>
       </td></tr>
     </table>
   </td></tr>
@@ -857,7 +721,7 @@ function buildAdDemoReminderHtml() {
   <!-- Footer -->
   <tr><td bgcolor="#f9fafb" style="border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
     <p style="margin:0;color:#9ca3af;font-family:verdana,geneva,sans-serif;font-size:9pt;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
-    <p style="margin:4px 0 0;color:#9ca3af;font-family:verdana,geneva,sans-serif;font-size:9pt;">© ${year} HFX Honorarfuchs GmbH</p>
+    <p style="margin:4px 0 0;color:#9ca3af;font-family:verdana,geneva,sans-serif;font-size:9pt;">© ${year} HFX Honorarfuchs</p>
   </td></tr>
 </table>
 </td></tr></table>
@@ -866,51 +730,34 @@ function buildAdDemoReminderHtml() {
 
 function buildAdNewLeadHtml() {
   const { praxis_name, vorname, nachname, email, plz, mobilnummer, hfx_customer_number } = MOCK;
-  const year = new Date().getFullYear();
-  return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
-  <tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07);">
-      <tr><td style="background:linear-gradient(135deg,#b6193d,#d42050);padding:32px 24px;text-align:center;">
-        <p style="margin:0 0 8px;font-size:13px;color:#f9c0cc;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;">Neuer Lead eingegangen</p>
-        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Neuer Interessent über die HFX-Webseite</h1>
-        <p style="margin:8px 0 0;color:#f9c0cc;font-size:14px;">Automatische Zuweisung nach PLZ ${plz}</p>
+  const bodyHtml = `
+    <p style="margin:0 0 16px 0;font-size:12pt;color:#333;">Hallo <strong>Uwe Waldenmeyer</strong>,</p>
+    <p style="margin:0 0 20px 0;font-size:11pt;color:#555;line-height:1.6;">ein neuer Interessent hat sich über die HFX-Webseite registriert und wurde dir automatisch aufgrund der PLZ-Zuordnung (PLZ ${plz}) zugewiesen.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+      <tr><td style="background:#fef2f4;padding:10px 14px;border-bottom:1px solid #e5e7eb;">
+        <p style="margin:0;font-size:10pt;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#b6193d;">Lead-Details</p>
       </td></tr>
-      <tr><td style="padding:28px 24px;">
-        <p style="margin:0 0 20px;font-size:15px;color:#374151;">Hallo <strong>Uwe Waldenmeyer</strong>,</p>
-        <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
-          ein neuer Interessent hat sich über die HFX-Webseite registriert und wurde dir automatisch aufgrund der PLZ-Zuordnung zugewiesen.
-        </p>
-        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:24px;">
-          <tr><td style="background:#fef2f4;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
-            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#b6193d;">Lead-Details</p>
-          </td></tr>
-          <tr><td style="padding:16px;">
-            <table width="100%" cellpadding="0" cellspacing="0">
-              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;width:160px;">Praxis</td><td style="padding:5px 0;font-size:13px;color:#111827;font-weight:600;">${praxis_name}</td></tr>
-              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Name</td><td style="padding:5px 0;font-size:13px;color:#111827;font-weight:500;">${vorname} ${nachname}</td></tr>
-              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">E-Mail</td><td style="padding:5px 0;font-size:13px;color:#b6193d;">${email}</td></tr>
-              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Telefon</td><td style="padding:5px 0;font-size:13px;color:#111827;">${mobilnummer}</td></tr>
-              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">PLZ</td><td style="padding:5px 0;font-size:13px;color:#111827;">${plz}</td></tr>
-              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Ort</td><td style="padding:5px 0;font-size:13px;color:#111827;">München</td></tr>
-              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Abrechnung</td><td style="padding:5px 0;font-size:13px;color:#111827;">Kein Abrechnungszentrum</td></tr>
-              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">HFX-Nummer</td><td style="padding:5px 0;font-size:13px;color:#111827;font-weight:600;">${hfx_customer_number}</td></tr>
-            </table>
-          </td></tr>
+      <tr><td style="padding:14px;">
+        <table width="100%" cellpadding="4" cellspacing="0" style="font-size:11pt;color:#333;">
+          <tr><td style="color:#6b7280;width:160px;">Praxis</td><td style="font-weight:600;">${praxis_name}</td></tr>
+          <tr><td style="color:#6b7280;">Name</td><td>${vorname} ${nachname}</td></tr>
+          <tr><td style="color:#6b7280;">E-Mail</td><td style="color:#b6193d;">${email}</td></tr>
+          <tr><td style="color:#6b7280;">Telefon</td><td>${mobilnummer}</td></tr>
+          <tr><td style="color:#6b7280;">PLZ</td><td>${plz}</td></tr>
+          <tr><td style="color:#6b7280;">Abrechnung</td><td>Kein Abrechnungszentrum</td></tr>
+          <tr><td style="color:#6b7280;">HFX-Nummer</td><td style="font-weight:600;">${hfx_customer_number}</td></tr>
         </table>
-        <p style="margin:0 0 24px;font-size:13px;color:#6b7280;line-height:1.6;background:#fafafa;border-left:3px solid #b6193d;padding:12px 16px;border-radius:0 4px 4px 0;">
-          <strong>Nächster Schritt:</strong> Bitte nimm zeitnah Kontakt mit dem Interessenten auf. Du findest den Lead im HFX-Portal unter <em>Interessenten</em>.
-        </p>
-      </td></tr>
-      <tr><td style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center;">
-        <p style="margin:0;font-size:12px;color:#9ca3af;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
-        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${year} HFX Honorarfuchs GmbH</p>
       </td></tr>
     </table>
-  </td></tr>
-</table>
-</body></html>`;
+    <p style="margin:0;font-size:11pt;color:#555;line-height:1.6;background:#fafafa;border-left:3px solid #b6193d;padding:12px 16px;border-radius:0 4px 4px 0;">
+      <strong>Nächster Schritt:</strong> Bitte nimm zeitnah Kontakt mit dem Interessenten auf. Du findest den Lead im HFX-Portal unter <em>Interessenten</em>.
+    </p>
+  `;
+  return renderBrandedEmail({
+    subheadline: "Neuer Lead eingegangen",
+    bodyHtml,
+    bodyText: `Neuer Lead: ${praxis_name} (${plz})\n${vorname} ${nachname} · ${email} · ${mobilnummer}\nHFX-Nummer: ${hfx_customer_number}`,
+  }).html;
 }
 
 function buildContractCustomerPdfSendHtml() {
@@ -953,7 +800,7 @@ function buildContractCustomerPdfSendHtml() {
     </div>
     <div class="footer">
       <p style="margin: 0;">Bei Fragen wenden Sie sich bitte an Ihren Ansprechpartner.</p>
-      <p style="margin: 10px 0 0 0; font-size: 12px;">© ${year} Honorarfuchs - HFX Sales Portal</p>
+      <p style="margin: 10px 0 0 0; font-size: 12px;">© ${year} HFX Honorarfuchs</p>
     </div>
   </div></body></html>`;
 }
@@ -998,7 +845,7 @@ function buildAdLeadAssignmentHtml() {
       </td></tr>
       <tr><td style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center;">
         <p style="margin:0;font-size:12px;color:#9ca3af;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
-        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${year} HFX Honorarfuchs GmbH</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${year} HFX Honorarfuchs</p>
       </td></tr>
     </table>
   </td></tr>
@@ -1133,7 +980,7 @@ function buildContractPaperConfirmationHtml() {
           <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
             <p style="color:#9ca3af;font-size:11px;margin:0;">
               HFX Honorarfuchs • Diese E-Mail wurde automatisch generiert.<br>
-              © ${year} HFX Honorarfuchs GmbH
+              © ${year} HFX Honorarfuchs
             </p>
           </td>
         </tr>
@@ -1191,7 +1038,7 @@ function buildBookingLinkHtml() {
   </td></tr>
   <tr><td style="padding:0 40px 16px;"><p style="color:#6b7280;font-size:12px;margin:0;">📄 <a href="https://praxisflow-buddy.lovable.app/templates/vertrag-honorarfuchs.pdf" style="color:#0b367f;">AGB herunterladen</a></p></td></tr>
   <tr><td style="padding:0 40px 32px;"><p style="color:#374151;font-size:14px;line-height:1.7;margin:0;">Bei Fragen: <a href="mailto:info@hfx-honorarfuchs.de" style="color:#0b367f;">info@hfx-honorarfuchs.de</a><br><br>Mit freundlichen Grüßen,<br><strong>Ihr HFX Honorarfuchs Team</strong></p></td></tr>
-  <tr><td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;"><p style="color:#9ca3af;font-size:11px;margin:0;">HFX Honorarfuchs • Diese E-Mail wurde automatisch generiert.<br>© ${year} HFX Honorarfuchs GmbH</p></td></tr>
+  <tr><td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;"><p style="color:#9ca3af;font-size:11px;margin:0;">HFX Honorarfuchs • Diese E-Mail wurde automatisch generiert.<br>© ${year} HFX Honorarfuchs</p></td></tr>
 </table>
 </td></tr>
 </table>
@@ -1342,7 +1189,9 @@ const DEFAULT_HTML: Record<string, () => string> = {
 };
 
 function getHtmlForTemplate(id: TemplateId) {
-  return patchLogo(DEFAULT_HTML[id]?.() ?? "");
+  const raw = DEFAULT_HTML[id]?.() ?? "";
+  // WIRED IDs werden über renderBrandedEmail (SSOT) gebaut und brauchen kein Logo-Patching.
+  return WIRED_IDS.has(id) ? raw : patchLogo(raw);
 }
 
 /** IDs where we show the live pdf-lib PDF preview button */
@@ -1418,7 +1267,8 @@ export default function EmailPreview() {
   const getRenderedHtml = useCallback(
     (tpl: Template, mode: "email" | "pdf") => {
       const key = getStorageKey(tpl, mode);
-      return patchLogo(customHtml[key] ?? getHtmlForTemplate(key as TemplateId));
+      const raw = customHtml[key] ?? getHtmlForTemplate(key as TemplateId);
+      return WIRED_IDS.has(key) ? raw : patchLogo(raw);
     },
     [customHtml]
   );
@@ -1613,11 +1463,35 @@ export default function EmailPreview() {
                 {groupTemplates.map((tpl) => (
                   <div key={tpl.id} className="rounded-xl border border-border bg-card p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         {tpl.type === "pdf" ? <FileText className="w-4 h-4 text-primary" /> : <Mail className="w-4 h-4 text-primary" />}
                         <span className="font-semibold text-foreground">{tpl.label}</span>
-                        {(hasCustom(tpl, "email") || (tpl.id === "invoice" && hasCustom(tpl, "pdf"))) && (
-                          <span className="ml-auto text-[10px] font-medium bg-warning/20 text-warning-foreground px-1.5 py-0.5 rounded border border-warning/30">Bearbeitet</span>
+                        {WIRED_IDS.has(tpl.id) && (
+                          <span
+                            className="ml-auto text-[10px] font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30"
+                            title="Vorschau kommt aus dem Live-SSOT (renderBrandedEmail)."
+                          >
+                            Live-SSOT
+                          </span>
+                        )}
+                        {STALE_IDS.has(tpl.id) && (
+                          <span
+                            className="ml-auto text-[10px] font-medium bg-amber-500/15 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/40"
+                            title="Diese Vorschau ist ein Mock — die echte Live-Mail wurde noch nicht auf renderBrandedEmail umgestellt."
+                          >
+                            Vorschau veraltet — Live-Mail noch nicht umgestellt
+                          </span>
+                        )}
+                        {NO_LIVE_IDS.has(tpl.id) && (
+                          <span
+                            className="ml-auto text-[10px] font-medium bg-muted text-muted-foreground px-1.5 py-0.5 rounded border border-border"
+                            title="Für diese Vorlage gibt es keine echte Live-Mail (Leiche oder reine PDF-Vorschau)."
+                          >
+                            Kein Live-Pendant
+                          </span>
+                        )}
+                        {!WIRED_IDS.has(tpl.id) && (hasCustom(tpl, "email") || (tpl.id === "invoice" && hasCustom(tpl, "pdf"))) && (
+                          <span className="text-[10px] font-medium bg-warning/20 text-warning-foreground px-1.5 py-0.5 rounded border border-warning/30">Bearbeitet</span>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">{tpl.description}</p>
@@ -1626,8 +1500,9 @@ export default function EmailPreview() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-6 px-2 text-muted-foreground hover:text-destructive"
-                          title="Vorlage löschen"
+                          className="h-6 px-2 text-muted-foreground hover:text-destructive disabled:opacity-40 disabled:cursor-not-allowed"
+                          title={WIRED_IDS.has(tpl.id) ? "Vorschau ist an den Live-SSOT gebunden" : "Vorlage löschen"}
+                          disabled={WIRED_IDS.has(tpl.id)}
                           onClick={() => setDeleteConfirmId(tpl.id)}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1652,7 +1527,9 @@ export default function EmailPreview() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="gap-1.5"
+                            className="gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                            disabled={WIRED_IDS.has(tpl.id)}
+                            title={WIRED_IDS.has(tpl.id) ? "Vorschau ist an den Live-SSOT gebunden" : undefined}
                             onClick={() => openAiEditor(tpl, "email")}
                           >
                             <Sparkles className="w-3.5 h-3.5" />
@@ -1661,7 +1538,9 @@ export default function EmailPreview() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="gap-1.5"
+                            className="gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                            disabled={WIRED_IDS.has(tpl.id)}
+                            title={WIRED_IDS.has(tpl.id) ? "Vorschau ist an den Live-SSOT gebunden" : undefined}
                             onClick={() => openEdit(tpl, "email")}
                           >
                             <Pencil className="w-3.5 h-3.5" />
@@ -1671,8 +1550,9 @@ export default function EmailPreview() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="px-2 text-muted-foreground"
-                              title="Zurücksetzen"
+                              className="px-2 text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                              title={WIRED_IDS.has(tpl.id) ? "Vorschau ist an den Live-SSOT gebunden" : "Zurücksetzen"}
+                              disabled={WIRED_IDS.has(tpl.id)}
                               onClick={() => resetTemplate(tpl, "email")}
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
@@ -1682,6 +1562,7 @@ export default function EmailPreview() {
                       )}
                     </div>
                     )}
+
 
 
                     {/* PDF row – live pdf-lib preview (booking-link, post-payment-contract-pdf, invoice) */}
