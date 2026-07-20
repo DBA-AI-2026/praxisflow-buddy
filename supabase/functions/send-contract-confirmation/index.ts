@@ -688,7 +688,7 @@ Deno.serve(async (req) => {
     const bodyHtml = `
       <p style="margin:0 0 16px 0;">${greeting},</p>
       <p style="margin:0 0 16px 0;">
-        vielen Dank f&uuml;r Ihren Vertragsabschluss bei Honorarfuchs. Ihre SEPA-Bankverbindung haben wir erhalten und Ihr Vertrag ist nun aktiviert. Im Anhang finden Sie Ihre Vertrags&uuml;bersicht sowie unsere AGB als PDF.
+        vielen Dank f&uuml;r Ihren Vertragsabschluss bei HFX Honorarfuchs. Ihre SEPA-Bankverbindung haben wir erhalten und Ihr Vertrag ist nun aktiviert. Im Anhang finden Sie Ihre Vertrags&uuml;bersicht sowie unsere AGB als PDF.
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;margin:8px 0 18px;">
         <tr><td style="padding:14px 18px;color:#374151;font-size:11pt;line-height:1.5;font-family:verdana,geneva,sans-serif;">
@@ -710,7 +710,7 @@ Deno.serve(async (req) => {
     const bodyText = [
       `${greeting},`,
       "",
-      "vielen Dank für Ihren Vertragsabschluss bei Honorarfuchs. Ihre SEPA-Bankverbindung haben wir erhalten und Ihr Vertrag ist nun aktiviert. Im Anhang finden Sie Ihre Vertragsübersicht sowie unsere AGB als PDF.",
+      "vielen Dank für Ihren Vertragsabschluss bei HFX Honorarfuchs. Ihre SEPA-Bankverbindung haben wir erhalten und Ihr Vertrag ist nun aktiviert. Im Anhang finden Sie Ihre Vertragsübersicht sowie unsere AGB als PDF.",
       "",
       `Vertragsnummer: ${hfxNr}`,
       `Produkt: ${contract.product_name || "–"}`,
