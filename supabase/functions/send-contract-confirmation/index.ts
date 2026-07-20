@@ -704,7 +704,7 @@ Deno.serve(async (req) => {
       </p>
       <p style="margin:24px 0 0 0;">
         Mit freundlichen Gr&uuml;&szlig;en<br />
-        <strong>Ihr Honorarfuchs-Team</strong>
+        <strong>Ihr HFX Honorarfuchs Team</strong>
       </p>`;
 
     const bodyText = [
