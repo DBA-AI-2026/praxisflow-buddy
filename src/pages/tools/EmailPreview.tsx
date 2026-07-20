@@ -23,14 +23,43 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
 import { showPdfInViewer } from "@/lib/pdfViewerState";
 import { Textarea } from "@/components/ui/textarea";
+import { renderBrandedEmail, renderBrandedButton } from "@/lib/emailLayout";
 
-// ─── Logo URLs ────────────────────────────────────────────────────────────────
+// ─── Logo URLs (Legacy — nur noch für STALE/NO_LIVE-Vorschauen relevant) ──────
 const LOGO_OLD = "https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg";
 const LOGO_NEW = "https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fuchs-bildmarke.png";
 
 function patchLogo(html: string): string {
   return html.split(LOGO_OLD).join(LOGO_NEW);
 }
+
+// IDs, deren Vorschau ECHT über renderBrandedEmail (SSOT) gebaut wird.
+// Für diese: kein patchLogo, kein Editor, kein KI, kein Löschen, kein Reset.
+const WIRED_IDS: ReadonlySet<string> = new Set([
+  "lead-confirmation",
+  "invoice",
+  "dashboard-credentials",
+  "ad-new-lead",
+]);
+
+// STALE: Live-Mail existiert, aber wurde noch nicht auf renderBrandedEmail migriert.
+const STALE_IDS: ReadonlySet<string> = new Set([
+  "contract-customer",
+  "contract-customer-pdf-send",
+  "contract-partner",
+  "demo-expiry-customer",
+  "ad-tipp-lead",
+  "ad-demo-reminder",
+  "ad-lead-assignment",
+  "admin-access-request",
+]);
+
+// NO_LIVE: Kein Live-Mail-Pendant (Leiche oder PDF-Vorschau).
+const NO_LIVE_IDS: ReadonlySet<string> = new Set([
+  "contract-paper-confirmation",
+  "booking-link",
+  "invoice-pdf",
+]);
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK = {
