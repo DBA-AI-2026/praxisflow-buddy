@@ -264,7 +264,7 @@ async function generateCommissionPdf(
   const drawFooter = () => {
     const fY = 42;
     page.drawLine({ start: { x: M, y: fY + 24 }, end: { x: PAGE_W - MARGIN_RIGHT, y: fY + 24 }, thickness: 0.5, color: C_LINE });
-    drawText("HFX Honorarfuchs – ein Geschäftsbereich von MCC Medical CareCapital GmbH  ·  Hohenzollernstr. 47, 47799 Krefeld", M, fY + 14, 6, font, C_MUTED);
+    drawText("HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH  ·  Hohenzollernstr. 47, 47799 Krefeld", M, fY + 14, 6, font, C_MUTED);
     drawText("Geschäftsführung: Olaf Hagelkruys, Thilo Wiers-Keiser, Robbin Zielke  ·  Amtsgericht Krefeld, HRB 14709  ·  USt-Id-Nr: DE 227 420 712  ·  www.hfx-honorarfuchs.de", M, fY + 4, 6, font, C_MUTED);
   };
 
@@ -288,7 +288,7 @@ async function generateCommissionPdf(
     const titleMaxW = logoLeftEdge - M - 12;
     drawText("Provisionsabrechnung", M, ty, 20, bold, C_NAVY, titleMaxW);
     ty -= 18;
-    drawText("HFX Sales Portal – Honorarfuchs", M, ty, 10, font, C_MUTED);
+    drawText("HFX Honorarfuchs", M, ty, 10, font, C_MUTED);
     ty -= 12;
     // Thin separator
     page.drawLine({ start: { x: M, y: ty }, end: { x: PAGE_W - MARGIN_RIGHT, y: ty }, thickness: 0.5, color: C_LINE });
@@ -401,7 +401,7 @@ async function generateCommissionPdf(
 
   // Info line
   ensureSpace(20);
-  drawText("Diese Abrechnung wurde automatisch vom HFX Sales Portal generiert.", M, y, SIZE_BODY - 1, font, C_MUTED);
+  drawText("Diese Abrechnung wurde automatisch vom HFX Honorarfuchs generiert.", M, y, SIZE_BODY - 1, font, C_MUTED);
 
   drawFooter();
   return doc.save();

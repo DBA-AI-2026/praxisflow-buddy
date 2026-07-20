@@ -118,7 +118,7 @@ export async function generateInvoicePdf(
   const drawFooter = () => {
     const fY = 42;
     page.drawLine({ start: { x: M, y: fY + 24 }, end: { x: PAGE_W - M, y: fY + 24 }, thickness: 0.5, color: C_LINE });
-    text("HFX Honorarfuchs – ein Geschäftsbereich von MCC Medical CareCapital GmbH  ·  Hohenzollernstr. 47, 47799 Krefeld", M, fY + 14, 6, font, C_MUTED);
+    text("HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH  ·  Hohenzollernstr. 47, 47799 Krefeld", M, fY + 14, 6, font, C_MUTED);
     text("Geschäftsführung: Olaf Hagelkruys, Thilo Wiers-Keiser, Robbin Zielke  ·  Amtsgericht Krefeld, HRB 14709  ·  USt-Id-Nr: DE 227 420 712  ·  www.hfx-honorarfuchs.de", M, fY + 4, 6, font, C_MUTED);
   };
 
