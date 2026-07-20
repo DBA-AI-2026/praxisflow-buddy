@@ -240,171 +240,34 @@ const TEMPLATES: Template[] = [
 // ─── HTML builders ────────────────────────────────────────────────────────────
 function buildLeadConfirmationHtml() {
   const { hfx_customer_number, generated_password, praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum } = MOCK;
-  return `<table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="600">
-<tr><td align="center" valign="top" bgcolor="#ffffff">
-<img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/Mailheader-Neutral-hfx-1200px.png" alt="Honorarfuchs" width="600" height="80" border="0" style="border-width:0px;" />
-</td></tr>
-<tr><td bgcolor="#ffffff" align="center">
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="600"><tbody><tr><td style="width:10px;"></td><td style="width:580px;">
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="580">
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="90">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#444444;">
-<strong>Danke für Ihr Interesse am Honorarfuchs!<br>Entdecken Sie, was KI aus Ihrer Privatabrechnung holt.</strong>
-</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="30">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Mit HFX.GOÄ gewinnen Sie schnell Klarheit über Ihre Abrechnung. Erkennen Sie Optimierungspotenziale, prüfen Sie Ihre Daten strukturiert und verschaffen Sie sich ein besseres Gefühl für Ihre Privatliquidation – ganz ohne Aufwand.</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Das erwartet Sie:</strong><br>Einfacher Import Ihrer Abrechnungsdaten<br>Verständliche Analyse statt komplizierter Prüfung<br>Mehr Transparenz und Sicherheit bei der GOÄ-Abrechnung</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Sie nutzen noch kein Abrechnungszentrum?</strong><br>Für die Nutzung von HFX.GOÄ benötigen Sie eine PAD- oder PADnext-Datei. Wenn Ihnen das gerade nichts sagt, kümmern wir uns darum: Ein Mitarbeiter meldet sich zeitnah bei Ihnen und begleitet Sie Schritt für Schritt durch die technischen Voraussetzungen.</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="30">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Ihre Zugangsdaten für HFX.GOÄ:</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td>
-<table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8; border-radius:8px; border:1px solid #d0d5dd;">
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;">
-<strong>E-Mail:</strong> ${email}<br>
-<strong>Passwort:</strong> <code style="background:#fff; padding:2px 8px; border-radius:4px; font-size:13pt; letter-spacing:1px;">${generated_password}</code><br>
-<strong>Name (Kundennummer):</strong> ${hfx_customer_number}
-</td></tr></table>
-</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#888888; font-family:verdana, geneva, sans-serif; font-size:10pt; line-height:14pt;"><em>Bitte bewahren Sie diese Zugangsdaten sicher auf. Sie benötigen sie für die Anmeldung in HFX.GOÄ.</em></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td></tr>
-<tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#444444;"><strong>Jetzt Testversion downloaden und starten!</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="5">&nbsp;</td></tr>
-<tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:10pt; line-height:12pt; color:#444444;">Sie benötigen dafür eine PAD/PAD.next-Schnittstelle.</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="15">&nbsp;</td></tr>
-<tr><td>
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="580"><tr>
-<td align="center" valign="top" width="290" style="padding: 10px;">
-<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border: 1px solid #6d6d6d; border-radius: 6px; width: 100%;"><tr><td align="center" style="padding:0;">
-<a href="https://download.qodia.de/production/hfx/latest/mac/hfx-desktop.dmg" target="_blank" rel="noopener noreferrer" style="display:block; padding:20px 10px; text-decoration:none; color:#444444; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; line-height:16pt;">
-<img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/apple-100.png" width="25" height="25" alt="" style="vertical-align:middle; border:0; margin-right:10px;">Download MacOS
-</a>
-</td></tr></table></td>
-<td align="center" valign="top" width="290" style="padding: 10px;">
-<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border: 1px solid #6d6d6d; border-radius: 6px; width: 100%;"><tr><td align="center" style="padding:0;">
-<a href="https://download.qodia.de/production/hfx/latest/windows/hfx-desktop.exe" target="_blank" rel="noopener noreferrer" style="display:block; padding:20px 10px; text-decoration:none; color:#444444; font-family:verdana, geneva, sans-serif; font-size:11pt; font-weight:bold; line-height:16pt;">
-<img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/Windows.png" width="25" height="25" alt="" style="vertical-align:middle; border:0; margin-right:10px;">Download Windows
-</a>
-</td></tr></table></td>
-</tr></table>
-</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="60">&nbsp;</td></tr>
-<tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#0b367f;"><strong>So funktioniert HFX.GOÄ</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="6">&nbsp;</td></tr>
-<tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:10pt; color:#888888;">In 5 einfachen Schritten zur optimierten Abrechnung</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="24">&nbsp;</td></tr>
-<tr><td>
-<table border="0" cellpadding="0" cellspacing="0" width="100%">
-
-<tr><td style="padding-bottom:10px;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f5ff; border-radius:8px; border-left:4px solid #0b367f;">
-<tr>
-  <td width="52" align="center" valign="top" style="padding:14px 0 14px 14px;">
-    <div style="background:#0b367f; color:#ffffff; font-family:verdana,sans-serif; font-size:13pt; font-weight:bold; width:32px; height:32px; border-radius:50%; text-align:center; line-height:32px;">1</div>
-  </td>
-  <td valign="top" style="padding:14px 14px 14px 10px; font-family:verdana, geneva, sans-serif; font-size:11pt; color:#333333; line-height:18pt;">
-    <strong style="color:#0b367f;">Vorbereitung – Daten bereitstellen</strong><br>
-    Patientenverwaltungssystem kurz offline nehmen<br>
-    PAD-Datei aus dem PVS exportieren<br>
-    <span style="color:#0b367f;">→ Saubere Ausgangsbasis für die Analyse</span>
-  </td>
-</tr>
-</table>
-</td></tr>
-
-<tr><td style="padding-bottom:10px;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f5ff; border-radius:8px; border-left:4px solid #0b367f;">
-<tr>
-  <td width="52" align="center" valign="top" style="padding:14px 0 14px 14px;">
-    <div style="background:#0b367f; color:#ffffff; font-family:verdana,sans-serif; font-size:13pt; font-weight:bold; width:32px; height:32px; border-radius:50%; text-align:center; line-height:32px;">2</div>
-  </td>
-  <td valign="top" style="padding:14px 14px 14px 10px; font-family:verdana, geneva, sans-serif; font-size:11pt; color:#333333; line-height:18pt;">
-    <strong style="color:#0b367f;">Import – Daten in HFX.GOÄ laden</strong><br>
-    PAD-Datei hochladen<br>
-    Keine Einrichtung notwendig<br>
-    <span style="color:#0b367f;">→ Der Import erfolgt in wenigen Sekunden</span>
-  </td>
-</tr>
-</table>
-</td></tr>
-
-<tr><td style="padding-bottom:10px;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f5ff; border-radius:8px; border-left:4px solid #0b367f;">
-<tr>
-  <td width="52" align="center" valign="top" style="padding:14px 0 14px 14px;">
-    <div style="background:#0b367f; color:#ffffff; font-family:verdana,sans-serif; font-size:13pt; font-weight:bold; width:32px; height:32px; border-radius:50%; text-align:center; line-height:32px;">3</div>
-  </td>
-  <td valign="top" style="padding:14px 14px 14px 10px; font-family:verdana, geneva, sans-serif; font-size:11pt; color:#333333; line-height:18pt;">
-    <strong style="color:#0b367f;">Analyse – Abrechnung prüfen lassen</strong><br>
-    Analyse per Klick starten<br>
-    Auffälligkeiten &amp; Potenziale erkennen<br>
-    <span style="color:#0b367f;">→ Automatisiert, strukturiert, nachvollziehbar</span>
-  </td>
-</tr>
-</table>
-</td></tr>
-
-<tr><td style="padding-bottom:10px;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f5ff; border-radius:8px; border-left:4px solid #0b367f;">
-<tr>
-  <td width="52" align="center" valign="top" style="padding:14px 0 14px 14px;">
-    <div style="background:#0b367f; color:#ffffff; font-family:verdana,sans-serif; font-size:13pt; font-weight:bold; width:32px; height:32px; border-radius:50%; text-align:center; line-height:32px;">4</div>
-  </td>
-  <td valign="top" style="padding:14px 14px 14px 10px; font-family:verdana, geneva, sans-serif; font-size:11pt; color:#333333; line-height:18pt;">
-    <strong style="color:#0b367f;">Entscheidung – Optimierungen bewerten</strong><br>
-    Vorschläge prüfen &amp; Entscheidungen selbst treffen<br>
-    Keine automatischen Änderungen<br>
-    <span style="color:#0b367f;">→ Sie behalten jederzeit die Kontrolle</span>
-  </td>
-</tr>
-</table>
-</td></tr>
-
-<tr><td style="padding-bottom:0;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f5ff; border-radius:8px; border-left:4px solid #0b367f;">
-<tr>
-  <td width="52" align="center" valign="top" style="padding:14px 0 14px 14px;">
-    <div style="background:#0b367f; color:#ffffff; font-family:verdana,sans-serif; font-size:13pt; font-weight:bold; width:32px; height:32px; border-radius:50%; text-align:center; line-height:32px;">5</div>
-  </td>
-  <td valign="top" style="padding:14px 14px 14px 10px; font-family:verdana, geneva, sans-serif; font-size:11pt; color:#333333; line-height:18pt;">
-    <strong style="color:#0b367f;">Abschluss – Optimierte Abrechnung übergeben</strong><br>
-    Neue PAD-Datei speichern &amp; optional ins PVS laden<br>
-    Übergabe an Ihr Abrechnungszentrum<br>
-    <span style="color:#0b367f;">→ Abrechnung wie gewohnt – nur optimiert</span>
-  </td>
-</tr>
-</table>
-</td></tr>
-
-</table>
-</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="24">&nbsp;</td></tr>
-<tr><td align="center" valign="top" style="background:#0b367f; border-radius:8px; padding:14px 20px; color:#ffffff; font-family:verdana, geneva, sans-serif; font-size:11pt; line-height:18pt;"><strong>Alle Schritte erfolgen lokal und nachvollziehbar!<br>Sie behalten jederzeit die volle Kontrolle über Ihre Abrechnungsdaten.</strong></td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="60">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Folgende Daten haben Sie an uns übermittelt:</strong></td></tr>
-<tr><td>
-<table border="0" cellpadding="3" cellspacing="0" width="100%"><tbody>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"><strong>Praxisdaten</strong></td><td></td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Praxisname:</td><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${praxis_name}&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Vorname:</td><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${vorname}&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Nachname:</td><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${nachname}&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">E-Mail:</td><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${email}&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">PLZ:</td><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${plz}&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Mobilnummer:</td><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${mobilnummer}&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td><td></td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;"><strong>Abrechnungszentrum</strong></td><td></td></tr>
-<tr><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Nutzen Sie ein Abrechnungszentrum?</td><td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${abrechnungszentrum}&nbsp;</td></tr>
-</tbody></table>
-</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="60">&nbsp;</td></tr>
-<tr><td align="center" valign="top" style="color:#888888; font-family:verdana, geneva, sans-serif; font-size:9pt;">© ${new Date().getFullYear()} Honorarfuchs · Qodia GmbH</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="20">&nbsp;</td></tr>
-</table></td></tr></table></td></tr></table></td></tr></table>`;
+  const bodyHtml = `
+    <p style="margin:0 0 16px 0;font-size:16pt;line-height:24pt;color:#444;"><strong>Danke für Ihr Interesse an HFX Honorarfuchs!</strong><br>Entdecken Sie, was KI aus Ihrer Privatabrechnung holt.</p>
+    <p style="margin:0 0 16px 0;font-size:12pt;line-height:18pt;color:#444;">Mit HFX.GOÄ gewinnen Sie schnell Klarheit über Ihre Abrechnung. Erkennen Sie Optimierungspotenziale, prüfen Sie Ihre Daten strukturiert und verschaffen Sie sich ein besseres Gefühl für Ihre Privatliquidation – ganz ohne Aufwand.</p>
+    <p style="margin:0 0 8px 0;font-size:12pt;line-height:18pt;color:#444;"><strong>Ihre Zugangsdaten für HFX.GOÄ:</strong></p>
+    <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8;border-radius:8px;border:1px solid #d0d5dd;margin-bottom:16px;">
+      <tr><td style="color:#444;font-size:12pt;line-height:20pt;">
+        <strong>E-Mail:</strong> ${email}<br>
+        <strong>Passwort:</strong> <code style="background:#fff;padding:2px 8px;border-radius:4px;font-size:13pt;letter-spacing:1px;">${generated_password}</code><br>
+        <strong>Name (Kundennummer):</strong> ${hfx_customer_number}
+      </td></tr>
+    </table>
+    <p style="margin:0 0 24px 0;font-size:10pt;color:#888;"><em>Bitte bewahren Sie diese Zugangsdaten sicher auf.</em></p>
+    <p style="margin:0 0 8px 0;font-size:12pt;color:#444;"><strong>Folgende Daten haben Sie an uns übermittelt:</strong></p>
+    <table border="0" cellpadding="4" cellspacing="0" width="100%" style="font-size:12pt;color:#444;">
+      <tr><td>Praxisname:</td><td>${praxis_name}</td></tr>
+      <tr><td>Vorname:</td><td>${vorname}</td></tr>
+      <tr><td>Nachname:</td><td>${nachname}</td></tr>
+      <tr><td>E-Mail:</td><td>${email}</td></tr>
+      <tr><td>PLZ:</td><td>${plz}</td></tr>
+      <tr><td>Mobilnummer:</td><td>${mobilnummer}</td></tr>
+      <tr><td>Abrechnungszentrum:</td><td>${abrechnungszentrum}</td></tr>
+    </table>
+  `;
+  return renderBrandedEmail({
+    subheadline: "Ihre Zugangsdaten",
+    bodyHtml,
+    bodyText: `Ihre Zugangsdaten für HFX.GOÄ\nE-Mail: ${email}\nPasswort: ${generated_password}\nName: ${hfx_customer_number}`,
+  }).html;
 }
 
 function buildDemoExpiryCustomerHtml() {
