@@ -2849,7 +2849,9 @@ export type Database = {
       get_public_contract_booking: {
         Args: { p_contract_id: string }
         Returns: {
+          cancellation_period_months: number
           customer_name: string
+          duration_months: number
           fachrichtung: string
           hfx_customer_number: string
           id: string

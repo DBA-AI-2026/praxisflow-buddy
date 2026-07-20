@@ -61,7 +61,10 @@ interface ContractSummary {
   hfx_customer_number: string | null;
   fachrichtung: string | null;
   rechtsform: string | null;
+  cancellation_period_months: number | null;
+  duration_months: number | null;
 }
+
 
 interface ProductAgb {
   name: string;
@@ -200,6 +203,8 @@ export default function Buchen() {
         hfx_customer_number: "HFX-2024-0042",
         fachrichtung: null,
         rechtsform: null,
+        cancellation_period_months: 0,
+        duration_months: 0,
       });
       setAgbUrl(DEFAULT_AGB_URL);
       setHasProductSpecificAgb(false);
@@ -518,10 +523,23 @@ export default function Buchen() {
                 {monthlyGross.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
               </span>
             </div>
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Kündigung</span>
-              <span>Unbefristet · 6 Monate Frist zum Monatsende</span>
-            </div>
+            {(() => {
+              // Frist ist rechtlich maßgeblich (AGB §13 Abs. 1): nur anzeigen,
+              // wenn die Daten aus dem Vertrag vorliegen. Kein erfundener Fallback.
+              const dur = contract?.duration_months;
+              const cancel = contract?.cancellation_period_months;
+              if (dur == null || cancel == null) return null;
+              const laufzeitLabel = dur === 0 ? "Unbefristet" : `${dur} Monate`;
+              const fristLabel = cancel === 0
+                ? "monatlich kündbar zum Monatsende"
+                : `${cancel} Monate Frist zum Monatsende`;
+              return (
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Kündigung</span>
+                  <span>{laufzeitLabel} · {fristLabel}</span>
+                </div>
+              );
+            })()}
           </div>
         </div>
 

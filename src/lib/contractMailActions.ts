@@ -99,7 +99,10 @@ export async function copyBuchungslink(params: {
   contractId: string;
   appUrl?: string;
 }): Promise<{ success: boolean; error?: string; url: string }> {
-  const origin = params.appUrl ?? window.location.origin;
+  // Origin fest auf die Produktivdomain — window.location.origin würde in
+  // id-preview-Umgebungen eine Lovable-Domain in den kopierten Link schreiben
+  // (dieselbe Falle wie #16 Phase 2b).
+  const origin = params.appUrl ?? "https://sales.hfx-honorarfuchs.de";
   const url = `${origin}/buchen?contract_id=${params.contractId}`;
   try {
     if (!navigator.clipboard?.writeText) {
@@ -111,3 +114,4 @@ export async function copyBuchungslink(params: {
     return { success: false, error: err?.message ?? "Kopieren fehlgeschlagen", url };
   }
 }
+
