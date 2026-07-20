@@ -384,7 +384,7 @@ export default function Buchen() {
             </div>
             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <span>🔒</span>
-              <span>SSL-verschlüsselt · Kreditkarte & SEPA-Lastschrift</span>
+              <span>SSL-verschlüsselt · SEPA-Lastschrift</span>
             </div>
           </div>
         </div>
@@ -628,7 +628,7 @@ export default function Buchen() {
                 Allgemeinen Geschäftsbedingungen (AGB)
                 <ExternalLink className="h-3 w-3" />
               </a>{" "}
-              der HFX Honorarfuchs GmbH. Mit der Zahlung schließe ich den Vertrag verbindlich ab.
+              der HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH – und gebe hiermit eine verbindliche Buchung ab. Die Abrechnung erfolgt per SEPA-Lastschrift; im nächsten Schritt richte ich das SEPA-Mandat ein.
             </label>
           </div>
 
@@ -649,7 +649,7 @@ export default function Buchen() {
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
-            Sichere Zahlung via Stripe · Kreditkarte oder SEPA-Lastschrift · SSL-verschlüsselt
+            Sichere Abwicklung via Stripe · SEPA-Lastschrift · SSL-verschlüsselt
           </p>
         </form>
 
