@@ -120,6 +120,25 @@ Deno.serve(async (req) => {
         .eq("name", product_name)
         .maybeSingle();
 
+      // Kündigungsfrist produktgetrieben ableiten.
+      // [REVIEW REQUIRED] Diese Regel spiegelt getCancellationPeriodForProducts()
+      // aus src/lib/contractLifecycle.ts (SYNCHRONIZE). Deno kann den TS-Helper
+      // nicht importieren, deshalb inline. Exakter Name-Match (kein ILIKE),
+      // MAX über Treffer, Fallback 6. set-once-at-creation.
+      // Rollback: bei Regression Zeilen 125–140 löschen, dann greift der
+      // DB-Default (contracts.cancellation_period_months DEFAULT 3).
+      const FALLBACK_CANCELLATION_MONTHS = 6;
+      const { data: cancellationRows } = await adminClient
+        .from("products")
+        .select("cancellation_period_months")
+        .in("name", [product_name]);
+      const matchedPeriods = (cancellationRows ?? [])
+        .map((r) => r.cancellation_period_months)
+        .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+      const cancellationPeriod = matchedPeriods.length
+        ? Math.max(...matchedPeriods)
+        : FALLBACK_CANCELLATION_MONTHS;
+
       const today = new Date().toISOString().split("T")[0];
       const customerName = [lead.vorname, lead.nachname].filter(Boolean).join(" ") || lead.praxis_name;
 
@@ -144,6 +163,7 @@ Deno.serve(async (req) => {
           start_date: today,
           end_date: "2099-12-31",
           duration_months: 0,
+          cancellation_period_months: cancellationPeriod,
           payment_interval: "monatlich",
         })
         .select("id")
@@ -154,8 +174,9 @@ Deno.serve(async (req) => {
       }
 
       contractId = newContract.id;
-      console.log(`[qodia-initiate-booking] Created new contract ${contractId}`);
+      console.log(`[qodia-initiate-booking] Created new contract ${contractId} (cancellation=${cancellationPeriod}m)`);
     }
+
 
     // 8. Trigger Mandat-Setup-Mail (Mail 1) via send-mandate-setup mit Service-Role
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
