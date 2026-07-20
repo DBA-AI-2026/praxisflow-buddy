@@ -1189,7 +1189,9 @@ const DEFAULT_HTML: Record<string, () => string> = {
 };
 
 function getHtmlForTemplate(id: TemplateId) {
-  return patchLogo(DEFAULT_HTML[id]?.() ?? "");
+  const raw = DEFAULT_HTML[id]?.() ?? "";
+  // WIRED IDs werden über renderBrandedEmail (SSOT) gebaut und brauchen kein Logo-Patching.
+  return WIRED_IDS.has(id) ? raw : patchLogo(raw);
 }
 
 /** IDs where we show the live pdf-lib PDF preview button */
