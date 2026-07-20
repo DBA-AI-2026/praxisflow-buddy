@@ -730,51 +730,34 @@ function buildAdDemoReminderHtml() {
 
 function buildAdNewLeadHtml() {
   const { praxis_name, vorname, nachname, email, plz, mobilnummer, hfx_customer_number } = MOCK;
-  const year = new Date().getFullYear();
-  return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
-  <tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07);">
-      <tr><td style="background:linear-gradient(135deg,#b6193d,#d42050);padding:32px 24px;text-align:center;">
-        <p style="margin:0 0 8px;font-size:13px;color:#f9c0cc;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;">Neuer Lead eingegangen</p>
-        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Neuer Interessent über die HFX-Webseite</h1>
-        <p style="margin:8px 0 0;color:#f9c0cc;font-size:14px;">Automatische Zuweisung nach PLZ ${plz}</p>
+  const bodyHtml = `
+    <p style="margin:0 0 16px 0;font-size:12pt;color:#333;">Hallo <strong>Uwe Waldenmeyer</strong>,</p>
+    <p style="margin:0 0 20px 0;font-size:11pt;color:#555;line-height:1.6;">ein neuer Interessent hat sich über die HFX-Webseite registriert und wurde dir automatisch aufgrund der PLZ-Zuordnung (PLZ ${plz}) zugewiesen.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+      <tr><td style="background:#fef2f4;padding:10px 14px;border-bottom:1px solid #e5e7eb;">
+        <p style="margin:0;font-size:10pt;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#b6193d;">Lead-Details</p>
       </td></tr>
-      <tr><td style="padding:28px 24px;">
-        <p style="margin:0 0 20px;font-size:15px;color:#374151;">Hallo <strong>Uwe Waldenmeyer</strong>,</p>
-        <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
-          ein neuer Interessent hat sich über die HFX-Webseite registriert und wurde dir automatisch aufgrund der PLZ-Zuordnung zugewiesen.
-        </p>
-        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:24px;">
-          <tr><td style="background:#fef2f4;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
-            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#b6193d;">Lead-Details</p>
-          </td></tr>
-          <tr><td style="padding:16px;">
-            <table width="100%" cellpadding="0" cellspacing="0">
-              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;width:160px;">Praxis</td><td style="padding:5px 0;font-size:13px;color:#111827;font-weight:600;">${praxis_name}</td></tr>
-              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Name</td><td style="padding:5px 0;font-size:13px;color:#111827;font-weight:500;">${vorname} ${nachname}</td></tr>
-              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">E-Mail</td><td style="padding:5px 0;font-size:13px;color:#b6193d;">${email}</td></tr>
-              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Telefon</td><td style="padding:5px 0;font-size:13px;color:#111827;">${mobilnummer}</td></tr>
-              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">PLZ</td><td style="padding:5px 0;font-size:13px;color:#111827;">${plz}</td></tr>
-              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Ort</td><td style="padding:5px 0;font-size:13px;color:#111827;">München</td></tr>
-              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Abrechnung</td><td style="padding:5px 0;font-size:13px;color:#111827;">Kein Abrechnungszentrum</td></tr>
-              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">HFX-Nummer</td><td style="padding:5px 0;font-size:13px;color:#111827;font-weight:600;">${hfx_customer_number}</td></tr>
-            </table>
-          </td></tr>
+      <tr><td style="padding:14px;">
+        <table width="100%" cellpadding="4" cellspacing="0" style="font-size:11pt;color:#333;">
+          <tr><td style="color:#6b7280;width:160px;">Praxis</td><td style="font-weight:600;">${praxis_name}</td></tr>
+          <tr><td style="color:#6b7280;">Name</td><td>${vorname} ${nachname}</td></tr>
+          <tr><td style="color:#6b7280;">E-Mail</td><td style="color:#b6193d;">${email}</td></tr>
+          <tr><td style="color:#6b7280;">Telefon</td><td>${mobilnummer}</td></tr>
+          <tr><td style="color:#6b7280;">PLZ</td><td>${plz}</td></tr>
+          <tr><td style="color:#6b7280;">Abrechnung</td><td>Kein Abrechnungszentrum</td></tr>
+          <tr><td style="color:#6b7280;">HFX-Nummer</td><td style="font-weight:600;">${hfx_customer_number}</td></tr>
         </table>
-        <p style="margin:0 0 24px;font-size:13px;color:#6b7280;line-height:1.6;background:#fafafa;border-left:3px solid #b6193d;padding:12px 16px;border-radius:0 4px 4px 0;">
-          <strong>Nächster Schritt:</strong> Bitte nimm zeitnah Kontakt mit dem Interessenten auf. Du findest den Lead im HFX-Portal unter <em>Interessenten</em>.
-        </p>
-      </td></tr>
-      <tr><td style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center;">
-        <p style="margin:0;font-size:12px;color:#9ca3af;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
-        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${year} HFX Honorarfuchs GmbH</p>
       </td></tr>
     </table>
-  </td></tr>
-</table>
-</body></html>`;
+    <p style="margin:0;font-size:11pt;color:#555;line-height:1.6;background:#fafafa;border-left:3px solid #b6193d;padding:12px 16px;border-radius:0 4px 4px 0;">
+      <strong>Nächster Schritt:</strong> Bitte nimm zeitnah Kontakt mit dem Interessenten auf. Du findest den Lead im HFX-Portal unter <em>Interessenten</em>.
+    </p>
+  `;
+  return renderBrandedEmail({
+    subheadline: "Neuer Lead eingegangen",
+    bodyHtml,
+    bodyText: `Neuer Lead: ${praxis_name} (${plz})\n${vorname} ${nachname} · ${email} · ${mobilnummer}\nHFX-Nummer: ${hfx_customer_number}`,
+  }).html;
 }
 
 function buildContractCustomerPdfSendHtml() {
