@@ -203,6 +203,8 @@ export default function Buchen() {
         hfx_customer_number: "HFX-2024-0042",
         fachrichtung: null,
         rechtsform: null,
+        cancellation_period_months: 0,
+        duration_months: 0,
       });
       setAgbUrl(DEFAULT_AGB_URL);
       setHasProductSpecificAgb(false);
