@@ -61,7 +61,10 @@ interface ContractSummary {
   hfx_customer_number: string | null;
   fachrichtung: string | null;
   rechtsform: string | null;
+  cancellation_period_months: number | null;
+  duration_months: number | null;
 }
+
 
 interface ProductAgb {
   name: string;
