@@ -135,45 +135,37 @@ Deno.serve(async (req) => {
       // Send notification email before reset if requested
       if (notifyBeforeReset) {
         try {
-          await resend.emails.send({
-            from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
-            to: [email],
-            subject: "Ihr Passwort wurde zurückgesetzt – HFX Sales Portal",
-            html: `<!DOCTYPE html>
-<html lang="de">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:verdana,geneva,sans-serif;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f5f5f5;padding:20px 0;">
-<tr><td align="center">
-<table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-  <tr>
-    <td style="background-color:#0b367f;padding:30px 40px;text-align:center;">
-      <h1 style="color:#ffffff;font-size:22pt;margin:0;font-family:verdana,geneva,sans-serif;">🦊 HFX Sales Portal</h1>
-      <p style="color:#c8d8f0;font-size:11pt;margin:8px 0 0 0;">Passwort zurückgesetzt</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:32px 40px;">
-      <p style="font-size:12pt;color:#333333;margin:0 0 16px 0;">Hallo <strong>${existingUser?.user_metadata?.full_name || fullName}</strong>,</p>
+          const displayName = existingUser?.user_metadata?.full_name || fullName;
+          const resetBodyHtml = `
+      <p style="font-size:12pt;color:#333333;margin:0 0 16px 0;">Hallo <strong>${displayName}</strong>,</p>
       <p style="font-size:11pt;color:#555555;margin:0 0 24px 0;">Ihr Passwort für das HFX Sales Portal wurde von einem Administrator zurückgesetzt.</p>
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#fff8e1;border-radius:8px;border:1px solid #f59e0b;margin-bottom:24px;">
         <tr><td style="padding:16px 20px;font-size:11pt;color:#92400e;">
-          <strong>⚠️ Wichtig:</strong> Sie erhalten in Kürze eine weitere E-Mail mit Ihren neuen Zugangsdaten.
+          <strong>Wichtig:</strong> Sie erhalten in Kürze eine weitere E-Mail mit Ihren neuen Zugangsdaten.
         </td></tr>
       </table>
-      <p style="font-size:10pt;color:#888888;margin:0 0 8px 0;">Falls Sie diese Änderung nicht angefordert haben, kontaktieren Sie bitte umgehend Ihren Administrator.</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="background-color:#f8f8f8;padding:16px 40px;border-top:1px solid #eeeeee;text-align:center;">
-      <p style="font-size:9pt;color:#aaaaaa;margin:0;">© 2026 HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH · Bei Fragen: info@hfx-honorarfuchs.de</p>
-    </td>
-  </tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`,
+      <p style="font-size:10pt;color:#888888;margin:0 0 8px 0;">Falls Sie diese Änderung nicht angefordert haben, kontaktieren Sie bitte umgehend Ihren Administrator.</p>`;
+          const resetBodyText = [
+            `Hallo ${displayName},`,
+            "",
+            "Ihr Passwort für das HFX Sales Portal wurde von einem Administrator zurückgesetzt.",
+            "",
+            "Wichtig: Sie erhalten in Kürze eine weitere E-Mail mit Ihren neuen Zugangsdaten.",
+            "",
+            "Falls Sie diese Änderung nicht angefordert haben, kontaktieren Sie bitte umgehend Ihren Administrator.",
+          ].join("\n");
+          const resetMail = renderBrandedEmail({
+            subheadline: "Ihr Passwort wurde zurückgesetzt",
+            bodyHtml: resetBodyHtml,
+            bodyText: resetBodyText,
+          });
+          await resend.emails.send({
+            from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+            reply_to: "info@hfx-honorarfuchs.de",
+            to: [email],
+            subject: "Ihr Passwort wurde zurückgesetzt – HFX Sales Portal",
+            html: resetMail.html,
+            text: resetMail.text,
           });
           console.log("Password reset notification sent to:", email);
         } catch (notifyError) {
