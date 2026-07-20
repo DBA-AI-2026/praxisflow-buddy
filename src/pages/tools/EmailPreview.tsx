@@ -443,48 +443,44 @@ function buildContractPartnerHtml() {
 
 function buildInvoiceHtml() {
   const { invoice_number, customer_name, invoice_date, due_date, net_amount, tax_amount, gross_amount } = MOCK;
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head><body style="margin:0;padding:0;background:#fff;">
-<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;">
-  <div style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:30px 20px;border-radius:8px 8px 0 0;text-align:center;">
-    <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg" alt="HFX Logo" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;"/>
-    <h1 style="color:#fff;margin:0;font-size:22px;">Rechnung ${invoice_number}</h1>
-    <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:13px;">Honorarfuchs – HFX Sales Portal</p>
-  </div>
-  <div style="background:#f9fafb;padding:30px 20px;border:1px solid #e5e7eb;border-top:none;">
-    <p style="font-size:15px;color:#333;">Sehr geehrte Damen und Herren,</p>
-    <p style="font-size:14px;color:#555;line-height:1.6;">anbei erhalten Sie Ihre Rechnung <strong>${invoice_number}</strong> vom <strong>${invoice_date}</strong>.</p>
-    <p style="font-size:14px;color:#555;"><strong>Rechnungsempfänger:</strong> ${customer_name}</p>
-    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;margin-top:20px;">
+  const bodyHtml = `
+    <p style="margin:0 0 12px 0;font-size:12pt;color:#333;">Sehr geehrte Damen und Herren,</p>
+    <p style="margin:0 0 16px 0;font-size:11pt;color:#555;line-height:1.6;">anbei erhalten Sie Ihre Rechnung <strong>${invoice_number}</strong> vom <strong>${invoice_date}</strong>.</p>
+    <p style="margin:0 0 16px 0;font-size:11pt;color:#555;"><strong>Rechnungsempfänger:</strong> ${customer_name}</p>
+    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:0 0 16px 0;">
       <thead><tr style="background:#0b367f;">
-        <th style="padding:10px 12px;text-align:left;color:#fff;font-size:12px;">Beschreibung</th>
-        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:12px;">Menge</th>
-        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:12px;">Einzelpreis</th>
-        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:12px;">Gesamt</th>
+        <th style="padding:10px 12px;text-align:left;color:#fff;font-size:11pt;">Beschreibung</th>
+        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:11pt;">Menge</th>
+        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:11pt;">Einzelpreis</th>
+        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:11pt;">Gesamt</th>
       </tr></thead>
       <tbody>
-        <tr><td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;">HFX EBM Lizenz – Februar 2026</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px;">1</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px;">150,00 €</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:13px;">150,00 €</td></tr>
+        <tr>
+          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:11pt;">HFX EBM Lizenz – Februar 2026</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:11pt;">1</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:11pt;">150,00 €</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:11pt;">150,00 €</td>
+        </tr>
       </tbody>
     </table>
-    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-top:20px;">
-      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span>Nettobetrag:</span><strong>${net_amount}</strong></div>
-      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#6b7280;"><span>MwSt. (19%):</span><span>${tax_amount}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #0b367f;margin-top:8px;font-size:16px;"><span><strong>Gesamtbetrag:</strong></span><strong style="color:#0b367f;">${gross_amount}</strong></div>
-    </div>
-    <p style="margin-top:20px;font-size:14px;color:#555;"><strong>Zahlungsziel:</strong> ${due_date}</p>
-    <p style="font-size:12px;color:#6b7280;margin-top:4px;">📎 Das PDF dieser Rechnung ist als Anhang beigefügt.</p>
-  </div>
-  <div style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
-    <p style="font-size:11px;color:#374151;font-weight:600;margin:0;">HFX Honorarfuchs – ein Geschäftsbereich von MCC Medical CareCapital GmbH</p>
-    <p style="font-size:11px;color:#6b7280;margin:4px 0 0;">Hohenzollernstr. 47, 47799 Krefeld</p>
-    <p style="font-size:11px;color:#6b7280;margin:4px 0 0;">Geschäftsführung: Olaf Hagelkruys, Thilo Wiers-Keiser, Robbin Zielke &nbsp;·&nbsp; Amtsgericht Krefeld, HRB 14709</p>
-    <p style="font-size:11px;color:#6b7280;margin:4px 0 0;">USt-Id-Nr: DE 227 420 712 &nbsp;·&nbsp; <a href="https://www.hfx-honorarfuchs.de" style="color:#0b367f;">www.hfx-honorarfuchs.de</a></p>
-    <p style="font-size:10px;color:#9ca3af;margin:8px 0 0;">Diese Rechnung wurde automatisch aus dem HFX Sales Portal erstellt.</p>
-  </div>
-</div>
-</body></html>`;
+    <table width="100%" border="0" cellpadding="4" cellspacing="0" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;font-size:11pt;">
+      <tr><td>Nettobetrag:</td><td align="right"><strong>${net_amount}</strong></td></tr>
+      <tr><td style="color:#6b7280;">MwSt. (19%):</td><td align="right" style="color:#6b7280;">${tax_amount}</td></tr>
+      <tr><td style="border-top:2px solid #0b367f;padding-top:8px;"><strong>Gesamtbetrag:</strong></td><td align="right" style="border-top:2px solid #0b367f;padding-top:8px;color:#0b367f;"><strong>${gross_amount}</strong></td></tr>
+    </table>
+    <p style="margin:16px 0 4px 0;font-size:11pt;color:#555;"><strong>Zahlungsziel:</strong> ${due_date}</p>
+    <table border="0" cellpadding="12" cellspacing="0" width="100%" style="background:#f0f4f8;border-radius:6px;border:1px solid #d0d5dd;margin-top:16px;">
+      <tr><td style="font-size:10pt;color:#0b367f;">
+        <strong>Automatischer Einzug:</strong> Der Rechnungsbetrag wird bequem per SEPA-Lastschrift eingezogen. Sie müssen nichts weiter veranlassen.
+      </td></tr>
+    </table>
+    <p style="margin:12px 0 0 0;font-size:10pt;color:#6b7280;">Das PDF dieser Rechnung ist als Anhang beigefügt.</p>
+  `;
+  return renderBrandedEmail({
+    subheadline: "Ihre Rechnung",
+    bodyHtml,
+    bodyText: `Rechnung ${invoice_number} vom ${invoice_date}\nGesamtbetrag: ${gross_amount}\nZahlungsziel: ${due_date}\nEinzug automatisch per SEPA-Lastschrift.`,
+  }).html;
 }
 
 function buildInvoicePdfPreviewHtml() {
