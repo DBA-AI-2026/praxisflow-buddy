@@ -403,7 +403,7 @@ function buildContractCustomerHtml() {
   <p style="font-family:Arial,sans-serif;font-size:14px;color:#555;">Mit freundlichen Grüßen,<br/><strong>Das HFX Team</strong></p>
 </td></tr>
 <tr><td style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
-  <p style="font-family:Arial,sans-serif;font-size:11px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} Honorarfuchs – HFX Sales Portal</p>
+  <p style="font-family:Arial,sans-serif;font-size:11px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} HFX Honorarfuchs</p>
 </td></tr>
 </table></td></tr></table>
 </body></html>`;
@@ -435,7 +435,7 @@ function buildContractPartnerHtml() {
   <p style="font-family:Arial,sans-serif;font-size:14px;color:#555;">Herzlichen Glückwunsch zum Abschluss!</p>
 </td></tr>
 <tr><td style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
-  <p style="font-family:Arial,sans-serif;font-size:11px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} Honorarfuchs – HFX Sales Portal</p>
+  <p style="font-family:Arial,sans-serif;font-size:11px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} HFX Honorarfuchs</p>
 </td></tr>
 </table></td></tr></table>
 </body></html>`;
@@ -512,7 +512,7 @@ function buildInvoicePdfPreviewHtml() {
   <div class="header">
     <div>
       <h1>Rechnung ${invoice_number}</h1>
-      <p>HFX Honorarfuchs GmbH</p>
+      <p>HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH</p>
     </div>
     <span class="badge">ENTWURF</span>
   </div>
@@ -548,7 +548,7 @@ function buildInvoicePdfPreviewHtml() {
     <p style="font-size:10px;color:#9ca3af;margin-top:4px;">Im ausgewiesenen Betrag sind 28,50 € Umsatzsteuer (19%) enthalten.</p>
   </div>
   <div class="footer">
-    <p style="margin:0;font-weight:600;color:#374151;">HFX Honorarfuchs – ein Geschäftsbereich von MCC Medical CareCapital GmbH</p>
+    <p style="margin:0;font-weight:600;color:#374151;">HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH</p>
     <p style="margin:3px 0 0;">Hohenzollernstr. 47, 47799 Krefeld</p>
     <p style="margin:3px 0 0;">Geschäftsführung: Olaf Hagelkruys, Thilo Wiers-Keiser, Robbin Zielke &nbsp;·&nbsp; Amtsgericht Krefeld, HRB 14709</p>
     <p style="margin:3px 0 0;">USt-Id-Nr: DE 227 420 712 &nbsp;·&nbsp; www.hfx-honorarfuchs.de</p>
@@ -632,7 +632,7 @@ function buildAdTippLeadHtml() {
       </td></tr>
       <tr><td style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center;">
         <p style="margin:0;font-size:12px;color:#9ca3af;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
-        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${year} HFX Honorarfuchs GmbH</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${year} HFX Honorarfuchs</p>
       </td></tr>
     </table>
   </td></tr>
@@ -721,7 +721,7 @@ function buildAdDemoReminderHtml() {
   <!-- Footer -->
   <tr><td bgcolor="#f9fafb" style="border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
     <p style="margin:0;color:#9ca3af;font-family:verdana,geneva,sans-serif;font-size:9pt;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
-    <p style="margin:4px 0 0;color:#9ca3af;font-family:verdana,geneva,sans-serif;font-size:9pt;">© ${year} HFX Honorarfuchs GmbH</p>
+    <p style="margin:4px 0 0;color:#9ca3af;font-family:verdana,geneva,sans-serif;font-size:9pt;">© ${year} HFX Honorarfuchs</p>
   </td></tr>
 </table>
 </td></tr></table>
@@ -800,7 +800,7 @@ function buildContractCustomerPdfSendHtml() {
     </div>
     <div class="footer">
       <p style="margin: 0;">Bei Fragen wenden Sie sich bitte an Ihren Ansprechpartner.</p>
-      <p style="margin: 10px 0 0 0; font-size: 12px;">© ${year} Honorarfuchs - HFX Sales Portal</p>
+      <p style="margin: 10px 0 0 0; font-size: 12px;">© ${year} HFX Honorarfuchs</p>
     </div>
   </div></body></html>`;
 }
@@ -845,7 +845,7 @@ function buildAdLeadAssignmentHtml() {
       </td></tr>
       <tr><td style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center;">
         <p style="margin:0;font-size:12px;color:#9ca3af;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
-        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${year} HFX Honorarfuchs GmbH</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${year} HFX Honorarfuchs</p>
       </td></tr>
     </table>
   </td></tr>
@@ -980,7 +980,7 @@ function buildContractPaperConfirmationHtml() {
           <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
             <p style="color:#9ca3af;font-size:11px;margin:0;">
               HFX Honorarfuchs • Diese E-Mail wurde automatisch generiert.<br>
-              © ${year} HFX Honorarfuchs GmbH
+              © ${year} HFX Honorarfuchs
             </p>
           </td>
         </tr>
@@ -1038,7 +1038,7 @@ function buildBookingLinkHtml() {
   </td></tr>
   <tr><td style="padding:0 40px 16px;"><p style="color:#6b7280;font-size:12px;margin:0;">📄 <a href="https://praxisflow-buddy.lovable.app/templates/vertrag-honorarfuchs.pdf" style="color:#0b367f;">AGB herunterladen</a></p></td></tr>
   <tr><td style="padding:0 40px 32px;"><p style="color:#374151;font-size:14px;line-height:1.7;margin:0;">Bei Fragen: <a href="mailto:info@hfx-honorarfuchs.de" style="color:#0b367f;">info@hfx-honorarfuchs.de</a><br><br>Mit freundlichen Grüßen,<br><strong>Ihr HFX Honorarfuchs Team</strong></p></td></tr>
-  <tr><td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;"><p style="color:#9ca3af;font-size:11px;margin:0;">HFX Honorarfuchs • Diese E-Mail wurde automatisch generiert.<br>© ${year} HFX Honorarfuchs GmbH</p></td></tr>
+  <tr><td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;"><p style="color:#9ca3af;font-size:11px;margin:0;">HFX Honorarfuchs • Diese E-Mail wurde automatisch generiert.<br>© ${year} HFX Honorarfuchs</p></td></tr>
 </table>
 </td></tr>
 </table>
