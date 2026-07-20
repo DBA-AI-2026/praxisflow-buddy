@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
+import { renderBrandedEmail, renderBrandedButton } from "../_shared/email-templates/baseEmailLayout.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -134,45 +135,37 @@ Deno.serve(async (req) => {
       // Send notification email before reset if requested
       if (notifyBeforeReset) {
         try {
-          await resend.emails.send({
-            from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
-            to: [email],
-            subject: "Ihr Passwort wurde zurückgesetzt – HFX Sales Portal",
-            html: `<!DOCTYPE html>
-<html lang="de">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:verdana,geneva,sans-serif;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f5f5f5;padding:20px 0;">
-<tr><td align="center">
-<table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-  <tr>
-    <td style="background-color:#0b367f;padding:30px 40px;text-align:center;">
-      <h1 style="color:#ffffff;font-size:22pt;margin:0;font-family:verdana,geneva,sans-serif;">🦊 HFX Sales Portal</h1>
-      <p style="color:#c8d8f0;font-size:11pt;margin:8px 0 0 0;">Passwort zurückgesetzt</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:32px 40px;">
-      <p style="font-size:12pt;color:#333333;margin:0 0 16px 0;">Hallo <strong>${existingUser?.user_metadata?.full_name || fullName}</strong>,</p>
+          const displayName = existingUser?.user_metadata?.full_name || fullName;
+          const resetBodyHtml = `
+      <p style="font-size:12pt;color:#333333;margin:0 0 16px 0;">Hallo <strong>${displayName}</strong>,</p>
       <p style="font-size:11pt;color:#555555;margin:0 0 24px 0;">Ihr Passwort für das HFX Sales Portal wurde von einem Administrator zurückgesetzt.</p>
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#fff8e1;border-radius:8px;border:1px solid #f59e0b;margin-bottom:24px;">
         <tr><td style="padding:16px 20px;font-size:11pt;color:#92400e;">
-          <strong>⚠️ Wichtig:</strong> Sie erhalten in Kürze eine weitere E-Mail mit Ihren neuen Zugangsdaten.
+          <strong>Wichtig:</strong> Sie erhalten in Kürze eine weitere E-Mail mit Ihren neuen Zugangsdaten.
         </td></tr>
       </table>
-      <p style="font-size:10pt;color:#888888;margin:0 0 8px 0;">Falls Sie diese Änderung nicht angefordert haben, kontaktieren Sie bitte umgehend Ihren Administrator.</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="background-color:#f8f8f8;padding:16px 40px;border-top:1px solid #eeeeee;text-align:center;">
-      <p style="font-size:9pt;color:#aaaaaa;margin:0;">© 2026 HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH · Bei Fragen: info@hfx-honorarfuchs.de</p>
-    </td>
-  </tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`,
+      <p style="font-size:10pt;color:#888888;margin:0 0 8px 0;">Falls Sie diese Änderung nicht angefordert haben, kontaktieren Sie bitte umgehend Ihren Administrator.</p>`;
+          const resetBodyText = [
+            `Hallo ${displayName},`,
+            "",
+            "Ihr Passwort für das HFX Sales Portal wurde von einem Administrator zurückgesetzt.",
+            "",
+            "Wichtig: Sie erhalten in Kürze eine weitere E-Mail mit Ihren neuen Zugangsdaten.",
+            "",
+            "Falls Sie diese Änderung nicht angefordert haben, kontaktieren Sie bitte umgehend Ihren Administrator.",
+          ].join("\n");
+          const resetMail = renderBrandedEmail({
+            subheadline: "Ihr Passwort wurde zurückgesetzt",
+            bodyHtml: resetBodyHtml,
+            bodyText: resetBodyText,
+          });
+          await resend.emails.send({
+            from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+            reply_to: "info@hfx-honorarfuchs.de",
+            to: [email],
+            subject: "Ihr Passwort wurde zurückgesetzt – HFX Sales Portal",
+            html: resetMail.html,
+            text: resetMail.text,
           });
           console.log("Password reset notification sent to:", email);
         } catch (notifyError) {
@@ -292,25 +285,7 @@ Deno.serve(async (req) => {
       try {
         const roleLabel = roleLabels[role] || role;
 
-        const emailResponse = await resend.emails.send({
-          from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
-          to: [email],
-          subject: "Ihre Zugangsdaten für das HFX Sales Portal",
-          html: `<!DOCTYPE html>
-<html lang="de">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:verdana,geneva,sans-serif;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f5f5f5;padding:20px 0;">
-<tr><td align="center">
-<table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-  <tr>
-    <td style="background-color:#0b367f;padding:30px 40px;text-align:center;">
-      <h1 style="color:#ffffff;font-size:22pt;margin:0;font-family:verdana,geneva,sans-serif;">🦊 Willkommen!</h1>
-      <p style="color:#c8d8f0;font-size:11pt;margin:8px 0 0 0;">HFX Sales Portal · das Portal für den Vertrieb</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:32px 40px;">
+        const welcomeBodyHtml = `
       <p style="font-size:12pt;color:#333333;margin:0 0 12px 0;">Hallo <strong>${fullName}</strong>,</p>
       <p style="font-size:11pt;color:#555555;margin:0 0 24px 0;">Ihr Benutzerkonto wurde erfolgreich erstellt. Sie wurden als <strong>${roleLabel}</strong> registriert.</p>
       <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8;border-radius:8px;border:1px solid #d0d5dd;margin-bottom:24px;">
@@ -320,28 +295,37 @@ Deno.serve(async (req) => {
           <strong>Temporäres Passwort:</strong> <code style="background:#fff;padding:2px 8px;border-radius:4px;font-size:13pt;letter-spacing:1px;">${password}</code>
         </td></tr>
       </table>
-      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">
-        <tr><td align="center">
-          <a href="${PORTAL_URL}" style="display:inline-block;background-color:#0b367f;color:#ffffff;font-family:verdana,geneva,sans-serif;font-size:12pt;font-weight:bold;padding:12px 32px;border-radius:6px;text-decoration:none;">Zum Portal anmelden</a>
-        </td></tr>
-      </table>
+      ${renderBrandedButton({ href: PORTAL_URL, label: "Zum Portal anmelden" })}
       <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background:#fff8e1;border-radius:6px;border:1px solid #f59e0b;">
         <tr><td style="font-size:10pt;color:#92400e;font-family:verdana,geneva,sans-serif;">
-          ⚠️ <strong>Wichtig:</strong> Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung unter Einstellungen → Sicherheit.
+          <strong>Wichtig:</strong> Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung unter Einstellungen → Sicherheit.
         </td></tr>
-      </table>
-    </td>
-  </tr>
-  <tr>
-    <td style="background-color:#f8f8f8;padding:16px 40px;border-top:1px solid #eeeeee;text-align:center;">
-      <p style="font-size:9pt;color:#aaaaaa;margin:0;">© 2026 HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH · Bei Fragen: info@hfx-honorarfuchs.de</p>
-    </td>
-  </tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`,
+      </table>`;
+        const welcomeBodyText = [
+          `Hallo ${fullName},`,
+          "",
+          `Ihr Benutzerkonto wurde erfolgreich erstellt. Sie wurden als ${roleLabel} registriert.`,
+          "",
+          "Ihre Zugangsdaten:",
+          `Registrierte E-Mail-Adresse: ${email}`,
+          `Temporäres Passwort: ${password}`,
+          "",
+          `Zum Portal anmelden: ${PORTAL_URL}`,
+          "",
+          "Wichtig: Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung unter Einstellungen → Sicherheit.",
+        ].join("\n");
+        const welcomeMail = renderBrandedEmail({
+          subheadline: "Ihre Zugangsdaten",
+          bodyHtml: welcomeBodyHtml,
+          bodyText: welcomeBodyText,
+        });
+
+        const emailResponse = await resend.emails.send({
+          from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+          to: [email],
+          subject: "Ihre Zugangsdaten für das HFX Sales Portal",
+          html: welcomeMail.html,
+          text: welcomeMail.text,
         });
 
         console.log("Welcome email sent successfully:", emailResponse);
