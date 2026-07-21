@@ -43,41 +43,21 @@ function buildMandateSetupEmail(params: {
   const { greeting, mandateUrl, agbUrl } = params;
   const couplingHtml = AGB_COUPLING_SENTENCE_HTML.replaceAll("{{AGB_URL}}", agbUrl);
   const couplingText = AGB_COUPLING_SENTENCE_TEXT.replaceAll("{{AGB_URL}}", agbUrl);
-  const html = `<!DOCTYPE html>
-<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f4f6fa;font-family:Arial,sans-serif;">
-<div style="max-width:600px;margin:0 auto;padding:20px;">
-  <div style="background:#0b367f;color:#fff;padding:30px 20px;border-radius:8px 8px 0 0;text-align:center;">
-    <h1 style="margin:0;font-size:22px;">Willkommen bei Honorarfuchs</h1>
-    <p style="margin:8px 0 0;opacity:0.9;font-size:14px;">Bitte aktivieren Sie Ihren Vertrag</p>
-  </div>
-  <div style="background:#fff;padding:30px 24px;border:1px solid #e5e7eb;border-top:none;color:#333;font-size:14px;line-height:1.6;">
-    <p style="margin:0 0 14px;">${greeting},</p>
-    <p style="margin:0 0 14px;">vielen Dank für Ihren Vertragsabschluss bei Honorarfuchs.</p>
-    <p style="margin:0 0 14px;">Damit wir Ihren Vertrag aktivieren und die monatliche Abrechnung einrichten können, benötigen wir noch Ihre SEPA-Bankverbindung.</p>
-    <p style="margin:0 0 14px;"><strong>${couplingHtml}</strong></p>
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:26px auto;">
-      <tr>
-        <td align="center" bgcolor="#0b367f" style="border-radius:8px;padding:14px 28px;">
-          <a href="${mandateUrl}" target="_blank" rel="noopener noreferrer" style="color:#ffffff;font-size:16px;font-weight:bold;text-decoration:none;">Bankverbindung hinterlegen</a>
-        </td>
-      </tr>
-    </table>
-    <p style="margin:0 0 14px;color:#555;">Die AGB finden Sie als PDF im Anhang dieser E-Mail sowie unter folgendem Link: <a href="${agbUrl}" target="_blank" rel="noopener noreferrer" style="color:#0b367f;">AGB öffnen</a>.</p>
-    <p style="margin:0 0 14px;color:#555;">Sobald Sie das SEPA-Mandat hinterlegt haben, erhalten Sie in einer zweiten E-Mail Ihre Vertragsunterlagen.</p>
-    <p style="margin:0 0 14px;color:#555;">Bei Fragen erreichen Sie uns unter <a href="mailto:info@hfx-honorarfuchs.de" style="color:#0b367f;">info@hfx-honorarfuchs.de</a>.</p>
-    <p style="margin:18px 0 0;">Mit freundlichen Grüßen<br/><strong>Ihr Honorarfuchs-Team</strong></p>
-    <p style="margin:14px 0 0;color:#888;font-size:11px;">Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br/><a href="${mandateUrl}" style="color:#0b367f;word-break:break-all;">${mandateUrl}</a></p>
-  </div>
-  <div style="background:#f9fafb;padding:14px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
-    <p style="font-size:11px;color:#9ca3af;margin:0;">HFX Honorarfuchs — eine Marke der MCC Medical CareCapital GmbH</p>
-  </div>
-</div>
-</body></html>`;
-  const text = [
+  const ctaHtml = renderBrandedButton({ href: mandateUrl, label: "Bankverbindung hinterlegen" });
+  const bodyHtml = `<p style="margin:0 0 14px;">${greeting},</p>
+<p style="margin:0 0 14px;">vielen Dank für Ihren Vertragsabschluss bei HFX Honorarfuchs.</p>
+<p style="margin:0 0 14px;">Damit wir Ihren Vertrag aktivieren und die monatliche Abrechnung einrichten können, benötigen wir noch Ihre SEPA-Bankverbindung.</p>
+<p style="margin:0 0 14px;"><strong>${couplingHtml}</strong></p>
+${ctaHtml}
+<p style="margin:0 0 14px;color:#555;">Die AGB finden Sie als PDF im Anhang dieser E-Mail sowie unter folgendem Link: <a href="${agbUrl}" target="_blank" rel="noopener noreferrer" style="color:#0b367f;">AGB öffnen</a>.</p>
+<p style="margin:0 0 14px;color:#555;">Sobald Sie das SEPA-Mandat hinterlegt haben, erhalten Sie in einer zweiten E-Mail Ihre Vertragsunterlagen.</p>
+<p style="margin:0 0 14px;color:#555;">Bei Fragen erreichen Sie uns unter <a href="mailto:info@hfx-honorarfuchs.de" style="color:#0b367f;">info@hfx-honorarfuchs.de</a>.</p>
+<p style="margin:18px 0 0;">Mit freundlichen Grüßen<br/><strong>Ihr HFX Honorarfuchs Team</strong></p>
+<p style="margin:14px 0 0;color:#888;font-size:11px;">Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br/><a href="${mandateUrl}" style="color:#0b367f;word-break:break-all;">${mandateUrl}</a></p>`;
+  const bodyText = [
     `${greeting},`,
     "",
-    "vielen Dank für Ihren Vertragsabschluss bei Honorarfuchs.",
+    "vielen Dank für Ihren Vertragsabschluss bei HFX Honorarfuchs.",
     "",
     "Damit wir Ihren Vertrag aktivieren und die monatliche Abrechnung einrichten können, benötigen wir noch Ihre SEPA-Bankverbindung.",
     "",
@@ -92,12 +72,15 @@ function buildMandateSetupEmail(params: {
     "Bei Fragen erreichen Sie uns unter info@hfx-honorarfuchs.de.",
     "",
     "Mit freundlichen Grüßen",
-    "Ihr Honorarfuchs-Team",
-    "",
-    "HFX Honorarfuchs — eine Marke der MCC Medical CareCapital GmbH",
+    "Ihr HFX Honorarfuchs Team",
   ].join("\n");
-  return { html, text };
+  return renderBrandedEmail({
+    subheadline: "Bitte aktivieren Sie Ihren Vertrag",
+    bodyHtml,
+    bodyText,
+  });
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
