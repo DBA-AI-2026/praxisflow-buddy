@@ -763,10 +763,7 @@ function buildAdminAccessRequestHtml() {
 
 const DEFAULT_HTML: Record<string, () => string> = {
   "lead-confirmation": buildLeadConfirmationHtml,
-  "contract-customer": buildContractCustomerHtml,
-  "contract-customer-pdf-send": buildContractCustomerPdfSendHtml,
   "contract-partner": buildContractPartnerHtml,
-  "contract-paper-confirmation": buildContractPaperConfirmationHtml,
   "booking-link": buildBookingLinkHtml,
   "invoice": buildInvoiceHtml,
   "invoice-pdf": buildInvoicePdfPreviewHtml,
