@@ -375,44 +375,47 @@ function buildContractPartnerHtml() {
 }
 
 function buildInvoiceHtml() {
-  const { invoice_number, customer_name, invoice_date, due_date, net_amount, tax_amount, gross_amount } = MOCK;
-  const bodyHtml = `
-    <p style="margin:0 0 12px 0;font-size:12pt;color:#333;">Sehr geehrte Damen und Herren,</p>
-    <p style="margin:0 0 16px 0;font-size:11pt;color:#555;line-height:1.6;">anbei erhalten Sie Ihre Rechnung <strong>${invoice_number}</strong> vom <strong>${invoice_date}</strong>.</p>
-    <p style="margin:0 0 16px 0;font-size:11pt;color:#555;"><strong>Rechnungsempfänger:</strong> ${customer_name}</p>
-    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:0 0 16px 0;">
-      <thead><tr style="background:#0b367f;">
-        <th style="padding:10px 12px;text-align:left;color:#fff;font-size:11pt;">Beschreibung</th>
-        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:11pt;">Menge</th>
-        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:11pt;">Einzelpreis</th>
-        <th style="padding:10px 12px;text-align:right;color:#fff;font-size:11pt;">Gesamt</th>
-      </tr></thead>
-      <tbody>
-        <tr>
-          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:11pt;">HFX EBM Lizenz – Februar 2026</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:11pt;">1</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:11pt;">150,00 €</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:11pt;">150,00 €</td>
-        </tr>
-      </tbody>
-    </table>
-    <table width="100%" border="0" cellpadding="4" cellspacing="0" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;font-size:11pt;">
-      <tr><td>Nettobetrag:</td><td align="right"><strong>${net_amount}</strong></td></tr>
-      <tr><td style="color:#6b7280;">MwSt. (19%):</td><td align="right" style="color:#6b7280;">${tax_amount}</td></tr>
-      <tr><td style="border-top:2px solid #0b367f;padding-top:8px;"><strong>Gesamtbetrag:</strong></td><td align="right" style="border-top:2px solid #0b367f;padding-top:8px;color:#0b367f;"><strong>${gross_amount}</strong></td></tr>
-    </table>
-    <p style="margin:16px 0 4px 0;font-size:11pt;color:#555;"><strong>Zahlungsziel:</strong> ${due_date}</p>
-    <table border="0" cellpadding="12" cellspacing="0" width="100%" style="background:#f0f4f8;border-radius:6px;border:1px solid #d0d5dd;margin-top:16px;">
-      <tr><td style="font-size:10pt;color:#0b367f;">
-        <strong>Automatischer Einzug:</strong> Der Rechnungsbetrag wird bequem per SEPA-Lastschrift eingezogen. Sie müssen nichts weiter veranlassen.
-      </td></tr>
-    </table>
-    <p style="margin:12px 0 0 0;font-size:10pt;color:#6b7280;">Das PDF dieser Rechnung ist als Anhang beigefügt.</p>
-  `;
+  const { invoice_number, customer_name, invoice_date, net_amount, tax_amount, gross_amount } = MOCK;
+  const collectionDate = "03.03.2026"; // = invoice_date + 3 Werktage (live-Logik)
+  const paymentMethodNote = "Der Betrag wird automatisch per SEPA-Lastschrift von Ihrem Konto eingezogen.";
+  const bodyHtml = `<p style="background:#fef3c7;border:1px solid #f59e0b;color:#92400e;padding:8px 12px;border-radius:6px;font-size:10pt;margin:0 0 16px 0;"><strong>Beispiel: SEPA-Einzug</strong> · Diese Vorschau zeigt einen von zwei Zahlwegen (SEPA-Lastschrift).</p>
+<p style="font-size:16px;">Sehr geehrte Damen und Herren,</p>
+<p>anbei erhalten Sie Ihre Rechnung <strong>${invoice_number}</strong> vom <strong>${invoice_date}</strong>.</p>
+<p><strong>Rechnungsempfänger:</strong> ${customer_name} (${MOCK.hfx_customer_number})</p>
+<p><strong>Adresse:</strong> Musterstraße 12, 80331 München</p>
+
+<table style="width:100%;border-collapse:collapse;background:#ffffff;border-radius:8px;overflow:hidden;margin-top:20px;">
+  <thead><tr>
+    <th style="background:#0b367f;color:#ffffff;padding:10px 12px;text-align:left;">Beschreibung</th>
+    <th style="background:#0b367f;color:#ffffff;padding:10px 12px;text-align:right;">Menge</th>
+    <th style="background:#0b367f;color:#ffffff;padding:10px 12px;text-align:right;">Einzelpreis</th>
+    <th style="background:#0b367f;color:#ffffff;padding:10px 12px;text-align:right;">Gesamt</th>
+  </tr></thead>
+  <tbody>
+    <tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">HFX EBM Lizenz – Februar 2026</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">1</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">150,00 €</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">150,00 €</td>
+    </tr>
+  </tbody>
+</table>
+
+<div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-top:20px;">
+  <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Nettobetrag:</span><strong>${net_amount}</strong></div>
+  <div style="display:flex;justify-content:space-between;padding:4px 0;color:#6b7280;"><span>MwSt. (19%):</span><span>${tax_amount}</span></div>
+  <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #0b367f;margin-top:8px;font-size:18px;"><span><strong>Gesamtbetrag:</strong></span><strong style="color:#0b367f;">${gross_amount}</strong></div>
+</div>
+
+<div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
+  <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>Automatischer Einzug</strong></p>
+  <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">${paymentMethodNote}</p>
+  <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;"><strong>Einzugsdatum:</strong> ${collectionDate}</p>
+</div>`;
   return renderBrandedEmail({
     subheadline: "Ihre Rechnung",
     bodyHtml,
-    bodyText: `Rechnung ${invoice_number} vom ${invoice_date}\nGesamtbetrag: ${gross_amount}\nZahlungsziel: ${due_date}\nEinzug automatisch per SEPA-Lastschrift.`,
+    bodyText: `Rechnung ${invoice_number} vom ${invoice_date}\nGesamtbetrag: ${gross_amount}\n${paymentMethodNote}\nEinzugsdatum: ${collectionDate}`,
   }).html;
 }
 
