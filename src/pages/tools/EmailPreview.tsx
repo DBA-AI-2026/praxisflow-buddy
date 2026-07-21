@@ -277,38 +277,6 @@ function buildDemoExpiryCustomerHtml() {
 }
 
 
-function buildContractCustomerHtml() {
-  const { customer_name, hfx_customer_number } = MOCK;
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head><body style="margin:0;padding:0;background:#fff;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="600">
-<tr><td align="center">
-  <div style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:30px 20px;text-align:center;border-radius:8px 8px 0 0;">
-    <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg" alt="HFX Logo" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;"/>
-    <h1 style="color:#fff;margin:0;font-size:22px;font-family:Arial,sans-serif;">Ihr Vertrag ist aktiv!</h1>
-    <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-family:Arial,sans-serif;font-size:14px;">HFX Honorarfuchs – Sales Portal</p>
-  </div>
-</td></tr>
-<tr><td style="background:#f9fafb;padding:30px 20px;border:1px solid #e5e7eb;border-top:none;">
-  <p style="font-family:Arial,sans-serif;font-size:16px;color:#333;">Sehr geehrte Damen und Herren,</p>
-  <p style="font-family:Arial,sans-serif;font-size:14px;color:#555;line-height:1.6;">Ihr Vertrag mit HFX Honorarfuchs wurde erfolgreich aktiviert. Vielen Dank für Ihr Vertrauen!</p>
-  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:20px 0;">
-    <table width="100%" border="0" cellpadding="0" cellspacing="0">
-    <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#666;padding:4px 0;">Kundenname:</td><td style="font-family:Arial,sans-serif;font-size:13px;color:#111;font-weight:bold;padding:4px 0;">${customer_name}</td></tr>
-    <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#666;padding:4px 0;">HFX-Kundennummer:</td><td style="font-family:Arial,sans-serif;font-size:13px;color:#0b367f;font-weight:bold;padding:4px 0;">${hfx_customer_number}</td></tr>
-    <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#666;padding:4px 0;">Produkt:</td><td style="font-family:Arial,sans-serif;font-size:13px;color:#111;padding:4px 0;">HFX EBM Professional</td></tr>
-    <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#666;padding:4px 0;">Startdatum:</td><td style="font-family:Arial,sans-serif;font-size:13px;color:#111;padding:4px 0;">01.03.2026</td></tr>
-    </table>
-  </div>
-  <p style="font-family:Arial,sans-serif;font-size:14px;color:#555;">Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
-  <p style="font-family:Arial,sans-serif;font-size:14px;color:#555;">Mit freundlichen Grüßen,<br/><strong>Das HFX Team</strong></p>
-</td></tr>
-<tr><td style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
-  <p style="font-family:Arial,sans-serif;font-size:11px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} HFX Honorarfuchs</p>
-</td></tr>
-</table></td></tr></table>
-</body></html>`;
-}
 
 function buildContractPartnerHtml() {
   const { customer_name, hfx_customer_number } = MOCK;
@@ -488,146 +456,79 @@ function buildDashboardCredentialsHtml() {
 }
 
 function buildAdTippLeadHtml() {
-  const year = new Date().getFullYear();
-  return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
-  <tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07);">
-      <tr><td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:32px 24px;text-align:center;">
-        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Neuer Lead-Tipp eingegangen 🎯</h1>
-        <p style="margin:8px 0 0;color:#c7d7f5;font-size:14px;">Tippgeber: Maria Musterfrau</p>
+  const bodyHtml = `
+    <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hallo,</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#374151;line-height:1.6;">
+      Ein neuer Lead-Tipp wurde durch einen Tippgeber eingereicht und Ihnen zugeordnet.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+      <tr><td style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+        <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Lead-Details</p>
       </td></tr>
-      <tr><td style="padding:28px 24px;">
-        <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hallo,</p>
-        <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
-          Ein neuer Lead-Tipp wurde durch einen Tippgeber eingereicht und Ihnen zugeordnet.
-        </p>
-        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:20px;">
-          <tr><td style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
-            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Lead-Details</p>
-          </td></tr>
-          <tr><td style="padding:16px;">
-            <table width="100%" cellpadding="0" cellspacing="0">
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;width:160px;">Arzt / Ärztin</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">Dr. Max Mustermann</td></tr>
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Praxis</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">Praxis Mustermann</td></tr>
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">PLZ</td><td style="padding:4px 0;font-size:13px;color:#111827;">80331</td></tr>
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">E-Mail Praxis</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="mailto:praxis@example.com" style="color:#0b367f;">praxis@example.com</a></td></tr>
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Telefon Praxis</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="tel:+4989123456" style="color:#0b367f;">+49 89 123456</a></td></tr>
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Geschäftsbereich</td><td style="padding:4px 0;font-size:13px;color:#111827;">MCC</td></tr>
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;vertical-align:top;">Dienstleistung</td><td style="padding:4px 0;font-size:13px;color:#111827;">Interesse an HFX.GOÄ – Demo gewünscht</td></tr>
-            </table>
-          </td></tr>
+      <tr><td style="padding:16px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr><td width="160" style="padding:4px 0;font-size:13px;color:#6b7280;">Arzt / Ärztin</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">Dr. Max Mustermann</td></tr>
+          <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Praxis</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">Praxis Mustermann</td></tr>
+          <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">PLZ</td><td style="padding:4px 0;font-size:13px;color:#111827;">80331</td></tr>
+          <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">E-Mail Praxis</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="mailto:praxis@example.com" style="color:#0b367f;">praxis@example.com</a></td></tr>
+          <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Telefon Praxis</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="tel:+4989123456" style="color:#0b367f;">+49 89 123456</a></td></tr>
+          <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;vertical-align:top;">Dienstleistung</td><td style="padding:4px 0;font-size:13px;color:#111827;">Interesse an HFX.GOÄ – Demo gewünscht</td></tr>
         </table>
-        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
-          <tr><td style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
-            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Empfohlen von</p>
-          </td></tr>
-          <tr><td style="padding:16px;">
-            <table width="100%" cellpadding="0" cellspacing="0">
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;width:160px;">Tippgeber</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">Maria Musterfrau</td></tr>
-              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Kontakt</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="mailto:maria@example.com" style="color:#0b367f;">maria@example.com</a></td></tr>
-            </table>
-          </td></tr>
-        </table>
-      </td></tr>
-      <tr><td style="padding:20px 24px;background:#f8fafc;border-top:1px solid #e5e7eb;text-align:center;">
-        <p style="margin:0;font-size:12px;color:#9ca3af;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
-        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">© ${year} HFX Honorarfuchs</p>
       </td></tr>
     </table>
-  </td></tr>
-</table>
-</body></html>`;
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+      <tr><td style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+        <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Empfohlen von</p>
+      </td></tr>
+      <tr><td style="padding:16px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr><td width="160" style="padding:4px 0;font-size:13px;color:#6b7280;">Tippgeber</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">Maria Musterfrau</td></tr>
+          <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Kontakt</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="mailto:maria@example.com" style="color:#0b367f;">maria@example.com</a></td></tr>
+        </table>
+      </td></tr>
+    </table>
+  `;
+  return renderBrandedEmail({
+    subheadline: "Status-Update zu Ihrem Lead-Tipp",
+    bodyHtml,
+    bodyText: "Neuer Lead-Tipp: Dr. Max Mustermann, Praxis Mustermann (80331). Empfohlen von Maria Musterfrau.",
+  }).html;
 }
 
+
 function buildAdDemoReminderHtml() {
-  const year = new Date().getFullYear();
-  return `<!DOCTYPE html>
-<html lang="de">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f4f6fa;font-family:verdana,geneva,sans-serif;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="600">
-  <!-- Mailheader Banner -->
-  <tr><td align="center" valign="top" bgcolor="#ffffff">
-    <img src="https://hfx-honorarfuchs.de/wp-content/uploads/2026/01/Mailheader-Neutral-hfx-1200px.png" alt="Honorarfuchs" width="600" height="80" border="0" style="border-width:0px;display:block;" />
-  </td></tr>
-  <!-- Body -->
-  <tr><td bgcolor="#ffffff">
-    <table align="center" border="0" cellpadding="0" cellspacing="0" width="580" style="margin:0 auto;">
-      <tr><td style="font-size:0;line-height:0;height:32px;">&nbsp;</td></tr>
-      <!-- Alert banner -->
-      <tr><td align="center" valign="top" style="background:#0b367f;border-radius:8px;padding:16px 20px;">
-        <p style="margin:0;color:#ffffff;font-family:verdana,geneva,sans-serif;font-size:14pt;font-weight:bold;">⏰ Testphase läuft in 3 Tagen ab</p>
-        <p style="margin:6px 0 0;color:#c7d7f5;font-family:verdana,geneva,sans-serif;font-size:10pt;">Jetzt Kontakt aufnehmen!</p>
+  const bodyHtml = `
+    <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hallo,</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#374151;line-height:1.6;">
+      Die Testphase eines Interessenten aus Ihrem Gebiet endet in <strong style="color:#0b367f;">3 Tagen</strong> am <strong style="color:#0b367f;">01.04.2026</strong>. Dies ist ein guter Zeitpunkt, um Kontakt aufzunehmen.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4ff;border-radius:8px;border:1px solid #d0d9ef;margin:0 0 20px 0;">
+      <tr><td style="background:#0b367f;border-radius:8px 8px 0 0;padding:10px 16px;">
+        <p style="margin:0;color:#ffffff;font-size:10pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;">Interessent</p>
       </td></tr>
-      <tr><td style="font-size:0;line-height:0;height:24px;">&nbsp;</td></tr>
-      <!-- Greeting -->
-      <tr><td align="left" valign="top" style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:18pt;">
-        Hallo,
-      </td></tr>
-      <tr><td style="font-size:0;line-height:0;height:12px;">&nbsp;</td></tr>
-      <tr><td align="left" valign="top" style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:18pt;">
-        Die Testphase eines Interessenten aus Ihrem Gebiet endet in <strong style="color:#0b367f;">3 Tagen</strong> am <strong style="color:#0b367f;">01.04.2026</strong>. Dies ist ein guter Zeitpunkt, um Kontakt aufzunehmen.
-      </td></tr>
-      <tr><td style="font-size:0;line-height:0;height:20px;">&nbsp;</td></tr>
-      <!-- Details box -->
-      <tr><td>
-        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f4ff;border-radius:8px;border:1px solid #d0d9ef;">
-          <tr><td style="background:#0b367f;border-radius:8px 8px 0 0;padding:10px 16px;">
-            <p style="margin:0;color:#ffffff;font-family:verdana,geneva,sans-serif;font-size:10pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;">Interessent</p>
-          </td></tr>
-          <tr><td style="padding:16px;">
-            <table border="0" cellpadding="3" cellspacing="0" width="100%">
-              <tr>
-                <td align="left" valign="top" width="160" style="color:#666666;font-family:verdana,geneva,sans-serif;font-size:10pt;">Unternehmen</td>
-                <td align="left" valign="top" style="color:#111827;font-family:verdana,geneva,sans-serif;font-size:10pt;font-weight:bold;">Testpraxis GmbH</td>
-              </tr>
-              <tr>
-                <td align="left" valign="top" width="160" style="color:#666666;font-family:verdana,geneva,sans-serif;font-size:10pt;">Ansprechpartner</td>
-                <td align="left" valign="top" style="color:#111827;font-family:verdana,geneva,sans-serif;font-size:10pt;">Dr. Hans Mustermann</td>
-              </tr>
-              <tr>
-                <td align="left" valign="top" width="160" style="color:#666666;font-family:verdana,geneva,sans-serif;font-size:10pt;">E-Mail</td>
-                <td align="left" valign="top" style="font-family:verdana,geneva,sans-serif;font-size:10pt;"><a href="mailto:praxis@testgmbh.de" style="color:#0b367f;">praxis@testgmbh.de</a></td>
-              </tr>
-              <tr>
-                <td align="left" valign="top" width="160" style="color:#666666;font-family:verdana,geneva,sans-serif;font-size:10pt;">Telefon</td>
-                <td align="left" valign="top" style="font-family:verdana,geneva,sans-serif;font-size:10pt;"><a href="tel:+4989654321" style="color:#0b367f;">+49 89 654321</a></td>
-              </tr>
-              <tr>
-                <td align="left" valign="top" width="160" style="color:#666666;font-family:verdana,geneva,sans-serif;font-size:10pt;">Produkt</td>
-                <td align="left" valign="top" style="color:#111827;font-family:verdana,geneva,sans-serif;font-size:10pt;">HFX.GOÄ Demo</td>
-              </tr>
-              <tr>
-                <td align="left" valign="top" width="160" style="color:#666666;font-family:verdana,geneva,sans-serif;font-size:10pt;">HFX-Nr.</td>
-                <td align="left" valign="top" style="color:#111827;font-family:verdana,geneva,sans-serif;font-size:10pt;font-family:monospace;">HFX-D01234</td>
-              </tr>
-              <tr>
-                <td align="left" valign="top" width="160" style="color:#666666;font-family:verdana,geneva,sans-serif;font-size:10pt;">Testende</td>
-                <td align="left" valign="top" style="color:#0b367f;font-family:verdana,geneva,sans-serif;font-size:10pt;font-weight:bold;">01.04.2026</td>
-              </tr>
-            </table>
-          </td></tr>
+      <tr><td style="padding:16px;">
+        <table width="100%" cellpadding="3" cellspacing="0">
+          <tr><td width="160" style="color:#666;font-size:10pt;">Unternehmen</td><td style="color:#111827;font-size:10pt;font-weight:bold;">Testpraxis GmbH</td></tr>
+          <tr><td width="160" style="color:#666;font-size:10pt;">Ansprechpartner</td><td style="color:#111827;font-size:10pt;">Dr. Hans Mustermann</td></tr>
+          <tr><td width="160" style="color:#666;font-size:10pt;">E-Mail</td><td style="font-size:10pt;"><a href="mailto:praxis@testgmbh.de" style="color:#0b367f;">praxis@testgmbh.de</a></td></tr>
+          <tr><td width="160" style="color:#666;font-size:10pt;">Telefon</td><td style="font-size:10pt;"><a href="tel:+4989654321" style="color:#0b367f;">+49 89 654321</a></td></tr>
+          <tr><td width="160" style="color:#666;font-size:10pt;">Produkt</td><td style="color:#111827;font-size:10pt;">HFX.GOÄ Demo</td></tr>
+          <tr><td width="160" style="color:#666;font-size:10pt;">HFX-Nr.</td><td style="color:#111827;font-size:10pt;font-family:monospace;">HFX-D01234</td></tr>
+          <tr><td width="160" style="color:#666;font-size:10pt;">Testende</td><td style="color:#0b367f;font-size:10pt;font-weight:bold;">01.04.2026</td></tr>
         </table>
       </td></tr>
-      <tr><td style="font-size:0;line-height:0;height:20px;">&nbsp;</td></tr>
-      <tr><td align="left" valign="top" style="color:#666666;font-family:verdana,geneva,sans-serif;font-size:10pt;line-height:16pt;border-left:3px solid #0b367f;padding:10px 14px;background:#f8fafc;border-radius:0 4px 4px 0;">
-        <strong>Bitte nehmen Sie zeitnah Kontakt auf</strong>, um einen Abschluss zu begleiten. Den Interessenten finden Sie im HFX-Portal unter <em>Demo-Tracking</em>.
-      </td></tr>
-      <tr><td style="font-size:0;line-height:0;height:40px;">&nbsp;</td></tr>
     </table>
-  </td></tr>
-  <!-- Footer -->
-  <tr><td bgcolor="#f9fafb" style="border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
-    <p style="margin:0;color:#9ca3af;font-family:verdana,geneva,sans-serif;font-size:9pt;">Diese E-Mail wurde automatisch von HFX Honorarfuchs generiert.</p>
-    <p style="margin:4px 0 0;color:#9ca3af;font-family:verdana,geneva,sans-serif;font-size:9pt;">© ${year} HFX Honorarfuchs</p>
-  </td></tr>
-</table>
-</td></tr></table>
-</body></html>`;
+    <p style="color:#374151;font-size:13px;line-height:1.6;border-left:3px solid #0b367f;padding:10px 14px;background:#f8fafc;border-radius:0 4px 4px 0;margin:0;">
+      <strong>Bitte nehmen Sie zeitnah Kontakt auf</strong>, um einen Abschluss zu begleiten. Den Interessenten finden Sie im HFX-Portal unter <em>Demo-Tracking</em>.
+    </p>
+  `;
+  return renderBrandedEmail({
+    subheadline: "Testphase läuft in 3 Tagen ab",
+    bodyHtml,
+    bodyText: "Die Testphase eines Interessenten aus Ihrem Gebiet endet am 01.04.2026 (Testpraxis GmbH, Dr. Hans Mustermann). Bitte zeitnah Kontakt aufnehmen.",
+  }).html;
 }
+
 
 function buildAdNewLeadHtml() {
   const { praxis_name, vorname, nachname, email, plz, mobilnummer, hfx_customer_number } = MOCK;
@@ -661,50 +562,6 @@ function buildAdNewLeadHtml() {
   }).html;
 }
 
-function buildContractCustomerPdfSendHtml() {
-  const { vorname, nachname, hfx_customer_number } = MOCK;
-  const year = new Date().getFullYear();
-  const customerName = `${vorname} ${nachname}`;
-  const products = "HFX EBM, HFX GOÄ";
-  const startDate = new Date().toLocaleDateString("de-DE");
-
-  const detailsHtml = `
-    <div style="background: white; border: 1px solid #e5e7eb; padding: 16px; border-radius: 8px; margin: 20px 0;">
-      <h3 style="margin-top: 0; color: #374151;">Vertragsdetails</h3>
-      <p style="margin:4px 0;"><strong>Kundennummer:</strong> ${hfx_customer_number}</p>
-      <p style="margin:4px 0;"><strong>Produkte:</strong> ${products}</p>
-      <p style="margin:4px 0;"><strong>Vertragsbeginn:</strong> ${startDate}</p>
-    </div>`;
-
-  return `<!DOCTYPE html><html><head><style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: linear-gradient(135deg, #0b367f, #1a4a9e); color: white; padding: 30px 20px; border-radius: 8px 8px 0 0; text-align: center; }
-    .content { background: #f9fafb; padding: 30px 20px; border: 1px solid #e5e7eb; border-top: none; }
-    .footer { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; font-size: 14px; color: #6b7280; }
-  </style></head><body><div class="container">
-    <div class="header">
-      <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg" alt="Honorarfuchs Logo" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; margin-bottom: 12px;" />
-      <h1 style="margin: 0; font-size: 28px;">Vertragsbestätigung</h1>
-      <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Honorarfuchs</p>
-    </div>
-    <div class="content">
-      <p style="font-size: 16px;">Sehr geehrte/r <strong>${customerName}</strong>,</p>
-      <p>vielen Dank für Ihr Vertrauen! Anbei erhalten Sie Ihre Vertragsunterlagen als PDF-Dokument.</p>
-      ${detailsHtml}
-      <p>Bitte prüfen Sie die beigefügten Unterlagen sorgfältig. Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
-      <p style="font-size: 13px; color: #6b7280; background: #f3f4f6; border-radius: 6px; padding: 10px 14px; margin-top: 16px;">
-        <strong>Anhänge dieser E-Mail:</strong><br>
-        📄 Vertrag-${hfx_customer_number}.pdf – Unterzeichnetes Vertragsdokument<br>
-        📊 Produktvorschau-${hfx_customer_number}.pdf – Produktübersicht (falls vorhanden)
-      </p>
-    </div>
-    <div class="footer">
-      <p style="margin: 0;">Bei Fragen wenden Sie sich bitte an Ihren Ansprechpartner.</p>
-      <p style="margin: 10px 0 0 0; font-size: 12px;">© ${year} HFX Honorarfuchs</p>
-    </div>
-  </div></body></html>`;
-}
 
 function buildAdLeadAssignmentHtml() {
   const { praxis_name, vorname, nachname, email, plz, mobilnummer, hfx_customer_number } = MOCK;
@@ -754,144 +611,6 @@ function buildAdLeadAssignmentHtml() {
 </body></html>`;
 }
 
-function buildContractPaperConfirmationHtml() {
-  const { hfx_customer_number, praxis_name, vorname, nachname } = MOCK;
-  const year = new Date().getFullYear();
-  const stripeUrl = "https://checkout.stripe.com/pay/demo-preview-cs_test_xxx";
-  const startDate = "01.04.2026";
-  const endDate = "31.03.2027";
-  const price = "179,00 €/Monat";
-  const duration = "12";
-  return `<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ihr HFX-Vertrag – jetzt verbindlich buchen</title>
-</head>
-<body style="margin:0;padding:0;background:#f4f6fa;font-family:Verdana,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fa;padding:40px 0;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.10);max-width:600px;">
-
-        <!-- Header -->
-        <tr>
-          <td style="background:linear-gradient(135deg,#0b367f,#1a4a9e);padding:36px 40px;text-align:center;">
-            <p style="color:#ffffff;font-size:24px;font-weight:700;margin:0;letter-spacing:-0.5px;">🦊 HFX Honorarfuchs</p>
-            <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:6px 0 0;">Ihr Vertrag wartet auf Ihre Buchung</p>
-          </td>
-        </tr>
-
-        <!-- Greeting -->
-        <tr>
-          <td style="padding:36px 40px 24px;">
-            <p style="color:#1a1a2e;font-size:16px;margin:0 0 12px;">Guten Tag ${vorname} ${nachname},</p>
-            <p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 12px;">
-              wir haben Ihren Vertrag erhalten und für Sie vorbereitet. Mit einem Klick auf den Button unten schließen Sie die Buchung <strong>kostenpflichtig</strong> ab – Ihr Vertrag wird danach automatisch aktiviert.
-            </p>
-          </td>
-        </tr>
-
-        <!-- Contract Details Box -->
-        <tr>
-          <td style="padding:0 40px 28px;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;overflow:hidden;">
-              <tr>
-                <td style="background:#0b367f;padding:12px 20px;">
-                  <p style="color:#ffffff;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin:0;">📋 Ihre Vertragsdetails</p>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:20px;">
-                  <table width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td style="padding:6px 0;font-size:13px;color:#6b7280;width:160px;vertical-align:top;">HFX-Kundennummer</td>
-                      <td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;font-family:monospace;">${hfx_customer_number}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:6px 0;font-size:13px;color:#6b7280;width:160px;vertical-align:top;">Produkt</td>
-                      <td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">HFX GOÄ – die KI für Ihre Privatabrechnung</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Praxis</td>
-                      <td style="padding:6px 0;font-size:13px;color:#111827;">${praxis_name}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Monatspreis</td>
-                      <td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">${price}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:6px 0;font-size:13px;color:#6b7280;vertical-align:top;">Laufzeit</td>
-                      <td style="padding:6px 0;font-size:13px;color:#111827;">${duration} Monate (${startDate} – ${endDate})</td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-        <!-- Buchungs-CTA (einziger Button) -->
-        <tr>
-          <td style="padding:0 40px 28px;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#0b367f,#1a4a9e);border-radius:10px;overflow:hidden;">
-              <tr><td style="padding:28px 32px;text-align:center;">
-                <p style="color:rgba(255,255,255,0.9);font-size:14px;line-height:1.6;margin:0 0 20px;">
-                  Ihr Außendienstmitarbeiter hat Ihren Vertragsabschluss vorbereitet.<br>
-                  Bitte schließen Sie die Buchung verbindlich ab – Ihre Zahlung aktiviert den Vertrag automatisch.
-                </p>
-                <table cellpadding="0" cellspacing="0" align="center">
-                  <tr><td style="background:#ffffff;border-radius:8px;padding:0;">
-                    <a href="${stripeUrl}"
-                       style="display:block;padding:16px 40px;color:#0b367f;font-size:16px;font-weight:700;text-decoration:none;letter-spacing:0.01em;">
-                      Verbindlich buchen →
-                    </a>
-                  </td></tr>
-                </table>
-                <p style="color:rgba(255,255,255,0.6);font-size:11px;margin:14px 0 0;">
-                  Sichere Zahlung via Stripe · Kreditkarte oder SEPA-Lastschrift · SSL-verschlüsselt
-                </p>
-              </td></tr>
-            </table>
-          </td>
-        </tr>
-
-        <!-- AGB-Download -->
-        <tr>
-          <td style="padding:0 40px 16px;">
-            <p style="color:#6b7280;font-size:12px;line-height:1.6;margin:0;">
-              📄 <a href="https://praxisflow-buddy.lovable.app/templates/vertrag-honorarfuchs.pdf" style="color:#0b367f;">Allgemeine Geschäftsbedingungen (AGB) herunterladen</a>
-            </p>
-          </td>
-        </tr>
-
-        <!-- Sign-off -->
-        <tr>
-          <td style="padding:0 40px 32px;">
-            <p style="color:#374151;font-size:14px;line-height:1.7;margin:0;">
-              Bei Fragen stehen wir Ihnen gerne unter <a href="mailto:info@hfx-honorarfuchs.de" style="color:#0b367f;">info@hfx-honorarfuchs.de</a> zur Verfügung.<br><br>
-              Mit freundlichen Grüßen,<br>
-              <strong>Ihr HFX Honorarfuchs Team</strong>
-            </p>
-          </td>
-        </tr>
-
-        <!-- Footer -->
-        <tr>
-          <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
-            <p style="color:#9ca3af;font-size:11px;margin:0;">
-              HFX Honorarfuchs • Diese E-Mail wurde automatisch generiert.<br>
-              © ${year} HFX Honorarfuchs
-            </p>
-          </td>
-        </tr>
-
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
-}
 
 function buildBookingLinkHtml() {
   const year = new Date().getFullYear();
@@ -1015,60 +734,31 @@ const MOCK_INVOICE_PDF_DATA = {
 };
 
 function buildAdminAccessRequestHtml() {
-  const year = new Date().getFullYear();
   const { vorname, nachname, email } = MOCK;
   const fullName = `${vorname} ${nachname}`;
   const company = "Muster Praxis GmbH";
   const message = "Ich würde gerne Zugang zum HFX Sales Portal beantragen.";
-  return `<!DOCTYPE html>
-<html lang="de">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:Arial,sans-serif;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f5f5f5;padding:20px 0;">
-<tr><td align="center">
-<table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-  <tr>
-    <td style="background:linear-gradient(135deg,#f97316,#ea580c);padding:30px 40px;text-align:center;">
-      <h1 style="color:#ffffff;font-size:22px;margin:0;">🦊 Neue Zugangsanfrage</h1>
-      <p style="color:rgba(255,255,255,0.85);font-size:13px;margin:8px 0 0 0;">HFX Sales Portal</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="background:#f9fafb;padding:28px 40px;border:1px solid #e5e7eb;border-top:none;">
-      <p style="font-size:15px;color:#374151;margin:0 0 20px;">Eine neue Zugangsanfrage ist eingegangen:</p>
-      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">
-        <tr>
-          <td style="padding:8px 0;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #e5e7eb;">Name</td>
-          <td style="padding:8px 0;font-size:15px;color:#111827;border-bottom:1px solid #e5e7eb;">${fullName}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #e5e7eb;">E-Mail</td>
-          <td style="padding:8px 0;font-size:15px;color:#f97316;border-bottom:1px solid #e5e7eb;">${email}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #e5e7eb;">Firma</td>
-          <td style="padding:8px 0;font-size:14px;color:#374151;border-bottom:1px solid #e5e7eb;">${company}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;vertical-align:top;">Nachricht</td>
-          <td style="padding:8px 0;font-size:14px;color:#374151;font-style:italic;">${message}</td>
-        </tr>
-      </table>
-      <p style="font-size:13px;color:#6b7280;background:#fff8e1;border-radius:6px;border:1px solid #f59e0b;padding:12px 16px;margin:0;">
-        👉 Bitte loggen Sie sich in das Admin-Portal ein, um die Anfrage zu genehmigen oder abzulehnen.
-      </p>
-    </td>
-  </tr>
-  <tr>
-    <td style="background:#f8f8f8;padding:16px 40px;border-top:1px solid #eeeeee;text-align:center;">
-      <p style="font-size:11px;color:#aaaaaa;margin:0;">© ${year} HFX Honorarfuchs – Diese E-Mail wurde automatisch generiert.</p>
-    </td>
-  </tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+  const bodyHtml = `
+    <p style="margin:0 0 20px;font-size:15px;color:#374151;">Eine neue Zugangsanfrage ist eingegangen:</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+      <tr><td style="padding:8px 0;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #e5e7eb;">Name</td>
+          <td style="padding:8px 0;font-size:15px;color:#111827;border-bottom:1px solid #e5e7eb;">${fullName}</td></tr>
+      <tr><td style="padding:8px 0;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #e5e7eb;">E-Mail</td>
+          <td style="padding:8px 0;font-size:15px;color:#0b367f;border-bottom:1px solid #e5e7eb;">${email}</td></tr>
+      <tr><td style="padding:8px 0;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #e5e7eb;">Firma</td>
+          <td style="padding:8px 0;font-size:14px;color:#374151;border-bottom:1px solid #e5e7eb;">${company}</td></tr>
+      <tr><td style="padding:8px 0;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;vertical-align:top;">Nachricht</td>
+          <td style="padding:8px 0;font-size:14px;color:#374151;font-style:italic;">${message}</td></tr>
+    </table>
+    <p style="font-size:13px;color:#374151;background:#f3f4f6;border-radius:6px;border:1px solid #e5e7eb;padding:12px 16px;margin:0;">
+      Bitte loggen Sie sich in das Admin-Portal ein, um die Anfrage zu genehmigen oder abzulehnen.
+    </p>
+  `;
+  return renderBrandedEmail({
+    subheadline: "Neue Zugangsanfrage",
+    bodyHtml,
+    bodyText: `Neue Zugangsanfrage von ${fullName} (${email}, ${company}).\n\nNachricht: ${message}`,
+  }).html;
 }
 
 const DEFAULT_HTML: Record<string, () => string> = {
