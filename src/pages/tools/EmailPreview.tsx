@@ -894,6 +894,7 @@ const DEFAULT_HTML: Record<string, () => string> = {
   "invoice-pdf": buildInvoicePdfPreviewHtml,
   "dashboard-credentials": buildDashboardCredentialsHtml,
   "demo-expiry-customer": buildDemoExpiryCustomerHtml,
+  "demo-limit-customer": buildDemoLimitCustomerHtml,
   "ad-tipp-lead": buildAdTippLeadHtml,
   "ad-demo-reminder": buildAdDemoReminderHtml,
   "ad-new-lead": buildAdNewLeadHtml,
