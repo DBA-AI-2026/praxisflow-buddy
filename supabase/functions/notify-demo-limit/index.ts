@@ -136,8 +136,8 @@ Deno.serve(async (req) => {
         status: "limit_reached",
         test_phase_end: today,
         notes: demo.notes
-          ? `${demo.notes}\n[Qodia] Rechnungslimit erreicht (${invoiceCount ?? 20} Rechnungen) am ${today}`
-          : `[Qodia] Rechnungslimit erreicht (${invoiceCount ?? 20} Rechnungen) am ${today}`,
+          ? `${demo.notes}\n[Qodia] Rechnungslimit erreicht (${invoiceCount ?? 200} Rechnungen) am ${today}`
+          : `[Qodia] Rechnungslimit erreicht (${invoiceCount ?? 200} Rechnungen) am ${today}`,
         updated_at: new Date().toISOString(),
       })
       .eq("id", demo.id);
@@ -169,14 +169,14 @@ Deno.serve(async (req) => {
           <td style="padding:0 0 24px;">
             <p style="color:#1a1a2e;font-size:16px;margin:0 0 16px;">Guten Tag,</p>
             <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 16px;">
-              Ihre kostenlose Testphase für <strong>${demo.product_name ?? "HFX-Produkt"}</strong> ist beendet –
-              Sie haben das Limit von <strong>20 Testrechnungen</strong> erreicht.
+              Ihr kostenloses Testkontingent für <strong>${demo.product_name ?? "HFX-Produkt"}</strong> ist aufgebraucht –
+              Sie haben das Limit von <strong>200 Testrechnungen</strong> erreicht.
             </p>
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;margin:0 0 24px;">
               <tr><td style="padding:16px 20px;">
-                <p style="color:#856404;font-size:14px;font-weight:700;margin:0 0 4px;">Testphase abgelaufen</p>
+                <p style="color:#856404;font-size:14px;font-weight:700;margin:0 0 4px;">Testkontingent aufgebraucht</p>
                 <p style="color:#533f03;font-size:13px;margin:0;">
-                  Das kostenlose Kontingent von 20 Testrechnungen ist ausgeschöpft. Um weiterhin unbegrenzt Rechnungen zu erstellen, buchen Sie jetzt die Vollversion.
+                  Das kostenlose Kontingent von 200 Testrechnungen ist ausgeschöpft. Um weiterhin unbegrenzt Rechnungen zu erstellen, buchen Sie jetzt die Vollversion.
                 </p>
               </td></tr>
             </table>
@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
       const bodyText = [
         "Guten Tag,",
         "",
-        `Ihre kostenlose Testphase für ${demo.product_name ?? "HFX-Produkt"} ist beendet – Sie haben das Limit von 20 Testrechnungen erreicht.`,
+        `Ihr kostenloses Testkontingent für ${demo.product_name ?? "HFX-Produkt"} ist aufgebraucht – Sie haben das Limit von 200 Testrechnungen erreicht.`,
         "",
         FALLBACK_CTA_TEXT,
         "",
@@ -205,7 +205,7 @@ Deno.serve(async (req) => {
       ].join("\n");
 
       const { html, text } = renderBrandedEmail({
-        subheadline: "Ihre Testphase ist abgelaufen",
+        subheadline: "Ihr Testkontingent ist aufgebraucht",
         bodyHtml,
         bodyText,
       });
@@ -217,7 +217,7 @@ Deno.serve(async (req) => {
           from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
           reply_to: "info@hfx-honorarfuchs.de",
           to: [demo.email],
-          subject: `Ihre Testphase für ${demo.product_name ?? "HFX"} ist abgelaufen`,
+          subject: `Ihr Testkontingent für ${demo.product_name ?? "HFX"} ist aufgebraucht`,
           html,
           text,
         }),
