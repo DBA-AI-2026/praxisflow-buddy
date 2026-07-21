@@ -136,8 +136,8 @@ Deno.serve(async (req) => {
         status: "limit_reached",
         test_phase_end: today,
         notes: demo.notes
-          ? `${demo.notes}\n[Qodia] Rechnungslimit erreicht (${invoiceCount ?? 200} Rechnungen) am ${today}`
-          : `[Qodia] Rechnungslimit erreicht (${invoiceCount ?? 200} Rechnungen) am ${today}`,
+          ? `${demo.notes}\n[Qodia] Limit von 200 geprüften Rechnungen erreicht (${invoiceCount ?? 200}) am ${today}`
+          : `[Qodia] Limit von 200 geprüften Rechnungen erreicht (${invoiceCount ?? 200}) am ${today}`,
         updated_at: new Date().toISOString(),
       })
       .eq("id", demo.id);
