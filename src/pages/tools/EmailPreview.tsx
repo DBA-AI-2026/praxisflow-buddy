@@ -114,6 +114,15 @@ const TEMPLATES: Template[] = [
     category: "kunden",
   },
   {
+    id: "demo-limit-customer",
+    label: "Testkontingent aufgebraucht (GOÄ · 200 geprüfte Rechnungen)",
+    subject: "Ihr Testkontingent für HFX.GOÄ ist aufgebraucht",
+    from: "noreply@hfx-honorarfuchs.de",
+    type: "email",
+    description: "Mengenbasiert (HFX GOÄ) — bei 200 geprüften Rechnungen. Live.",
+    category: "kunden",
+  },
+  {
     id: "booking-link",
     label: "Digitaler Vertragsabschluss (Buchungslink)",
     subject: "Ihre HFX-Vertragsbestätigung (HFX-I01019)",
