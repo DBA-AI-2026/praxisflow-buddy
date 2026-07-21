@@ -233,7 +233,7 @@ Deno.serve(async (req) => {
       from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
       reply_to: "info@hfx-honorarfuchs.de",
       to: [recipient],
-      subject: "Willkommen bei Honorarfuchs — bitte aktivieren Sie Ihren Vertrag",
+      subject: "Willkommen bei HFX Honorarfuchs — bitte aktivieren Sie Ihren Vertrag",
       html,
       text,
       ...(attachments ? { attachments } : {}),
