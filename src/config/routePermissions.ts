@@ -57,7 +57,7 @@ export const routePermissions: RoutePermission[] = [
 
   // Tools
   { path: "/tools/pdf-coordinates", allowedRoles: ["admin"] },
-  { path: "/tools/email-preview", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
+  { path: "/tools/email-preview", allowedRoles: ["admin"] },
   { path: "/admin/email-preview", allowedRoles: ["admin"] },
   { path: "/admin/email-settings", allowedRoles: ["admin"] },
 
