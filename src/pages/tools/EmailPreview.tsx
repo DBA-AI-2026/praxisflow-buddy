@@ -523,109 +523,110 @@ function buildDashboardCredentialsHtml() {
 }
 
 function buildAdTippLeadHtml() {
+  const tippgeberName = "Maria Musterfrau";
   const bodyHtml = `
-    <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hallo,</p>
-    <p style="margin:0 0 20px;font-size:14px;color:#374151;line-height:1.6;">
-      Ein neuer Lead-Tipp wurde durch einen Tippgeber eingereicht und Ihnen zugeordnet.
-    </p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:20px;">
-      <tr><td style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
-        <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Lead-Details</p>
-      </td></tr>
-      <tr><td style="padding:16px;">
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr><td width="160" style="padding:4px 0;font-size:13px;color:#6b7280;">Arzt / Ärztin</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">Dr. Max Mustermann</td></tr>
-          <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Praxis</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">Praxis Mustermann</td></tr>
-          <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">PLZ</td><td style="padding:4px 0;font-size:13px;color:#111827;">80331</td></tr>
-          <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">E-Mail Praxis</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="mailto:praxis@example.com" style="color:#0b367f;">praxis@example.com</a></td></tr>
-          <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Telefon Praxis</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="tel:+4989123456" style="color:#0b367f;">+49 89 123456</a></td></tr>
-          <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;vertical-align:top;">Dienstleistung</td><td style="padding:4px 0;font-size:13px;color:#111827;">Interesse an HFX.GOÄ – Demo gewünscht</td></tr>
+        <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hallo,</p>
+        <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
+          Ein neuer Lead-Tipp von <strong>${tippgeberName}</strong> wurde eingereicht und Ihnen zugeordnet.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+          <tr><td style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Lead-Details</p>
+          </td></tr>
+          <tr><td style="padding:16px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td width="160" style="padding:4px 0;font-size:13px;color:#6b7280;">Arzt / Ärztin</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">Dr. Max Mustermann</td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Praxis</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">Praxis Mustermann</td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">PLZ</td><td style="padding:4px 0;font-size:13px;color:#111827;">80331</td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">E-Mail Praxis</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="mailto:praxis@example.com" style="color:#0b367f;">praxis@example.com</a></td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Telefon Praxis</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="tel:+4989123456" style="color:#0b367f;">+49 89 123456</a></td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Geschäftsbereich</td><td style="padding:4px 0;font-size:13px;color:#111827;">HFX GOÄ</td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;vertical-align:top;">Dienstleistung</td><td style="padding:4px 0;font-size:13px;color:#111827;">Interesse an HFX.GOÄ – Demo gewünscht</td></tr>
+            </table>
+          </td></tr>
         </table>
-      </td></tr>
-    </table>
-    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
-      <tr><td style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
-        <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Empfohlen von</p>
-      </td></tr>
-      <tr><td style="padding:16px;">
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr><td width="160" style="padding:4px 0;font-size:13px;color:#6b7280;">Tippgeber</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">Maria Musterfrau</td></tr>
-          <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Kontakt</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="mailto:maria@example.com" style="color:#0b367f;">maria@example.com</a></td></tr>
-        </table>
-      </td></tr>
-    </table>
-  `;
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+          <tr><td style="background:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Empfohlen von</p>
+          </td></tr>
+          <tr><td style="padding:16px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td width="160" style="padding:4px 0;font-size:13px;color:#6b7280;">Tippgeber</td><td style="padding:4px 0;font-size:13px;color:#111827;font-weight:500;">${tippgeberName}</td></tr>
+              <tr><td style="padding:4px 0;font-size:13px;color:#6b7280;">Kontakt</td><td style="padding:4px 0;font-size:13px;color:#0b367f;"><a href="mailto:maria@example.com" style="color:#0b367f;">maria@example.com</a></td></tr>
+            </table>
+          </td></tr>
+        </table>`;
   return renderBrandedEmail({
-    subheadline: "Status-Update zu Ihrem Lead-Tipp",
+    subheadline: "Neuer Lead-Tipp eingegangen",
     bodyHtml,
-    bodyText: "Neuer Lead-Tipp: Dr. Max Mustermann, Praxis Mustermann (80331). Empfohlen von Maria Musterfrau.",
+    bodyText: `Hallo,\n\nEin neuer Lead-Tipp von ${tippgeberName} wurde eingereicht und Ihnen zugeordnet.\n\nLead-Details:\n- Arzt / Ärztin: Dr. Max Mustermann\n- Praxis: Praxis Mustermann\n- PLZ: 80331\n- Geschäftsbereich: HFX GOÄ`,
   }).html;
 }
 
 
 function buildAdDemoReminderHtml() {
+  const testEndFormatted = "01.04.2026";
   const bodyHtml = `
-    <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hallo,</p>
-    <p style="margin:0 0 20px;font-size:14px;color:#374151;line-height:1.6;">
-      Die Testphase eines Interessenten aus Ihrem Gebiet endet in <strong style="color:#0b367f;">3 Tagen</strong> am <strong style="color:#0b367f;">01.04.2026</strong>. Dies ist ein guter Zeitpunkt, um Kontakt aufzunehmen.
-    </p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4ff;border-radius:8px;border:1px solid #d0d9ef;margin:0 0 20px 0;">
-      <tr><td style="background:#0b367f;border-radius:8px 8px 0 0;padding:10px 16px;">
-        <p style="margin:0;color:#ffffff;font-size:10pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;">Interessent</p>
-      </td></tr>
-      <tr><td style="padding:16px;">
-        <table width="100%" cellpadding="3" cellspacing="0">
-          <tr><td width="160" style="color:#666;font-size:10pt;">Unternehmen</td><td style="color:#111827;font-size:10pt;font-weight:bold;">Testpraxis GmbH</td></tr>
-          <tr><td width="160" style="color:#666;font-size:10pt;">Ansprechpartner</td><td style="color:#111827;font-size:10pt;">Dr. Hans Mustermann</td></tr>
-          <tr><td width="160" style="color:#666;font-size:10pt;">E-Mail</td><td style="font-size:10pt;"><a href="mailto:praxis@testgmbh.de" style="color:#0b367f;">praxis@testgmbh.de</a></td></tr>
-          <tr><td width="160" style="color:#666;font-size:10pt;">Telefon</td><td style="font-size:10pt;"><a href="tel:+4989654321" style="color:#0b367f;">+49 89 654321</a></td></tr>
-          <tr><td width="160" style="color:#666;font-size:10pt;">Produkt</td><td style="color:#111827;font-size:10pt;">HFX.GOÄ Demo</td></tr>
-          <tr><td width="160" style="color:#666;font-size:10pt;">HFX-Nr.</td><td style="color:#111827;font-size:10pt;font-family:monospace;">HFX-D01234</td></tr>
-          <tr><td width="160" style="color:#666;font-size:10pt;">Testende</td><td style="color:#0b367f;font-size:10pt;font-weight:bold;">01.04.2026</td></tr>
+        <p style="margin:0 0 16px 0;">Hallo,</p>
+        <p style="margin:0 0 24px 0;">
+          Die Testphase eines Interessenten aus Ihrem Gebiet endet in <strong style="color:#0b367f;">3 Tagen</strong> am <strong style="color:#0b367f;">${testEndFormatted}</strong>. Dies ist ein guter Zeitpunkt, um Kontakt aufzunehmen.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:0 0 20px 0;">
+          <tr><td style="background-color:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:9pt;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#777777;">Interessent</p>
+          </td></tr>
+          <tr><td style="padding:16px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td style="padding:4px 0;font-size:10pt;color:#777777;width:160px;">Unternehmen</td><td style="padding:4px 0;font-size:10pt;color:#111827;font-weight:500;">Testpraxis GmbH</td></tr>
+              <tr><td style="padding:4px 0;font-size:10pt;color:#777777;">Ansprechpartner</td><td style="padding:4px 0;font-size:10pt;color:#111827;">Dr. Hans Mustermann</td></tr>
+              <tr><td style="padding:4px 0;font-size:10pt;color:#777777;">E-Mail</td><td style="padding:4px 0;font-size:10pt;color:#0b367f;"><a href="mailto:praxis@testgmbh.de" style="color:#0b367f;">praxis@testgmbh.de</a></td></tr>
+              <tr><td style="padding:4px 0;font-size:10pt;color:#777777;">Telefon</td><td style="padding:4px 0;font-size:10pt;color:#0b367f;"><a href="tel:+4989654321" style="color:#0b367f;">+49 89 654321</a></td></tr>
+              <tr><td style="padding:4px 0;font-size:10pt;color:#777777;">Produkt</td><td style="padding:4px 0;font-size:10pt;color:#111827;">HFX GOÄ - die KI für ihre Privatabrechnung</td></tr>
+              <tr><td style="padding:4px 0;font-size:10pt;color:#777777;">HFX-Nr.</td><td style="padding:4px 0;font-size:10pt;color:#111827;font-family:monospace;">HFX-D01234</td></tr>
+              <tr><td style="padding:4px 0;font-size:10pt;color:#777777;">Testende</td><td style="padding:4px 0;font-size:10pt;color:#0b367f;font-weight:600;">${testEndFormatted}</td></tr>
+            </table>
+          </td></tr>
         </table>
-      </td></tr>
-    </table>
-    <p style="color:#374151;font-size:13px;line-height:1.6;border-left:3px solid #0b367f;padding:10px 14px;background:#f8fafc;border-radius:0 4px 4px 0;margin:0;">
-      <strong>Bitte nehmen Sie zeitnah Kontakt auf</strong>, um einen Abschluss zu begleiten. Den Interessenten finden Sie im HFX-Portal unter <em>Demo-Tracking</em>.
-    </p>
-  `;
+        <p style="margin:0;">Bitte nehmen Sie zeitnah Kontakt auf, um einen Abschluss zu begleiten.</p>`;
   return renderBrandedEmail({
     subheadline: "Testphase läuft in 3 Tagen ab",
     bodyHtml,
-    bodyText: "Die Testphase eines Interessenten aus Ihrem Gebiet endet am 01.04.2026 (Testpraxis GmbH, Dr. Hans Mustermann). Bitte zeitnah Kontakt aufnehmen.",
+    bodyText: `Hallo,\n\nDie Testphase eines Interessenten aus Ihrem Gebiet endet in 3 Tagen am ${testEndFormatted}.\n\nUnternehmen: Testpraxis GmbH\nAnsprechpartner: Dr. Hans Mustermann\nTestende: ${testEndFormatted}\n\nBitte nehmen Sie zeitnah Kontakt auf.`,
   }).html;
 }
 
 
 function buildAdNewLeadHtml() {
   const { praxis_name, vorname, nachname, email, plz, mobilnummer, hfx_customer_number } = MOCK;
+  const adName = "Uwe Waldenmeyer";
   const bodyHtml = `
-    <p style="margin:0 0 16px 0;font-size:12pt;color:#333;">Hallo <strong>Uwe Waldenmeyer</strong>,</p>
-    <p style="margin:0 0 20px 0;font-size:11pt;color:#555;line-height:1.6;">ein neuer Interessent hat sich über die HFX-Webseite registriert und wurde dir automatisch aufgrund der PLZ-Zuordnung (PLZ ${plz}) zugewiesen.</p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:20px;">
-      <tr><td style="background:#fef2f4;padding:10px 14px;border-bottom:1px solid #e5e7eb;">
-        <p style="margin:0;font-size:10pt;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#b6193d;">Lead-Details</p>
-      </td></tr>
-      <tr><td style="padding:14px;">
-        <table width="100%" cellpadding="4" cellspacing="0" style="font-size:11pt;color:#333;">
-          <tr><td style="color:#6b7280;width:160px;">Praxis</td><td style="font-weight:600;">${praxis_name}</td></tr>
-          <tr><td style="color:#6b7280;">Name</td><td>${vorname} ${nachname}</td></tr>
-          <tr><td style="color:#6b7280;">E-Mail</td><td style="color:#b6193d;">${email}</td></tr>
-          <tr><td style="color:#6b7280;">Telefon</td><td>${mobilnummer}</td></tr>
-          <tr><td style="color:#6b7280;">PLZ</td><td>${plz}</td></tr>
-          <tr><td style="color:#6b7280;">Abrechnung</td><td>Kein Abrechnungszentrum</td></tr>
-          <tr><td style="color:#6b7280;">HFX-Nummer</td><td style="font-weight:600;">${hfx_customer_number}</td></tr>
+        <p style="margin:0 0 20px;font-size:15px;color:#374151;">Hallo <strong>${adName}</strong>,</p>
+        <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
+          ein neuer Interessent hat sich über die HFX-Webseite registriert und wurde dir automatisch aufgrund der PLZ-Zuordnung zugewiesen.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:24px;">
+          <tr><td style="background:#f0f5ff;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#0b367f;">Lead-Details</p>
+          </td></tr>
+          <tr><td style="padding:16px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;width:160px;">Praxis</td><td style="padding:5px 0;font-size:13px;color:#111827;font-weight:600;">${praxis_name}</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Name</td><td style="padding:5px 0;font-size:13px;color:#111827;font-weight:500;">${vorname} ${nachname}</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">E-Mail</td><td style="padding:5px 0;font-size:13px;color:#0b367f;">${email}</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Telefon</td><td style="padding:5px 0;font-size:13px;color:#111827;">${mobilnummer}</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">PLZ</td><td style="padding:5px 0;font-size:13px;color:#111827;">${plz}</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Abrechnung</td><td style="padding:5px 0;font-size:13px;color:#111827;">Kein Abrechnungszentrum</td></tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">HFX-Nummer</td><td style="padding:5px 0;font-size:13px;color:#111827;font-weight:600;">${hfx_customer_number}</td></tr>
+            </table>
+          </td></tr>
         </table>
-      </td></tr>
-    </table>
-    <p style="margin:0;font-size:11pt;color:#555;line-height:1.6;background:#fafafa;border-left:3px solid #b6193d;padding:12px 16px;border-radius:0 4px 4px 0;">
-      <strong>Nächster Schritt:</strong> Bitte nimm zeitnah Kontakt mit dem Interessenten auf. Du findest den Lead im HFX-Portal unter <em>Interessenten</em>.
-    </p>
-  `;
+        <p style="margin:0 0 0;font-size:13px;color:#374151;line-height:1.6;background:#f0f5ff;border-left:3px solid #0b367f;padding:12px 16px;border-radius:0 4px 4px 0;">
+          <strong>Nächster Schritt:</strong> Bitte nimm zeitnah Kontakt mit dem Interessenten auf. Du findest den Lead im HFX-Portal unter <em>Interessenten</em>.
+        </p>`;
   return renderBrandedEmail({
     subheadline: "Neuer Lead eingegangen",
     bodyHtml,
-    bodyText: `Neuer Lead: ${praxis_name} (${plz})\n${vorname} ${nachname} · ${email} · ${mobilnummer}\nHFX-Nummer: ${hfx_customer_number}`,
+    bodyText: `Hallo ${adName},\n\nein neuer Interessent hat sich über die HFX-Webseite registriert und wurde dir automatisch aufgrund der PLZ-Zuordnung zugewiesen.\n\nPraxis: ${praxis_name}\nName: ${vorname} ${nachname}\nE-Mail: ${email}\nTelefon: ${mobilnummer}\nPLZ: ${plz}\nHFX-Nummer: ${hfx_customer_number}`,
   }).html;
 }
 
