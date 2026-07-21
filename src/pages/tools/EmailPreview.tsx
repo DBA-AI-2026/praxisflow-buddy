@@ -210,33 +210,89 @@ const TEMPLATES: Template[] = [
 // ─── HTML builders ────────────────────────────────────────────────────────────
 function buildLeadConfirmationHtml() {
   const { hfx_customer_number, generated_password, praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum } = MOCK;
-  const bodyHtml = `
-    <p style="margin:0 0 16px 0;font-size:16pt;line-height:24pt;color:#444;"><strong>Danke für Ihr Interesse an HFX Honorarfuchs!</strong><br>Entdecken Sie, was KI aus Ihrer Privatabrechnung holt.</p>
-    <p style="margin:0 0 16px 0;font-size:12pt;line-height:18pt;color:#444;">Mit HFX.GOÄ gewinnen Sie schnell Klarheit über Ihre Abrechnung. Erkennen Sie Optimierungspotenziale, prüfen Sie Ihre Daten strukturiert und verschaffen Sie sich ein besseres Gefühl für Ihre Privatliquidation – ganz ohne Aufwand.</p>
-    <p style="margin:0 0 8px 0;font-size:12pt;line-height:18pt;color:#444;"><strong>Ihre Zugangsdaten für HFX.GOÄ:</strong></p>
-    <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8;border-radius:8px;border:1px solid #d0d5dd;margin-bottom:16px;">
-      <tr><td style="color:#444;font-size:12pt;line-height:20pt;">
-        <strong>E-Mail:</strong> ${email}<br>
-        <strong>Passwort:</strong> <code style="background:#fff;padding:2px 8px;border-radius:4px;font-size:13pt;letter-spacing:1px;">${generated_password}</code><br>
-        <strong>Name (Kundennummer):</strong> ${hfx_customer_number}
-      </td></tr>
-    </table>
-    <p style="margin:0 0 24px 0;font-size:10pt;color:#888;"><em>Bitte bewahren Sie diese Zugangsdaten sicher auf.</em></p>
-    <p style="margin:0 0 8px 0;font-size:12pt;color:#444;"><strong>Folgende Daten haben Sie an uns übermittelt:</strong></p>
-    <table border="0" cellpadding="4" cellspacing="0" width="100%" style="font-size:12pt;color:#444;">
-      <tr><td>Praxisname:</td><td>${praxis_name}</td></tr>
-      <tr><td>Vorname:</td><td>${vorname}</td></tr>
-      <tr><td>Nachname:</td><td>${nachname}</td></tr>
-      <tr><td>E-Mail:</td><td>${email}</td></tr>
-      <tr><td>PLZ:</td><td>${plz}</td></tr>
-      <tr><td>Mobilnummer:</td><td>${mobilnummer}</td></tr>
-      <tr><td>Abrechnungszentrum:</td><td>${abrechnungszentrum}</td></tr>
-    </table>
-  `;
+  const DOWNLOAD_URL_MAC = "https://hfx-honorarfuchs.de/download/mac";
+  const DOWNLOAD_URL_WIN = "https://hfx-honorarfuchs.de/download/win";
+  const bodyHtml = `<table align="center" border="0" cellpadding="0" cellspacing="0" width="100%">
+<tr><td align="left" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt; color:#444444;">
+<strong>Danke für Ihr Interesse am HFX Honorarfuchs!<br>Entdecken Sie, was KI aus Ihrer Privatabrechnung holt.</strong>
+</td></tr>
+<tr><td height="30" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:18pt;">Mit HFX.GOÄ gewinnen Sie schnell Klarheit über Ihre Abrechnung. Erkennen Sie Optimierungspotenziale, prüfen Sie Ihre Daten strukturiert und verschaffen Sie sich ein besseres Gefühl für Ihre Privatliquidation – ganz ohne Aufwand.</td></tr>
+<tr><td height="10" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:18pt;"><strong>Das erwartet Sie:</strong><br>Einfacher Import Ihrer Abrechnungsdaten<br>Verständliche Analyse statt komplizierter Prüfung<br>Mehr Transparenz und Sicherheit bei der GOÄ-Abrechnung</td></tr>
+<tr><td height="10" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:18pt;"><strong>Sie nutzen noch kein Abrechnungszentrum?</strong><br>Für die Nutzung von HFX.GOÄ benötigen Sie eine PAD- oder PADnext-Datei. Wenn Ihnen das gerade nichts sagt, kümmern wir uns darum: Ein Mitarbeiter meldet sich zeitnah bei Ihnen und begleitet Sie Schritt für Schritt durch die technischen Voraussetzungen.</td></tr>
+<tr><td height="30" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:18pt;"><strong>Ihre Zugangsdaten für HFX.GOÄ:</strong></td></tr>
+<tr><td height="10" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td>
+<table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8;border-radius:8px;border:1px solid #d0d5dd;">
+<tr><td style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:20pt;">
+<strong>Registrierte E-Mail-Adresse:</strong> ${email}<br>
+<strong>Benutzername:</strong> ${hfx_customer_number}<br>
+<strong>Passwort:</strong> <code style="background:#fff;padding:2px 8px;border-radius:4px;font-size:13pt;letter-spacing:1px;">${generated_password}</code>
+</td></tr>
+</table>
+</td></tr>
+<tr><td height="10" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td style="color:#888888;font-family:verdana,geneva,sans-serif;font-size:10pt;line-height:14pt;"><em>Bitte bewahren Sie diese Zugangsdaten sicher auf. Sie benötigen sie für die Anmeldung in HFX.GOÄ.</em></td></tr>
+<tr><td height="40" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td align="center" style="font-family:verdana,geneva,sans-serif;font-size:16pt;line-height:24pt;color:#444444;"><strong>Jetzt Testversion downloaden und starten!</strong></td></tr>
+<tr><td height="5" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td align="center" style="font-family:verdana,geneva,sans-serif;font-size:10pt;line-height:12pt;color:#444444;">Sie benötigen dafür eine PAD/PAD.next-Schnittstelle.</td></tr>
+<tr><td height="15" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td>
+<table align="center" border="0" cellpadding="0" cellspacing="0" width="100%"><tr>
+<td align="center" valign="top" width="50%" style="padding:10px;">
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border:1px solid #6d6d6d;border-radius:6px;width:100%;"><tr><td align="center">
+<a href="${DOWNLOAD_URL_MAC}" style="display:block;padding:20px 10px;text-decoration:none;color:#444444;font-family:verdana,geneva,sans-serif;font-size:11pt;font-weight:bold;line-height:16pt;">Download MacOS</a>
+</td></tr></table></td>
+<td align="center" valign="top" width="50%" style="padding:10px;">
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border:1px solid #6d6d6d;border-radius:6px;width:100%;"><tr><td align="center">
+<a href="${DOWNLOAD_URL_WIN}" style="display:block;padding:20px 10px;text-decoration:none;color:#444444;font-family:verdana,geneva,sans-serif;font-size:11pt;font-weight:bold;line-height:16pt;">Download Windows</a>
+</td></tr></table></td>
+</tr></table>
+</td></tr>
+<tr><td height="60" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td align="center" style="font-family:verdana,geneva,sans-serif;font-size:16pt;line-height:24pt;color:#0b367f;"><strong>So funktioniert HFX.GOÄ</strong></td></tr>
+<tr><td height="6" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td align="center" style="font-family:verdana,geneva,sans-serif;font-size:10pt;color:#888888;">In 5 einfachen Schritten zur optimierten Abrechnung</td></tr>
+<tr><td height="20" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td>
+${[
+  ["1", "Vorbereitung – Daten bereitstellen", "Patientenverwaltungssystem kurz offline nehmen<br>PAD-Datei aus dem PVS exportieren", "Saubere Ausgangsbasis für die Analyse"],
+  ["2", "Import – Daten in HFX.GOÄ laden", "PAD-Datei hochladen<br>Keine Einrichtung notwendig", "Der Import erfolgt in wenigen Sekunden"],
+  ["3", "Analyse – Abrechnung prüfen lassen", "Analyse per Klick starten<br>Auffälligkeiten &amp; Potenziale erkennen", "Automatisiert, strukturiert, nachvollziehbar"],
+  ["4", "Entscheidung – Optimierungen bewerten", "Vorschläge prüfen &amp; Entscheidungen selbst treffen<br>Keine automatischen Änderungen", "Sie behalten jederzeit die Kontrolle"],
+  ["5", "Abschluss – Optimierte Abrechnung übergeben", "Neue PAD-Datei speichern &amp; optional ins PVS laden<br>Übergabe an Ihr Abrechnungszentrum", "Abrechnung wie gewohnt – nur optimiert"],
+].map(([n, title, body, arrow]) => `<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f5ff;border-radius:8px;border-left:4px solid #0b367f;margin-bottom:10px;"><tr><td width="52" align="center" valign="top" style="padding:14px 0 14px 14px;"><div style="background:#0b367f;color:#ffffff;font-family:verdana,sans-serif;font-size:13pt;font-weight:bold;width:32px;height:32px;border-radius:50%;text-align:center;line-height:32px;">${n}</div></td><td valign="top" style="padding:14px 14px 14px 10px;font-family:verdana,geneva,sans-serif;font-size:11pt;color:#333333;line-height:18pt;"><strong style="color:#0b367f;">${title}</strong><br>${body}<br><span style="color:#0b367f;">→ ${arrow}</span></td></tr></table>`).join("")}
+</td></tr>
+<tr><td height="20" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td align="center" style="background:#0b367f;border-radius:8px;padding:14px 20px;color:#ffffff;font-family:verdana,geneva,sans-serif;font-size:11pt;line-height:18pt;"><strong>Alle Schritte erfolgen lokal und nachvollziehbar!<br>Sie behalten jederzeit die volle Kontrolle über Ihre Abrechnungsdaten.</strong></td></tr>
+<tr><td height="40" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:18pt;"><strong>Folgende Daten haben Sie an uns übermittelt:</strong></td></tr>
+<tr><td>
+<table border="0" cellpadding="3" cellspacing="0" width="100%">
+<tr><td colspan="2" height="20" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td colspan="2" style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:16pt;"><strong>Praxisdaten</strong></td></tr>
+${[
+  ["Praxisname:", praxis_name],
+  ["Vorname:", vorname],
+  ["Nachname:", nachname],
+  ["E-Mail:", email],
+  ["PLZ:", plz],
+  ["Mobilnummer:", mobilnummer],
+].map(([k, v]) => `<tr><td style="border-top:1px solid #444444;padding-top:6px;color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:16pt;">${k}</td><td style="border-top:1px solid #444444;padding-top:6px;color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:16pt;">${v}&nbsp;</td></tr>`).join("")}
+<tr><td colspan="2" height="20" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td colspan="2" style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:16pt;"><strong>Abrechnungszentrum</strong></td></tr>
+<tr><td style="border-top:1px solid #444444;padding-top:6px;color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:16pt;">Nutzen Sie ein Abrechnungszentrum?</td><td style="border-top:1px solid #444444;padding-top:6px;color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:16pt;">${abrechnungszentrum}&nbsp;</td></tr>
+</table>
+</td></tr>
+</table>`;
   return renderBrandedEmail({
     subheadline: "Ihre Zugangsdaten",
     bodyHtml,
-    bodyText: `Ihre Zugangsdaten für HFX.GOÄ\nE-Mail: ${email}\nPasswort: ${generated_password}\nName: ${hfx_customer_number}`,
+    bodyText: `Danke für Ihr Interesse am HFX Honorarfuchs!\n\nIhre Zugangsdaten für HFX.GOÄ\nE-Mail: ${email}\nBenutzername: ${hfx_customer_number}\nPasswort: ${generated_password}\n\nDownload MacOS: ${DOWNLOAD_URL_MAC}\nDownload Windows: ${DOWNLOAD_URL_WIN}`,
   }).html;
 }
 
@@ -247,32 +303,40 @@ function buildDemoExpiryCustomerHtml() {
   const contactName = "Dr. Max Müller";
   const hfxNr = "HFX-D01234";
   const stripeCheckoutUrl = "#stripe-checkout-demo-link";
+  const ctaHtml = `
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f7ff;border-radius:8px;border:1px solid #bfdbfe;margin:0 0 24px 0;">
+          <tr><td style="padding:24px;">
+            <p style="color:#0b367f;font-size:12pt;font-weight:700;margin:0 0 8px 0;">Jetzt direkt weiterbuchen</p>
+            <p style="color:#333333;font-size:11pt;line-height:1.5;margin:0 0 16px 0;">
+              Gefällt Ihnen <strong>${productName}</strong>? Buchen Sie jetzt direkt online und nutzen Sie das Produkt ohne Unterbrechung weiter.
+            </p>
+            <table cellpadding="0" cellspacing="0"><tr>
+              <td style="background-color:#0b367f;border-radius:6px;">
+                <a href="${stripeCheckoutUrl}" style="display:inline-block;padding:14px 28px;color:#ffffff;font-size:11pt;font-weight:700;text-decoration:none;">Jetzt kostenpflichtig buchen</a>
+              </td>
+            </tr></table>
+            <p style="color:#777777;font-size:9pt;margin:10px 0 0 0;">Sichere Zahlung per Kreditkarte oder SEPA-Lastschrift über Stripe.</p>
+          </td></tr>
+        </table>`;
   const bodyHtml = `
-    <p style="margin:0 0 16px 0;font-size:12pt;color:#333;">Guten Tag <strong>${contactName}</strong>,</p>
-    <p style="margin:0 0 16px 0;font-size:11pt;color:#555;line-height:1.6;">
-      wir möchten Sie daran erinnern, dass Ihre Testphase für <strong>${productName}</strong>
-      (${companyName}) in <strong>3 Tagen</strong> – am <strong>${testEndFormatted}</strong> – abläuft.
-    </p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f5ff;border-radius:8px;border:1px solid #c8d8f0;margin:0 0 20px 0;">
-      <tr><td style="padding:16px 20px;">
-        <p style="font-size:10pt;color:#0b367f;font-weight:bold;text-transform:uppercase;margin:0 0 8px 0;">Ihre Testphase</p>
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr><td style="padding:4px 0;font-size:10pt;color:#777;width:140px;">Produkt</td><td style="padding:4px 0;font-size:10pt;color:#333;"><strong>${productName}</strong></td></tr>
-          <tr><td style="padding:4px 0;font-size:10pt;color:#777;">HFX-Nr.</td><td style="padding:4px 0;font-size:10pt;color:#0b367f;font-weight:bold;font-family:monospace;">${hfxNr}</td></tr>
-          <tr><td style="padding:4px 0;font-size:10pt;color:#777;">Testende</td><td style="padding:4px 0;font-size:11pt;color:#0b367f;font-weight:bold;">${testEndFormatted}</td></tr>
+        <p style="margin:0 0 16px 0;">Guten Tag ${contactName},</p>
+        <p style="margin:0 0 16px 0;">
+          wir möchten Sie daran erinnern, dass Ihre Testphase für <strong>${productName}</strong> (${companyName}) in <strong>3 Tagen</strong> – am <strong>${testEndFormatted}</strong> – abläuft.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f4ff;border-radius:6px;margin:0 0 24px 0;">
+          <tr><td style="padding:16px 20px;">
+            <p style="color:#0b367f;font-size:10pt;font-weight:700;margin:0 0 8px 0;">Ihre Testphase</p>
+            <p style="color:#333333;font-size:10pt;margin:0;"><strong>Produkt:</strong> ${productName}</p>
+            <p style="color:#333333;font-size:10pt;margin:4px 0 0 0;"><strong>HFX-Nr.:</strong> ${hfxNr}</p>
+            <p style="color:#333333;font-size:10pt;margin:4px 0 0 0;"><strong>Testende:</strong> ${testEndFormatted}</p>
+          </td></tr>
         </table>
-      </td></tr>
-    </table>
-    <p style="margin:0 0 16px 0;font-size:11pt;color:#374151;line-height:1.6;">
-      Gefällt Ihnen <strong>${productName}</strong>? Buchen Sie jetzt direkt online und nutzen Sie das Produkt ohne Unterbrechung weiter.
-    </p>
-    ${renderBrandedButton({ href: stripeCheckoutUrl, label: "Jetzt kostenpflichtig buchen" })}
-    <p style="margin:16px 0 0 0;font-size:10pt;color:#6b7280;">Sichere Zahlung per SEPA-Lastschrift über Stripe.</p>
-  `;
+        ${ctaHtml}
+        <p style="margin:0;">Mit freundlichen Grüßen,<br><strong>Ihr HFX Honorarfuchs Team</strong></p>`;
   return renderBrandedEmail({
     subheadline: "Ihre Testphase läuft bald ab",
     bodyHtml,
-    bodyText: `Ihre Testphase für ${productName} (${companyName}) endet am ${testEndFormatted}. Jetzt kostenpflichtig buchen: ${stripeCheckoutUrl}`,
+    bodyText: `Guten Tag ${contactName},\n\nIhre Testphase für ${productName} (${companyName}) endet in 3 Tagen – am ${testEndFormatted}.\n\nJetzt direkt weiterbuchen: ${stripeCheckoutUrl}\n\nMit freundlichen Grüßen,\nIhr HFX Honorarfuchs Team`,
   }).html;
 }
 
