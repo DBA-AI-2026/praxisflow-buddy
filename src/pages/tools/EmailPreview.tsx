@@ -40,23 +40,20 @@ const WIRED_IDS: ReadonlySet<string> = new Set([
   "invoice",
   "dashboard-credentials",
   "ad-new-lead",
+  "demo-expiry-customer",
+  "ad-demo-reminder",
+  "ad-tipp-lead",
+  "admin-access-request",
 ]);
 
 // STALE: Live-Mail existiert, aber wurde noch nicht auf renderBrandedEmail migriert.
 const STALE_IDS: ReadonlySet<string> = new Set([
-  "contract-customer",
-  "contract-customer-pdf-send",
   "contract-partner",
-  "demo-expiry-customer",
-  "ad-tipp-lead",
-  "ad-demo-reminder",
   "ad-lead-assignment",
-  "admin-access-request",
 ]);
 
 // NO_LIVE: Kein Live-Mail-Pendant (Leiche oder PDF-Vorschau).
 const NO_LIVE_IDS: ReadonlySet<string> = new Set([
-  "contract-paper-confirmation",
   "booking-link",
   "invoice-pdf",
 ]);
