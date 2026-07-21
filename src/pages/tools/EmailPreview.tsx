@@ -807,20 +807,14 @@ function buildAdminAccessRequestHtml() {
   const company = "Muster Praxis GmbH";
   const message = "Ich würde gerne Zugang zum HFX Sales Portal beantragen.";
   const bodyHtml = `
-    <p style="margin:0 0 20px;font-size:15px;color:#374151;">Eine neue Zugangsanfrage ist eingegangen:</p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
-      <tr><td style="padding:8px 0;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #e5e7eb;">Name</td>
-          <td style="padding:8px 0;font-size:15px;color:#111827;border-bottom:1px solid #e5e7eb;">${fullName}</td></tr>
-      <tr><td style="padding:8px 0;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #e5e7eb;">E-Mail</td>
-          <td style="padding:8px 0;font-size:15px;color:#0b367f;border-bottom:1px solid #e5e7eb;">${email}</td></tr>
-      <tr><td style="padding:8px 0;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #e5e7eb;">Firma</td>
-          <td style="padding:8px 0;font-size:14px;color:#374151;border-bottom:1px solid #e5e7eb;">${company}</td></tr>
-      <tr><td style="padding:8px 0;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;vertical-align:top;">Nachricht</td>
-          <td style="padding:8px 0;font-size:14px;color:#374151;font-style:italic;">${message}</td></tr>
-    </table>
-    <p style="font-size:13px;color:#374151;background:#f3f4f6;border-radius:6px;border:1px solid #e5e7eb;padding:12px 16px;margin:0;">
-      Bitte loggen Sie sich in das Admin-Portal ein, um die Anfrage zu genehmigen oder abzulehnen.
-    </p>
+      <p style="margin:0 0 16px 0;">Eine neue Zugangsanfrage ist eingegangen:</p>
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 16px 0;">
+        <tr><td style="padding:6px 0;font-size:11pt;color:#777777;text-transform:uppercase;letter-spacing:0.5px;width:120px;">Name</td><td style="padding:6px 0;font-size:11pt;color:#333333;">${fullName}</td></tr>
+        <tr><td style="padding:6px 0;font-size:11pt;color:#777777;text-transform:uppercase;letter-spacing:0.5px;">E-Mail</td><td style="padding:6px 0;font-size:11pt;color:#333333;">${email}</td></tr>
+        <tr><td style="padding:6px 0;font-size:11pt;color:#777777;text-transform:uppercase;letter-spacing:0.5px;">Firma</td><td style="padding:6px 0;font-size:11pt;color:#333333;">${company}</td></tr>
+        <tr><td style="padding:6px 0;font-size:11pt;color:#777777;text-transform:uppercase;letter-spacing:0.5px;vertical-align:top;">Nachricht</td><td style="padding:6px 0;font-size:11pt;color:#333333;">${message}</td></tr>
+      </table>
+      <p style="margin:16px 0 0 0;">Bitte im Admin-Portal anmelden, um die Anfrage zu bearbeiten.</p>
   `;
   return renderBrandedEmail({
     subheadline: "Neue Zugangsanfrage",
