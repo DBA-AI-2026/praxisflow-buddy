@@ -41,6 +41,7 @@ const WIRED_IDS: ReadonlySet<string> = new Set([
   "dashboard-credentials",
   "ad-new-lead",
   "demo-expiry-customer",
+  "demo-limit-customer",
   "ad-demo-reminder",
   "ad-tipp-lead",
   "admin-access-request",
