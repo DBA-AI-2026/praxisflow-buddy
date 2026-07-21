@@ -136,8 +136,8 @@ Deno.serve(async (req) => {
         status: "limit_reached",
         test_phase_end: today,
         notes: demo.notes
-          ? `${demo.notes}\n[Qodia] Rechnungslimit erreicht (${invoiceCount ?? 200} Rechnungen) am ${today}`
-          : `[Qodia] Rechnungslimit erreicht (${invoiceCount ?? 200} Rechnungen) am ${today}`,
+          ? `${demo.notes}\n[Qodia] Limit von 200 geprüften Rechnungen erreicht (${invoiceCount ?? 200}) am ${today}`
+          : `[Qodia] Limit von 200 geprüften Rechnungen erreicht (${invoiceCount ?? 200}) am ${today}`,
         updated_at: new Date().toISOString(),
       })
       .eq("id", demo.id);
@@ -170,13 +170,13 @@ Deno.serve(async (req) => {
             <p style="color:#1a1a2e;font-size:16px;margin:0 0 16px;">Guten Tag,</p>
             <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 16px;">
               Ihr kostenloses Testkontingent für <strong>${demo.product_name ?? "HFX-Produkt"}</strong> ist aufgebraucht –
-              Sie haben das Limit von <strong>200 Testrechnungen</strong> erreicht.
+              Sie haben das Limit von <strong>200 geprüften Rechnungen</strong> erreicht.
             </p>
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;margin:0 0 24px;">
               <tr><td style="padding:16px 20px;">
                 <p style="color:#856404;font-size:14px;font-weight:700;margin:0 0 4px;">Testkontingent aufgebraucht</p>
                 <p style="color:#533f03;font-size:13px;margin:0;">
-                  Das kostenlose Kontingent von 200 Testrechnungen ist ausgeschöpft. Um weiterhin unbegrenzt Rechnungen zu erstellen, buchen Sie jetzt die Vollversion.
+                  Das kostenlose Kontingent von 200 geprüften Rechnungen ist ausgeschöpft. Um weiterhin unbegrenzt Rechnungen zu erstellen, buchen Sie jetzt die Vollversion.
                 </p>
               </td></tr>
             </table>
@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
       const bodyText = [
         "Guten Tag,",
         "",
-        `Ihr kostenloses Testkontingent für ${demo.product_name ?? "HFX-Produkt"} ist aufgebraucht – Sie haben das Limit von 200 Testrechnungen erreicht.`,
+        `Ihr kostenloses Testkontingent für ${demo.product_name ?? "HFX-Produkt"} ist aufgebraucht – Sie haben das Limit von 200 geprüften Rechnungen erreicht.`,
         "",
         FALLBACK_CTA_TEXT,
         "",
