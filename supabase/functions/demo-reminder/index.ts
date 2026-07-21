@@ -129,11 +129,11 @@ Deno.serve(async (req) => {
       const customerBodyHtml = `
         <p style="margin:0 0 16px 0;">Guten Tag${demo.contact_name ? ` ${demo.contact_name}` : ""},</p>
         <p style="margin:0 0 16px 0;">
-          wir möchten Sie daran erinnern, dass Ihre Testphase für <strong>${demo.product_name ?? "HFX-Produkt"}</strong>${demo.company_name ? ` (${demo.company_name})` : ""} in <strong>3 Tagen</strong> – am <strong>${testEndFormatted}</strong> – abläuft.
+          wir möchten Sie daran erinnern, dass Ihr Testquartal für <strong>${demo.product_name ?? "HFX-Produkt"}</strong>${demo.company_name ? ` (${demo.company_name})` : ""} in <strong>3 Tagen</strong> – am <strong>${testEndFormatted}</strong> – abläuft.
         </p>
         <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f4ff;border-radius:6px;margin:0 0 24px 0;">
           <tr><td style="padding:16px 20px;">
-            <p style="color:#0b367f;font-size:10pt;font-weight:700;margin:0 0 8px 0;">Ihre Testphase</p>
+            <p style="color:#0b367f;font-size:10pt;font-weight:700;margin:0 0 8px 0;">Ihr Testquartal</p>
             <p style="color:#333333;font-size:10pt;margin:0;"><strong>Produkt:</strong> ${demo.product_name ?? "–"}</p>
             ${demo.hfx_customer_number ? `<p style="color:#333333;font-size:10pt;margin:4px 0 0 0;"><strong>HFX-Nr.:</strong> ${demo.hfx_customer_number}</p>` : ""}
             <p style="color:#333333;font-size:10pt;margin:4px 0 0 0;"><strong>Testende:</strong> ${testEndFormatted}</p>
@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
       const customerBodyText = [
         `Guten Tag${demo.contact_name ? ` ${demo.contact_name}` : ""},`,
         "",
-        `Ihre Testphase für ${demo.product_name ?? "HFX-Produkt"}${demo.company_name ? ` (${demo.company_name})` : ""} endet in 3 Tagen – am ${testEndFormatted}.`,
+        `Ihr Testquartal für ${demo.product_name ?? "HFX-Produkt"}${demo.company_name ? ` (${demo.company_name})` : ""} endet in 3 Tagen – am ${testEndFormatted}.`,
         "",
         `Produkt: ${demo.product_name ?? "–"}`,
         demo.hfx_customer_number ? `HFX-Nr.: ${demo.hfx_customer_number}` : null,
@@ -160,7 +160,7 @@ Deno.serve(async (req) => {
       ].filter(Boolean).join("\n");
 
       const customerEmail = renderBrandedEmail({
-        subheadline: "Ihre Testphase läuft bald ab",
+        subheadline: "Ihr Testquartal läuft bald ab",
         bodyHtml: customerBodyHtml,
         bodyText: customerBodyText,
       });
@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
           from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
           reply_to: "info@hfx-honorarfuchs.de",
           to: [demo.email],
-          subject: `Erinnerung: Ihre Testphase endet am ${testEndFormatted}`,
+          subject: `Erinnerung: Ihr Testquartal endet am ${testEndFormatted}`,
           html: customerEmail.html,
           text: customerEmail.text,
         }),
@@ -236,7 +236,7 @@ Deno.serve(async (req) => {
           const adBodyHtml = `
         <p style="margin:0 0 16px 0;">Hallo,</p>
         <p style="margin:0 0 24px 0;">
-          Die Testphase eines Interessenten aus Ihrem Gebiet endet in <strong style="color:#0b367f;">3 Tagen</strong> am <strong style="color:#0b367f;">${testEndFormatted}</strong>. Dies ist ein guter Zeitpunkt, um Kontakt aufzunehmen.
+          Das Testquartal eines Interessenten aus Ihrem Gebiet endet in <strong style="color:#0b367f;">3 Tagen</strong> am <strong style="color:#0b367f;">${testEndFormatted}</strong>. Dies ist ein guter Zeitpunkt, um Kontakt aufzunehmen.
         </p>
         <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:0 0 20px 0;">
           <tr><td style="background-color:#f8fafc;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
@@ -259,7 +259,7 @@ Deno.serve(async (req) => {
           const adBodyText = [
             "Hallo,",
             "",
-            `Die Testphase eines Interessenten aus Ihrem Gebiet endet in 3 Tagen am ${testEndFormatted}.`,
+            `Das Testquartal eines Interessenten aus Ihrem Gebiet endet in 3 Tagen am ${testEndFormatted}.`,
             "",
             `Unternehmen: ${demo.company_name}`,
             demo.contact_name ? `Ansprechpartner: ${demo.contact_name}` : null,
@@ -273,7 +273,7 @@ Deno.serve(async (req) => {
           ].filter(Boolean).join("\n");
 
           const adEmailRendered = renderBrandedEmail({
-            subheadline: "Testphase läuft in 3 Tagen ab",
+            subheadline: "Testquartal endet in 3 Tagen",
             bodyHtml: adBodyHtml,
             bodyText: adBodyText,
           });
@@ -286,7 +286,7 @@ Deno.serve(async (req) => {
               from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
               reply_to: "info@hfx-honorarfuchs.de",
               to: [adEmail],
-              subject: `Testphase endet bald: ${demo.company_name} (${testEndFormatted})`,
+              subject: `Testquartal endet bald: ${demo.company_name} (${testEndFormatted})`,
               html: adEmailRendered.html,
               text: adEmailRendered.text,
             }),
