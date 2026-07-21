@@ -97,7 +97,7 @@ const TEMPLATES: Template[] = [
   {
     id: "lead-confirmation",
     label: "Lead-Bestätigung",
-    subject: "Bestätigung Ihrer Anfrage – Honorarfuchs",
+    subject: "Danke für Ihr Interesse am HFX Honorarfuchs!",
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "E-Mail an neuen Interessenten mit Zugangsdaten",
@@ -106,7 +106,7 @@ const TEMPLATES: Template[] = [
   {
     id: "demo-expiry-customer",
     label: "Testphase läuft ab",
-    subject: "⏰ Erinnerung: Ihre Testphase endet am 01.04.2026",
+    subject: "Erinnerung: Ihre Testphase endet am 01.04.2026",
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "Erinnerungsmail an den Interessenten 3 Tage vor Ablauf der Testphase – mit Stripe-Buchungslink",
@@ -163,7 +163,7 @@ const TEMPLATES: Template[] = [
   {
     id: "ad-new-lead",
     label: "AD: Neuer Website-Lead",
-    subject: "🔔 Neuer Lead: Testpraxis Dr. Müller (80331)",
+    subject: "Neuer Lead: Testpraxis Dr. Müller (80331)",
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "Benachrichtigung an AD wenn ein neuer Interessent über die HFX-Webseite eingeht",
@@ -190,7 +190,7 @@ const TEMPLATES: Template[] = [
   {
     id: "ad-demo-reminder",
     label: "AD: Testphasen-Ablauf",
-    subject: "⏰ Testphase endet bald: Testpraxis GmbH (01.04.2026)",
+    subject: "Testphase endet bald: Testpraxis GmbH (01.04.2026)",
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "AD-Benachrichtigung parallel zur Kunden-Erinnerung bei Demo-Ablauf",
@@ -202,7 +202,7 @@ const TEMPLATES: Template[] = [
     subject: "Neue Zugangsanfrage: Max Mustermann",
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
-    description: "Benachrichtigung an Admin (info@honorarfuchs.de) wenn jemand über die Login-Seite Zugang zum Sales Portal beantragt",
+    description: "Benachrichtigung an Admin (info@hfx-honorarfuchs.de) wenn jemand über die Login-Seite Zugang zum Sales Portal beantragt",
     category: "intern",
   },
 ];
