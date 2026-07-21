@@ -79,7 +79,7 @@ const MOCK = {
 };
 
 // ─── Templates ────────────────────────────────────────────────────────────────
-type TemplateId = "lead-confirmation" | "contract-customer" | "contract-customer-pdf-send" | "contract-partner" | "contract-paper-confirmation" | "booking-link" | "post-payment-contract-pdf" | "invoice" | "invoice-pdf" | "dashboard-credentials" | "demo-expiry-customer" | "ad-tipp-lead" | "ad-demo-reminder" | "ad-new-lead" | "ad-lead-assignment" | "admin-access-request";
+type TemplateId = "lead-confirmation" | "contract-partner" | "booking-link" | "post-payment-contract-pdf" | "invoice" | "invoice-pdf" | "dashboard-credentials" | "demo-expiry-customer" | "ad-tipp-lead" | "ad-demo-reminder" | "ad-new-lead" | "ad-lead-assignment" | "admin-access-request";
 
 interface Template {
   id: TemplateId;
@@ -113,15 +113,6 @@ const TEMPLATES: Template[] = [
     category: "kunden",
   },
   {
-    id: "contract-paper-confirmation",
-    label: "Vertragsbestätigung (manuell)",
-    subject: "Ihr HFX-Vertrag – jetzt verbindlich buchen (HFX-I01019)",
-    from: "noreply@hfx-honorarfuchs.de",
-    type: "email",
-    description: "E-Mail an Kunden nach Papiervertrag-Upload durch AD – einziger Button 'Verbindlich buchen' → Stripe. Vertrag aktiviert sich nach Zahlung automatisch.",
-    category: "kunden",
-  },
-  {
     id: "booking-link",
     label: "Digitaler Vertragsabschluss (Buchungslink)",
     subject: "Ihre HFX-Vertragsbestätigung (HFX-I01019)",
@@ -140,24 +131,6 @@ const TEMPLATES: Template[] = [
     description: "Nach erfolgreicher Stripe-Zahlung wird diese Vertragszusammenfassung automatisch als PDF-Anhang in der Bestätigungs-E-Mail mitgeschickt (zusammen mit den AGB). Das PDF wird via pdf-lib dynamisch generiert.",
     category: "kunden",
     hasPdfPreview: true,
-  },
-  {
-    id: "contract-customer",
-    label: "Vertrag (Kunde)",
-    subject: "Ihr Vertrag mit HFX Honorarfuchs",
-    from: "noreply@hfx-honorarfuchs.de",
-    type: "email",
-    description: "Vertragsbestätigung an Kunden nach Aktivierung",
-    category: "kunden",
-  },
-  {
-    id: "contract-customer-pdf-send",
-    label: "Vertrag + Vorschau per Mail (Kunde)",
-    subject: "Ihre Vertragsunterlagen – HFX EBM, HFX GOÄ",
-    from: "noreply@hfx-honorarfuchs.de",
-    type: "email",
-    description: "Manueller E-Mail-Versand an Kunden: Vertragsdokument + Produktvorschau als Anhang",
-    category: "kunden",
   },
   {
     id: "invoice",
