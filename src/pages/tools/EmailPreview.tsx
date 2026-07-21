@@ -917,7 +917,9 @@ export default function EmailPreview() {
   const getRenderedHtml = useCallback(
     (tpl: Template, mode: "email" | "pdf") => {
       const key = getStorageKey(tpl, mode);
-      const raw = customHtml[key] ?? getHtmlForTemplate(key as TemplateId);
+      const raw = WIRED_IDS.has(key)
+        ? getHtmlForTemplate(key as TemplateId)              // WIRED: nur Builder
+        : (customHtml[key] ?? getHtmlForTemplate(key as TemplateId));
       return WIRED_IDS.has(key) ? raw : patchLogo(raw);
     },
     [customHtml]
