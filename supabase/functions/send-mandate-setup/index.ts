@@ -13,6 +13,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14.21.0";
 import { Resend } from "npm:resend@2.0.0";
 import { resolveAgbForCandidates } from "../_shared/agbResolver.ts";
+import { renderBrandedEmail, renderBrandedButton } from "../_shared/email-templates/baseEmailLayout.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
