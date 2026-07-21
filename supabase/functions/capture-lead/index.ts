@@ -100,8 +100,8 @@ function buildConfirmationEmail(fields: {
   </tr>` : "";
 
   const bodyHtml = `<table align="center" border="0" cellpadding="0" cellspacing="0" width="100%">
-<tr><td align="left" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#444444;">
-<strong>Danke für Ihr Interesse am Honorarfuchs!<br>Entdecken Sie, was KI aus Ihrer Privatabrechnung holt.</strong>
+<tr><td align="left" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt; color:#444444;">
+<strong>Danke für Ihr Interesse am HFX Honorarfuchs!<br>Entdecken Sie, was KI aus Ihrer Privatabrechnung holt.</strong>
 </td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="30">&nbsp;</td></tr>
 <tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Mit HFX.GOÄ gewinnen Sie schnell Klarheit über Ihre Abrechnung. Erkennen Sie Optimierungspotenziale, prüfen Sie Ihre Daten strukturiert und verschaffen Sie sich ein besseres Gefühl für Ihre Privatliquidation – ganz ohne Aufwand.</td></tr>
@@ -216,7 +216,7 @@ ${nachrichtSection}` : ""}
 </table>`;
 
   const bodyText = [
-    "Danke für Ihr Interesse am Honorarfuchs!",
+    "Danke für Ihr Interesse am HFX Honorarfuchs!",
     "Entdecken Sie, was KI aus Ihrer Privatabrechnung holt.",
     "",
     "Mit HFX.GOÄ gewinnen Sie schnell Klarheit über Ihre Abrechnung. Erkennen Sie Optimierungspotenziale, prüfen Sie Ihre Daten strukturiert und verschaffen Sie sich ein besseres Gefühl für Ihre Privatliquidation – ganz ohne Aufwand.",
@@ -360,7 +360,7 @@ Deno.serve(async (req) => {
           await resend.emails.send({
             from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
             to: [normalizedEmail],
-            subject: `Ihre bestehenden Zugangsdaten – Honorarfuchs`,
+            subject: `Ihre bestehenden Zugangsdaten – HFX Honorarfuchs`,
             html: emailHtml,
             text: emailText,
           });
@@ -514,7 +514,7 @@ Deno.serve(async (req) => {
           const sendResult = await resend.emails.send({
             from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
             to: [email],
-            subject: `Danke für Ihr Interesse am Honorarfuchs!`,
+            subject: `Danke für Ihr Interesse am HFX Honorarfuchs!`,
             html: emailHtml,
             text: emailText,
           });
