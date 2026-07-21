@@ -106,8 +106,8 @@ const App = () => (
             <Route path="/admin/agb" element={<ProtectedRoute><AgbManagement /></ProtectedRoute>} />
             <Route path="/tipp-leads" element={<ProtectedRoute><TippLeadsPage /></ProtectedRoute>} />
             
-            <Route path="/tools/email-preview" element={<ProtectedRoute><EmailPreview /></ProtectedRoute>} />
-            <Route path="/admin/email-preview" element={<ProtectedRoute><EmailPreview /></ProtectedRoute>} />
+            <Route path="/tools/email-preview" element={<ProtectedRoute requiredRoles={["admin"]}><EmailPreview /></ProtectedRoute>} />
+            <Route path="/admin/email-preview" element={<ProtectedRoute requiredRoles={["admin"]}><EmailPreview /></ProtectedRoute>} />
             <Route path="/admin/email-settings" element={<ProtectedRoute><EmailSettings /></ProtectedRoute>} />
             <Route path="/sicherheit" element={<ProtectedRoute><Sicherheit /></ProtectedRoute>} />
             <Route path="/mein-konto" element={<ProtectedRoute><MeinKonto /></ProtectedRoute>} />
