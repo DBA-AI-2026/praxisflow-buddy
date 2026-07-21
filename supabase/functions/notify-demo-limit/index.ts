@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
       const bodyText = [
         "Guten Tag,",
         "",
-        `Ihr kostenloses Testkontingent für ${demo.product_name ?? "HFX-Produkt"} ist aufgebraucht – Sie haben das Limit von 200 Testrechnungen erreicht.`,
+        `Ihr kostenloses Testkontingent für ${demo.product_name ?? "HFX-Produkt"} ist aufgebraucht – Sie haben das Limit von 200 geprüften Rechnungen erreicht.`,
         "",
         FALLBACK_CTA_TEXT,
         "",
