@@ -350,6 +350,59 @@ function buildDemoExpiryCustomerHtml() {
   }).html;
 }
 
+function buildDemoLimitCustomerHtml() {
+  const productName = "HFX GOÄ - die KI für ihre Privatabrechnung";
+  const FALLBACK_CTA_TEXT =
+    "Möchten Sie HFX weiter nutzen? Sprechen Sie uns an – wir erstellen Ihnen gerne ein individuelles Angebot.";
+  const bodyHtml = `<table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding:0 0 24px;">
+            <p style="color:#1a1a2e;font-size:16px;margin:0 0 16px;">Guten Tag,</p>
+            <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 16px;">
+              Ihr kostenloses Testkontingent für <strong>${productName}</strong> ist aufgebraucht –
+              Sie haben das Limit von <strong>200 geprüften Rechnungen</strong> erreicht.
+            </p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;margin:0 0 24px;">
+              <tr><td style="padding:16px 20px;">
+                <p style="color:#856404;font-size:14px;font-weight:700;margin:0 0 4px;">Testkontingent aufgebraucht</p>
+                <p style="color:#533f03;font-size:13px;margin:0;">
+                  Das kostenlose Kontingent von 200 geprüften Rechnungen ist ausgeschöpft. Um weiterhin unbegrenzt Rechnungen zu erstellen, buchen Sie jetzt die Vollversion.
+                </p>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+        <tr><td style="padding:0 0 24px;">
+          <p style="color:#374151;font-size:15px;line-height:1.6;margin:0;">
+            ${FALLBACK_CTA_TEXT}
+          </p>
+        </td></tr>
+        <tr>
+          <td style="padding:0;">
+            <p style="color:#374151;font-size:15px;line-height:1.6;margin:0;">
+              Mit freundlichen Grüßen,<br>
+              <strong>Ihr HFX Honorarfuchs Team</strong>
+            </p>
+          </td>
+        </tr>
+      </table>`;
+  const bodyText = [
+    "Guten Tag,",
+    "",
+    `Ihr kostenloses Testkontingent für ${productName} ist aufgebraucht – Sie haben das Limit von 200 geprüften Rechnungen erreicht.`,
+    "",
+    FALLBACK_CTA_TEXT,
+    "",
+    "Mit freundlichen Grüßen,",
+    "Ihr HFX Honorarfuchs Team",
+  ].join("\n");
+  return renderBrandedEmail({
+    subheadline: "Ihr Testkontingent ist aufgebraucht",
+    bodyHtml,
+    bodyText,
+  }).html;
+}
+
 
 
 function buildContractPartnerHtml() {
