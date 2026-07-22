@@ -782,7 +782,7 @@ Deno.serve(async (req) => {
           ? renderStripeFailedBox({ includeRetryHint: true })
           : grossAmount === 0
           ? `<div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
-              <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>✅ Diese Rechnung weist keinen Zahlbetrag aus.</strong></p>
+              <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>Diese Rechnung weist keinen Zahlbetrag aus.</strong></p>
               <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">Es sind keine Zahlungen erforderlich. Diese Abrechnung dient als Nachweis für den Abrechnungszeitraum ${billingPeriod}.</p>
             </div>`
           : renderSepaOkBox({
