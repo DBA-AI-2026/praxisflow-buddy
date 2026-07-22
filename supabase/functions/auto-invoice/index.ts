@@ -774,30 +774,25 @@ Deno.serve(async (req) => {
         const totalsHtml = renderTotalsBlock({ net: netAmount, tax: taxAmount, gross: grossAmount });
 
         // ── Zahlungshinweis ──
+        // [REVIEW REQUIRED] Der frühere "Überweisungs"-Zweig (!hasStripeCustomer && grossAmount>0)
+        // war unerreichbar: oben wird für diesen Fall eine Mandat-Recovery-Mail versandt und
+        // per `continue` zur nächsten Rechnung gesprungen. Rollback: letzten ELSE-Zweig wieder einsetzen.
         const noticeHtml = stripeChargeFailed
           ? renderStripeFailedBox({ includeRetryHint: true })
-          : hasStripeCustomer && grossAmount > 0
-          ? renderSepaOkBox({
-              collectionDate: collectionDateFormatted,
-              usageHint: usageNetAmount > 0
-                ? `${usageNetAmount.toFixed(2)} € netto (${usageChargeIds.length} geprüfte GOÄ-Rechnungen, zzgl. MwSt.)`
-                : undefined,
-            })
           : grossAmount === 0
           ? `<div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
               <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>✅ Diese Rechnung weist keinen Zahlbetrag aus.</strong></p>
               <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">Es sind keine Zahlungen erforderlich. Diese Abrechnung dient als Nachweis für den Abrechnungszeitraum ${billingPeriod}.</p>
             </div>`
-          : `<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:14px 16px;margin-top:20px;">
-              <p style="margin:0;font-size:14px;color:#8a6d00;"><strong>💳 Zahlung per Überweisung</strong></p>
-              <p style="margin:6px 0 0;font-size:13px;color:#8a6d00;">Bitte überweisen Sie den Gesamtbetrag bis zum <strong>${collectionDateFormatted}</strong> auf folgendes Konto:</p>
-              <p style="margin:8px 0 0;font-size:13px;color:#5d4700;"><strong>Empfänger:</strong> MCC Medical CareCapital GmbH</p>
-              <p style="margin:4px 0 0;font-size:13px;color:#5d4700;"><strong>Verwendungszweck:</strong> ${invoice.invoice_number} – ${contract.hfx_customer_number || contract.customer_name}</p>
-              <p style="margin:8px 0 0;font-size:11px;color:#8a6d00;">Bankverbindung auf Anfrage unter <a href="mailto:info@hfx-honorarfuchs.de" style="color:#8a6d00;">info@hfx-honorarfuchs.de</a></p>
-            </div>`;
+          : renderSepaOkBox({
+              collectionDate: collectionDateFormatted,
+              usageHint: usageNetAmount > 0
+                ? `${usageNetAmount.toFixed(2)} € netto (${usageChargeIds.length} geprüfte GOÄ-Rechnungen, zzgl. MwSt.)`
+                : undefined,
+            });
 
         const bodyText = grossAmount > 0
-          ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nGesamtbetrag: ${grossAmount.toFixed(2)} €\n${hasStripeCustomer ? `Einzugsdatum: ${collectionDateFormatted}` : `Bitte überweisen Sie bis zum ${collectionDateFormatted}.`}\nDiese Rechnung wurde automatisch generiert.`
+          ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nGesamtbetrag: ${grossAmount.toFixed(2)} €\nEinzugsdatum: ${collectionDateFormatted}\nDiese Rechnung wurde automatisch generiert.`
           : isInWaiverPeriod
           ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus (Einführungsangebot aktiv).\nDiese Rechnung wurde automatisch generiert.`
           : isLocationGoae
