@@ -20,6 +20,14 @@
 import { Resend } from "npm:resend@2.0.0";
 import Stripe from "npm:stripe@14.21.0";
 import { requireActiveRole } from "../_shared/auth.ts";
+import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
+import {
+  renderPositionsRows,
+  renderPositionsTable,
+  renderTotalsBlock,
+  renderStripeFailedBox,
+  renderSepaOkBox,
+} from "../_shared/invoiceEmailParts.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
@@ -272,66 +280,57 @@ Deno.serve(async (req) => {
         .eq("status", "invoicing");
     }
 
-    // 4) Send invoice email (same template style as auto-invoice, simplified for interim)
-    const positionsHtml = positions.map((p) => `
-      <tr>
-        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">${p.description}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${p.quantity}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${Number(p.unit_price).toFixed(2)} €</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${(p.quantity * p.unit_price).toFixed(2)} €</td>
-      </tr>`).join("");
-
+    // 4) Send invoice email (SSOT: renderBrandedEmail + _shared/invoiceEmailParts)
+    const positionsHtml = renderPositionsRows(positions);
+    const tableHtml = renderPositionsTable(positionsHtml);
+    const totalsHtml = renderTotalsBlock({ net: netAmount, tax: taxAmount, gross: grossAmount });
     const noticeHtml = stripeChargeFailed
-      ? `<div style="background:#fff4e5;border:1px solid #ffb74d;border-radius:8px;padding:14px 16px;margin-top:20px;">
-          <p style="margin:0;font-size:14px;color:#8a4b00;"><strong>⚠️ Hinweis: Automatischer Einzug nicht möglich</strong></p>
-          <p style="margin:6px 0 0;font-size:13px;color:#8a4b00;">Der SEPA-Einzug ist fehlgeschlagen. Bei Rückfragen: <a href="mailto:buchhaltung@hfx-honorarfuchs.de" style="color:#8a4b00;">buchhaltung@hfx-honorarfuchs.de</a>.</p>
-        </div>`
-      : `<div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
-          <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug (SEPA via Stripe)</strong></p>
-          <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">Der Betrag wird automatisch von Ihrem hinterlegten SEPA-Konto eingezogen.</p>
-        </div>`;
+      ? renderStripeFailedBox({ includeRetryHint: false })
+      : renderSepaOkBox();
 
-    const emailHtml = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"/></head><body style="margin:0;padding:0;background:#ffffff;font-family:Arial,sans-serif;">
-<div style="max-width:600px;margin:0 auto;">
-  <div style="background:linear-gradient(135deg,#0b367f,#1a4a9e);color:#fff;padding:30px 20px;border-radius:8px 8px 0 0;text-align:center;">
-    <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg" alt="Honorarfuchs" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin:0 auto 12px;display:block;"/>
-    <h1 style="margin:0;font-size:24px;">Zwischenabrechnung ${invoice.invoice_number}</h1>
-    <p style="margin:8px 0 0;opacity:0.9;font-size:14px;">Honorarfuchs – HFX Sales Portal</p>
-  </div>
-  <div style="background:#f9fafb;padding:30px 20px;border:1px solid #e5e7eb;border-top:none;">
+    const introHtml = `
     <p style="font-size:15px;color:#333;">Sehr geehrte Damen und Herren,</p>
     <p style="color:#555;font-size:14px;line-height:1.6;">anbei erhalten Sie Ihre <strong>Zwischenabrechnung ${invoice.invoice_number}</strong> vom <strong>${fmtDeDate(todayStr)}</strong> für den Verbrauchszeitraum <strong>${fmtDeDate(periodFrom)} – ${fmtDeDate(periodTo)}</strong>.</p>
-    <p style="color:#555;font-size:14px;"><strong>Rechnungsempfänger:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</p>
-    <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;margin-top:20px;">
-      <thead><tr>
-        <th style="background:#0b367f;color:#fff;padding:10px 12px;text-align:left;font-size:12px;">Beschreibung</th>
-        <th style="background:#0b367f;color:#fff;padding:10px 12px;text-align:right;font-size:12px;">Menge</th>
-        <th style="background:#0b367f;color:#fff;padding:10px 12px;text-align:right;font-size:12px;">Einzelpreis</th>
-        <th style="background:#0b367f;color:#fff;padding:10px 12px;text-align:right;font-size:12px;">Gesamt</th>
-      </tr></thead>
-      <tbody>${positionsHtml}</tbody>
-    </table>
-    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-top:20px;">
-      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span>Nettobetrag:</span><strong>${netAmount.toFixed(2)} €</strong></div>
-      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#6b7280;"><span>MwSt. (19%):</span><span>${taxAmount.toFixed(2)} €</span></div>
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #0b367f;margin-top:8px;font-size:16px;"><span><strong>Gesamtbetrag:</strong></span><strong style="color:#0b367f;">${grossAmount.toFixed(2)} €</strong></div>
-    </div>
+    <p style="color:#555;font-size:14px;"><strong>Rechnungsempfänger:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</p>`;
+
+    const bodyHtml = `${introHtml}
+    ${tableHtml}
+    ${totalsHtml}
     ${noticeHtml}
-    <p style="font-size:12px;color:#9ca3af;margin-top:8px;">Diese Zwischenabrechnung wurde manuell ausgelöst.</p>
-  </div>
-  <div style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
-    <p style="font-size:11px;color:#9ca3af;margin:0;">© Honorarfuchs – HFX Sales Portal</p>
-  </div>
-</div>
-</body></html>`;
+    <p style="font-size:12px;color:#9ca3af;margin-top:8px;">Diese Zwischenabrechnung wurde manuell ausgelöst.</p>`;
+
+    const bodyText = [
+      `Sehr geehrte Damen und Herren,`,
+      ``,
+      `anbei erhalten Sie Ihre Zwischenabrechnung ${invoice.invoice_number} vom ${fmtDeDate(todayStr)} für den Verbrauchszeitraum ${fmtDeDate(periodFrom)} – ${fmtDeDate(periodTo)}.`,
+      `Rechnungsempfänger: ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}`,
+      ``,
+      ...positions.map((p) => `- ${p.description} | ${p.quantity} × ${Number(p.unit_price).toFixed(2)} € = ${(p.quantity * p.unit_price).toFixed(2)} €`),
+      ``,
+      `Nettobetrag: ${netAmount.toFixed(2)} €`,
+      `MwSt. (19%): ${taxAmount.toFixed(2)} €`,
+      `Gesamtbetrag: ${grossAmount.toFixed(2)} €`,
+      ``,
+      stripeChargeFailed
+        ? `Hinweis: Automatischer Einzug aktuell nicht möglich. Bei Rückfragen: info@hfx-honorarfuchs.de.`
+        : `Der Betrag wird automatisch von Ihrem hinterlegten SEPA-Konto eingezogen.`,
+      ``,
+      `Diese Zwischenabrechnung wurde manuell ausgelöst.`,
+    ].join("\n");
+
+    const { html: emailHtml } = renderBrandedEmail({
+      subheadline: "Ihre Zwischenabrechnung",
+      bodyHtml,
+      bodyText,
+    });
 
     const sendResult = await resend.emails.send({
-      from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+      from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
       reply_to: "info@hfx-honorarfuchs.de",
       to: [emailTo],
       subject: `Zwischenabrechnung ${invoice.invoice_number} – ${contract.customer_name}`,
       html: emailHtml,
+      text: bodyText,
     });
 
     if (stripeChargeFailed) {
