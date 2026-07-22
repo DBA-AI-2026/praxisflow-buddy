@@ -530,18 +530,19 @@ Deno.serve(async (req) => {
               // Customer keine SEPA-Zahlungsmethode hat — genau dieser Recovery-Fall.
               const mandateUrl = `https://sales.hfx-honorarfuchs.de/mandat?contract_id=${contract.id}`;
 
-              const mandateEmailHtml = buildMandateRequestEmail({
+              const { html: mandateEmailHtml, text: mandateEmailText } = buildMandateRequestEmail({
                 customerName: contract.customer_name,
                 productName: contract.product_name,
                 mandateUrl,
                 billingPeriod,
               });
               await resend.emails.send({
-                from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+                from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
                 reply_to: "info@hfx-honorarfuchs.de",
                 to: [emailRecipient],
                 subject: `Zahlungsmethode hinterlegen – ${contract.customer_name}`,
                 html: mandateEmailHtml,
+                text: mandateEmailText,
               });
               console.log(`[auto-invoice] Mandatsanforderung gesendet an ${emailRecipient} (Contract: ${contract.id})`);
             }
