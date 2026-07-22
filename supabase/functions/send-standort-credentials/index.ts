@@ -117,73 +117,56 @@ Deno.serve(async (req) => {
   }
 });
 
-// ⚠ SYNCHRONIZE MIT resend-lead-credentials/index.ts (buildCredentialsEmailHtml).
+// ⚠ SYNCHRONIZE MIT resend-lead-credentials/index.ts (buildCredentialsEmail).
 // Etappe 2b duplicate; spätere Konsolidierung nach _shared offen.
-function buildCredentialsEmailHtml(fields: {
+function buildCredentialsEmail(fields: {
   praxis_name: string;
   email: string;
   hfx_customer_number: string;
   generated_password: string;
 }) {
   const { praxis_name, email, hfx_customer_number, generated_password } = fields;
-  return `<!DOCTYPE html>
-<html lang="de">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background-color:#f5f5f5;font-family:verdana,geneva,sans-serif;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f5f5f5;padding:20px 0;">
-<tr><td align="center">
-<table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-  <tr>
-    <td bgcolor="#ffffff" style="background-color:#ffffff;padding:30px 40px;text-align:center;">
-      <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/8270-Logo-RZ-Honorarfuchs-HFX.png" alt="HFX Honorarfuchs" style="display:block;max-width:280px;height:auto;margin:0 auto;border:0;" />
-      <p style="color:#0b367f;font-size:11pt;margin:16px 0 0 0;">Ihre Zugangsdaten (Standort)</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:32px 40px;">
+  const bodyHtml = `
       <p style="font-size:12pt;color:#333333;margin:0 0 16px 0;">Hallo <strong>${praxis_name}</strong>,</p>
       <p style="font-size:11pt;color:#555555;margin:0 0 24px 0;">anbei Ihre Zugangsdaten für das Honorarfuchs-Portal an diesem Standort.</p>
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f5ff;border-radius:8px;border:1px solid #c8d8f0;margin-bottom:24px;">
         <tr>
           <td style="padding:20px 24px;">
-            <p style="font-size:10pt;color:#0b367f;font-weight:bold;text-transform:uppercase;margin:0 0 12px 0;">Ihre Zugangsdaten</p>
+            <p style="font-size:10pt;color:#0b367f;font-weight:bold;text-transform:uppercase;margin:0 0 12px 0;font-family:verdana,geneva,sans-serif;">Ihre Zugangsdaten</p>
             <table border="0" cellpadding="0" cellspacing="0" width="100%">
               <tr>
-                <td style="padding:6px 0;font-size:10pt;color:#777777;width:140px;">E-Mail-Adresse</td>
-                <td style="padding:6px 0;font-size:11pt;color:#333333;">${email}</td>
+                <td style="padding:6px 0;font-size:10pt;color:#777777;width:140px;font-family:verdana,geneva,sans-serif;">E-Mail-Adresse</td>
+                <td style="padding:6px 0;font-size:11pt;color:#333333;font-family:verdana,geneva,sans-serif;">${email}</td>
               </tr>
               <tr>
-                <td style="padding:6px 0;font-size:10pt;color:#777777;">Benutzername</td>
+                <td style="padding:6px 0;font-size:10pt;color:#777777;font-family:verdana,geneva,sans-serif;">Benutzername</td>
                 <td style="padding:6px 0;font-size:11pt;color:#0b367f;font-weight:bold;font-family:monospace;">${hfx_customer_number}</td>
               </tr>
               <tr>
-                <td style="padding:6px 0;font-size:10pt;color:#777777;">Passwort</td>
+                <td style="padding:6px 0;font-size:10pt;color:#777777;font-family:verdana,geneva,sans-serif;">Passwort</td>
                 <td style="padding:6px 0;font-size:11pt;color:#0b367f;font-weight:bold;font-family:monospace;">${generated_password}</td>
               </tr>
             </table>
           </td>
         </tr>
       </table>
-      <p style="font-size:10pt;color:#888888;margin:0 0 8px 0;">Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung.</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="background-color:#f8f8f8;padding:20px 40px;border-top:1px solid #eeeeee;text-align:center;">
-      <p style="font-size:9pt;color:#777777;margin:0 0 8px 0;line-height:1.5;">
-        <strong>HFX Honorarfuchs &ndash; eine Marke der MCC Medical CareCapital GmbH</strong><br>
-        Hohenzollernstr. 47 &middot; 47799 Krefeld
-      </p>
-      <p style="font-size:9pt;color:#777777;margin:0 0 8px 0;line-height:1.5;">
-        Gesch&auml;ftsf&uuml;hrer: Olaf Hagelkruys, Thilo Wiers-Keiser und Robbin Zielke<br>
-        Registergericht: Amtsgericht Krefeld &middot; HRB 14709<br>
-        Umsatzsteueridentifikationsnummer gem&auml;&szlig; &sect;27a Umsatzsteuergesetz: DE 227 420 712
-      </p>
-      <p style="font-size:9pt;color:#aaaaaa;margin:8px 0 0 0;">&copy; 2026 HFX Honorarfuchs &middot; Bei Fragen: info@hfx-honorarfuchs.de</p>
-    </td>
-  </tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+      <p style="font-size:10pt;color:#888888;margin:0 0 8px 0;">Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung.</p>`;
+
+  const bodyText = [
+    `Hallo ${praxis_name},`,
+    "",
+    "anbei Ihre Zugangsdaten für das Honorarfuchs-Portal (Standort):",
+    "",
+    `E-Mail-Adresse: ${email}`,
+    `Benutzername: ${hfx_customer_number}`,
+    `Passwort: ${generated_password}`,
+    "",
+    "Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung.",
+  ].join("\n");
+
+  return renderBrandedEmail({
+    subheadline: "Ihre Zugangsdaten (Standort)",
+    bodyHtml,
+    bodyText,
+  });
 }
