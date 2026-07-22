@@ -117,7 +117,7 @@ export default function CampaignMint() {
   );
 
   return (
-    <MainLayout>
+    <MainLayout title="Campaign Mint">
       <div className="p-6 space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">Campaign Mint</h1>
