@@ -155,7 +155,7 @@ function buildCredentialsEmail(fields: {
   const bodyText = [
     `Hallo ${praxis_name},`,
     "",
-    "anbei Ihre Zugangsdaten für das Honorarfuchs-Portal (Standort):",
+    "anbei Ihre Zugangsdaten für das HFX Honorarfuchs-Portal (Standort):",
     "",
     `E-Mail-Adresse: ${email}`,
     `Benutzername: ${hfx_customer_number}`,
