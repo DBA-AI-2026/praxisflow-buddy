@@ -121,16 +121,6 @@ const TEMPLATES: Template[] = [
     category: "kunden",
   },
   {
-    id: "booking-link",
-    label: "Digitaler Vertragsabschluss (Buchungslink)",
-    subject: "Ihre HFX-Vertragsbestätigung (HFX-I01019)",
-    from: "noreply@hfx-honorarfuchs.de",
-    type: "email",
-    description: "Wird vom Vertrieb manuell ausgelöst: sendet dem Interessenten einen Buchungslink zur /buchen-Seite. Dort gibt der Kunde Fachrichtung, Rechtsform und ggf. BSNR/LANR an und zahlt via Stripe – der Vertrag aktiviert sich automatisch.",
-    category: "kunden",
-    hasPdfPreview: true,
-  },
-  {
     id: "post-payment-contract-pdf",
     label: "Vertragszusammenfassung (PDF nach Zahlung)",
     subject: "— PDF-Anhang (kein separater Versand) —",
