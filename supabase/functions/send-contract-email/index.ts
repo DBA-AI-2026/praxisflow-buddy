@@ -1,5 +1,6 @@
 import { Resend } from "npm:resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
 
 const ALLOWED_ORIGINS = [
   "https://sales.hfx-honorarfuchs.de",
