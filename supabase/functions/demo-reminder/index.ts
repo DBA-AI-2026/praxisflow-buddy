@@ -129,14 +129,13 @@ Deno.serve(async (req) => {
       const customerBodyHtml = `
         <p style="margin:0 0 16px 0;">Guten Tag${demo.contact_name ? ` ${demo.contact_name}` : ""},</p>
         <p style="margin:0 0 16px 0;">
-          wir möchten Sie daran erinnern, dass Ihr Testquartal für <strong>${demo.product_name ?? "HFX-Produkt"}</strong>${demo.company_name ? ` (${demo.company_name})` : ""} in <strong>3 Tagen</strong> – am <strong>${testEndFormatted}</strong> – abläuft.
+          wir möchten Sie daran erinnern, dass Ihr Testkontingent für <strong>${demo.product_name ?? "HFX-Produkt"}</strong>${demo.company_name ? ` (${demo.company_name})` : ""} fast aufgebraucht ist.
         </p>
         <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f4ff;border-radius:6px;margin:0 0 24px 0;">
           <tr><td style="padding:16px 20px;">
-            <p style="color:#0b367f;font-size:10pt;font-weight:700;margin:0 0 8px 0;">Ihr Testquartal</p>
+            <p style="color:#0b367f;font-size:10pt;font-weight:700;margin:0 0 8px 0;">Ihr Testkontingent</p>
             <p style="color:#333333;font-size:10pt;margin:0;"><strong>Produkt:</strong> ${demo.product_name ?? "–"}</p>
             ${demo.hfx_customer_number ? `<p style="color:#333333;font-size:10pt;margin:4px 0 0 0;"><strong>HFX-Nr.:</strong> ${demo.hfx_customer_number}</p>` : ""}
-            <p style="color:#333333;font-size:10pt;margin:4px 0 0 0;"><strong>Testende:</strong> ${testEndFormatted}</p>
           </td></tr>
         </table>
         ${ctaHtml}
@@ -145,11 +144,10 @@ Deno.serve(async (req) => {
       const customerBodyText = [
         `Guten Tag${demo.contact_name ? ` ${demo.contact_name}` : ""},`,
         "",
-        `Ihr Testquartal für ${demo.product_name ?? "HFX-Produkt"}${demo.company_name ? ` (${demo.company_name})` : ""} endet in 3 Tagen – am ${testEndFormatted}.`,
+        `Ihr Testkontingent für ${demo.product_name ?? "HFX-Produkt"}${demo.company_name ? ` (${demo.company_name})` : ""} ist fast aufgebraucht.`,
         "",
         `Produkt: ${demo.product_name ?? "–"}`,
         demo.hfx_customer_number ? `HFX-Nr.: ${demo.hfx_customer_number}` : null,
-        `Testende: ${testEndFormatted}`,
         "",
         stripeCheckoutUrl
           ? `Jetzt direkt weiterbuchen: ${stripeCheckoutUrl}`
@@ -160,7 +158,7 @@ Deno.serve(async (req) => {
       ].filter(Boolean).join("\n");
 
       const customerEmail = renderBrandedEmail({
-        subheadline: "Ihr Testquartal läuft bald ab",
+        subheadline: "Ihr Testkontingent ist fast aufgebraucht",
         bodyHtml: customerBodyHtml,
         bodyText: customerBodyText,
       });
@@ -179,7 +177,7 @@ Deno.serve(async (req) => {
           from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
           reply_to: "info@hfx-honorarfuchs.de",
           to: [demo.email],
-          subject: `Erinnerung: Ihr Testquartal endet am ${testEndFormatted}`,
+          subject: `Erinnerung: Ihr Testkontingent ist fast aufgebraucht`,
           html: customerEmail.html,
           text: customerEmail.text,
         }),
