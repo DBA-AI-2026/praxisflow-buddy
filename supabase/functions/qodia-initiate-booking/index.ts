@@ -201,6 +201,19 @@ Deno.serve(async (req) => {
       console.log(`[qodia-initiate-booking] Created new contract ${contractId} (cancellation=${cancellationPeriod}m, waiver_until=${(waiverFields as any).base_fee_waived_until ?? "none"})`);
     }
 
+    // [REVIEW REQUIRED] skip_mail-Schalter: bewusst kein Mailversand.
+    // Regel: skip_mail === true → Schritt 8 überspringen, Vertrag bleibt angelegt.
+    // Rückgabe enthält mail_skipped: true, damit Aufrufer (z. B. Mint-Runner)
+    // schwarz auf weiß sieht, dass hier keine Mail rausging.
+    // Default: skip_mail fehlend/false → bisheriges Verhalten (Mail senden).
+    // Rollback: bei Regression diesen Block entfernen → es wird immer gesendet.
+    if (skip_mail === true) {
+      console.log(`[qodia-initiate-booking] skip_mail=true; Mandat-Setup-Mail nicht gesendet für Vertrag ${contractId}`);
+      return new Response(
+        JSON.stringify({ success: true, contract_id: contractId, mail_skipped: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // 8. Trigger Mandat-Setup-Mail (Mail 1) via send-mandate-setup mit Service-Role
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
