@@ -1229,7 +1229,7 @@ export default function EmailPreview() {
 
 
 
-                    {/* PDF row – live pdf-lib preview (booking-link, post-payment-contract-pdf, invoice) */}
+                    {/* PDF row – live pdf-lib preview (post-payment-contract-pdf, invoice) */}
                     {PDF_PREVIEW_TEMPLATE_IDS.includes(tpl.id) && (
                       <div className="flex gap-2">
                         <Button
