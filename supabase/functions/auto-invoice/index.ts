@@ -4,6 +4,14 @@ import Stripe from "npm:stripe@14.21.0";
 import { isGoaeProduct, isCarrierContract, healCustomerStripeId } from "../_shared/multiLocation.ts";
 import { createGoaeCommissions } from "../_shared/goaeCommissions.ts";
 import { computeEffectiveUsageNet } from "../_shared/freeQuota.ts";
+import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
+import {
+  renderPositionsRows,
+  renderPositionsTable,
+  renderTotalsBlock,
+  renderStripeFailedBox,
+  renderSepaOkBox,
+} from "../_shared/invoiceEmailParts.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
