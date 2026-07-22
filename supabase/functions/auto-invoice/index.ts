@@ -4,6 +4,14 @@ import Stripe from "npm:stripe@14.21.0";
 import { isGoaeProduct, isCarrierContract, healCustomerStripeId } from "../_shared/multiLocation.ts";
 import { createGoaeCommissions } from "../_shared/goaeCommissions.ts";
 import { computeEffectiveUsageNet } from "../_shared/freeQuota.ts";
+import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
+import {
+  renderPositionsRows,
+  renderPositionsTable,
+  renderTotalsBlock,
+  renderStripeFailedBox,
+  renderSepaOkBox,
+} from "../_shared/invoiceEmailParts.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
@@ -756,34 +764,25 @@ Deno.serve(async (req) => {
         }
 
         // ── Send invoice email ────────────────────────────────────────────────
-        const positionsHtml = positions
-          .filter(p => p.unit_price !== 0 || (isInWaiverPeriod && p === positions[0]) || (isLocationGoae && p === positions[0]))
-          .map((p) => `
-          <tr>
-            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">${p.description}</td>
-            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${p.quantity}</td>
-            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${Number(p.unit_price).toFixed(2)} €</td>
-            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${(p.quantity * p.unit_price).toFixed(2)} €</td>
-          </tr>`).join("");
+        // [REVIEW REQUIRED] Migrated to SSOT (renderBrandedEmail + _shared/invoiceEmailParts.ts).
+        // Guardrail: Cron feuert am 1. des Monats; Deploy außerhalb dieses Fensters.
+        // Rollback: diesen Block auf den vorherigen Inline-Stand (Gradient-Header + fox-logo + Inline-Footer) zurücksetzen.
+        const filteredPositions = positions
+          .filter(p => p.unit_price !== 0 || (isInWaiverPeriod && p === positions[0]) || (isLocationGoae && p === positions[0]));
+        const positionsHtml = renderPositionsRows(filteredPositions);
+        const positionsTableHtml = renderPositionsTable(positionsHtml);
+        const totalsHtml = renderTotalsBlock({ net: netAmount, tax: taxAmount, gross: grossAmount });
 
         // ── Zahlungshinweis ──
-        // A3: Wenn Stripe-Charge fehlgeschlagen ist, oranger Hinweisblock vor dem normalen Block
-        const chargeFailedNoticeHtml = stripeChargeFailed
-          ? `<div style="background:#fff4e5;border:1px solid #ffb74d;border-radius:8px;padding:14px 16px;margin-top:20px;">
-              <p style="margin:0;font-size:14px;color:#8a4b00;"><strong>⚠️ Hinweis: Automatischer Einzug aktuell nicht möglich</strong></p>
-              <p style="margin:6px 0 0;font-size:13px;color:#8a4b00;">Der automatische SEPA-Einzug für diese Rechnung ist beim ersten Versuch fehlgeschlagen. Wir versuchen den Einzug automatisch erneut. Sie müssen aktuell <strong>nichts unternehmen</strong>.</p>
-              <p style="margin:6px 0 0;font-size:13px;color:#8a4b00;">Bei Rückfragen wenden Sie sich bitte an <a href="mailto:buchhaltung@hfx-honorarfuchs.de" style="color:#8a4b00;">buchhaltung@hfx-honorarfuchs.de</a>.</p>
-            </div>`
-          : "";
-        const paymentBlockHtml = stripeChargeFailed
-          ? ""
+        const noticeHtml = stripeChargeFailed
+          ? renderStripeFailedBox({ includeRetryHint: true })
           : hasStripeCustomer && grossAmount > 0
-          ? `<div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
-              <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>🔄 Automatischer Einzug (SEPA via Stripe)</strong></p>
-              <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">Der Betrag wird automatisch von Ihrem hinterlegten SEPA-Konto eingezogen.</p>
-              <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">📅 <strong>Einzugsdatum:</strong> ${collectionDateFormatted}</p>
-              ${usageNetAmount > 0 ? `<p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">📊 <strong>Enthält Nutzungsgebühren:</strong> ${usageNetAmount.toFixed(2)} € netto (${usageChargeIds.length} geprüfte GOÄ-Rechnungen, zzgl. MwSt.)</p>` : ""}
-            </div>`
+          ? renderSepaOkBox({
+              collectionDate: collectionDateFormatted,
+              usageHint: usageNetAmount > 0
+                ? `${usageNetAmount.toFixed(2)} € netto (${usageChargeIds.length} geprüfte GOÄ-Rechnungen, zzgl. MwSt.)`
+                : undefined,
+            })
           : grossAmount === 0
           ? `<div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
               <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>✅ Diese Rechnung weist keinen Zahlbetrag aus.</strong></p>
@@ -792,47 +791,32 @@ Deno.serve(async (req) => {
           : `<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:14px 16px;margin-top:20px;">
               <p style="margin:0;font-size:14px;color:#8a6d00;"><strong>💳 Zahlung per Überweisung</strong></p>
               <p style="margin:6px 0 0;font-size:13px;color:#8a6d00;">Bitte überweisen Sie den Gesamtbetrag bis zum <strong>${collectionDateFormatted}</strong> auf folgendes Konto:</p>
-              <p style="margin:8px 0 0;font-size:13px;color:#5d4700;"><strong>Empfänger:</strong> Honorarfuchs GmbH</p>
+              <p style="margin:8px 0 0;font-size:13px;color:#5d4700;"><strong>Empfänger:</strong> MCC Medical CareCapital GmbH</p>
               <p style="margin:4px 0 0;font-size:13px;color:#5d4700;"><strong>Verwendungszweck:</strong> ${invoice.invoice_number} – ${contract.hfx_customer_number || contract.customer_name}</p>
-              <p style="margin:8px 0 0;font-size:11px;color:#8a6d00;">Bankverbindung auf Anfrage unter <a href="mailto:buchhaltung@hfx-honorarfuchs.de" style="color:#8a6d00;">buchhaltung@hfx-honorarfuchs.de</a></p>
+              <p style="margin:8px 0 0;font-size:11px;color:#8a6d00;">Bankverbindung auf Anfrage unter <a href="mailto:info@hfx-honorarfuchs.de" style="color:#8a6d00;">info@hfx-honorarfuchs.de</a></p>
             </div>`;
 
-        const emailHtml = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"/></head><body style="margin:0;padding:0;background:#ffffff;font-family:Arial,sans-serif;">
-<div style="max-width:600px;margin:0 auto;">
-  <div style="background:linear-gradient(135deg,#0b367f,#1a4a9e);color:#fff;padding:30px 20px;border-radius:8px 8px 0 0;text-align:center;">
-    <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg"
-      alt="Honorarfuchs" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin:0 auto 12px;display:block;"/>
-    <h1 style="margin:0;font-size:24px;">Rechnung ${invoice.invoice_number}</h1>
-    <p style="margin:8px 0 0;opacity:0.9;font-size:14px;">Honorarfuchs – HFX Sales Portal</p>
-  </div>
-  <div style="background:#f9fafb;padding:30px 20px;border:1px solid #e5e7eb;border-top:none;">
-    <p style="font-size:15px;color:#333;">Sehr geehrte Damen und Herren,</p>
-    <p style="color:#555;font-size:14px;line-height:1.6;">anbei erhalten Sie Ihre Rechnung <strong>${invoice.invoice_number}</strong> vom <strong>${new Date(todayStr).toLocaleDateString("de-DE")}</strong> für den Abrechnungszeitraum <strong>${billingPeriod}</strong>.</p>
-    <p style="color:#555;font-size:14px;"><strong>Rechnungsempfänger:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</p>
-    <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;margin-top:20px;">
-      <thead><tr>
-        <th style="background:#0b367f;color:#fff;padding:10px 12px;text-align:left;font-size:12px;">Beschreibung</th>
-        <th style="background:#0b367f;color:#fff;padding:10px 12px;text-align:right;font-size:12px;">Menge</th>
-        <th style="background:#0b367f;color:#fff;padding:10px 12px;text-align:right;font-size:12px;">Einzelpreis</th>
-        <th style="background:#0b367f;color:#fff;padding:10px 12px;text-align:right;font-size:12px;">Gesamt</th>
-      </tr></thead>
-      <tbody>${positionsHtml}</tbody>
-    </table>
-    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-top:20px;">
-      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span>Nettobetrag:</span><strong>${netAmount.toFixed(2)} €</strong></div>
-      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#6b7280;"><span>MwSt. (19%):</span><span>${taxAmount.toFixed(2)} €</span></div>
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #0b367f;margin-top:8px;font-size:16px;"><span><strong>Gesamtbetrag:</strong></span><strong style="color:#0b367f;">${grossAmount.toFixed(2)} €</strong></div>
-    </div>
-    ${chargeFailedNoticeHtml}
-    ${paymentBlockHtml}
-    <p style="font-size:12px;color:#9ca3af;margin-top:8px;">Diese Rechnung wurde automatisch generiert.</p>
-  </div>
-  <div style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
-    <p style="font-size:11px;color:#9ca3af;margin:0;">© Honorarfuchs – HFX Sales Portal</p>
-  </div>
-</div>
-</body></html>`;
+        const bodyText = grossAmount > 0
+          ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nGesamtbetrag: ${grossAmount.toFixed(2)} €\n${hasStripeCustomer ? `Einzugsdatum: ${collectionDateFormatted}` : `Bitte überweisen Sie bis zum ${collectionDateFormatted}.`}\nDiese Rechnung wurde automatisch generiert.`
+          : isInWaiverPeriod
+          ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus (Einführungsangebot aktiv).\nDiese Rechnung wurde automatisch generiert.`
+          : isLocationGoae
+          ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus. Die Grundgebühr wird zentral über Ihren Hauptstandort abgerechnet.\nDiese Rechnung wurde automatisch generiert.`
+          : `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus.\nDiese Rechnung wurde automatisch generiert.`;
+
+        const bodyHtml = `<p style="font-size:15px;color:#333;">Sehr geehrte Damen und Herren,</p>
+<p style="color:#555;font-size:14px;line-height:1.6;">anbei erhalten Sie Ihre Rechnung <strong>${invoice.invoice_number}</strong> vom <strong>${new Date(todayStr).toLocaleDateString("de-DE")}</strong> für den Abrechnungszeitraum <strong>${billingPeriod}</strong>.</p>
+<p style="color:#555;font-size:14px;"><strong>Rechnungsempfänger:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</p>
+${positionsTableHtml}
+${totalsHtml}
+${noticeHtml}
+<p style="font-size:12px;color:#9ca3af;margin-top:8px;">Diese Rechnung wurde automatisch generiert.</p>`;
+
+        const { html: emailHtml } = renderBrandedEmail({
+          subheadline: "Ihre Rechnung",
+          bodyHtml,
+          bodyText,
+        });
 
         const nowTs = new Date().toISOString();
 
@@ -848,18 +832,12 @@ Deno.serve(async (req) => {
           const emailTo = contract.rechnungs_email || contract.email;
           const subjectSuffix = grossAmount === 0 ? " (kein Zahlbetrag)" : "";
           await resend.emails.send({
-            from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+            from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
             reply_to: "info@hfx-honorarfuchs.de",
             to: [emailTo],
             subject: `Rechnung ${invoice.invoice_number} – ${contract.customer_name} – ${billingPeriod}${subjectSuffix}`,
             html: emailHtml,
-            text: grossAmount > 0
-              ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nGesamtbetrag: ${grossAmount.toFixed(2)} €\n${hasStripeCustomer ? `Einzugsdatum: ${collectionDateFormatted}` : `Bitte überweisen Sie bis zum ${collectionDateFormatted}.`}\nDiese Rechnung wurde automatisch generiert.`
-              : isInWaiverPeriod
-              ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus (Einführungsangebot aktiv).\nDiese Rechnung wurde automatisch generiert.`
-              : isLocationGoae
-              ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus. Die Grundgebühr wird zentral über Ihren Hauptstandort abgerechnet.\nDiese Rechnung wurde automatisch generiert.`
-              : `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus.\nDiese Rechnung wurde automatisch generiert.`,
+            text: bodyText,
           });
 
           // A4: email_sent_at IMMER setzen (Kunden-Mail wurde versendet, ggf. mit Hinweisblock).
