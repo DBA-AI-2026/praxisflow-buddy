@@ -54,7 +54,6 @@ const STALE_IDS: ReadonlySet<string> = new Set([]);
 
 // NO_LIVE: Kein Live-Mail-Pendant (Leiche oder PDF-Vorschau).
 const NO_LIVE_IDS: ReadonlySet<string> = new Set([
-  "booking-link",
   "invoice-pdf",
 ]);
 
