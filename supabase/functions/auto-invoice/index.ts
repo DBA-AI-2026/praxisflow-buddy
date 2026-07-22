@@ -832,18 +832,12 @@ ${noticeHtml}
           const emailTo = contract.rechnungs_email || contract.email;
           const subjectSuffix = grossAmount === 0 ? " (kein Zahlbetrag)" : "";
           await resend.emails.send({
-            from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+            from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
             reply_to: "info@hfx-honorarfuchs.de",
             to: [emailTo],
             subject: `Rechnung ${invoice.invoice_number} – ${contract.customer_name} – ${billingPeriod}${subjectSuffix}`,
             html: emailHtml,
-            text: grossAmount > 0
-              ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nGesamtbetrag: ${grossAmount.toFixed(2)} €\n${hasStripeCustomer ? `Einzugsdatum: ${collectionDateFormatted}` : `Bitte überweisen Sie bis zum ${collectionDateFormatted}.`}\nDiese Rechnung wurde automatisch generiert.`
-              : isInWaiverPeriod
-              ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus (Einführungsangebot aktiv).\nDiese Rechnung wurde automatisch generiert.`
-              : isLocationGoae
-              ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus. Die Grundgebühr wird zentral über Ihren Hauptstandort abgerechnet.\nDiese Rechnung wurde automatisch generiert.`
-              : `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus.\nDiese Rechnung wurde automatisch generiert.`,
+            text: bodyText,
           });
 
           // A4: email_sent_at IMMER setzen (Kunden-Mail wurde versendet, ggf. mit Hinweisblock).
