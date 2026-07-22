@@ -1,5 +1,6 @@
 import { Resend } from "npm:resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
 
 const ALLOWED_ORIGINS = [
   "https://sales.hfx-honorarfuchs.de",
@@ -53,7 +54,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { email, salesPartnerEmail, customerName, pdfBase64, previewPdfBase64, products, startDate, hfxNumber } = await req.json();
+    const { salesPartnerEmail, customerName, pdfBase64, previewPdfBase64, products, startDate, hfxNumber } = await req.json();
 
     // Check email notification settings
     const supabaseAdmin = createClient(
@@ -63,14 +64,13 @@ Deno.serve(async (req) => {
     const { data: emailSettings } = await supabaseAdmin
       .from("email_notification_settings")
       .select("setting_key, is_enabled")
-      .in("setting_key", ["contract_email_customer", "contract_email_partner"]);
+      .in("setting_key", ["contract_email_partner"]);
     const settingsMap = Object.fromEntries((emailSettings ?? []).map((s: any) => [s.setting_key, s.is_enabled]));
-    const customerEmailEnabled = settingsMap["contract_email_customer"] !== false;
     const partnerEmailEnabled = settingsMap["contract_email_partner"] !== false;
 
-    if (!email && !salesPartnerEmail) {
+    if (!salesPartnerEmail) {
       return new Response(
-        JSON.stringify({ error: "At least one email address is required" }),
+        JSON.stringify({ error: "salesPartnerEmail is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -82,14 +82,14 @@ Deno.serve(async (req) => {
     }
 
     const attachment = {
-      filename: `Vertrag-${hfxNumber || "Honorarfuchs"}.pdf`,
+      filename: `Vertrag-${hfxNumber || "HFX"}.pdf`,
       content: pdfBase64,
     };
 
     const attachments = [attachment];
     if (previewPdfBase64) {
       attachments.push({
-        filename: `Produktvorschau-${hfxNumber || "Honorarfuchs"}.pdf`,
+        filename: `Produktvorschau-${hfxNumber || "HFX"}.pdf`,
         content: previewPdfBase64,
       });
     }
@@ -104,106 +104,45 @@ Deno.serve(async (req) => {
 
     const results: Record<string, any> = {};
 
-    // --- Customer email ---
-    if (email && customerEmailEnabled) {
-      const customerHtml = `<!DOCTYPE html><html><head><style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #0b367f, #1a4a9e); color: white; padding: 30px 20px; border-radius: 8px 8px 0 0; text-align: center; }
-        .content { background: #f9fafb; padding: 30px 20px; border: 1px solid #e5e7eb; border-top: none; }
-        .footer { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; font-size: 14px; color: #6b7280; }
-      </style></head><body><div class="container">
-        <div class="header">
-          <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fuchs-bildmarke.png" alt="Honorarfuchs Logo" style="width: 60px; height: 60px; border-radius: 50%; background-color: #ffffff; padding: 4px; object-fit: contain; margin-bottom: 12px;" />
-          <h1 style="margin: 0; font-size: 28px;">Vertragsbestätigung</h1>
-          <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Honorarfuchs</p>
-        </div>
-        <div class="content">
-          <p style="font-size: 16px;">Sehr geehrte/r <strong>${customerName || "Kunde"}</strong>,</p>
-          <p>vielen Dank für Ihr Vertrauen! Anbei erhalten Sie Ihre Vertragsunterlagen als PDF-Dokument.</p>
-          ${detailsHtml}
-          <p>Bitte prüfen Sie die beigefügten Unterlagen sorgfältig. Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
-        </div>
-        <div class="footer">
-          <p style="margin: 0;">Bei Fragen wenden Sie sich bitte an Ihren Ansprechpartner.</p>
-          <p style="margin: 10px 0 0 0; font-size: 12px;">© Honorarfuchs - HFX Sales Portal</p>
-        </div>
-      </div></body></html>`;
-
-      results.customer = await resend.emails.send({
-        from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
-        reply_to: "info@hfx-honorarfuchs.de",
-        to: [email],
-        subject: `Ihre Vertragsunterlagen – ${products || "Honorarfuchs"}`,
-        attachments,
-        html: customerHtml,
-        text: [
-          `Sehr geehrte/r ${customerName || "Kunde"},`,
-          "",
-          "vielen Dank für Ihr Vertrauen! Anbei erhalten Sie Ihre Vertragsunterlagen als PDF-Dokument.",
-          "",
-          hfxNumber ? `Kundennummer: ${hfxNumber}` : null,
-          products ? `Produkte: ${products}` : null,
-          startDate ? `Vertragsbeginn: ${new Date(startDate).toLocaleDateString("de-DE")}` : null,
-          "",
-          "Bitte prüfen Sie die beigefügten Unterlagen sorgfältig.",
-          "Bei Fragen wenden Sie sich bitte an Ihren Ansprechpartner.",
-          "",
-          "© Honorarfuchs - HFX Sales Portal",
-        ].filter(Boolean).join("\n"),
-      });
-      console.log("Customer email sent to:", email, results.customer);
-    }
-
-    // --- Sales partner email ---
+    // --- Sales partner (AD self-copy) email ---
     if (salesPartnerEmail && partnerEmailEnabled) {
-      const partnerHtml = `<!DOCTYPE html><html><head><style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #b6193d, #d42050); color: white; padding: 30px 20px; border-radius: 8px 8px 0 0; text-align: center; }
-        .content { background: #f9fafb; padding: 30px 20px; border: 1px solid #e5e7eb; border-top: none; }
-        .footer { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; font-size: 14px; color: #6b7280; }
-      </style></head><body><div class="container">
-        <div class="header">
-          <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fuchs-bildmarke.png" alt="Honorarfuchs Logo" style="width: 60px; height: 60px; border-radius: 50%; background-color: #ffffff; padding: 4px; object-fit: contain; margin-bottom: 12px;" />
-          <h1 style="margin: 0; font-size: 28px;">Neuer Vertrag abgeschlossen</h1>
-          <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Vertriebspartner-Kopie</p>
-        </div>
-        <div class="content">
-          <p style="font-size: 16px;">Hallo,</p>
-          <p>ein neuer Vertrag wurde erfolgreich für <strong>${customerName || "einen Kunden"}</strong> erstellt. Anbei finden Sie eine Kopie der Vertragsunterlagen für Ihre Unterlagen.</p>
-          ${detailsHtml}
-          <p>Diese E-Mail dient als Bestätigung des Vertragsabschlusses. Das Vertragsdokument ist als PDF beigefügt.</p>
-        </div>
-        <div class="footer">
-          <p style="margin: 0;">Dies ist eine automatische Benachrichtigung aus dem HFX Sales Portal.</p>
-          <p style="margin: 10px 0 0 0; font-size: 12px;">© Honorarfuchs - HFX Sales Portal</p>
-        </div>
-      </div></body></html>`;
+      const bodyHtml = `
+        <p style="font-size: 16px;">Hallo,</p>
+        <p>ein neuer Vertrag wurde erfolgreich für <strong>${customerName || "einen Kunden"}</strong> erstellt. Anbei finden Sie eine Kopie der Vertragsunterlagen für Ihre Unterlagen.</p>
+        ${detailsHtml}
+        <p>Diese E-Mail dient als Bestätigung des Vertragsabschlusses. Das Vertragsdokument ist als PDF beigefügt.</p>
+      `;
+
+      const bodyText = [
+        "Hallo,",
+        "",
+        `ein neuer Vertrag wurde erfolgreich für ${customerName || "einen Kunden"} erstellt.`,
+        "",
+        hfxNumber ? `Kundennummer: ${hfxNumber}` : null,
+        products ? `Produkte: ${products}` : null,
+        startDate ? `Vertragsbeginn: ${new Date(startDate).toLocaleDateString("de-DE")}` : null,
+        "",
+        "Das Vertragsdokument ist als PDF beigefügt.",
+      ].filter(Boolean).join("\n");
+
+      const { html, text } = renderBrandedEmail({
+        subheadline: "Ihre Vertragskopie",
+        bodyHtml,
+        bodyText,
+      });
 
       results.partner = await resend.emails.send({
-        from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+        from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
         reply_to: "info@hfx-honorarfuchs.de",
         to: [salesPartnerEmail],
-        subject: `Vertragskopie – ${customerName || "Neuer Kunde"} – ${products || "Honorarfuchs"}`,
+        subject: `Vertragskopie – ${customerName || "Neuer Kunde"} – ${products || "HFX"}`,
         attachments,
-        html: partnerHtml,
-        text: [
-          "Hallo,",
-          "",
-          `ein neuer Vertrag wurde erfolgreich für ${customerName || "einen Kunden"} erstellt.`,
-          "",
-          hfxNumber ? `Kundennummer: ${hfxNumber}` : null,
-          products ? `Produkte: ${products}` : null,
-          startDate ? `Vertragsbeginn: ${new Date(startDate).toLocaleDateString("de-DE")}` : null,
-          "",
-          "Das Vertragsdokument ist als PDF beigefügt.",
-          "",
-          "© Honorarfuchs - HFX Sales Portal",
-        ].filter(Boolean).join("\n"),
+        html,
+        text,
       });
       console.log("Partner email sent to:", salesPartnerEmail, results.partner);
     }
+
 
     return new Response(
       JSON.stringify({ success: true, results }),
