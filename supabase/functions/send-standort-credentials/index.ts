@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
       from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
       reply_to: "info@hfx-honorarfuchs.de",
       to: [contract.email],
-      subject: "Ihre Zugangsdaten – Honorarfuchs (Standort)",
+      subject: "Ihre Zugangsdaten – HFX Honorarfuchs (Standort)",
       html: emailHtml,
       text: emailText,
     });
@@ -128,7 +128,7 @@ function buildCredentialsEmail(fields: {
   const { praxis_name, email, hfx_customer_number, generated_password } = fields;
   const bodyHtml = `
       <p style="font-size:12pt;color:#333333;margin:0 0 16px 0;">Hallo <strong>${praxis_name}</strong>,</p>
-      <p style="font-size:11pt;color:#555555;margin:0 0 24px 0;">anbei Ihre Zugangsdaten für das Honorarfuchs-Portal an diesem Standort.</p>
+      <p style="font-size:11pt;color:#555555;margin:0 0 24px 0;">anbei Ihre Zugangsdaten für das HFX Honorarfuchs-Portal an diesem Standort.</p>
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f5ff;border-radius:8px;border:1px solid #c8d8f0;margin-bottom:24px;">
         <tr>
           <td style="padding:20px 24px;">
@@ -155,7 +155,7 @@ function buildCredentialsEmail(fields: {
   const bodyText = [
     `Hallo ${praxis_name},`,
     "",
-    "anbei Ihre Zugangsdaten für das Honorarfuchs-Portal (Standort):",
+    "anbei Ihre Zugangsdaten für das HFX Honorarfuchs-Portal (Standort):",
     "",
     `E-Mail-Adresse: ${email}`,
     `Benutzername: ${hfx_customer_number}`,
