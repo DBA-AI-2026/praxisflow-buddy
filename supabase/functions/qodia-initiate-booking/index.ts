@@ -116,9 +116,31 @@ Deno.serve(async (req) => {
       // Look up the product price
       const { data: product } = await adminClient
         .from("products")
-        .select("monthly_price, one_time_fee")
+        .select("monthly_price, one_time_fee, promo_base_fee_end_date")
         .eq("name", product_name)
         .maybeSingle();
+
+      // Grundgebühr-Waiver aus Produkt ableiten.
+      // [REVIEW REQUIRED] promo_base_fee_end_date ist per Definition das
+      // Grundgebühr-Befreiungs-Enddatum (Migration 20260213083330,
+      // "Add column for base fee waiver end date"; Onboarding-Checkliste:
+      // "Grundgebühr-Befreiung bis"). qodia-initiate-booking ist der erste
+      // Code-Konsument dieses Feldes — keine neue Semantik, nur erste Nutzung.
+      // Regel: Trägt das Produkt ein Enddatum, wird der Vertrag mit
+      // base_fee_waived=true und base_fee_waived_until=<Datum> gemintet.
+      // Ohne Enddatum: keine Waiver-Felder setzen (DB-Defaults greifen).
+      // monthly_price bleibt regulär; die Waiver-Anwendung erfolgt in auto-invoice.
+      // set-once-at-creation. Reuse-Zweig (openContract) bleibt unberührt.
+      // Rollback: bei Regression waiverFields wieder aus dem Insert entfernen,
+      // dann werden Verträge ohne Waiver geminted (Vollpreis ab 1. Rechnung).
+      const waiverFields: { base_fee_waived?: boolean; base_fee_waived_until?: string } =
+        product?.promo_base_fee_end_date
+          ? {
+              base_fee_waived: true,
+              base_fee_waived_until: product.promo_base_fee_end_date,
+            }
+          : {};
+
 
       // Kündigungsfrist produktgetrieben ableiten.
       // [REVIEW REQUIRED] Diese Regel spiegelt getCancellationPeriodForProducts()
@@ -165,7 +187,9 @@ Deno.serve(async (req) => {
           duration_months: 0,
           cancellation_period_months: cancellationPeriod,
           payment_interval: "monatlich",
+          ...waiverFields,
         })
+
         .select("id")
         .single();
 
@@ -174,7 +198,7 @@ Deno.serve(async (req) => {
       }
 
       contractId = newContract.id;
-      console.log(`[qodia-initiate-booking] Created new contract ${contractId} (cancellation=${cancellationPeriod}m)`);
+      console.log(`[qodia-initiate-booking] Created new contract ${contractId} (cancellation=${cancellationPeriod}m, waiver_until=${(waiverFields as any).base_fee_waived_until ?? "none"})`);
     }
 
 
