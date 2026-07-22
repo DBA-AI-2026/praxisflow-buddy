@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
 
     const resend = new Resend(Deno.env.get("RESEND_API_KEY")!);
 
-    const emailHtml = buildCredentialsEmailHtml({
+    const { html: emailHtml, text: emailText } = buildCredentialsEmail({
       praxis_name: lead.praxis_name,
       vorname: lead.vorname,
       nachname: lead.nachname,
@@ -158,29 +158,7 @@ Deno.serve(async (req) => {
       to: [lead.email],
       subject: "Ihre Zugangsdaten – Honorarfuchs (erneute Zusendung)",
       html: emailHtml,
-      text: [
-        `Hallo ${lead.vorname} ${lead.nachname},`,
-        "",
-        "auf Wunsch haben wir Ihre Zugangsdaten zurückgesetzt.",
-        "",
-        "Ihre neuen Zugangsdaten:",
-        `E-Mail-Adresse: ${lead.email}`,
-        `Benutzername: ${lead.hfx_customer_number}`,
-        `Neues Passwort: ${newPassword}`,
-        "",
-        "Bitte ändern Sie Ihr Passwort nach der ersten Anmeldung.",
-        "Falls Sie diese E-Mail nicht angefordert haben, wenden Sie sich bitte umgehend an uns.",
-        "",
-        "--",
-        "HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH",
-        "Hohenzollernstr. 47 · 47799 Krefeld",
-        "",
-        "Geschäftsführer: Olaf Hagelkruys, Thilo Wiers-Keiser und Robbin Zielke",
-        "Registergericht: Amtsgericht Krefeld · HRB 14709",
-        "Umsatzsteueridentifikationsnummer gemäß §27a Umsatzsteuergesetz: DE 227 420 712",
-        "",
-        "© 2026 HFX Honorarfuchs · Bei Fragen: info@hfx-honorarfuchs.de",
-      ].join("\n"),
+      text: emailText,
     });
 
     if (sendResult.error) {
