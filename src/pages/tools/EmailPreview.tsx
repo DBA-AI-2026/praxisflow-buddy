@@ -181,7 +181,7 @@ const TEMPLATES: Template[] = [
   {
     id: "ad-lead-assignment",
     label: "AD: Lead manuell zugewiesen",
-    subject: "📋 Lead zugewiesen: Testpraxis Dr. Müller (80331)",
+    subject: "Lead zugewiesen: Testpraxis Dr. Müller (80331)",
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
     description: "Benachrichtigung an AD wenn ihm ein Lead manuell im Portal zugewiesen wird",
