@@ -8,6 +8,7 @@
 //  - MAIL_SENT_CREDENTIALS wird vom Aufrufer erst nach erfolgreichem Send geloggt.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
+import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
