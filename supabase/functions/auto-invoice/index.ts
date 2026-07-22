@@ -1114,37 +1114,43 @@ ${noticeHtml}
 // ────────────────────────────────────────────────────────────────────────────
 // EMAIL: SEPA-Mandatsanforderung
 // ────────────────────────────────────────────────────────────────────────────
+// [REVIEW REQUIRED] Mandat-Recovery-Mail. Rollback: diese Function + Call-Site
+// (siehe oben) zurück auf Inline-HTML-Variante. Deploy außerhalb 1.-des-Monats.
 function buildMandateRequestEmail(params: {
   customerName: string;
   productName: string;
   mandateUrl: string;
   billingPeriod: string;
-}) {
+}): { html: string; text: string } {
   const { customerName, productName, mandateUrl, billingPeriod } = params;
-  return `<!DOCTYPE html>
-<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f4f6fa;font-family:Arial,sans-serif;">
-<div style="max-width:600px;margin:0 auto;padding:20px;">
-  <div style="background:linear-gradient(135deg,#0b367f,#1a4a9e);color:#fff;padding:30px 20px;border-radius:8px 8px 0 0;text-align:center;">
-    <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg"
-      alt="Honorarfuchs" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin:0 auto 12px;display:block;"/>
-    <h1 style="margin:0;font-size:22px;">Zahlungsmethode hinterlegen</h1>
-    <p style="margin:8px 0 0;opacity:0.9;font-size:14px;">Honorarfuchs – HFX Sales Portal</p>
-  </div>
-  <div style="background:#fff;padding:30px 20px;border:1px solid #e5e7eb;border-top:none;">
-    <p style="font-size:15px;color:#333;">Sehr geehrte/r ${customerName},</p>
-    <p style="color:#555;font-size:14px;line-height:1.6;">für Ihren Vertrag <strong>${productName}</strong> (Abrechnungszeitraum: ${billingPeriod}) benötigen wir Ihre SEPA-Zahlungsdaten, um den monatlichen Einzug zu ermöglichen.</p>
-    <p style="color:#555;font-size:14px;">Bitte klicken Sie auf den folgenden Button, um Ihre Zahlungsmethode sicher zu hinterlegen:</p>
-    <div style="text-align:center;margin:24px 0;">
-      <a href="${mandateUrl}" style="background:#0b367f;color:#fff;padding:14px 28px;border-radius:8px;font-size:16px;text-decoration:none;display:inline-block;font-weight:bold;">Zahlungsmethode hinterlegen</a>
-    </div>
-    <p style="color:#888;font-size:12px;">Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br/><a href="${mandateUrl}" style="color:#0b367f;word-break:break-all;">${mandateUrl}</a></p>
-  </div>
-  <div style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
-    <p style="font-size:11px;color:#9ca3af;margin:0;">© Honorarfuchs – HFX Sales Portal</p>
-  </div>
-</div>
-</body></html>`;
+
+  const bodyHtml = `
+    <p style="margin:0 0 16px;">Sehr geehrte/r ${customerName},</p>
+    <p style="margin:0 0 16px;">für Ihren aktiven Vertrag <strong>${productName}</strong> liegt uns noch keine SEPA-Bankverbindung vor. Damit wir die Abrechnung für ${billingPeriod} einziehen können, hinterlegen Sie bitte Ihre Bankverbindung:</p>
+    ${renderBrandedButton({ href: mandateUrl, label: "Bankverbindung hinterlegen" })}
+    <p style="margin:0 0 16px;font-size:10pt;color:#666;">Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br/><a href="${mandateUrl}" style="color:#b6193d;word-break:break-all;">${mandateUrl}</a></p>
+    <p style="margin:0 0 16px;">Bei Fragen erreichen Sie uns unter <a href="mailto:info@hfx-honorarfuchs.de" style="color:#b6193d;">info@hfx-honorarfuchs.de</a>.</p>
+    <p style="margin:16px 0 0;">Mit freundlichen Grüßen<br/>Ihr HFX Honorarfuchs Team</p>
+  `;
+
+  const bodyText = [
+    `Sehr geehrte/r ${customerName},`,
+    "",
+    `für Ihren aktiven Vertrag ${productName} liegt uns noch keine SEPA-Bankverbindung vor. Damit wir die Abrechnung für ${billingPeriod} einziehen können, hinterlegen Sie bitte Ihre Bankverbindung:`,
+    "",
+    mandateUrl,
+    "",
+    "Bei Fragen erreichen Sie uns unter info@hfx-honorarfuchs.de.",
+    "",
+    "Mit freundlichen Grüßen",
+    "Ihr HFX Honorarfuchs Team",
+  ].join("\n");
+
+  return renderBrandedEmail({
+    subheadline: "Bitte hinterlegen Sie Ihre Bankverbindung",
+    bodyHtml,
+    bodyText,
+  });
 }
 
 // ────────────────────────────────────────────────────────────────────────────
