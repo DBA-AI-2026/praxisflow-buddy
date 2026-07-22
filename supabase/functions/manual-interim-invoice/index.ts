@@ -20,6 +20,14 @@
 import { Resend } from "npm:resend@2.0.0";
 import Stripe from "npm:stripe@14.21.0";
 import { requireActiveRole } from "../_shared/auth.ts";
+import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
+import {
+  renderPositionsRows,
+  renderPositionsTable,
+  renderTotalsBlock,
+  renderStripeFailedBox,
+  renderSepaOkBox,
+} from "../_shared/invoiceEmailParts.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
