@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
       }
 
       contractId = newContract.id;
-      console.log(`[qodia-initiate-booking] Created new contract ${contractId} (cancellation=${cancellationPeriod}m)`);
+      console.log(`[qodia-initiate-booking] Created new contract ${contractId} (cancellation=${cancellationPeriod}m, waiver_until=${(waiverFields as any).base_fee_waived_until ?? "none"})`);
     }
 
 
