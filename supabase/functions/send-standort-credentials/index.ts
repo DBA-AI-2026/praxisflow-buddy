@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
       from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
       reply_to: "info@hfx-honorarfuchs.de",
       to: [contract.email],
-      subject: "Ihre Zugangsdaten – Honorarfuchs (Standort)",
+      subject: "Ihre Zugangsdaten – HFX Honorarfuchs (Standort)",
       html: emailHtml,
       text: emailText,
     });
