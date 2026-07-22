@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { hfx_customer_number, product_name } = body;
+    const { hfx_customer_number, product_name, skip_mail } = body;
 
     // 2. Validate required fields
     if (!hfx_customer_number || !product_name) {
