@@ -106,11 +106,11 @@ const TEMPLATES: Template[] = [
   },
   {
     id: "demo-expiry-customer",
-    label: "Testkontingent fast aufgebraucht",
-    subject: "Erinnerung: Ihr Testkontingent ist fast aufgebraucht",
+    label: "Testquartal endet bald (EBM)",
+    subject: "Erinnerung: Ihr Testquartal endet am 01.04.2026",
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
-    description: "Erinnerung an GOÄ-Kunden, dass das Testkontingent zur Neige geht – mit Buchungslink.",
+    description: "Zeitbasiert (HFX EBM), 3 Tage vor Quartalsende. Noch nicht live.",
     category: "kunden",
   },
   {
@@ -307,10 +307,11 @@ ${[
 }
 
 function buildDemoExpiryCustomerHtml() {
-  const productName = "HFX GOÄ - die KI für ihre Privatabrechnung";
+  const productName = "HFX EBM";
   const companyName = "Testpraxis Dr. Müller";
   const contactName = "Dr. Max Müller";
   const hfxNr = "HFX-D01234";
+  const testEndFormatted = "01.04.2026";
   const stripeCheckoutUrl = "#stripe-checkout-demo-link";
   const ctaHtml = `
         <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f7ff;border-radius:8px;border:1px solid #bfdbfe;margin:0 0 24px 0;">
@@ -330,21 +331,22 @@ function buildDemoExpiryCustomerHtml() {
   const bodyHtml = `
         <p style="margin:0 0 16px 0;">Guten Tag ${contactName},</p>
         <p style="margin:0 0 16px 0;">
-          wir möchten Sie daran erinnern, dass Ihr Testkontingent für <strong>${productName}</strong> (${companyName}) fast aufgebraucht ist.
+          wir möchten Sie daran erinnern, dass Ihr Testquartal für <strong>${productName}</strong> (${companyName}) in 3 Tagen endet – am <strong>${testEndFormatted}</strong>.
         </p>
         <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f4ff;border-radius:6px;margin:0 0 24px 0;">
           <tr><td style="padding:16px 20px;">
-            <p style="color:#0b367f;font-size:10pt;font-weight:700;margin:0 0 8px 0;">Ihr Testkontingent</p>
+            <p style="color:#0b367f;font-size:10pt;font-weight:700;margin:0 0 8px 0;">Ihr Testquartal</p>
             <p style="color:#333333;font-size:10pt;margin:0;"><strong>Produkt:</strong> ${productName}</p>
             <p style="color:#333333;font-size:10pt;margin:4px 0 0 0;"><strong>HFX-Nr.:</strong> ${hfxNr}</p>
+            <p style="color:#333333;font-size:10pt;margin:4px 0 0 0;"><strong>Testende:</strong> ${testEndFormatted}</p>
           </td></tr>
         </table>
         ${ctaHtml}
         <p style="margin:0;">Mit freundlichen Grüßen,<br><strong>Ihr HFX Honorarfuchs Team</strong></p>`;
   return renderBrandedEmail({
-    subheadline: "Ihr Testkontingent ist fast aufgebraucht",
+    subheadline: "Ihr Testquartal endet bald",
     bodyHtml,
-    bodyText: `Guten Tag ${contactName},\n\nIhr Testkontingent für ${productName} (${companyName}) ist fast aufgebraucht.\n\nJetzt direkt weiterbuchen: ${stripeCheckoutUrl}\n\nMit freundlichen Grüßen,\nIhr HFX Honorarfuchs Team`,
+    bodyText: `Guten Tag ${contactName},\n\nIhr Testquartal für ${productName} (${companyName}) endet in 3 Tagen – am ${testEndFormatted}.\n\nProdukt: ${productName}\nHFX-Nr.: ${hfxNr}\nTestende: ${testEndFormatted}\n\nJetzt direkt weiterbuchen: ${stripeCheckoutUrl}\n\nMit freundlichen Grüßen,\nIhr HFX Honorarfuchs Team`,
   }).html;
 }
 
