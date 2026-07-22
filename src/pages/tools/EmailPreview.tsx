@@ -911,7 +911,7 @@ function getHtmlForTemplate(id: TemplateId) {
 }
 
 /** IDs where we show the live pdf-lib PDF preview button */
-const PDF_PREVIEW_TEMPLATE_IDS: TemplateId[] = ["booking-link", "post-payment-contract-pdf", "invoice"];
+const PDF_PREVIEW_TEMPLATE_IDS: TemplateId[] = ["post-payment-contract-pdf", "invoice"];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function EmailPreview() {
