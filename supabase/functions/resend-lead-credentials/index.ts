@@ -202,7 +202,7 @@ function buildCredentialsEmail(fields: {
   const { vorname, nachname, email, hfx_customer_number, generated_password } = fields;
   const bodyHtml = `
       <p style="font-size:12pt;color:#333333;margin:0 0 16px 0;">Hallo <strong>${vorname} ${nachname}</strong>,</p>
-      <p style="font-size:11pt;color:#555555;margin:0 0 24px 0;">auf Wunsch haben wir Ihre Zugangsdaten zurückgesetzt. Sie finden unten Ihre neuen Anmeldedaten für das Honorarfuchs-Portal.</p>
+      <p style="font-size:11pt;color:#555555;margin:0 0 24px 0;">auf Wunsch haben wir Ihre Zugangsdaten zurückgesetzt. Sie finden unten Ihre neuen Anmeldedaten für das HFX Honorarfuchs-Portal.</p>
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#f0f5ff;border-radius:8px;border:1px solid #c8d8f0;margin-bottom:24px;">
         <tr>
           <td style="padding:20px 24px;">
