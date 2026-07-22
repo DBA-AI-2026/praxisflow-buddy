@@ -45,11 +45,11 @@ const WIRED_IDS: ReadonlySet<string> = new Set([
   "ad-demo-reminder",
   "ad-tipp-lead",
   "admin-access-request",
+  "contract-partner",
 ]);
 
 // STALE: Live-Mail existiert, aber wurde noch nicht auf renderBrandedEmail migriert.
 const STALE_IDS: ReadonlySet<string> = new Set([
-  "contract-partner",
   "ad-lead-assignment",
 ]);
 
@@ -163,11 +163,11 @@ const TEMPLATES: Template[] = [
   },
   {
     id: "contract-partner",
-    label: "Vertrag (Vertrieb)",
-    subject: "Neuer Vertrag abgeschlossen – HFX Sales Portal",
+    label: "Vertragskopie (AD-Selbstkopie)",
+    subject: "Vertragskopie – Test GmbH – HFX EBM Professional",
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
-    description: "Benachrichtigung an Vertriebspartner nach Vertragsabschluss",
+    description: "Interne Kopie an den abschließenden Vertriebler, mit Vertrags-PDF.",
     category: "intern",
   },
   {
@@ -407,34 +407,40 @@ function buildDemoLimitCustomerHtml() {
 
 function buildContractPartnerHtml() {
   const { customer_name, hfx_customer_number } = MOCK;
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head><body style="margin:0;padding:0;background:#fff;">
-<table border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td>
-<table align="center" border="0" cellpadding="0" cellspacing="0" width="600">
-<tr><td align="center">
-  <div style="background:linear-gradient(135deg,#b6193d,#d42050);padding:30px 20px;text-align:center;border-radius:8px 8px 0 0;">
-    <img src="https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/fox-logo.jpeg" alt="HFX Logo" style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;"/>
-    <h1 style="color:#fff;margin:0;font-size:22px;font-family:Arial,sans-serif;">Neuer Vertrag abgeschlossen! 🎉</h1>
-    <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-family:Arial,sans-serif;font-size:14px;">HFX Honorarfuchs – Sales Portal</p>
-  </div>
-</td></tr>
-<tr><td style="background:#f9fafb;padding:30px 20px;border:1px solid #e5e7eb;border-top:none;">
-  <p style="font-family:Arial,sans-serif;font-size:16px;color:#333;">Hallo,</p>
-  <p style="font-family:Arial,sans-serif;font-size:14px;color:#555;line-height:1.6;">Ein neuer Vertrag wurde erfolgreich abgeschlossen und aktiviert.</p>
-  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:20px 0;">
-    <table width="100%" border="0" cellpadding="0" cellspacing="0">
-    <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#666;padding:4px 0;">Kundenname:</td><td style="font-family:Arial,sans-serif;font-size:13px;color:#111;font-weight:bold;padding:4px 0;">${customer_name}</td></tr>
-    <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#666;padding:4px 0;">HFX-Nummer:</td><td style="font-family:Arial,sans-serif;font-size:13px;color:#b6193d;font-weight:bold;padding:4px 0;">${hfx_customer_number}</td></tr>
-    <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#666;padding:4px 0;">Produkt:</td><td style="font-family:Arial,sans-serif;font-size:13px;color:#111;padding:4px 0;">HFX EBM Professional</td></tr>
-    <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#666;padding:4px 0;">Laufzeit:</td><td style="font-family:Arial,sans-serif;font-size:13px;color:#111;padding:4px 0;">12 Monate ab 01.03.2026</td></tr>
-    </table>
-  </div>
-  <p style="font-family:Arial,sans-serif;font-size:14px;color:#555;">Herzlichen Glückwunsch zum Abschluss!</p>
-</td></tr>
-<tr><td style="background:#f9fafb;padding:16px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
-  <p style="font-family:Arial,sans-serif;font-size:11px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} HFX Honorarfuchs</p>
-</td></tr>
-</table></td></tr></table>
-</body></html>`;
+  const products = "HFX EBM Professional";
+  const startDate = "01.03.2026";
+  const detailsHtml = `
+      <div style="background: white; border: 1px solid #e5e7eb; padding: 16px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="margin-top: 0; color: #374151;">Vertragsdetails</h3>
+        <p><strong>Kundennummer:</strong> ${hfx_customer_number}</p>
+        <p><strong>Produkte:</strong> ${products}</p>
+        <p><strong>Vertragsbeginn:</strong> ${startDate}</p>
+      </div>`;
+
+  const bodyHtml = `
+        <p style="font-size: 16px;">Hallo,</p>
+        <p>ein neuer Vertrag wurde erfolgreich für <strong>${customer_name}</strong> erstellt. Anbei finden Sie eine Kopie der Vertragsunterlagen für Ihre Unterlagen.</p>
+        ${detailsHtml}
+        <p>Diese E-Mail dient als Bestätigung des Vertragsabschlusses. Das Vertragsdokument ist als PDF beigefügt.</p>
+      `;
+
+  const bodyText = [
+    "Hallo,",
+    "",
+    `ein neuer Vertrag wurde erfolgreich für ${customer_name} erstellt.`,
+    "",
+    `Kundennummer: ${hfx_customer_number}`,
+    `Produkte: ${products}`,
+    `Vertragsbeginn: ${startDate}`,
+    "",
+    "Das Vertragsdokument ist als PDF beigefügt.",
+  ].join("\n");
+
+  return renderBrandedEmail({
+    subheadline: "Ihre Vertragskopie",
+    bodyHtml,
+    bodyText,
+  }).html;
 }
 
 function buildInvoiceHtml() {
