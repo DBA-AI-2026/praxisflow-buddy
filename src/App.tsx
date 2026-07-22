@@ -54,6 +54,7 @@ import RollenUebersicht from "./pages/admin/RollenUebersicht";
 import FibuReconciliation from "./pages/admin/FibuReconciliation";
 import ContractInspect from "./pages/admin/ContractInspect";
 import LeadCleanup from "./pages/admin/LeadCleanup";
+import CampaignMint from "./pages/admin/CampaignMint";
 
 const queryClient = new QueryClient();
 
@@ -121,6 +122,7 @@ const App = () => (
             <Route path="/admin/rollen-uebersicht" element={<ProtectedRoute><RollenUebersicht /></ProtectedRoute>} />
             <Route path="/admin/fibu-reconciliation" element={<ProtectedRoute><FibuReconciliation /></ProtectedRoute>} />
             <Route path="/admin/lead-cleanup" element={<ProtectedRoute><LeadCleanup /></ProtectedRoute>} />
+            <Route path="/admin/campaign-mint" element={<ProtectedRoute requiredRoles={["admin"]}><CampaignMint /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

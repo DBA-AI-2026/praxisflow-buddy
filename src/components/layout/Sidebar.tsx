@@ -87,6 +87,7 @@ const verwaltungNav: NavItem[] = [
   { name: "FiBu-Reconciliation", href: "/admin/fibu-reconciliation", icon: FileDown },
   { name: "Systemdokumentation", href: "/admin/documentation", icon: BookMarked },
   { name: "Test-Leads aufräumen", href: "/admin/lead-cleanup", icon: AlertTriangle },
+  { name: "Campaign Mint", href: "/admin/campaign-mint", icon: FileSignature },
 ];
 
 interface NavSectionProps {

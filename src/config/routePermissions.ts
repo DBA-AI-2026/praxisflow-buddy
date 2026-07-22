@@ -92,6 +92,11 @@ export const routePermissions: RoutePermission[] = [
   // Temporäres Admin-Tool: Test-Leads aufräumen
   { path: "/admin/lead-cleanup", allowedRoles: ["admin"] },
 
+  // Campaign Mint (still stille Vertragsanlage — admin-only)
+  { path: "/admin/campaign-mint", allowedRoles: ["admin"] },
+
+
+
 ];
 
 export function getRoutePermission(path: string): RoutePermission | undefined {
