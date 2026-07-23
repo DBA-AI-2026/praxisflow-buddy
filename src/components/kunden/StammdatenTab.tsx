@@ -78,7 +78,22 @@ export function StammdatenTab({ data }: StammdatenTabProps) {
 
   const { isAdmin, isSalesLead } = useUserRole();
   const canReassignAd = ssot === "lead" && !!lead && (isAdmin || isSalesLead);
+  const canCopyKampagne = ssot === "lead" && !!lead && (isAdmin || isSalesLead);
   const [reassignOpen, setReassignOpen] = useState(false);
+  const [copyingKampagne, setCopyingKampagne] = useState(false);
+
+  const handleCopyKampagne = async () => {
+    if (!lead) return;
+    setCopyingKampagne(true);
+    const res = await copyKampagnenLink({ leadId: lead.id });
+    setCopyingKampagne(false);
+    if (res.success) {
+      toast({ title: "Kampagnen-Link kopiert", description: "Der Link liegt in der Zwischenablage." });
+    } else {
+      toast({ title: "Kopieren fehlgeschlagen", description: res.error ?? "Unbekannter Fehler", variant: "destructive" });
+    }
+  };
+
 
   // Look up current AD name (only when the section is visible)
   const { data: currentAdName } = useQuery({
