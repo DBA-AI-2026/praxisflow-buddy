@@ -37,8 +37,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Lock, UserCog } from "lucide-react";
+import { Lock, UserCog, Link2 } from "lucide-react";
 import { ReassignLeadAdDialog } from "@/components/leads/ReassignLeadAdDialog";
+import { copyKampagnenLink } from "@/lib/contractMailActions";
+import { toast } from "@/hooks/use-toast";
 import type {
   StammdatenFormValues,
   UseKundenDialogDataResult,
@@ -76,7 +78,22 @@ export function StammdatenTab({ data }: StammdatenTabProps) {
 
   const { isAdmin, isSalesLead } = useUserRole();
   const canReassignAd = ssot === "lead" && !!lead && (isAdmin || isSalesLead);
+  const canCopyKampagne = ssot === "lead" && !!lead && (isAdmin || isSalesLead);
   const [reassignOpen, setReassignOpen] = useState(false);
+  const [copyingKampagne, setCopyingKampagne] = useState(false);
+
+  const handleCopyKampagne = async () => {
+    if (!lead) return;
+    setCopyingKampagne(true);
+    const res = await copyKampagnenLink({ leadId: lead.id });
+    setCopyingKampagne(false);
+    if (res.success) {
+      toast({ title: "Kampagnen-Link kopiert", description: "Der Link liegt in der Zwischenablage." });
+    } else {
+      toast({ title: "Kopieren fehlgeschlagen", description: res.error ?? "Unbekannter Fehler", variant: "destructive" });
+    }
+  };
+
 
   // Look up current AD name (only when the section is visible)
   const { data: currentAdName } = useQuery({
@@ -155,6 +172,28 @@ export function StammdatenTab({ data }: StammdatenTabProps) {
             </Button>
           </div>
         )}
+
+        {canCopyKampagne && lead && (
+          <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
+            <div className="text-sm min-w-0">
+              <div className="text-xs text-muted-foreground">Kampagnen-Link</div>
+              <div className="text-xs text-muted-foreground">
+                Erzeugt (idempotent) einen persönlichen Einladungslink für diesen Lead.
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCopyKampagne}
+              disabled={copyingKampagne}
+            >
+              <Link2 className="h-4 w-4 mr-2" />
+              {copyingKampagne ? "…" : "Link kopieren"}
+            </Button>
+          </div>
+        )}
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField

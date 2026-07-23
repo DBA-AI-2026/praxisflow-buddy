@@ -115,3 +115,29 @@ export async function copyBuchungslink(params: {
   }
 }
 
+/**
+ * copyKampagnenLink — #16 Etappe 1.
+ * Ruft `campaign-token-issue` (admin/sales_lead-gated) auf und legt den
+ * zurückgegebenen /kampagne-Link in die Zwischenablage. Idempotent: bei
+ * mehrfachem Aufruf liefert die Function denselben Token/Link.
+ */
+export async function copyKampagnenLink(params: {
+  leadId: string;
+}): Promise<{ success: boolean; error?: string; url?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke("campaign-token-issue", {
+      body: { lead_id: params.leadId },
+    });
+    if (error) return { success: false, error: error.message };
+    const url = (data as { url?: string } | null)?.url;
+    if (!url) return { success: false, error: "Kein Link erhalten" };
+    if (!navigator.clipboard?.writeText) {
+      return { success: false, error: "Zwischenablage nicht verfügbar", url };
+    }
+    await navigator.clipboard.writeText(url);
+    return { success: true, url };
+  } catch (err: any) {
+    return { success: false, error: err?.message ?? "Unbekannter Fehler" };
+  }
+}
+
