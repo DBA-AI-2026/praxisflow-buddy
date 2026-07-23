@@ -16,7 +16,11 @@
 //   Bei Regression Function deaktivieren. Die Spalten leads.campaign_token /
 //   campaign_token_created_at / campaign_token_used_at bleiben harmlos leer;
 //   Etappe 2 (/kampagne + campaign-start) existiert noch nicht.
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 import { requireActiveRole } from "../_shared/auth.ts";
 
 const CAMPAIGN_URL_ORIGIN = "https://sales.hfx-honorarfuchs.de";
