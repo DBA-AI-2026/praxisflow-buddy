@@ -37,8 +37,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Lock, UserCog } from "lucide-react";
+import { Lock, UserCog, Link2 } from "lucide-react";
 import { ReassignLeadAdDialog } from "@/components/leads/ReassignLeadAdDialog";
+import { copyKampagnenLink } from "@/lib/contractMailActions";
+import { toast } from "@/hooks/use-toast";
 import type {
   StammdatenFormValues,
   UseKundenDialogDataResult,
