@@ -61,3 +61,5 @@ project_id = "gvsxentbbzuyanqbqvea"
     verify_jwt = false
   [functions.mandate-link]
     verify_jwt = false
+  [functions.campaign-start]
+    verify_jwt = false
