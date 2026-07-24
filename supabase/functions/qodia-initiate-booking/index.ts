@@ -8,7 +8,10 @@ const corsHeaders = {
 
 const APP_URL = "https://praxisflow-buddy.lovable.app";
 
-// Products that are available for the digital booking flow
+// Products that are available for the digital booking flow.
+// SYNCHRONIZE: campaign-start → CAMPAIGN_PRODUCT hartkodiert denselben
+// String. Bei Produktnamens-Wechsel BEIDE Stellen anfassen (dieselbe
+// Regel wie bei der Kündigungsfrist-Ableitung: kein stiller Drift).
 const VALID_PRODUCTS = [
   "HFX GOÄ - die KI für ihre Privatabrechnung",
 ];
