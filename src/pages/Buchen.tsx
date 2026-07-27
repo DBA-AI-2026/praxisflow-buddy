@@ -63,7 +63,17 @@ interface ContractSummary {
   rechtsform: string | null;
   cancellation_period_months: number | null;
   duration_months: number | null;
+  qodia_unit_price: number | null;
+  base_fee_waived: boolean | null;
+  base_fee_waived_until: string | null;
 }
+
+// SYNCHRONIZE: Testkontingent-Angebotstext für GOÄ. Dieselbe hartkodierte
+// 200 (Trial-Freikontingent) taucht in capture-lead und sync-lead-qodia auf;
+// bei Wechsel BEIDE Stellen anfassen. Reiner Angebotstext, kein Bezug zu
+// free_quota_grants (dort liegt der reale Saldo).
+const GOAE_PRODUCT_NAME = "HFX GOÄ - die KI für ihre Privatabrechnung";
+const GOAE_TRIAL_FREE_UNITS = 200;
 
 
 interface ProductAgb {
