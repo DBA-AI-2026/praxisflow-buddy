@@ -533,17 +533,44 @@ export default function Buchen() {
               </div>
             )}
             <div className="border-t pt-2 flex justify-between">
-              <span className="text-muted-foreground">Monatspreis netto</span>
+              <span className="text-muted-foreground">Monatspreis</span>
               <span className="font-medium text-foreground">
-                {monthlyNet.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                {formatEuro(monthlyNet)} € zzgl. gesetzlicher MwSt.
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Monatspreis brutto</span>
-              <span className="font-bold text-primary">
-                {monthlyGross.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
-              </span>
-            </div>
+            {(() => {
+              // Waiver-Hinweis: nur wenn Vertrag explizit befreit ist UND das Enddatum
+              // in der Zukunft liegt. Kein erfundener Fallback (analog Frist-Guard).
+              if (contract?.base_fee_waived !== true) return null;
+              const until = contract?.base_fee_waived_until;
+              if (!until) return null;
+              // Vergleich auf Datumsebene (ohne Uhrzeit), Vergangenheit → nichts anzeigen.
+              const todayIso = new Date().toISOString().slice(0, 10);
+              if (until < todayIso) return null;
+              return (
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Aktion</span>
+                  <span>Grundgebühr entfällt bis {formatDeDate(until)}</span>
+                </div>
+              );
+            })()}
+            {(() => {
+              // Stückpreis: nur bei vorhandenem, positivem Wert.
+              const unit = contract?.qodia_unit_price;
+              if (unit == null || unit <= 0) return null;
+              return (
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Pro geprüfter Rechnung</span>
+                  <span>{formatEuro(unit)} € zzgl. MwSt.</span>
+                </div>
+              );
+            })()}
+            {contract?.product_name === GOAE_PRODUCT_NAME && (
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Testkontingent</span>
+                <span>Die ersten {GOAE_TRIAL_FREE_UNITS} geprüften Rechnungen sind kostenfrei.</span>
+              </div>
+            )}
             {(() => {
               // Frist ist rechtlich maßgeblich (AGB §13 Abs. 1): nur anzeigen,
               // wenn die Daten aus dem Vertrag vorliegen. Kein erfundener Fallback.
