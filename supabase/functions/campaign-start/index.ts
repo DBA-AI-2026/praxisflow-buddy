@@ -167,8 +167,12 @@ Deno.serve(async (req) => {
       return redirectToInfo("booking_no_contract");
     }
 
+    // Vorwert VOR dem Update festhalten — nicht später aus `lead` lesen.
+    // Ein künftiges Refactor, das `lead` mutiert, würde das Flag sonst still kippen.
+    const wasFirstRedemption = !lead.campaign_token_used_at;
+
     // Ersteinlösung markieren (idempotent — nur setzen, wenn NULL).
-    if (!lead.campaign_token_used_at) {
+    if (wasFirstRedemption) {
       const { error: uErr } = await admin
         .from("leads")
         .update({ campaign_token_used_at: new Date().toISOString() })
@@ -176,6 +180,33 @@ Deno.serve(async (req) => {
         .is("campaign_token_used_at", null);
       if (uErr) log("WARN: campaign_token_used_at update failed", { message: uErr.message });
     }
+
+    // [REVIEW REQUIRED] customer_events CAMPAIGN_LINK_REDEEMED (non-blocking).
+    // Muster analog buchen-submit (Zeilen 164–186): try/catch, log()-Helper, kein Throw.
+    // Rollback: diesen Block (bis inkl. schließendem catch) entfernen — sonst nichts.
+    // first_redemption ist best effort (Race bei Parallelklicks möglich).
+    // Autoritativ für "erstmals eingelöst" ist leads.campaign_token_used_at.
+    try {
+      const { error: ceErr } = await admin.from("customer_events").insert({
+        event_type: "CAMPAIGN_LINK_REDEEMED",
+        entity_type: "contract",
+        entity_id: contractId,
+        hfx_customer_number: lead.hfx_customer_number,
+        lead_id: lead.id,
+        contract_id: contractId,
+        created_by: null,
+        event_data: {
+          campaign: "goae_mint_2026_07",
+          product_name: CAMPAIGN_PRODUCT,
+          first_redemption: wasFirstRedemption,
+          source: "campaign_start",
+        },
+      });
+      if (ceErr) log("WARN: customer_events insert failed (non-blocking)", ceErr.message);
+    } catch (ex) {
+      log("WARN: customer_events insert exception (non-blocking)", String(ex));
+    }
+
 
     log("redirect_buchen", {
       lead_id: lead.id,
