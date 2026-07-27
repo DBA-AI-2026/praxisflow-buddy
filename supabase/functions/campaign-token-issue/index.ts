@@ -17,31 +17,13 @@
 //   campaign_token_created_at / campaign_token_used_at bleiben harmlos leer;
 //   Etappe 2 (/kampagne + campaign-start) existiert noch nicht.
 import { requireActiveRole } from "../_shared/auth.ts";
+import { buildCampaignUrl, generateCampaignToken } from "../_shared/campaign.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-
-const CAMPAIGN_URL_ORIGIN = "https://sales.hfx-honorarfuchs.de";
-const TOKEN_PREFIX = "hfxc_";
-
-function toBase64Url(bytes: Uint8Array): string {
-  let bin = "";
-  for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
-}
-
-function generateToken(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return TOKEN_PREFIX + toBase64Url(bytes);
-}
-
-function buildUrl(token: string): string {
-  return `${CAMPAIGN_URL_ORIGIN}/kampagne?token=${encodeURIComponent(token)}`;
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -102,7 +84,7 @@ Deno.serve(async (req) => {
       reused: true,
     });
     return new Response(
-      JSON.stringify({ url: buildUrl(existing.campaign_token), reused: true }),
+      JSON.stringify({ url: buildCampaignUrl(existing.campaign_token), reused: true }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
