@@ -1,33 +1,35 @@
-// campaign-mail-send — Etappe 3 (Kampagnen-Mailversand)
+// campaign-mail-send — Etappe 3 (Kampagnen-Mailversand, GOÄ-Konvertierung)
 //
-// Admin-JWT-geschützt. Verschickt die GOÄ-Kampagnen-Mail (branded Layout,
-// roter CTA auf /kampagne?token=…) an alle qualifizierten Leads, die
-// (a) einen hfx_customer_number besitzen,
-// (b) eine E-Mail besitzen (defensiv — leads.email ist NOT NULL,
-//     Filter bleibt trotzdem drin; kein "Lead ohne Mail"-Zweig im Reporting),
-// (c) noch KEINE Kampagnen-Mail erhalten haben (campaign_mail_sent_at IS NULL).
+// Admin-JWT-geschützt. Drei Modi:
 //
-// Kein Trigger, kein Cron — ausschließlich manuell aus /admin/kampagne.
+//   dry_run  → liefert nur die Ziel-Liste (kein Versand, keine DB-Änderung).
+//   canary   → GENAU EINE Mail an test_email; Link trägt einen WEGWERF-TOKEN
+//              (nicht in die DB geschrieben) und läuft in campaign-start
+//              Gate 3 (token_not_found) auf /kampagne-info. Kein DB-Write.
+//              Rendert mit den Daten des ersten Ziel-Leads (nur zum Rendern;
+//              dieser Lead wird nicht berührt). Leere Zielmenge → Platzhalter.
+//   send     → fetch Ziel-Liste EINMAL, iteriere sequentiell mit 100ms
+//              Pause, ensure Token, sende Mail via Resend-SDK,
+//              setze campaign_mail_sent_at, non-blocking customer_events.
 //
-// Modi:
-//   dry_run: liefert nur die Ziel-Liste (kein Versand, keine DB-Änderung).
-//   send:    fetch Ziel-Liste EINMAL, iteriere sequentiell mit 100ms Pause,
-//            ensure Token, sende Mail via Resend, setze campaign_mail_sent_at,
-//            optional customer_events CAMPAIGN_MAIL_SENT (non-blocking).
+// Idempotenz-Anker: leads.campaign_mail_sent_at. Wird EINMAL gesetzt und
+// NIE überschrieben — die Zielmenge schließt Leads mit gesetztem Wert aus.
 //
 // Token wird NIEMALS geloggt. Nur lead_id / hfx_customer_number / outcome.
 //
-// Rollback: Function deaktivieren; keine DB-Migration nötig. Bereits gesetzte
-// campaign_mail_sent_at bleiben stehen (das ist beabsichtigt — verhindert
-// versehentlichen Doppel-Versand).
+// Größenordnung: sequentiell + einmalige Zielmenge ist für Dutzende ausgelegt.
+// Bei mehreren hundert Empfängern reicht die Laufzeit einer Edge Function
+// nicht — dann Paginierung über campaign_mail_sent_at IS NULL + Wiederholaufrufe.
 
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { Resend } from "npm:resend@2.0.0";
 import { requireActiveRole } from "../_shared/auth.ts";
 import {
   buildCampaignUrl,
   CAMPAIGN_ID,
   CAMPAIGN_PRODUCT,
+  ensureCampaignToken,
   generateCampaignToken,
+  MAIL_ELIGIBLE_STATUSES,
 } from "../_shared/campaign.ts";
 import {
   renderBrandedButton,
@@ -40,22 +42,18 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const RESEND_API_URL = "https://api.resend.com/emails";
-const FROM_ADDRESS = "HFX Honorarfuchs <no-reply@hfx-honorarfuchs.de>";
+const FROM_ADDRESS = "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>";
 const REPLY_TO = "info@hfx-honorarfuchs.de";
+const SUBJECT = "Ihr Zugang zu HFX-GOÄ – jetzt dauerhaftes Angebot sichern";
 
-// Lead-Status, die eine Kampagnen-Mail erhalten dürfen.
-// BEWUSST enger als ALLOWED_LEAD_STATUSES aus _shared/campaign.ts
-// (dort ist 'vertrag' drin für den Klick-Reuse-Pfad); Mail-Versand
-// an Leads mit bereits laufendem Vertrag ergibt keinen Sinn.
-const MAIL_ELIGIBLE_STATUSES = ["neu", "kontaktiert", "qualifiziert"];
-
-type Mode = "dry_run" | "send";
+type Mode = "dry_run" | "canary" | "send";
 
 interface LeadRow {
   id: string;
   hfx_customer_number: string | null;
   email: string | null;
+  anrede: string | null;
+  titel: string | null;
   vorname: string | null;
   nachname: string | null;
   praxis_name: string | null;
@@ -78,7 +76,7 @@ const log = (step: string, details?: unknown) => {
   console.log(`[campaign-mail-send][${ts}] ${step}${d}`);
 };
 
-function displayName(l: LeadRow): string {
+function displayName(l: Pick<LeadRow, "praxis_name" | "vorname" | "nachname">): string {
   return (
     l.praxis_name ||
     [l.vorname, l.nachname].filter(Boolean).join(" ") ||
@@ -86,49 +84,72 @@ function displayName(l: LeadRow): string {
   );
 }
 
-function buildMailParts(lead: LeadRow, url: string) {
-  const greetingName = [lead.vorname, lead.nachname].filter(Boolean).join(" ")
-    || lead.praxis_name
-    || "Ihr HFX-Team";
+/**
+ * Anrede-Zeile analog send-mandate-setup:
+ *   „Sehr geehrte/r <Titel> <Vorname> <Nachname>"
+ *   Fallback ohne Namensbestandteile: „Sehr geehrte Damen und Herren"
+ */
+function buildGreeting(l: Pick<LeadRow, "anrede" | "titel" | "vorname" | "nachname">): string {
+  const parts = [l.titel, l.vorname, l.nachname].filter(Boolean).join(" ").trim();
+  if (!parts) return "Sehr geehrte Damen und Herren";
+  return `Sehr geehrte/r ${parts}`;
+}
 
-  const subject = "Ihr HFX GOÄ Zugang ist bereit — jetzt starten";
-  const subheadline = "GOÄ-Kampagne: Ihr Zugang wartet";
+function buildMailParts(lead: Pick<LeadRow, "anrede" | "titel" | "vorname" | "nachname">, url: string) {
+  const greeting = buildGreeting(lead);
+  const subheadline = "Ihr HFX-GOÄ Zugang wartet";
 
   const bodyHtml = `
-      <p>Guten Tag ${greetingName},</p>
+      <p>${greeting},</p>
       <p>
-        wir haben Ihr Konto für <strong>${CAMPAIGN_PRODUCT}</strong> vorbereitet.
-        Mit einem Klick auf den Button unten öffnen Sie Ihre persönliche
-        Bestellseite — dort sehen Sie Preis, Konditionen und schließen
-        Ihren Vertrag digital ab.
+        Sie können Ihren Zugang zu <strong>HFX-GOÄ</strong> inklusive
+        200 Rechnungen kostenfrei testen.
       </p>
-      ${renderBrandedButton({ href: url, label: "Jetzt starten" })}
+      <p>
+        Wer jetzt abschließt, zahlt zunächst trotzdem nichts – die
+        Grundgebühr entfällt bis 31.12.2026, das verbliebene
+        Freikontingent gilt weiter.
+      </p>
+      <ul style="margin:12px 0 12px 20px;padding:0;">
+        <li>dauerhaft 0,99 € pro Rechnung statt 1,20 €</li>
+        <li>keine Grundgebühr bis 31.12.2026 – das sind 49 € pro Monat, gezahlt wird erst ab 2027</li>
+        <li>je früher der Abschluss, desto größer die Ersparnis</li>
+      </ul>
+      <p>
+        Abschließen kostet jetzt nichts, verlängert das Testen nahtlos
+        und friert den Preisvorteil ein.
+      </p>
+      ${renderBrandedButton({ href: url, label: "Jetzt Vollversion buchen" })}
       <p style="font-size:10pt;color:#666;">
         Der Link ist personalisiert. Bitte nicht weitergeben.
       </p>
-      <p>Bei Fragen antworten Sie einfach auf diese Mail — wir sind für Sie da.</p>
-      <p>Ihr HFX Honorarfuchs Team</p>
+      <p>Bei Fragen erreichen Sie uns unter
+        <a href="mailto:info@hfx-honorarfuchs.de">info@hfx-honorarfuchs.de</a>.
+      </p>
   `.trim();
 
   const bodyText = [
-    `Guten Tag ${greetingName},`,
+    `${greeting},`,
     "",
-    `wir haben Ihr Konto für ${CAMPAIGN_PRODUCT} vorbereitet.`,
-    "Mit einem Klick auf den Link unten öffnen Sie Ihre persönliche",
-    "Bestellseite — dort sehen Sie Preis, Konditionen und schließen",
-    "Ihren Vertrag digital ab.",
+    "Sie können Ihren Zugang zu HFX-GOÄ inklusive 200 Rechnungen kostenfrei testen.",
     "",
-    `Jetzt starten: ${url}`,
+    "Wer jetzt abschließt, zahlt zunächst trotzdem nichts – die Grundgebühr entfällt bis 31.12.2026, das verbliebene Freikontingent gilt weiter.",
+    "",
+    "- dauerhaft 0,99 € pro Rechnung statt 1,20 €",
+    "- keine Grundgebühr bis 31.12.2026 – das sind 49 € pro Monat, gezahlt wird erst ab 2027",
+    "- je früher der Abschluss, desto größer die Ersparnis",
+    "",
+    "Abschließen kostet jetzt nichts, verlängert das Testen nahtlos und friert den Preisvorteil ein.",
+    "",
+    `Jetzt Vollversion buchen: ${url}`,
     "",
     "Der Link ist personalisiert. Bitte nicht weitergeben.",
     "",
-    "Bei Fragen antworten Sie einfach auf diese Mail — wir sind für Sie da.",
-    "",
-    "Ihr HFX Honorarfuchs Team",
+    "Bei Fragen erreichen Sie uns unter info@hfx-honorarfuchs.de.",
   ].join("\n");
 
   const { html, text } = renderBrandedEmail({ subheadline, bodyHtml, bodyText });
-  return { subject, html, text };
+  return { subject: SUBJECT, html, text };
 }
 
 Deno.serve(async (req) => {
@@ -144,7 +165,7 @@ Deno.serve(async (req) => {
   if (authResult instanceof Response) return authResult;
   const { admin } = authResult;
 
-  let body: { mode?: Mode; lead_ids?: string[] } = {};
+  let body: { mode?: Mode; test_email?: string } = {};
   try {
     body = await req.json();
   } catch {
@@ -155,28 +176,29 @@ Deno.serve(async (req) => {
   }
 
   const mode = body.mode;
-  if (!mode || !["dry_run", "send"].includes(mode)) {
+  if (!mode || !["dry_run", "canary", "send"].includes(mode)) {
     return new Response(
-      JSON.stringify({ error: "mode must be 'dry_run' or 'send'" }),
+      JSON.stringify({ error: "mode must be 'dry_run', 'canary' or 'send'" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 
   const resendKey = Deno.env.get("RESEND_API_KEY");
-  if (mode === "send" && !resendKey) {
+  if ((mode === "send" || mode === "canary") && !resendKey) {
     return new Response(JSON.stringify({ error: "RESEND_API_KEY not configured" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+  const resend = resendKey ? new Resend(resendKey) : null;
 
   // === Ziel-Liste EINMAL fetchen ===
   // leads.email ist laut Schema NOT NULL; Filter defensiv drin, aber KEIN
   // Sonderpfad im Ergebnis-Reporting.
-  let query = admin
+  const { data: leads, error: lErr } = await admin
     .from("leads")
     .select(
-      "id, hfx_customer_number, email, vorname, nachname, praxis_name, campaign_token, campaign_mail_sent_at, status",
+      "id, hfx_customer_number, email, anrede, titel, vorname, nachname, praxis_name, campaign_token, campaign_mail_sent_at, status",
     )
     .in("status", MAIL_ELIGIBLE_STATUSES)
     .not("hfx_customer_number", "is", null)
@@ -184,11 +206,6 @@ Deno.serve(async (req) => {
     .is("campaign_mail_sent_at", null)
     .order("created_at", { ascending: true });
 
-  if (Array.isArray(body.lead_ids) && body.lead_ids.length > 0) {
-    query = query.in("id", body.lead_ids);
-  }
-
-  const { data: leads, error: lErr } = await query;
   if (lErr) {
     log("db error (lead lookup)", { message: lErr.message });
     return new Response(JSON.stringify({ error: "Lead lookup failed" }), {
@@ -209,19 +226,73 @@ Deno.serve(async (req) => {
           hfx_customer_number: t.hfx_customer_number,
           name: displayName(t),
           email: t.email,
+          status: t.status,
         })),
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 
+  if (mode === "canary") {
+    const testEmail = body.test_email?.trim();
+    if (!testEmail) {
+      return new Response(JSON.stringify({ error: "test_email required for mode 'canary'" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Wegwerf-Token: NICHT in die DB geschrieben.
+    // Ein echter Token würde beim Klick einen Vertrag für einen echten
+    // Interessenten anlegen. Der Wegwerf-Token läuft in campaign-start
+    // Gate 3 (token_not_found) auf /kampagne-info — der Kanarienvogel
+    // kann strukturell keinen Schaden anrichten.
+    const throwawayToken = generateCampaignToken();
+    const url = buildCampaignUrl(throwawayToken);
+
+    const renderSample = targets[0] ?? {
+      anrede: null,
+      titel: null,
+      vorname: null,
+      nachname: null,
+      praxis_name: null,
+    };
+    const { subject, html, text } = buildMailParts(renderSample, url);
+
+    try {
+      const sent = await resend!.emails.send({
+        from: FROM_ADDRESS,
+        reply_to: REPLY_TO,
+        to: [testEmail],
+        subject,
+        html,
+        text,
+      });
+      if ((sent as any)?.error) {
+        throw new Error(String((sent as any).error?.message || (sent as any).error));
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log("canary ERROR", { message: msg });
+      return new Response(JSON.stringify({ error: msg }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    log("canary sent", { test_email_domain: testEmail.split("@")[1] ?? null, target_count: targets.length });
+    return new Response(
+      JSON.stringify({
+        mode,
+        count: 1,
+        test_email: testEmail,
+        rendered_from_target: targets.length > 0,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
   // === send-Modus: sequentiell + einmalige Zielmenge ===
-  //
-  // Sequentiell + einmalige Zielmenge ist für die aktuelle Größenordnung
-  // (Dutzende) ausgelegt. Bei mehreren hundert Empfängern reicht die
-  // Laufzeit einer Edge Function nicht — dann braucht es Paginierung
-  // über campaign_mail_sent_at IS NULL und mehrere Läufe.
-  // Kein Grund, das heute zu bauen.
   const results: ResultRow[] = [];
 
   for (const lead of targets) {
@@ -230,7 +301,7 @@ Deno.serve(async (req) => {
       // Guard: falls parallel schon versendet → skip
       const { data: fresh, error: fErr } = await admin
         .from("leads")
-        .select("campaign_mail_sent_at, campaign_token")
+        .select("campaign_mail_sent_at")
         .eq("id", lead.id)
         .maybeSingle();
       if (fErr) throw new Error(`re-check failed: ${fErr.message}`);
@@ -244,64 +315,31 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Token ensuren (idempotent, analog campaign-token-issue)
-      let token = fresh?.campaign_token ?? lead.campaign_token;
-      if (!token) {
-        const newToken = generateCampaignToken();
-        const { error: uErr } = await admin
-          .from("leads")
-          .update({
-            campaign_token: newToken,
-            campaign_token_created_at: new Date().toISOString(),
-          })
-          .eq("id", lead.id)
-          .is("campaign_token", null);
-        if (uErr) throw new Error(`token write failed: ${uErr.message}`);
-
-        // Read-back (Race-Guard)
-        const { data: after, error: aErr } = await admin
-          .from("leads")
-          .select("campaign_token")
-          .eq("id", lead.id)
-          .maybeSingle();
-        if (aErr || !after?.campaign_token) {
-          throw new Error("token read-back failed");
-        }
-        token = after.campaign_token;
-      }
-
-      const url = buildCampaignUrl(token!);
+      const { token } = await ensureCampaignToken(admin, lead.id);
+      const url = buildCampaignUrl(token);
       const { subject, html, text } = buildMailParts(lead, url);
 
-      const resp = await fetch(RESEND_API_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: FROM_ADDRESS,
-          to: [lead.email],
-          reply_to: REPLY_TO,
-          subject,
-          html,
-          text,
-        }),
+      const sent = await resend!.emails.send({
+        from: FROM_ADDRESS,
+        reply_to: REPLY_TO,
+        to: [lead.email!],
+        subject,
+        html,
+        text,
       });
-
-      if (!resp.ok) {
-        const errBody = await resp.text();
-        throw new Error(`Resend ${resp.status}: ${errBody.slice(0, 300)}`);
+      if ((sent as any)?.error) {
+        throw new Error(String((sent as any).error?.message || (sent as any).error));
       }
 
       const nowIso = new Date().toISOString();
       const { error: mErr } = await admin
         .from("leads")
         .update({ campaign_mail_sent_at: nowIso })
-        .eq("id", lead.id);
+        .eq("id", lead.id)
+        .is("campaign_mail_sent_at", null); // Doppel-Versand-Guard
       if (mErr) throw new Error(`mail_sent_at write failed: ${mErr.message}`);
 
-      // Non-blocking customer_events
+      // Non-blocking customer_events (Muster analog campaign-start)
       try {
         const { error: ceErr } = await admin.from("customer_events").insert({
           event_type: "CAMPAIGN_MAIL_SENT",
@@ -309,12 +347,13 @@ Deno.serve(async (req) => {
           entity_id: lead.id,
           hfx_customer_number: lead.hfx_customer_number,
           lead_id: lead.id,
+          contract_id: null,
           created_by: null,
           event_data: {
             campaign: CAMPAIGN_ID,
             product_name: CAMPAIGN_PRODUCT,
             lead_status: lead.status,
-            source: "campaign-mail-send",
+            source: "campaign_mail_send",
           },
         });
         if (ceErr) log("WARN: customer_events insert failed (non-blocking)", ceErr.message);
