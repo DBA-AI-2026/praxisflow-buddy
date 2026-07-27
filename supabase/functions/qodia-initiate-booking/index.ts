@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { DEFAULT_QODIA_UNIT_PRICE } from "../_shared/promoStatus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
