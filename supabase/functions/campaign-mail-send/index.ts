@@ -281,11 +281,7 @@ Deno.serve(async (req) => {
     const throwawayToken = generateCampaignToken();
     const url = buildCampaignUrl(throwawayToken);
 
-    const renderSample = targets[0] ?? {
-      vorname: null,
-      nachname: null,
-    };
-    const { subject, html, text } = buildMailParts(renderSample, url);
+    const { subject, html, text } = buildMailParts(url);
 
     try {
       const sent = await resend!.emails.send({
