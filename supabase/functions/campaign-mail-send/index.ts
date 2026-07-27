@@ -249,11 +249,8 @@ Deno.serve(async (req) => {
     const url = buildCampaignUrl(throwawayToken);
 
     const renderSample = targets[0] ?? {
-      anrede: null,
-      titel: null,
       vorname: null,
       nachname: null,
-      praxis_name: null,
     };
     const { subject, html, text } = buildMailParts(renderSample, url);
 
