@@ -272,7 +272,15 @@ export default function Buchen() {
 
   const productName = contract?.product_name || productParam || "";
   const monthlyNet = contract?.monthly_price ?? 0;
-  const monthlyGross = monthlyNet * 1.19;
+
+  const formatEuro = (value: number) =>
+    value.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const formatDeDate = (iso: string) => {
+    const [y, m, d] = iso.split("-");
+    if (!y || !m || !d) return iso;
+    return `${d}.${m}.${y}`;
+  };
 
   const canSubmit =
     isPreview ||
