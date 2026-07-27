@@ -455,8 +455,8 @@ export default function Buchen() {
                 <span className="font-mono">HFX-2024-0042</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Monatspreis brutto</span>
-                <span className="font-bold text-primary">58,31 €</span>
+                <span className="text-muted-foreground">Monatspreis</span>
+                <span className="font-medium">{formatEuro(monthlyNet)} € zzgl. gesetzlicher MwSt.</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Zahlungsart</span>
