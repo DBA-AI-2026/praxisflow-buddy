@@ -1,0 +1,2 @@
+COMMENT ON COLUMN public.leads.campaign_mail_sent_at IS
+  'Zeitpunkt des letzten Kampagnen-Mailversands (GOÄ-Kampagne). Wird von campaign-mail-send gesetzt; NULL = Lead hat bisher keine Kampagnen-Mail erhalten und ist Kandidat für den nächsten Batch. Kein Backfill.';
