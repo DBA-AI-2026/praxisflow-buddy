@@ -1577,6 +1577,7 @@ export type Database = {
           adresse: string | null
           assigned_to: string | null
           assignment_source: string | null
+          campaign_mail_sent_at: string | null
           campaign_token: string | null
           campaign_token_created_at: string | null
           campaign_token_used_at: string | null
@@ -1612,6 +1613,7 @@ export type Database = {
           adresse?: string | null
           assigned_to?: string | null
           assignment_source?: string | null
+          campaign_mail_sent_at?: string | null
           campaign_token?: string | null
           campaign_token_created_at?: string | null
           campaign_token_used_at?: string | null
@@ -1647,6 +1649,7 @@ export type Database = {
           adresse?: string | null
           assigned_to?: string | null
           assignment_source?: string | null
+          campaign_mail_sent_at?: string | null
           campaign_token?: string | null
           campaign_token_created_at?: string | null
           campaign_token_used_at?: string | null
