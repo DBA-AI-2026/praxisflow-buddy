@@ -2858,6 +2858,8 @@ export type Database = {
       get_public_contract_booking: {
         Args: { p_contract_id: string }
         Returns: {
+          base_fee_waived: boolean
+          base_fee_waived_until: string
           cancellation_period_months: number
           customer_name: string
           duration_months: number
@@ -2868,6 +2870,7 @@ export type Database = {
           monthly_price: number
           praxis: string
           product_name: string
+          qodia_unit_price: number
           rechtsform: string
           status: string
         }[]
