@@ -341,7 +341,7 @@ Deno.serve(async (req) => {
 
       const { token } = await ensureCampaignToken(admin, lead.id);
       const url = buildCampaignUrl(token);
-      const { subject, html, text } = buildMailParts(lead, url);
+      const { subject, html, text } = buildMailParts(url);
 
       const sent = await resend!.emails.send({
         from: FROM_ADDRESS,
