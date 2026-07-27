@@ -214,6 +214,7 @@ Deno.serve(async (req) => {
           duration_months: 0,
           cancellation_period_months: cancellationPeriod,
           payment_interval: "monatlich",
+          qodia_unit_price: qodiaUnitPrice,
           ...waiverFields,
         })
 
