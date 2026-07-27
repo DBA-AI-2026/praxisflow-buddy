@@ -83,70 +83,74 @@ function displayName(l: Pick<LeadRow, "praxis_name" | "vorname" | "nachname">): 
 }
 
 /**
- * Anrede-Zeile analog send-mandate-setup:
- *   „Sehr geehrte/r <Vorname> <Nachname>"
- *   Fallback ohne Namensbestandteile: „Sehr geehrte Damen und Herren"
+ * Kampagnen-Mailtext (verbindlicher Wortlaut). Datenfrei — dieselbe Byte-Ausgabe
+ * für dry_run-Rendering, canary und send. Keine Anrede-Personalisierung, nur
+ * der Link (url) trägt einen empfängerspezifischen Token.
+ * `.select()`-Spaltenliste der leads-Abfrage bleibt trotzdem breit:
+ * vorname/nachname/praxis_name werden weiterhin von displayName() für
+ * Dry-Run- und Ergebnis-Tabelle gebraucht — nur der Mailtext verliert seinen
+ * Lead-Bezug, nicht das Reporting.
  */
-function buildGreeting(l: Pick<LeadRow, "vorname" | "nachname">): string {
-  const parts = [l.vorname, l.nachname].filter(Boolean).join(" ").trim();
-  if (!parts) return "Sehr geehrte Damen und Herren";
-  return `Sehr geehrte/r ${parts}`;
-}
-
-function buildMailParts(lead: Pick<LeadRow, "vorname" | "nachname">, url: string) {
-  const greeting = buildGreeting(lead);
-  const subheadline = "Ihr HFX-GOÄ Zugang wartet";
-
+function buildMailParts(url: string) {
   const bodyHtml = `
-      <p>${greeting},</p>
+      <p>Sehr geehrte Damen und Herren,</p>
       <p>
-        Sie können Ihren Zugang zu <strong>HFX-GOÄ</strong> inklusive
-        200 Rechnungen kostenfrei testen.
+        Sie haben Zugang zu HFX GOÄ – der KI für Ihre Privatabrechnung.
+        Die ersten 200 geprüften Rechnungen sind kostenfrei, Sie können
+        also in Ruhe testen.
       </p>
       <p>
-        Wer jetzt abschließt, zahlt zunächst trotzdem nichts – die
-        Grundgebühr entfällt bis 31.12.2026, das verbliebene
-        Freikontingent gilt weiter.
+        Der entscheidende Punkt: Wer jetzt abschließt, zahlt zunächst
+        trotzdem nichts – die Grundgebühr entfällt bis 31.12.2026, und
+        Ihr verbliebenes Freikontingent gilt weiter. Sie sichern sich
+        mit dem Abschluss aber dauerhaft die besten Konditionen:
       </p>
       <ul style="margin:12px 0 12px 20px;padding:0;">
-        <li>dauerhaft 0,99 € pro Rechnung statt 1,20 €</li>
-        <li>keine Grundgebühr bis 31.12.2026 – das sind 49 € pro Monat, gezahlt wird erst ab 2027</li>
-        <li>je früher der Abschluss, desto größer die Ersparnis</li>
+        <li>Dauerhaft 0,99 € statt 1,20 € pro geprüfter Rechnung – dieser Preis bleibt für Sie bestehen, solange Sie Kunde sind. Wer später bucht, zahlt den regulären Preis.</li>
+        <li>Keine Grundgebühr bis 31.12.2026 – Sie sparen die reguläre Monatspauschale von 49 € und zahlen erst ab 2027.</li>
+        <li>Je früher Sie buchen, desto mehr sparen Sie – das Angebot gilt bis 31.12.2026, unabhängig vom Buchungsmonat. Jeder Monat Warten ist ein Monat weniger Ersparnis.</li>
       </ul>
       <p>
-        Abschließen kostet jetzt nichts, verlängert das Testen nahtlos
-        und friert den Preisvorteil ein.
+        Kurz: Abschließen kostet Sie jetzt nichts, verlängert Ihr Testen
+        nahtlos – und friert Ihren Preisvorteil dauerhaft ein. Es gibt
+        also keinen Grund zu warten.
+      </p>
+      <p>
+        Diese Konditionen gelten nur bei Abschluss bis zum 31.12.2026.
+        Danach gilt der reguläre Preis von 1,20 € pro Rechnung.
       </p>
       ${renderBrandedButton({ href: url, label: "Jetzt Vollversion buchen" })}
       <p style="font-size:10pt;color:#666;">
         Der Link ist personalisiert. Bitte nicht weitergeben.
       </p>
-      <p>Bei Fragen erreichen Sie uns unter
+      <p>Bei Fragen erreichen Sie uns jederzeit unter
         <a href="mailto:info@hfx-honorarfuchs.de">info@hfx-honorarfuchs.de</a>.
       </p>
   `.trim();
 
   const bodyText = [
-    `${greeting},`,
+    "Sehr geehrte Damen und Herren,",
     "",
-    "Sie können Ihren Zugang zu HFX-GOÄ inklusive 200 Rechnungen kostenfrei testen.",
+    "Sie haben Zugang zu HFX GOÄ – der KI für Ihre Privatabrechnung. Die ersten 200 geprüften Rechnungen sind kostenfrei, Sie können also in Ruhe testen.",
     "",
-    "Wer jetzt abschließt, zahlt zunächst trotzdem nichts – die Grundgebühr entfällt bis 31.12.2026, das verbliebene Freikontingent gilt weiter.",
+    "Der entscheidende Punkt: Wer jetzt abschließt, zahlt zunächst trotzdem nichts – die Grundgebühr entfällt bis 31.12.2026, und Ihr verbliebenes Freikontingent gilt weiter. Sie sichern sich mit dem Abschluss aber dauerhaft die besten Konditionen:",
     "",
-    "- dauerhaft 0,99 € pro Rechnung statt 1,20 €",
-    "- keine Grundgebühr bis 31.12.2026 – das sind 49 € pro Monat, gezahlt wird erst ab 2027",
-    "- je früher der Abschluss, desto größer die Ersparnis",
+    "- Dauerhaft 0,99 € statt 1,20 € pro geprüfter Rechnung – dieser Preis bleibt für Sie bestehen, solange Sie Kunde sind. Wer später bucht, zahlt den regulären Preis.",
+    "- Keine Grundgebühr bis 31.12.2026 – Sie sparen die reguläre Monatspauschale von 49 € und zahlen erst ab 2027.",
+    "- Je früher Sie buchen, desto mehr sparen Sie – das Angebot gilt bis 31.12.2026, unabhängig vom Buchungsmonat. Jeder Monat Warten ist ein Monat weniger Ersparnis.",
     "",
-    "Abschließen kostet jetzt nichts, verlängert das Testen nahtlos und friert den Preisvorteil ein.",
+    "Kurz: Abschließen kostet Sie jetzt nichts, verlängert Ihr Testen nahtlos – und friert Ihren Preisvorteil dauerhaft ein. Es gibt also keinen Grund zu warten.",
+    "",
+    "Diese Konditionen gelten nur bei Abschluss bis zum 31.12.2026. Danach gilt der reguläre Preis von 1,20 € pro Rechnung.",
     "",
     `Jetzt Vollversion buchen: ${url}`,
     "",
     "Der Link ist personalisiert. Bitte nicht weitergeben.",
     "",
-    "Bei Fragen erreichen Sie uns unter info@hfx-honorarfuchs.de.",
+    "Bei Fragen erreichen Sie uns jederzeit unter info@hfx-honorarfuchs.de.",
   ].join("\n");
 
-  const { html, text } = renderBrandedEmail({ subheadline, bodyHtml, bodyText });
+  const { html, text } = renderBrandedEmail({ bodyHtml, bodyText });
   return { subject: SUBJECT, html, text };
 }
 
