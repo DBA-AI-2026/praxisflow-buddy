@@ -215,7 +215,7 @@ export default function Buchen() {
         rechtsform: null,
         cancellation_period_months: 0,
         duration_months: 0,
-        qodia_unit_price: 0.79,
+        qodia_unit_price: 0.99,
         base_fee_waived: true,
         base_fee_waived_until: "2026-12-31",
       });
