@@ -52,8 +52,6 @@ interface LeadRow {
   id: string;
   hfx_customer_number: string | null;
   email: string | null;
-  anrede: string | null;
-  titel: string | null;
   vorname: string | null;
   nachname: string | null;
   praxis_name: string | null;
@@ -86,16 +84,16 @@ function displayName(l: Pick<LeadRow, "praxis_name" | "vorname" | "nachname">): 
 
 /**
  * Anrede-Zeile analog send-mandate-setup:
- *   „Sehr geehrte/r <Titel> <Vorname> <Nachname>"
+ *   „Sehr geehrte/r <Vorname> <Nachname>"
  *   Fallback ohne Namensbestandteile: „Sehr geehrte Damen und Herren"
  */
-function buildGreeting(l: Pick<LeadRow, "anrede" | "titel" | "vorname" | "nachname">): string {
-  const parts = [l.titel, l.vorname, l.nachname].filter(Boolean).join(" ").trim();
+function buildGreeting(l: Pick<LeadRow, "vorname" | "nachname">): string {
+  const parts = [l.vorname, l.nachname].filter(Boolean).join(" ").trim();
   if (!parts) return "Sehr geehrte Damen und Herren";
   return `Sehr geehrte/r ${parts}`;
 }
 
-function buildMailParts(lead: Pick<LeadRow, "anrede" | "titel" | "vorname" | "nachname">, url: string) {
+function buildMailParts(lead: Pick<LeadRow, "vorname" | "nachname">, url: string) {
   const greeting = buildGreeting(lead);
   const subheadline = "Ihr HFX-GOÄ Zugang wartet";
 
@@ -198,7 +196,7 @@ Deno.serve(async (req) => {
   const { data: leads, error: lErr } = await admin
     .from("leads")
     .select(
-      "id, hfx_customer_number, email, anrede, titel, vorname, nachname, praxis_name, campaign_token, campaign_mail_sent_at, status",
+      "id, hfx_customer_number, email, vorname, nachname, praxis_name, campaign_token, campaign_mail_sent_at, status",
     )
     .in("status", MAIL_ELIGIBLE_STATUSES)
     .not("hfx_customer_number", "is", null)
