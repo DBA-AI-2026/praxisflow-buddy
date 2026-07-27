@@ -63,7 +63,17 @@ interface ContractSummary {
   rechtsform: string | null;
   cancellation_period_months: number | null;
   duration_months: number | null;
+  qodia_unit_price: number | null;
+  base_fee_waived: boolean | null;
+  base_fee_waived_until: string | null;
 }
+
+// SYNCHRONIZE: Testkontingent-Angebotstext für GOÄ. Dieselbe hartkodierte
+// 200 (Trial-Freikontingent) taucht in capture-lead und sync-lead-qodia auf;
+// bei Wechsel BEIDE Stellen anfassen. Reiner Angebotstext, kein Bezug zu
+// free_quota_grants (dort liegt der reale Saldo).
+const GOAE_PRODUCT_NAME = "HFX GOÄ - die KI für ihre Privatabrechnung";
+const GOAE_TRIAL_FREE_UNITS = 200;
 
 
 interface ProductAgb {
@@ -205,6 +215,9 @@ export default function Buchen() {
         rechtsform: null,
         cancellation_period_months: 0,
         duration_months: 0,
+        qodia_unit_price: 0.79,
+        base_fee_waived: true,
+        base_fee_waived_until: "2026-12-31",
       });
       setAgbUrl(DEFAULT_AGB_URL);
       setHasProductSpecificAgb(false);
@@ -259,7 +272,15 @@ export default function Buchen() {
 
   const productName = contract?.product_name || productParam || "";
   const monthlyNet = contract?.monthly_price ?? 0;
-  const monthlyGross = monthlyNet * 1.19;
+
+  const formatEuro = (value: number) =>
+    value.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const formatDeDate = (iso: string) => {
+    const [y, m, d] = iso.split("-");
+    if (!y || !m || !d) return iso;
+    return `${d}.${m}.${y}`;
+  };
 
   const canSubmit =
     isPreview ||
@@ -434,8 +455,8 @@ export default function Buchen() {
                 <span className="font-mono">HFX-2024-0042</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Monatspreis brutto</span>
-                <span className="font-bold text-primary">58,31 €</span>
+                <span className="text-muted-foreground">Monatspreis</span>
+                <span className="font-medium">{formatEuro(monthlyNet)} € zzgl. gesetzlicher MwSt.</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Zahlungsart</span>
@@ -512,17 +533,44 @@ export default function Buchen() {
               </div>
             )}
             <div className="border-t pt-2 flex justify-between">
-              <span className="text-muted-foreground">Monatspreis netto</span>
+              <span className="text-muted-foreground">Monatspreis</span>
               <span className="font-medium text-foreground">
-                {monthlyNet.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                {formatEuro(monthlyNet)} € zzgl. gesetzlicher MwSt.
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Monatspreis brutto</span>
-              <span className="font-bold text-primary">
-                {monthlyGross.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
-              </span>
-            </div>
+            {(() => {
+              // Waiver-Hinweis: nur wenn Vertrag explizit befreit ist UND das Enddatum
+              // in der Zukunft liegt. Kein erfundener Fallback (analog Frist-Guard).
+              if (contract?.base_fee_waived !== true) return null;
+              const until = contract?.base_fee_waived_until;
+              if (!until) return null;
+              // Vergleich auf Datumsebene (ohne Uhrzeit), Vergangenheit → nichts anzeigen.
+              const todayIso = new Date().toISOString().slice(0, 10);
+              if (until < todayIso) return null;
+              return (
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Aktion</span>
+                  <span>Grundgebühr entfällt bis {formatDeDate(until)}</span>
+                </div>
+              );
+            })()}
+            {(() => {
+              // Stückpreis: nur bei vorhandenem, positivem Wert.
+              const unit = contract?.qodia_unit_price;
+              if (unit == null || unit <= 0) return null;
+              return (
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Pro geprüfter Rechnung</span>
+                  <span>{formatEuro(unit)} € zzgl. MwSt.</span>
+                </div>
+              );
+            })()}
+            {contract?.product_name === GOAE_PRODUCT_NAME && (
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Testkontingent</span>
+                <span>Die ersten {GOAE_TRIAL_FREE_UNITS} geprüften Rechnungen sind kostenfrei.</span>
+              </div>
+            )}
             {(() => {
               // Frist ist rechtlich maßgeblich (AGB §13 Abs. 1): nur anzeigen,
               // wenn die Daten aus dem Vertrag vorliegen. Kein erfundener Fallback.
