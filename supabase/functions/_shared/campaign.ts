@@ -30,8 +30,14 @@ export const ALLOWED_LEAD_STATUSES = [
 // Zielmenge des Mailversands. MUSS Teilmenge von
 // ALLOWED_LEAD_STATUSES sein — sonst bekommen Empfänger einen Link,
 // den campaign-start Gate 4 auf /kampagne-info abweist.
+//
+// 'neu' ist BEWUSST draußen (Entscheidung Dani, 27.07.2026): Der
+// Mailtext setzt einen laufenden Test voraus ("Ihr Zugang", "das
+// verbliebene Freikontingent gilt weiter"). Bei 'neu' hat noch kein
+// Aussendienstler gesprochen — die Mail würde den Erstkontakt
+// vorwegnehmen. Diese Leads rutschen automatisch nach, sobald ihr
+// Status auf 'kontaktiert' wechselt.
 export const MAIL_ELIGIBLE_STATUSES = [
-  "neu",
   "kontaktiert",
   "qualifiziert",
   "vertrag",
