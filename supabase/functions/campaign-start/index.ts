@@ -35,6 +35,16 @@ const APP_URL = "https://sales.hfx-honorarfuchs.de";
 // hartkodiert. Bei Produktnamens-Wechsel BEIDE Stellen anfassen.
 const CAMPAIGN_PRODUCT = "HFX GOÄ - die KI für ihre Privatabrechnung";
 
+// SYNCHRONIZE: campaign-mail-send (Etappe 3b) MUSS denselben Wert
+// verwenden — sonst ist der Funnel "Mail versendet → Link eingelöst"
+// nicht joinbar. Bewusst jahres-, nicht monatsbezogen: die Aktion
+// läuft bis promo_end_date 2027-01-01.
+// ACHTUNG: campaign-mint-runner trägt eine gleichnamige Konstante mit
+// ABWEICHENDEM Wert ("goae_mint_2026_07"). Das ist Absicht — der Runner
+// ist Weg-A-Altbestand und Entsorgungskandidat, seine Alt-Events bleiben
+// unter ihrem Alt-Label. Nicht "vereinheitlichen".
+const CAMPAIGN_ID = "goae_conversion_2026";
+
 // Allowlist: alle Lead-Status, die einen Kampagnen-Klick einlösen dürfen.
 // `vertrag` bleibt drin (Reuse-Pfad in qodia-initiate-booking).
 const ALLOWED_LEAD_STATUSES = ["neu", "kontaktiert", "qualifiziert", "vertrag"];
@@ -196,8 +206,9 @@ Deno.serve(async (req) => {
         contract_id: contractId,
         created_by: null,
         event_data: {
-          campaign: "goae_mint_2026_07",
+          campaign: CAMPAIGN_ID,
           product_name: CAMPAIGN_PRODUCT,
+          lead_status: lead.status,
           first_redemption: wasFirstRedemption,
           source: "campaign_start",
         },
