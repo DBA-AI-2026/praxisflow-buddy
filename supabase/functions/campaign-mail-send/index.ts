@@ -44,7 +44,7 @@ const corsHeaders = {
 
 const FROM_ADDRESS = "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>";
 const REPLY_TO = "info@hfx-honorarfuchs.de";
-const SUBJECT = "Ihr Zugang zu HFX-GOÄ – jetzt dauerhaftes Angebot sichern";
+const SUBJECT = "Ihr Zugang zu HFX-GOÄ – jetzt dauerhaften Vorteil sichern";
 
 type Mode = "dry_run" | "canary" | "send";
 
