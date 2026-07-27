@@ -95,6 +95,9 @@ export const routePermissions: RoutePermission[] = [
   // Campaign Mint (still stille Vertragsanlage — admin-only)
   { path: "/admin/campaign-mint", allowedRoles: ["admin"] },
 
+  // GOÄ-Kampagne (Mailversand — admin-only)
+  { path: "/admin/kampagne", allowedRoles: ["admin"] },
+
 
 
 ];
