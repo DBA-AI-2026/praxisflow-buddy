@@ -5,19 +5,14 @@
 //   Lead und gibt den fertigen /kampagne-Link auf der Produktivdomain zurück.
 //   Aufruf ausschließlich durch admin oder sales_lead.
 //
-// Regeln (siehe #16 Etappe 1):
-//   - Token nur hier serverseitig via crypto.getRandomValues erzeugen.
-//   - Token NIEMALS loggen (weder success noch error path).
-//   - Rückgabe-URL hart auf https://sales.hfx-honorarfuchs.de/kampagne.
-//   - Idempotent: hat der Lead bereits einen campaign_token, wird derselbe
-//     Link zurückgegeben, kein Überschreiben.
+// Token-Logik gekapselt in _shared/campaign.ts → ensureCampaignToken.
+// Response-Shape { url, reused } bleibt Byte-für-Byte identisch.
 //
 // [REVIEW REQUIRED] Rollback:
 //   Bei Regression Function deaktivieren. Die Spalten leads.campaign_token /
-//   campaign_token_created_at / campaign_token_used_at bleiben harmlos leer;
-//   Etappe 2 (/kampagne + campaign-start) existiert noch nicht.
+//   campaign_token_created_at / campaign_token_used_at bleiben harmlos leer.
 import { requireActiveRole } from "../_shared/auth.ts";
-import { buildCampaignUrl, generateCampaignToken } from "../_shared/campaign.ts";
+import { buildCampaignUrl, ensureCampaignToken } from "../_shared/campaign.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,10 +48,11 @@ Deno.serve(async (req) => {
 
   const { admin } = ctx;
 
-  // 1) Idempotenz-Check
+  // Existenz-Check separat, damit "Lead not found" nicht in einem
+  // generischen 500 aus ensureCampaignToken untergeht.
   const { data: existing, error: fetchErr } = await admin
     .from("leads")
-    .select("id, hfx_customer_number, campaign_token")
+    .select("id, hfx_customer_number")
     .eq("id", leadId)
     .maybeSingle();
 
@@ -77,66 +73,26 @@ Deno.serve(async (req) => {
     });
   }
 
-  if (existing.campaign_token) {
-    console.log("[campaign-token-issue] reuse", {
+  try {
+    const { token, reused } = await ensureCampaignToken(admin, leadId);
+    console.log("[campaign-token-issue]", {
       lead_id: existing.id,
       hfx_customer_number: existing.hfx_customer_number,
-      reused: true,
+      reused,
     });
     return new Response(
-      JSON.stringify({ url: buildCampaignUrl(existing.campaign_token), reused: true }),
+      JSON.stringify({ url: buildCampaignUrl(token), reused }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-  }
-
-  // 2) Neuen Token erzeugen und schreiben (Service-Role)
-  const token = generateCampaignToken();
-  const { error: updateErr } = await admin
-    .from("leads")
-    .update({
-      campaign_token: token,
-      campaign_token_created_at: new Date().toISOString(),
-    })
-    .eq("id", leadId)
-    .is("campaign_token", null); // Race-Guard
-
-  if (updateErr) {
-    console.error("[campaign-token-issue] token write failed", {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[campaign-token-issue] ensure failed", {
       lead_id: leadId,
-      error: updateErr.message,
+      error: msg,
     });
-    return new Response(JSON.stringify({ error: "Token write failed" }), {
+    return new Response(JSON.stringify({ error: "Token ensure failed" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-
-  // Race-Fall: parallel wurde einer geschrieben — dann diesen zurückgeben.
-  const { data: after, error: afterErr } = await admin
-    .from("leads")
-    .select("campaign_token")
-    .eq("id", leadId)
-    .maybeSingle();
-
-  if (afterErr || !after?.campaign_token) {
-    console.error("[campaign-token-issue] post-write reread failed", {
-      lead_id: leadId,
-      error: afterErr?.message,
-    });
-    return new Response(JSON.stringify({ error: "Token read-back failed" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  console.log("[campaign-token-issue] issued", {
-    lead_id: existing.id,
-    hfx_customer_number: existing.hfx_customer_number,
-    reused: false,
-  });
-
-  return new Response(
-    JSON.stringify({ url: buildCampaignUrl(after.campaign_token), reused: false }),
-    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-  );
 });
