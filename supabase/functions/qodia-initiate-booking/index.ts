@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { DEFAULT_QODIA_UNIT_PRICE } from "../_shared/promoStatus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -119,9 +120,32 @@ Deno.serve(async (req) => {
       // Look up the product price
       const { data: product } = await adminClient
         .from("products")
-        .select("monthly_price, one_time_fee, promo_base_fee_end_date")
+        .select("monthly_price, one_time_fee, promo_base_fee_end_date, promo_price, promo_end_date, price_per_unit")
         .eq("name", product_name)
         .maybeSingle();
+
+      // [REVIEW REQUIRED] qodia_unit_price produktgetrieben einstempeln.
+      // SYNCHRONIZE mit src/pages/Vertraege.tsx (Ableitung: hasPromo ? promo_price : price_per_unit,
+      // Default nur wenn gar kein Stückpreis am Produkt hinterlegt ist) und
+      // supabase/functions/_shared/promoStatus.ts (DEFAULT_QODIA_UNIT_PRICE).
+      // Hintergrund: Ohne diesen Stempel greift der DB-Default 0 →
+      // qodia-auto-usage-sync markiert die Umsätze als "ungeklaert" (Datenfehler).
+      // Regel: Aktive Produkt-Promo (promo_price + promo_end_date >= heute) gewinnt.
+      // Sonst regulärer price_per_unit. Nur wenn beide Felder fehlen: DEFAULT_QODIA_UNIT_PRICE.
+      // Rollback: bei Regression diesen Block + Zeile im Insert entfernen — dann greift
+      // wieder DB-Default 0 (Symptom: ungeklaert-Buchungen).
+      const nowTs = new Date();
+      const hasActivePromo =
+        product?.promo_price != null &&
+        !!product?.promo_end_date &&
+        new Date(product.promo_end_date) >= nowTs;
+      const qodiaUnitPrice = hasActivePromo
+        ? Number(product!.promo_price)
+        : product?.price_per_unit != null
+          ? Number(product.price_per_unit)
+          : DEFAULT_QODIA_UNIT_PRICE;
+
+
 
       // Grundgebühr-Waiver aus Produkt ableiten.
       // [REVIEW REQUIRED] promo_base_fee_end_date ist per Definition das
@@ -190,6 +214,7 @@ Deno.serve(async (req) => {
           duration_months: 0,
           cancellation_period_months: cancellationPeriod,
           payment_interval: "monatlich",
+          qodia_unit_price: qodiaUnitPrice,
           ...waiverFields,
         })
 
@@ -201,7 +226,7 @@ Deno.serve(async (req) => {
       }
 
       contractId = newContract.id;
-      console.log(`[qodia-initiate-booking] Created new contract ${contractId} (cancellation=${cancellationPeriod}m, waiver_until=${(waiverFields as any).base_fee_waived_until ?? "none"})`);
+      console.log(`[qodia-initiate-booking] Created new contract ${contractId} (cancellation=${cancellationPeriod}m, waiver_until=${(waiverFields as any).base_fee_waived_until ?? "none"}, qodia_unit_price=${qodiaUnitPrice}, promo=${hasActivePromo})`);
     }
 
     // [REVIEW REQUIRED] skip_mail-Schalter: bewusst kein Mailversand.
