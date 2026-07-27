@@ -27,27 +27,15 @@
 // nach Einlösung — bewusst offen (siehe mandate-link Phase 3).
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  ALLOWED_LEAD_STATUSES,
+  CAMPAIGN_ID,
+  CAMPAIGN_PRODUCT,
+  CAMPAIGN_URL_ORIGIN,
+} from "../_shared/campaign.ts";
 
 // Produktivdomain — identisch zu mandate-link (kanonische Frontend-URL).
-const APP_URL = "https://sales.hfx-honorarfuchs.de";
-
-// SYNCHRONIZE: qodia-initiate-booking → VALID_PRODUCTS. Ein Produkt,
-// hartkodiert. Bei Produktnamens-Wechsel BEIDE Stellen anfassen.
-const CAMPAIGN_PRODUCT = "HFX GOÄ - die KI für ihre Privatabrechnung";
-
-// SYNCHRONIZE: campaign-mail-send (Etappe 3b) MUSS denselben Wert
-// verwenden — sonst ist der Funnel "Mail versendet → Link eingelöst"
-// nicht joinbar. Bewusst jahres-, nicht monatsbezogen: die Aktion
-// läuft bis promo_end_date 2027-01-01.
-// ACHTUNG: campaign-mint-runner trägt eine gleichnamige Konstante mit
-// ABWEICHENDEM Wert ("goae_mint_2026_07"). Das ist Absicht — der Runner
-// ist Weg-A-Altbestand und Entsorgungskandidat, seine Alt-Events bleiben
-// unter ihrem Alt-Label. Nicht "vereinheitlichen".
-const CAMPAIGN_ID = "goae_conversion_2026";
-
-// Allowlist: alle Lead-Status, die einen Kampagnen-Klick einlösen dürfen.
-// `vertrag` bleibt drin (Reuse-Pfad in qodia-initiate-booking).
-const ALLOWED_LEAD_STATUSES = ["neu", "kontaktiert", "qualifiziert", "vertrag"];
+const APP_URL = CAMPAIGN_URL_ORIGIN;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

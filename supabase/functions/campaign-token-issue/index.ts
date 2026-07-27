@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
   }
 
   // 2) Neuen Token erzeugen und schreiben (Service-Role)
-  const token = generateToken();
+  const token = generateCampaignToken();
   const { error: updateErr } = await admin
     .from("leads")
     .update({
@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
   });
 
   return new Response(
-    JSON.stringify({ url: buildUrl(after.campaign_token), reused: false }),
+    JSON.stringify({ url: buildCampaignUrl(after.campaign_token), reused: false }),
     { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
 });
