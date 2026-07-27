@@ -212,7 +212,36 @@ Deno.serve(async (req) => {
     });
   }
 
-  const targets: LeadRow[] = (leads ?? []) as LeadRow[];
+  // Leads mit bereits bestehendem Vertrag fliegen raus — sie haben
+  // gebucht, eine "jetzt Vollversion buchen"-Mail wäre falsch.
+  // Fehlte dieser Filter bis 27.07.2026; Dry-Run zeigte deshalb 67
+  // statt 64. Gleicher Abgleich wie campaign-mint-runner.
+  let targets: LeadRow[] = [];
+  const leadRows = (leads ?? []) as LeadRow[];
+  const hfxList = leadRows
+    .map((l) => l.hfx_customer_number)
+    .filter((v): v is string => Boolean(v));
+  if (hfxList.length === 0) {
+    targets = [];
+  } else {
+    const { data: contracts, error: cErr } = await admin
+      .from("contracts")
+      .select("hfx_customer_number")
+      .in("hfx_customer_number", hfxList);
+    if (cErr) {
+      log("db error (contracts lookup)", { message: cErr.message });
+      return new Response(JSON.stringify({ error: "Contracts lookup failed" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const withContract = new Set(
+      (contracts ?? []).map((c: any) => c.hfx_customer_number as string),
+    );
+    targets = leadRows.filter(
+      (l) => l.hfx_customer_number && !withContract.has(l.hfx_customer_number),
+    );
+  }
 
   if (mode === "dry_run") {
     return new Response(
