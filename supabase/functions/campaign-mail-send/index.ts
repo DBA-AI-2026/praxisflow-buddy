@@ -150,7 +150,11 @@ function buildMailParts(url: string) {
     "Bei Fragen erreichen Sie uns jederzeit unter info@hfx-honorarfuchs.de.",
   ].join("\n");
 
-  const { html, text } = renderBrandedEmail({ bodyHtml, bodyText });
+  const { html, text } = renderBrandedEmail({
+    preheader: "Dauerhaft 0,99 € pro geprüfter Rechnung sichern – ohne Grundgebühr bis 31.12.2026.",
+    bodyHtml,
+    bodyText,
+  });
   return { subject: SUBJECT, html, text };
 }
 
