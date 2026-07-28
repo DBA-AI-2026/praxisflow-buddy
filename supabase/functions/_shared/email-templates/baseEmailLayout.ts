@@ -12,7 +12,7 @@
 // und erhalten `{ html, text }` mit konsistentem weißem Header (LOGO_URL),
 // optionaler Sub-Headline (#0b367f) und kanonischem Footer aus HFX-Kontext §8.4.
 //
-// Logo-Quelle: aktuell WP-gehostet. Bei Self-Hosting nur LOGO_URL anpassen.
+// Logo-Quelle: Supabase Storage (email-assets). Bei Self-Hosting nur LOGO_URL anpassen.
 // ============================================================================
 
 import { ENTITY_TAGLINE } from "../entityCanon.ts";
