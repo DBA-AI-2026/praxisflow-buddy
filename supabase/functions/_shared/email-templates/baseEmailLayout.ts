@@ -23,6 +23,8 @@ export const LOGO_URL =
 export interface RenderBrandedEmailInput {
   /** Optionale Sub-Headline unterhalb des Logos, #0b367f. */
   subheadline?: string;
+  /** Optionaler Preheader (Inbox-Snippet). Fällt auf subheadline zurück. */
+  preheader?: string;
   /** Inhalts-HTML; wird innerhalb der weißen Card mit 32px/40px Padding gerendert. */
   bodyHtml: string;
   /** Inhalts-Text (Klartext); Footer wird automatisch angehängt. */
