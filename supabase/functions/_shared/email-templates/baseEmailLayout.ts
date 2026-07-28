@@ -40,6 +40,10 @@ export function renderBrandedEmail(
   input: RenderBrandedEmailInput,
 ): RenderBrandedEmailOutput {
   const year = new Date().getFullYear();
+  const effectivePreheader = input.preheader ?? input.subheadline;
+  const preheaderHtml = effectivePreheader
+    ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${effectivePreheader}</div>`
+    : "";
   const subheadlineHtml = input.subheadline
     ? `<p style="color:#0b367f;font-size:11pt;margin:16px 0 0 0;font-family:verdana,geneva,sans-serif;">${input.subheadline}</p>`
     : "";
@@ -48,12 +52,13 @@ export function renderBrandedEmail(
 <html lang="de">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background-color:#f5f5f5;font-family:verdana,geneva,sans-serif;">
+${preheaderHtml}
 <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f5f5f5;padding:20px 0;">
 <tr><td align="center">
 <table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
   <tr>
     <td bgcolor="#ffffff" style="background-color:#ffffff;padding:30px 40px;text-align:center;border-bottom:3px solid #b6193d;">
-      <img src="${LOGO_URL}" alt="HFX Honorarfuchs" style="display:block;max-width:280px;height:auto;margin:0 auto;border:0;" />
+      <img src="${LOGO_URL}" alt="HFX Honorarfuchs" width="240" style="display:block;max-width:240px;height:auto;margin:0 auto;border:0;" />
       ${subheadlineHtml}
     </td>
   </tr>
