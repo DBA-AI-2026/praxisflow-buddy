@@ -15,6 +15,8 @@
 // Logo-Quelle: aktuell WP-gehostet. Bei Self-Hosting nur LOGO_URL anpassen.
 // ============================================================================
 
+import { ENTITY_TAGLINE } from "../entityCanon.ts";
+
 export const LOGO_URL =
   "https://gvsxentbbzuyanqbqvea.supabase.co/storage/v1/object/public/email-assets/8270-Logo-RZ-Honorarfuchs-HFX.png";
 
@@ -61,7 +63,7 @@ ${input.bodyHtml}
   <tr>
     <td style="background-color:#f8f8f8;padding:20px 40px;border-top:1px solid #eeeeee;text-align:center;">
       <p style="font-size:9pt;color:#777777;margin:0 0 8px 0;line-height:1.5;font-family:verdana,geneva,sans-serif;">
-        <strong>HFX Honorarfuchs &ndash; eine Marke der MCC Medical CareCapital GmbH</strong><br>
+        <strong>${ENTITY_TAGLINE}</strong><br>
         Hohenzollernstr. 47 &middot; 47799 Krefeld
       </p>
       <p style="font-size:9pt;color:#777777;margin:0 0 8px 0;line-height:1.5;font-family:verdana,geneva,sans-serif;">
@@ -82,7 +84,7 @@ ${input.bodyHtml}
     input.bodyText,
     "",
     "--",
-    "HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH",
+    ENTITY_TAGLINE,
     "Hohenzollernstr. 47 · 47799 Krefeld",
     "",
     "Geschäftsführer: Olaf Hagelkruys, Thilo Wiers-Keiser und Robbin Zielke",

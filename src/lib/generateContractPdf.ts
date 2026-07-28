@@ -14,6 +14,7 @@
  * nur in der UI. Alles andere muss byte-identisch sein.
  */
 import { PDFDocument, rgb } from "pdf-lib";
+import { ENTITY_TAGLINE } from "@/lib/entityCanon";
 import { embedExo2 } from "@/lib/pdfFontLoader";
 import { isContractPromoActive } from "@/lib/promoStatus";
 import {
@@ -243,7 +244,7 @@ export async function generateContractPdf(
     page.drawImage(embeddedLogo, { x: logoX, y: headerTop - logoH + 10, width: logoW, height: logoH });
   } else {
     text("HFX Honorarfuchs", ML, headerTop, 18, fontBold, C_NAVY);
-    text("eine Marke der MCC Medical CareCapital GmbH", ML, headerTop - 16, 7, font, C_MUTED);
+    text(ENTITY_TAGLINE, ML, headerTop - 16, 7, font, C_MUTED);
   }
 
   // ===== SENDER LINE =====

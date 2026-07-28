@@ -1,6 +1,7 @@
 import { Info, Mail, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logoUrl from "@/assets/fuchs-bildmarke.png";
+import { ENTITY_TAGLINE } from "@/lib/entityCanon";
 
 /**
  * MandateInfo — Neutrale Info-Seite, auf die der öffentliche
@@ -68,7 +69,7 @@ export default function MandateInfo() {
           </div>
 
           <p className="text-xs text-gray-300">
-            HFX Honorarfuchs — eine Marke der MCC Medical CareCapital GmbH
+            {ENTITY_TAGLINE}
           </p>
         </div>
       </div>
