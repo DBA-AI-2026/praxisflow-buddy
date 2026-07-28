@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabaseClient";
+import { ENTITY_TAGLINE } from "@/lib/entityCanon";
 import { toast } from "sonner";
 import CodeMirror from "@uiw/react-codemirror";
 import { html } from "@codemirror/lang-html";
@@ -505,7 +506,7 @@ function buildInvoicePdfPreviewHtml() {
   <div class="header">
     <div>
       <h1>Rechnung ${invoice_number}</h1>
-      <p>HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH</p>
+      <p>${ENTITY_TAGLINE}</p>
     </div>
     <span class="badge">ENTWURF</span>
   </div>
@@ -541,7 +542,7 @@ function buildInvoicePdfPreviewHtml() {
     <p style="font-size:10px;color:#9ca3af;margin-top:4px;">Im ausgewiesenen Betrag sind 28,50 € Umsatzsteuer (19%) enthalten.</p>
   </div>
   <div class="footer">
-    <p style="margin:0;font-weight:600;color:#374151;">HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH</p>
+    <p style="margin:0;font-weight:600;color:#374151;">${ENTITY_TAGLINE}</p>
     <p style="margin:3px 0 0;">Hohenzollernstr. 47, 47799 Krefeld</p>
     <p style="margin:3px 0 0;">Geschäftsführung: Olaf Hagelkruys, Thilo Wiers-Keiser, Robbin Zielke &nbsp;·&nbsp; Amtsgericht Krefeld, HRB 14709</p>
     <p style="margin:3px 0 0;">USt-Id-Nr: DE 227 420 712 &nbsp;·&nbsp; www.hfx-honorarfuchs.de</p>

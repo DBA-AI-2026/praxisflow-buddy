@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import fuchsLogo from "@/assets/fuchs-bildmarke.png";
+import { ENTITY_TAGLINE } from "@/lib/entityCanon";
 
 const FACHRICHTUNGEN = [
   "Allgemeinmedizin",
@@ -676,7 +677,7 @@ export default function Buchen() {
                 Allgemeinen Geschäftsbedingungen (AGB)
                 <ExternalLink className="h-3 w-3" />
               </a>{" "}
-              der HFX Honorarfuchs – eine Marke der MCC Medical CareCapital GmbH – und gebe hiermit eine verbindliche Buchung ab. Die Abrechnung erfolgt per SEPA-Lastschrift; im nächsten Schritt richte ich das SEPA-Mandat ein.
+              der {ENTITY_TAGLINE} – und gebe hiermit eine verbindliche Buchung ab. Die Abrechnung erfolgt per SEPA-Lastschrift; im nächsten Schritt richte ich das SEPA-Mandat ein.
             </label>
           </div>
 
