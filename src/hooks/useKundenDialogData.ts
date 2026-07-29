@@ -6,8 +6,11 @@
  * Status-Label sowie Stammdaten-CRUD inkl. RLS-gespiegeltem canEdit.
  *
  * SSOT-Logik:
- *  - Phase lead/qualifiziert → leads ist SSOT
- *  - Phase vertrag/aktiv/service → customers ist SSOT, leads wird gespiegelt
+ *  - SSOT hängt an Customer-Existenz, nicht an der Phase.
+ *  - Customer vorhanden → customers ist SSOT, leads wird gespiegelt.
+ *  - Kein Customer → leads ist SSOT (auch bei Phase `vertrag`, z. B. Lead-
+ *    Status "vertrag" ohne Kundenanlage — dann trägt weiterhin die
+ *    leads-UPDATE-Policy den Save, kein Customer-Write nötig).
  *
  * canEdit-Spiegelung (siehe Migration 2026-05-20):
  *  - leads UPDATE: admin | sales_lead | regional_lead (Team) | user|sales_partner (assigned_to == self)
@@ -412,7 +415,7 @@ export function useKundenDialogData(
     return derivePhaseFromData(leadQ.data ?? null, customerQ.data ?? null, contractsQ.data ?? []);
   }, [input, leadQ.data, customerQ.data, contractsQ.data]);
 
-  const ssot: "lead" | "customer" = isLeadPhase(derivedPhase) ? "lead" : "customer";
+  const ssot: "lead" | "customer" = customerQ.data ? "customer" : "lead";
 
   const currentStatusLabel = useMemo(
     () => deriveStatusLabel(derivedPhase, leadQ.data ?? null, contractsQ.data ?? []),
