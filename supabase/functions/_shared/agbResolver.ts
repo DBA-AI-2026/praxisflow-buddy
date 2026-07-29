@@ -7,7 +7,45 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 export type ProductWithAgb = {
   name: string;
   agb_pdf_path: string | null;
+  id?: string;
 };
+
+/**
+ * Leichtgewichtiger Version-Resolver für Beweis-Trail (agb_acceptances.agb_version).
+ * Kein PDF-Fetch. Wirft nie — Fehler ⇒ generischer Fallback-Label.
+ */
+export async function resolveCurrentAgbVersion(
+  admin: SupabaseClient,
+  candidates: Array<string | null | undefined>,
+): Promise<{ label: string; version: number | null; source: "product" | "generic" }> {
+  try {
+    const { data: products } = await admin
+      .from("products")
+      .select("id, name, agb_pdf_path")
+      .not("agb_pdf_path", "is", null);
+
+    const matched = findBestProductMatch((products ?? []) as ProductWithAgb[], candidates);
+
+    if (matched?.agb_pdf_path && matched.id) {
+      const { data: cur } = await admin
+        .from("agb_versions")
+        .select("version")
+        .eq("product_id", matched.id)
+        .eq("is_current", true)
+        .maybeSingle();
+      if (cur?.version != null) {
+        return {
+          label: `${matched.name} v${cur.version}`,
+          version: cur.version as number,
+          source: "product",
+        };
+      }
+    }
+  } catch (_err) {
+    // fall through to generic
+  }
+  return { label: "Standard-AGB (generisch)", version: null, source: "generic" };
+}
 
 const normalizeProductKey = (value: string) =>
   value
