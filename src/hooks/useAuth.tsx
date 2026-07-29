@@ -28,52 +28,79 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
+    let currentUserId: string | null = null;
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         console.log("Auth state changed:", event, currentSession?.user?.email);
-        
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        
-        // Mark as initialized after first auth state change
+
+        const nextUser = currentSession?.user ?? null;
+        const nextUserId = nextUser?.id ?? null;
+
+        // Only mutate React state on events that actually change identity.
+        // TOKEN_REFRESHED must NOT re-set session/user — it triggers a full
+        // consumer re-render (dialogs close, forms reset) on every tab refocus.
+        // The supabase-js client keeps the refreshed token internally, so
+        // SDK calls (Edge Functions, DB queries) continue to use fresh tokens.
+        const isIdentityEvent =
+          event === "SIGNED_IN" ||
+          event === "SIGNED_OUT" ||
+          event === "USER_UPDATED" ||
+          event === "INITIAL_SESSION";
+
+        if (isIdentityEvent) {
+          const identityChanged = nextUserId !== currentUserId;
+          currentUserId = nextUserId;
+
+          setSession(currentSession);
+          setUser(nextUser);
+
+          if (nextUser) {
+            // Defer profile fetch with setTimeout to prevent deadlock
+            setTimeout(() => { fetchProfile(nextUser.id); }, 0);
+          } else if (identityChanged) {
+            setProfile(null);
+          }
+        }
+
+        // Mark as initialized on the very first event (any type) so the
+        // loading gate releases even if getSession() below hasn't resolved.
         if (!isInitialized) {
           setIsInitialized(true);
           setIsLoading(false);
         }
-        
-        // Defer profile fetch with setTimeout to prevent deadlock
-        if (currentSession?.user) {
+
+        // last_seen_at heartbeat: fire-and-forget, no React state involved.
+        if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && nextUser) {
           setTimeout(() => {
-            fetchProfile(currentSession.user.id);
-          }, 0);
-        // Update last_seen_at on sign in and token refresh
-          if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-            setTimeout(() => {
-              supabase.from("profiles")
-                .update({ last_seen_at: new Date().toISOString() })
-                .eq("user_id", currentSession.user.id)
-                .then(() => {}); // fire and forget
-            }, 500);
-          }
-        } else {
-          setProfile(null);
+            supabase.from("profiles")
+              .update({ last_seen_at: new Date().toISOString() })
+              .eq("user_id", nextUser.id)
+              .then(() => {});
+          }, 500);
         }
       }
     );
 
-    // THEN check for existing session
+    // THEN check for existing session (belt-and-braces for the initial load;
+    // supabase-js also fires INITIAL_SESSION, but this guarantees hydration
+    // even if that event were ever missed).
     supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
       console.log("Initial session check:", existingSession?.user?.email ?? "No session");
-      
-      setSession(existingSession);
-      setUser(existingSession?.user ?? null);
-      
-      if (existingSession?.user) {
-        fetchProfile(existingSession.user.id);
+
+      const existingUser = existingSession?.user ?? null;
+      const existingId = existingUser?.id ?? null;
+
+      if (existingId !== currentUserId) {
+        currentUserId = existingId;
+        setSession(existingSession);
+        setUser(existingUser);
+        if (existingUser) {
+          fetchProfile(existingUser.id);
+        }
       }
-      
-      // Only set loading to false here if we haven't already via onAuthStateChange
+
       if (!isInitialized) {
         setIsInitialized(true);
         setIsLoading(false);
@@ -81,7 +108,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [isInitialized]);
+    // Intentionally empty deps: listener must be registered exactly once for
+    // the lifetime of the provider. Re-subscribing on isInitialized flip
+    // would tear down and rebuild the listener on first event.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchProfile = async (userId: string) => {
     const { data, error } = await supabase
