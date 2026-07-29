@@ -85,6 +85,7 @@ export function useUserRole(): UseUserRoleResult & { actualRole: AppRole | null;
       }
 
       const roles = (data ?? []).map((r) => r.role as AppRole);
+      loadedForUserIdRef.current = user.id;
       setActualRoles(roles);
       setIsLoading(false);
       setRoleError(false);
