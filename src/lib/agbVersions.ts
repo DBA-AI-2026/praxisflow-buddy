@@ -68,3 +68,37 @@ export async function deactivateCurrentAgb(productId: string): Promise<void> {
     .eq("id", productId);
   if (productError) throw productError;
 }
+
+export interface AgbVersionRow {
+  version: number;
+  file_name: string | null;
+  storage_path: string;
+  is_current: boolean;
+  uploaded_at: string;
+}
+
+/**
+ * Listet alle AGB-Versionen eines Produkts (Historie), neueste zuerst.
+ * Lesen ist admin-gegated per RLS auf `agb_versions`.
+ */
+export async function listAgbVersions(productId: string): Promise<AgbVersionRow[]> {
+  const { data, error } = await supabase
+    .from("agb_versions")
+    .select("version, file_name, storage_path, is_current, uploaded_at")
+    .eq("product_id", productId)
+    .order("version", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as AgbVersionRow[];
+}
+
+/**
+ * Setzt atomar eine bestimmte Version als aktuell (Rollback / Reaktivierung).
+ * Reihenfolge-konform mit dem partiellen Unique-Index; nur via RPC (admin-gegated).
+ */
+export async function setCurrentAgbVersion(productId: string, version: number): Promise<void> {
+  const { error } = await supabase.rpc("set_current_agb_version", {
+    p_product_id: productId,
+    p_version: version,
+  });
+  if (error) throw error;
+}
