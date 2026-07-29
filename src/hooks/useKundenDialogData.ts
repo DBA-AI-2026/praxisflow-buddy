@@ -415,7 +415,7 @@ export function useKundenDialogData(
     return derivePhaseFromData(leadQ.data ?? null, customerQ.data ?? null, contractsQ.data ?? []);
   }, [input, leadQ.data, customerQ.data, contractsQ.data]);
 
-  const ssot: "lead" | "customer" = isLeadPhase(derivedPhase) ? "lead" : "customer";
+  const ssot: "lead" | "customer" = customerQ.data ? "customer" : "lead";
 
   const currentStatusLabel = useMemo(
     () => deriveStatusLabel(derivedPhase, leadQ.data ?? null, contractsQ.data ?? []),
