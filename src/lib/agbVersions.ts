@@ -19,7 +19,19 @@ export async function uploadAgbVersion(productId: string, file: File): Promise<n
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const path = `agb/${productId}/${uniqueSuffix}.pdf`;
+
+  const safeName = (() => {
+    const base = (file.name || "").trim();
+    const sanitized = base
+      .replace(/[^a-zA-Z0-9äöüÄÖÜß.\-_]/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    const name = sanitized || "datei";
+    const nameWithPdf = name.toLowerCase().endsWith(".pdf") ? name : `${name}.pdf`;
+    return nameWithPdf;
+  })();
+
+  const path = `agb/${productId}/${uniqueSuffix}/${safeName}`;
 
   const { error: upErr } = await supabase.storage
     .from("contracts")
