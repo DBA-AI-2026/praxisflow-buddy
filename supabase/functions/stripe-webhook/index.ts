@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isGoaeProduct, isStandortHfx } from "../_shared/multiLocation.ts";
 import { ensureCarrierCustomer } from "../_shared/ensureCarrierCustomer.ts";
 import { formatStripeMaskedIban } from "../_shared/formatStripeMaskedIban.ts";
+import { resolveCurrentAgbVersion } from "../_shared/agbResolver.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
   apiVersion: "2025-08-27.basil",
@@ -900,7 +901,7 @@ async function handleSepaMandateSetup(
   // die customers-Zeile mit vollen Stammdaten hydrieren kann.
   const { data: existing } = await supabase
     .from("contracts")
-    .select("stripe_customer_id, status, email, confirmation_email_sent_at, customer_id, customer_name, vorname, nachname, rechnungs_email, hfx_customer_number, mp_nr, product_name, praxis, telefon, adresse, plz, ort, bsnr, lanr")
+    .select("stripe_customer_id, status, email, confirmation_email_sent_at, customer_id, customer_name, vorname, nachname, rechnungs_email, hfx_customer_number, mp_nr, product_name, modules, praxis, telefon, adresse, plz, ort, bsnr, lanr")
     .eq("id", contractId)
     .maybeSingle();
 
@@ -933,9 +934,13 @@ async function handleSepaMandateSetup(
           e?.customer_name ||
           [e?.vorname, e?.nachname].filter(Boolean).join(" ").trim() ||
           null;
+        const agbVer = await resolveCurrentAgbVersion(supabase, [
+          e?.product_name,
+          ...(Array.isArray(e?.modules) ? e.modules : []),
+        ]);
         const { error: agbErr } = await supabase.from("agb_acceptances").insert({
           contract_id: contractId,
-          agb_version: "1.0",
+          agb_version: agbVer.label,
           customer_email: customerEmail,
           customer_name: customerName,
           accepted_at: new Date().toISOString(),
@@ -945,7 +950,7 @@ async function handleSepaMandateSetup(
         if (agbErr) {
           log("WARN: agb_acceptances insert failed (non-blocking)", agbErr.message);
         } else {
-          log("agb_acceptances inserted (via SEPA mandate)", { contractId, agb_version: "1.0" });
+          log("agb_acceptances inserted (via SEPA mandate)", { contractId, agb_version: agbVer.label });
         }
       } catch (err) {
         log("WARN: agb_acceptances insert exception (non-blocking)", String(err));
