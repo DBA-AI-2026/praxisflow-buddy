@@ -25,7 +25,7 @@ const corsHeaders = {
 const APP_URL = "https://sales.hfx-honorarfuchs.de";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// KOPPLUNGSSATZ (Platzhalter — finaler Wortlaut vor Go-live durch Anwalt).
+// KOPPLUNGSSATZ (anwaltlich final (29.07.2026)).
 // Änderung erfordert Function-Re-Deploy (kein DB-Wert). Im Hauptteil der Mail
 // sichtbar, NICHT im Footer. HTML- und Text-Variante getrennt pflegen.
 // ─────────────────────────────────────────────────────────────────────────────
