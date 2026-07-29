@@ -323,21 +323,21 @@ export default function AdminProducts() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) closeDialog(); else setDialogOpen(true); }}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[720px]">
           <DialogHeader>
             <DialogTitle>{editId ? "Produkt bearbeiten" : "Neues Produkt"}</DialogTitle>
           </DialogHeader>
-          <form autoComplete="off" onSubmit={handleSubmit} className="space-y-4">
+          <form autoComplete="off" onSubmit={handleSubmit} className="space-y-4 min-w-0">
             <div>
               <Label>Produktname *</Label>
               <Input value={form.name} onChange={(e) => set("name", e.target.value)} required placeholder="z.B. HFX GOÄ" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="min-w-0">
                 <Label>Monatspreis (€)</Label>
                 <Input type="number" min={0} step="0.01" value={form.monthly_price} onChange={(e) => set("monthly_price", Number(e.target.value))} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <Label>Einmalgebühr (€)</Label>
                 <Input type="number" min={0} step="0.01" value={form.one_time_fee} onChange={(e) => set("one_time_fee", Number(e.target.value))} />
               </div>
@@ -358,12 +358,12 @@ export default function AdminProducts() {
             </div>
 
             {/* Stückpreis */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="min-w-0">
                 <Label>Stückpreis (€)</Label>
                 <Input type="number" min={0} step="0.01" value={form.price_per_unit ?? ""} onChange={(e) => set("price_per_unit", e.target.value ? Number(e.target.value) : null)} placeholder="z.B. 1,20" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <Label>Stückpreis-Label</Label>
                 <Input value={form.price_per_unit_label} onChange={(e) => set("price_per_unit_label", e.target.value)} placeholder="z.B. pro geprüfter Rechnung" />
               </div>
@@ -391,20 +391,20 @@ export default function AdminProducts() {
             )}
 
             {/* Aktionspreis */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="min-w-0">
                 <Label>Aktionspreis (€)</Label>
                 <Input type="number" min={0} step="0.01" value={form.promo_price ?? ""} onChange={(e) => set("promo_price", e.target.value ? Number(e.target.value) : null)} placeholder="z.B. 0,99" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <Label>Aktions-Label</Label>
                 <Input value={form.promo_price_label} onChange={(e) => set("promo_price_label", e.target.value)} placeholder="z.B. Beschreibung der Aktion" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <Label>Abschluss-Deadline</Label>
                 <Input type="date" value={form.promo_end_date} onChange={(e) => set("promo_end_date", e.target.value)} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <Label>Grundgebühr-Befreiung bis</Label>
                 <Input type="date" value={form.promo_base_fee_end_date} onChange={(e) => set("promo_base_fee_end_date", e.target.value)} />
               </div>
@@ -422,12 +422,12 @@ export default function AdminProducts() {
                 <Label>Lizenz-Hinweise</Label>
                 <Textarea value={form.licensing_notes} onChange={(e) => set("licensing_notes", e.target.value)} rows={2} placeholder="z.B. 1 BSNR + 3 LANR inkl." />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="min-w-0">
                   <Label>Zusatzpreis (€)</Label>
                   <Input type="number" min={0} step="0.01" value={form.extra_unit_price ?? ""} onChange={(e) => set("extra_unit_price", e.target.value ? Number(e.target.value) : null)} placeholder="z.B. 22" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <Label>Zusatz-Label</Label>
                   <Input value={form.extra_unit_label} onChange={(e) => set("extra_unit_label", e.target.value)} placeholder="z.B. pro zusätzl. LANR" />
                 </div>
