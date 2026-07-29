@@ -40,7 +40,7 @@ export function renderBrandedEmail(
   input: RenderBrandedEmailInput,
 ): RenderBrandedEmailOutput {
   const year = new Date().getFullYear();
-  const effectivePreheader = input.preheader ?? input.subheadline;
+  const effectivePreheader = input.preheader ?? input.subheadline ?? "Ihre Abrechnungs-KI";
   const preheaderHtml = effectivePreheader
     ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${effectivePreheader}</div>`
     : "";

@@ -151,7 +151,7 @@ function buildMailParts(url: string) {
   ].join("\n");
 
   const { html, text } = renderBrandedEmail({
-    preheader: "Dauerhaft 0,99 € pro geprüfter Rechnung sichern – ohne Grundgebühr bis 31.12.2026.",
+    preheader: "Ihre Abrechnungs-KI – jetzt dauerhaft sichern",
     bodyHtml,
     bodyText,
   });
