@@ -373,16 +373,16 @@ export default function AdminProducts() {
             {form.price_per_unit != null && (
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Laufzeitabhängige Stückpreise (optional)</Label>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="min-w-0">
                     <Label>3 Monate (€)</Label>
                     <Input type="number" min={0} step="0.01" value={form.price_per_unit_3m ?? ""} onChange={(e) => set("price_per_unit_3m", e.target.value ? Number(e.target.value) : null)} placeholder="z.B. 159" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <Label>6 Monate (€)</Label>
                     <Input type="number" min={0} step="0.01" value={form.price_per_unit_6m ?? ""} onChange={(e) => set("price_per_unit_6m", e.target.value ? Number(e.target.value) : null)} placeholder="z.B. 149" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <Label>12 Monate (€)</Label>
                     <Input type="number" min={0} step="0.01" value={form.price_per_unit_12m ?? ""} onChange={(e) => set("price_per_unit_12m", e.target.value ? Number(e.target.value) : null)} placeholder="z.B. 139" />
                   </div>
