@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isGoaeProduct, isStandortHfx } from "../_shared/multiLocation.ts";
 import { ensureCarrierCustomer } from "../_shared/ensureCarrierCustomer.ts";
 import { formatStripeMaskedIban } from "../_shared/formatStripeMaskedIban.ts";
+import { resolveCurrentAgbVersion } from "../_shared/agbResolver.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
   apiVersion: "2025-08-27.basil",
