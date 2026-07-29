@@ -900,7 +900,7 @@ async function handleSepaMandateSetup(
   // die customers-Zeile mit vollen Stammdaten hydrieren kann.
   const { data: existing } = await supabase
     .from("contracts")
-    .select("stripe_customer_id, status, email, confirmation_email_sent_at, customer_id, customer_name, vorname, nachname, rechnungs_email, hfx_customer_number, mp_nr, product_name, praxis, telefon, adresse, plz, ort, bsnr, lanr")
+    .select("stripe_customer_id, status, email, confirmation_email_sent_at, customer_id, customer_name, vorname, nachname, rechnungs_email, hfx_customer_number, mp_nr, product_name, modules, praxis, telefon, adresse, plz, ort, bsnr, lanr")
     .eq("id", contractId)
     .maybeSingle();
 
