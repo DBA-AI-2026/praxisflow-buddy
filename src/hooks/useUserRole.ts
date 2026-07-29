@@ -32,6 +32,10 @@ export function useUserRole(): UseUserRoleResult & { actualRole: AppRole | null;
   // Guard against state updates after unmount or stale retry chains
   const mountedRef = useRef(true);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // user.id, für die zuletzt ERFOLGREICH Rollen geladen wurden.
+  // Verhindert, dass stilles Nachladen (z. B. Tab-Refokus) das Loading-Gate
+  // in ProtectedRoute auslöst und den Seitenbaum unmountet.
+  const loadedForUserIdRef = useRef<string | null>(null);
 
   const cancelPendingRetry = useCallback(() => {
     if (retryTimerRef.current !== null) {
@@ -42,14 +46,17 @@ export function useUserRole(): UseUserRoleResult & { actualRole: AppRole | null;
 
   const fetchRole = useCallback(async (attempt: number = 0) => {
     if (!user) {
+      loadedForUserIdRef.current = null;
       setActualRoles([]);
       setIsLoading(false);
       setRoleError(false);
       return;
     }
 
-    setIsLoading(true);
+    const isFirstLoadForThisUser = loadedForUserIdRef.current !== user.id;
+    if (isFirstLoadForThisUser) setIsLoading(true);
     setRoleError(false);
+
 
     try {
       // Multi-role aware: load ALL active roles for this user.
@@ -78,6 +85,7 @@ export function useUserRole(): UseUserRoleResult & { actualRole: AppRole | null;
       }
 
       const roles = (data ?? []).map((r) => r.role as AppRole);
+      loadedForUserIdRef.current = user.id;
       setActualRoles(roles);
       setIsLoading(false);
       setRoleError(false);
