@@ -2917,6 +2917,10 @@ export type Database = {
           matched_rule: string
         }[]
       }
+      set_current_agb_version: {
+        Args: { p_product_id: string; p_version: number }
+        Returns: undefined
+      }
       submit_registration_request: {
         Args: {
           p_company?: string
