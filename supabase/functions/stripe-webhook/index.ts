@@ -933,9 +933,13 @@ async function handleSepaMandateSetup(
           e?.customer_name ||
           [e?.vorname, e?.nachname].filter(Boolean).join(" ").trim() ||
           null;
+        const agbVer = await resolveCurrentAgbVersion(supabase, [
+          e?.product_name,
+          ...(Array.isArray(e?.modules) ? e.modules : []),
+        ]);
         const { error: agbErr } = await supabase.from("agb_acceptances").insert({
           contract_id: contractId,
-          agb_version: "1.0",
+          agb_version: agbVer.label,
           customer_email: customerEmail,
           customer_name: customerName,
           accepted_at: new Date().toISOString(),
@@ -945,7 +949,7 @@ async function handleSepaMandateSetup(
         if (agbErr) {
           log("WARN: agb_acceptances insert failed (non-blocking)", agbErr.message);
         } else {
-          log("agb_acceptances inserted (via SEPA mandate)", { contractId, agb_version: "1.0" });
+          log("agb_acceptances inserted (via SEPA mandate)", { contractId, agb_version: agbVer.label });
         }
       } catch (err) {
         log("WARN: agb_acceptances insert exception (non-blocking)", String(err));
