@@ -209,13 +209,14 @@ function TH({ children, right, className, tier }: { children: React.ReactNode; r
   );
 }
 
-function EmptyState({ icon: Icon, title, sub }: { icon: React.ComponentType<any>; title: string; sub?: string }) {
+function EmptyState({ icon: Icon, title, sub, action }: { icon: React.ComponentType<any>; title: string; sub?: string; action?: React.ReactNode }) {
   return (
     <tr>
       <td colSpan={99} className="py-16 text-center">
         <Icon className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
         <p className="text-sm font-medium text-muted-foreground">{title}</p>
         {sub && <p className="text-xs text-muted-foreground/60 mt-1">{sub}</p>}
+        {action && <div className="mt-3">{action}</div>}
       </td>
     </tr>
   );
