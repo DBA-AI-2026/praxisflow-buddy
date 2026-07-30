@@ -13,6 +13,7 @@ import {
 import { format, differenceInDays } from "date-fns";
 import { isWaitingForMandate } from "@/lib/contractLifecycle";
 import { countDistinctCustomers } from "@/lib/multiLocation";
+import { isTestHfx } from "@/lib/testData";
 import { de } from "date-fns/locale";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -412,8 +413,9 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
 
   // Team-filtered leads (respects regional lead / partner visibility)
   const teamLeads = useMemo(() => {
-    if (isSalesPartner || isTippgeber) return leads;
-    return leads.filter((l: any) => matchesTeamFilter(l.assigned_to));
+    const base = leads.filter((l: any) => !isTestHfx(l.hfx_customer_number));
+    if (isSalesPartner || isTippgeber) return base;
+    return base.filter((l: any) => matchesTeamFilter(l.assigned_to));
   }, [leads, matchesTeamFilter, isSalesPartner, isTippgeber]);
 
   const activeCount = teamLeads.filter((l: any) => ACTIVE_LEAD_STATUSES.includes(l.status)).length;
@@ -819,8 +821,9 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
 
   // Team-filtered contracts
   const teamContracts = useMemo(() => {
-    if (isSalesPartner || isTippgeber) return contracts;
-    return contracts.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
+    const base = contracts.filter((c: any) => !isTestHfx(c.hfx_customer_number));
+    if (isSalesPartner || isTippgeber) return base;
+    return base.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
   }, [contracts, matchesTeamFilter, isSalesPartner, isTippgeber]);
 
   // Qodia provider status: only relevant for products flagged with provider_flags.qodia
@@ -1166,8 +1169,9 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
 
   // Team-filtered contracts for consistent counts
   const teamContracts = useMemo(() => {
-    if (isSalesPartner || isTippgeber) return allContracts;
-    return allContracts.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
+    const base = allContracts.filter((c: any) => !isTestHfx(c.hfx_customer_number));
+    if (isSalesPartner || isTippgeber) return base;
+    return base.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
   }, [allContracts, matchesTeamFilter, isSalesPartner, isTippgeber]);
 
   // Provider statuses (generic). Qodia for GOÄ, HonorarPlus for EBM.
@@ -1578,13 +1582,15 @@ export default function PraxenJourney() {
 
   // Apply team filter on KPI data (client-side, same as tabs)
   const kpiTeamLeads = useMemo(() => {
-    if (isSalesPartner || isTippgeber) return kpiLeadsAll;
-    return kpiLeadsAll.filter((l: any) => matchesTeamFilter(l.assigned_to));
+    const base = kpiLeadsAll.filter((l: any) => !isTestHfx(l.hfx_customer_number));
+    if (isSalesPartner || isTippgeber) return base;
+    return base.filter((l: any) => matchesTeamFilter(l.assigned_to));
   }, [kpiLeadsAll, matchesTeamFilter, isSalesPartner, isTippgeber]);
 
   const kpiTeamContracts = useMemo(() => {
-    if (isSalesPartner || isTippgeber) return kpiContractsAll;
-    return kpiContractsAll.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
+    const base = kpiContractsAll.filter((c: any) => !isTestHfx(c.hfx_customer_number));
+    if (isSalesPartner || isTippgeber) return base;
+    return base.filter((c: any) => matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by));
   }, [kpiContractsAll, matchesTeamFilter, isSalesPartner, isTippgeber]);
 
   // Split leads for KPI bar: non-kunde leads vs kunde leads
