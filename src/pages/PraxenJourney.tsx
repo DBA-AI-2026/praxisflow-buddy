@@ -481,7 +481,8 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journey-leads"] });
-      queryClient.invalidateQueries({ queryKey: ["journey-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["kpi-leads-all"] });
+      queryClient.invalidateQueries({ queryKey: ["kpi-contracts-all"] });
       toast.success("Status aktualisiert");
     },
   });
@@ -780,7 +781,8 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
       if (error) throw error;
       toast.success(`SEPA-Mandat-Mail an ${contract.email} gesendet`);
       queryClient.invalidateQueries({ queryKey: ["journey-contracts-abschluss"] });
-      queryClient.invalidateQueries({ queryKey: ["journey-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["kpi-leads-all"] });
+      queryClient.invalidateQueries({ queryKey: ["kpi-contracts-all"] });
     } catch (err: any) {
       toast.error(err.message || "Fehler beim Senden der SEPA-Mandat-Mail");
     } finally {
@@ -1097,7 +1099,8 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
           onClose={() => {
             setSelectedContractId(null);
             queryClient.invalidateQueries({ queryKey: ["journey-contracts-abschluss"] });
-            queryClient.invalidateQueries({ queryKey: ["journey-counts"] });
+            queryClient.invalidateQueries({ queryKey: ["kpi-leads-all"] });
+      queryClient.invalidateQueries({ queryKey: ["kpi-contracts-all"] });
           }}
           input={{ type: "contract", contractId: selectedContractId }}
         />
@@ -1543,19 +1546,6 @@ export default function PraxenJourney() {
   const { isSalesPartner, isTippgeber } = useUserRole();
   const { user } = useAuth();
 
-  const { data: counts = { leads: 0, abschluss: 0, kunden: 0, missingEmail: 0 } } = useQuery({
-    queryKey: ["journey-counts"],
-    queryFn: async () => {
-      const [l, ab, k, me] = await Promise.all([
-        supabase.from("leads").select("id", { count: "exact", head: true }).in("status", ACTIVE_LEAD_STATUSES),
-        supabase.from("contracts").select("id", { count: "exact", head: true }).in("status", ["entwurf", "eingegangen", "gezeichnet"]),
-        supabase.from("contracts").select("id", { count: "exact", head: true }).in("status", ["aktiv", "gekuendigt", "beendet"]),
-        supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "eingegangen").is("mandate_email_sent_at", null),
-      ]);
-      return { leads: l.count ?? 0, abschluss: ab.count ?? 0, kunden: k.count ?? 0, missingEmail: me.count ?? 0 };
-    },
-  });
-
   // KPI data: all leads (including kunde) for conversion metrics — RLS-filtered
   const { data: kpiLeadsAll = [] } = useQuery({
     queryKey: ["kpi-leads-all", user?.id],
@@ -1569,11 +1559,14 @@ export default function PraxenJourney() {
   });
 
   // KPI data: all contracts for funnel + time metrics — RLS-filtered
+  // Hinweis: bewusst ohne .in()-Statusfilter, damit diese Query die einzige
+  // Filterquelle (SSOT) für KPIs UND Tab-Badges bleibt. Decke ca. 2.000 Zeilen;
+  // darüber hinaus wäre eine Aggregat-RPC der Ausweg.
   const { data: kpiContractsAll = [] } = useQuery({
     queryKey: ["kpi-contracts-all", user?.id],
     queryFn: async () => {
       if (isTippgeber) return [];
-      let q = supabase.from("contracts").select("id, status, created_at, start_date, hfx_customer_number, sales_partner_id, created_by");
+      let q = supabase.from("contracts").select("id, status, created_at, start_date, hfx_customer_number, sales_partner_id, created_by, monthly_price, updated_at, mandate_email_sent_at, customer_confirmed_at");
       if (isSalesPartner && user?.id) q = q.or(`sales_partner_id.eq.${user.id},created_by.eq.${user.id}`);
       const { data } = await q;
       return data ?? [];
@@ -1595,11 +1588,20 @@ export default function PraxenJourney() {
   const kpiLeadsNonKunde = useMemo(() => kpiTeamLeads.filter((l: any) => l.status !== "kunde"), [kpiTeamLeads]);
   const kpiLeadsKunde = useMemo(() => kpiTeamLeads.filter((l: any) => l.status === "kunde"), [kpiTeamLeads]);
 
+  // Tab-Badges aus derselben Basis wie die KPIs (eine Filterquelle)
+  const counts = useMemo(() => ({
+    leads: kpiTeamLeads.filter((l: any) => ACTIVE_LEAD_STATUSES.includes(l.status)).length,
+    abschluss: kpiTeamContracts.filter((c: any) => ["entwurf", "eingegangen", "gezeichnet"].includes(c.status)).length,
+    kunden: kpiTeamContracts.filter((c: any) => c.status === "aktiv").length,
+    missingEmail: kpiTeamContracts.filter((c: any) => c.status === "eingegangen" && !c.mandate_email_sent_at).length,
+  }), [kpiTeamLeads, kpiTeamContracts]);
+
   const tabs: TabDef[] = [
     { key: "interessenten", label: "Interessenten", icon: Users, count: counts.leads },
     { key: "abschlussphase", label: "Abschlussphase", icon: FileText, count: counts.abschluss, warningCount: counts.missingEmail },
     { key: "kunden", label: "Kunden", icon: Building2, count: counts.kunden },
   ];
+
 
   return (
     <MainLayout

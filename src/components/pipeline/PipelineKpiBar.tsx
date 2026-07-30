@@ -287,12 +287,13 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads }: Pipe
         {tab === "kunden" && (
           <>
             <KpiCard
-              label="Aktive Kunden"
+              label="Aktive Verträge"
               value={kpis.aktivContracts}
               icon={<Building2 className="h-4 w-4" />}
               accent="success"
-              tooltip="Verträge im Status Aktiv. Laufende Abrechnungen."
+              tooltip="Anzahl aktiver Verträge. Standorte zählen einzeln, da jeder Standort separat abgerechnet wird."
             />
+
             <KpiCard
               label="Monatlicher Umsatz"
               value={fmtEur(kpis.monthlyRevenue)}
