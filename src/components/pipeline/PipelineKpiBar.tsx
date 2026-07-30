@@ -306,14 +306,16 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads, active
         )}
 
         <button
-          onClick={() => setExpanded(!expanded)}
+          onClick={() => setExpanded(false)}
+          aria-expanded={true}
           className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
         >
           <BarChart3 className="h-3.5 w-3.5" />
-          {expanded ? "Weniger" : "Details"}
-          {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          Kennzahlen
+          <ChevronUp className="h-3 w-3" />
         </button>
       </div>
+      )}
 
       {expanded && (
         <div className="px-4 pb-4 pt-1 grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/10 border-t border-border/50">
