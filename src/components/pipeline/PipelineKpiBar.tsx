@@ -95,9 +95,11 @@ interface PipelineKpiBarProps {
   allContracts: any[];
   /** Leads with status "kunde" — needed for conversion calculation */
   kundeLeads: any[];
+  /** Distinct customers behind the active contracts (Träger + Standorte = 1 Kunde) */
+  activeCustomerCount?: number;
 }
 
-export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads }: PipelineKpiBarProps) {
+export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads, activeCustomerCount }: PipelineKpiBarProps) {
   const [expanded, setExpanded] = useState(false);
 
   const kpis = useMemo(() => {
@@ -289,6 +291,7 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads }: Pipe
             <KpiCard
               label="Aktive Verträge"
               value={kpis.aktivContracts}
+              sub={activeCustomerCount !== undefined ? `in ${activeCustomerCount} Kunden` : undefined}
               icon={<Building2 className="h-4 w-4" />}
               accent="success"
               tooltip="Anzahl aktiver Verträge. Standorte zählen einzeln, da jeder Standort separat abgerechnet wird."
