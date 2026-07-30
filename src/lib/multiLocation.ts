@@ -40,3 +40,27 @@ export function isStandortHfx(hfx: string | null | undefined): boolean {
   if (!hfx) return false;
   return /^HFX-[A-Z0-9]+-\d{2}$/i.test(hfx);
 }
+
+/**
+ * Dedup-Schlüssel für die Kunden-Zählung (#17 Phase 3).
+ * Contract-vs-Customer: mehrere Verträge (Träger + Standorte) gehören zu einem
+ * Kunden. Primärschlüssel ist `customer_id`; Altzeilen ohne customer_id fallen
+ * auf `hfx_customer_number` und zuletzt auf den Praxis-/Kundennamen zurück.
+ */
+export function customerKey(c: {
+  customer_id?: string | null;
+  hfx_customer_number?: string | null;
+  praxis?: string | null;
+  customer_name?: string | null;
+}): string {
+  if (c.customer_id) return `cust:${c.customer_id}`;
+  if (c.hfx_customer_number) return `hfx:${c.hfx_customer_number}`;
+  return `name:${(c.praxis || c.customer_name || "").toLowerCase().trim()}`;
+}
+
+/** Anzahl distinkter Kunden in einer Vertragsliste. */
+export function countDistinctCustomers(contracts: Parameters<typeof customerKey>[0][]): number {
+  const seen = new Set<string>();
+  for (const c of contracts) seen.add(customerKey(c));
+  return seen.size;
+}
