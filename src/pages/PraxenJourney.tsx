@@ -636,7 +636,19 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
             {isLoading ? (
               <tr><td colSpan={10} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : sorted.length === 0 ? (
-              <EmptyState icon={Users} title="Keine Interessenten gefunden" sub="Versuche einen anderen Filter oder lege einen neuen Interessenten an" />
+              overdueFilter || statusFilter !== "aktiv" ? (
+                <EmptyState
+                  icon={Users}
+                  title="Keine Treffer für diesen Filter."
+                  action={
+                    <button type="button" onClick={resetFilters} className="text-xs font-medium text-primary hover:underline">
+                      Filter zurücksetzen
+                    </button>
+                  }
+                />
+              ) : (
+                <EmptyState icon={Users} title="Keine Interessenten gefunden" sub="Versuche einen anderen Filter oder lege einen neuen Interessenten an" />
+              )
             ) : sorted.map((lead: any) => {
               const sc = leadStatusCfg[lead.status] ?? leadStatusCfg.neu;
               const src = getSource(lead);
