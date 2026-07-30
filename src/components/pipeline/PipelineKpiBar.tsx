@@ -242,22 +242,6 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads, active
               accent="primary"
               tooltip="Verträge in den Status Entwurf oder Eingegangen. Aktiver Bestand der Abschlussphase."
             />
-            <KpiCard
-              label="Wartet auf SEPA-Mandat"
-              value={kpis.wartetSepa}
-              sub="Mail noch nicht raus"
-              icon={<Mail className="h-4 w-4" />}
-              accent={kpis.wartetSepa > 0 ? "warning" : "muted"}
-              tooltip="Verträge im Status Eingegangen, bei denen die SEPA-Mandat-Mail noch nicht versendet wurde. Aktion durch Vertriebler nötig."
-            />
-            <KpiCard
-              label="Wartet auf Erteilung"
-              value={kpis.wartetMandat}
-              sub="Mail raus, Mandat offen"
-              icon={<ShieldCheck className="h-4 w-4" />}
-              accent={kpis.wartetMandat > 0 ? "warning" : "muted"}
-              tooltip="SEPA-Mandat-Mail wurde versendet (Pfad A) oder der Kunde hat über den Buchungslink gebucht (Pfad B). Wartet jetzt auf SEPA-Bestätigung über Stripe."
-            />
             {kpis.time.avgContractToActive !== null && (
               <KpiCard
                 label="⌀ Vertrag → Aktiv"
