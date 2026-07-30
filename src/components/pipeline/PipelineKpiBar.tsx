@@ -214,12 +214,11 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads, active
         {tab === "interessenten" && (
           <>
             <KpiCard
-              label="Qualifiziert"
-              value={kpis.qualifiziert}
-              sub="bereit für Vertrag"
-              icon={<Target className="h-4 w-4" />}
-              accent="success"
-              tooltip="Vom Vertriebler geprüft und für ernsthaft befunden. Bereit für Vertragsanlage."
+              label="Neu (ohne Kontakt)"
+              value={kpis.neu}
+              icon={<TrendingUp className="h-4 w-4" />}
+              accent={kpis.neu > 0 ? "warning" : "muted"}
+              tooltip="Leads mit Status Neu — Vertriebler hat noch nicht reagiert. Ziel: schneller Erstkontakt."
             />
             {kpis.time.avgLeadToContract !== null && (
               <KpiCard
