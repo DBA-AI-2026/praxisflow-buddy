@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
-  Users, TrendingUp, TrendingDown, Target, Clock, Globe, PenLine,
-  ChevronDown, ChevronUp, BarChart3, FileText, Mail, ShieldCheck,
+  TrendingUp, TrendingDown, Clock, Globe, PenLine,
+  ChevronDown, ChevronUp, BarChart3, FileText,
   Building2, Euro, XCircle,
 } from "lucide-react";
 import { differenceInDays } from "date-fns";
