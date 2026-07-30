@@ -773,9 +773,8 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
 const ABSCHLUSS_STATUSES = ["entwurf", "eingegangen", "gezeichnet"];
 
 function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeamFilter, initialFilter }: { search: string; highlightId?: string; missingEmailCount: number; matchesTeamFilter: (id?: string | null) => boolean; initialFilter?: string }) {
-  const [statusFilter, setStatusFilter] = useState<string>(
-    initialFilter === "missing_email" || initialFilter === "missing_confirmation" || initialFilter === "waiting_payment" ? "eingegangen" : "alle"
-  );
+  // Deep-Link setzt ausschließlich contractFilter; statusFilter bleibt "alle" (isWaitingForMandate ist SSOT)
+  const [statusFilter, setStatusFilter] = useState<string>("alle");
   const [contractFilter, setContractFilter] = useState<"missing_email" | "missing_confirmation" | "waiting_payment" | null>(
     initialFilter === "missing_email" ? "missing_email" : initialFilter === "missing_confirmation" ? "missing_confirmation" : initialFilter === "waiting_payment" ? "waiting_payment" : null
   );
@@ -787,13 +786,23 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
     else sp.delete("filter");
     setSearchParams(sp, { replace: true });
   };
+  // Konfliktmenge: contractFilter vs. staleFilter — nur eines gleichzeitig aktiv
   const toggleContractFilter = (key: "missing_email" | "waiting_payment") => {
     const next = contractFilter === key ? null : key;
     setContractFilter(next);
     syncUrlFilter(next);
-    if (next) setStatusFilter("eingegangen");
+    if (next) setStaleFilter(false);
   };
-  const toggleStale = () => setStaleFilter((v) => !v);
+  const toggleStale = () => {
+    setStaleFilter((v) => {
+      const next = !v;
+      if (next && contractFilter) {
+        setContractFilter(null);
+        syncUrlFilter(null);
+      }
+      return next;
+    });
+  };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
