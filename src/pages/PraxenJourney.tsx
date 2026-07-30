@@ -481,7 +481,8 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journey-leads"] });
-      queryClient.invalidateQueries({ queryKey: ["journey-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["kpi-leads-all"] });
+      queryClient.invalidateQueries({ queryKey: ["kpi-contracts-all"] });
       toast.success("Status aktualisiert");
     },
   });
@@ -780,7 +781,8 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
       if (error) throw error;
       toast.success(`SEPA-Mandat-Mail an ${contract.email} gesendet`);
       queryClient.invalidateQueries({ queryKey: ["journey-contracts-abschluss"] });
-      queryClient.invalidateQueries({ queryKey: ["journey-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["kpi-leads-all"] });
+      queryClient.invalidateQueries({ queryKey: ["kpi-contracts-all"] });
     } catch (err: any) {
       toast.error(err.message || "Fehler beim Senden der SEPA-Mandat-Mail");
     } finally {
@@ -1097,7 +1099,8 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
           onClose={() => {
             setSelectedContractId(null);
             queryClient.invalidateQueries({ queryKey: ["journey-contracts-abschluss"] });
-            queryClient.invalidateQueries({ queryKey: ["journey-counts"] });
+            queryClient.invalidateQueries({ queryKey: ["kpi-leads-all"] });
+      queryClient.invalidateQueries({ queryKey: ["kpi-contracts-all"] });
           }}
           input={{ type: "contract", contractId: selectedContractId }}
         />
