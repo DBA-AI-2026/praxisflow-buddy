@@ -209,13 +209,14 @@ function TH({ children, right, className, tier }: { children: React.ReactNode; r
   );
 }
 
-function EmptyState({ icon: Icon, title, sub }: { icon: React.ComponentType<any>; title: string; sub?: string }) {
+function EmptyState({ icon: Icon, title, sub, action }: { icon: React.ComponentType<any>; title: string; sub?: string; action?: React.ReactNode }) {
   return (
     <tr>
       <td colSpan={99} className="py-16 text-center">
         <Icon className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
         <p className="text-sm font-medium text-muted-foreground">{title}</p>
         {sub && <p className="text-xs text-muted-foreground/60 mt-1">{sub}</p>}
+        {action && <div className="mt-3">{action}</div>}
       </td>
     </tr>
   );
@@ -324,13 +325,32 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     else sp.delete("filter");
     setSearchParams(sp, { replace: true });
   };
+  // Konfliktmenge: overdueFilter vs. statusFilter "qualifiziert" — nur eines gleichzeitig aktiv
   const toggleOverdue = (key: "overdue7" | "overdue14") => {
     const next = overdueFilter === key ? null : key;
     setOverdueFilter(next);
     syncUrlFilter(next);
+    if (next && statusFilter === "qualifiziert") setStatusFilter("aktiv");
   };
   const toggleQualifiziert = () => {
-    setStatusFilter(statusFilter === "qualifiziert" ? "aktiv" : "qualifiziert");
+    const next = statusFilter === "qualifiziert" ? "aktiv" : "qualifiziert";
+    setStatusFilter(next);
+    if (next === "qualifiziert" && overdueFilter) {
+      setOverdueFilter(null);
+      syncUrlFilter(null);
+    }
+  };
+  const selectStatus = (next: LeadStatusFilter) => {
+    setStatusFilter(next);
+    if (overdueFilter) {
+      setOverdueFilter(null);
+      syncUrlFilter(null);
+    }
+  };
+  const resetFilters = () => {
+    setStatusFilter("aktiv");
+    setOverdueFilter(null);
+    syncUrlFilter(null);
   };
 
   useEffect(() => {
@@ -567,10 +587,10 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
       {/* Unified Toolbar */}
       <div className="p-4 border-b border-border flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex items-center gap-2 flex-wrap">
-          <FilterPill active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")} label="Im Prozess" count={activeCount} />
-          <FilterPill active={statusFilter === "kein_abschluss"} onClick={() => setStatusFilter("kein_abschluss")} label="Kein Abschluss" count={closedKeinCount} />
-          <FilterPill active={statusFilter === "abgelehnt"} onClick={() => setStatusFilter("abgelehnt")} label="Abgelehnt" count={closedAblCount} />
-          <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={teamLeads.length} />
+          <FilterPill active={statusFilter === "aktiv"} onClick={() => selectStatus("aktiv")} label="Im Prozess" count={activeCount} />
+          <FilterPill active={statusFilter === "kein_abschluss"} onClick={() => selectStatus("kein_abschluss")} label="Kein Abschluss" count={closedKeinCount} />
+          <FilterPill active={statusFilter === "abgelehnt"} onClick={() => selectStatus("abgelehnt")} label="Abgelehnt" count={closedAblCount} />
+          <FilterPill active={statusFilter === "alle"} onClick={() => selectStatus("alle")} label="Alle" count={teamLeads.length} />
 
           <span className="h-5 w-px bg-border mx-1" />
 
@@ -616,7 +636,19 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
             {isLoading ? (
               <tr><td colSpan={10} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : sorted.length === 0 ? (
-              <EmptyState icon={Users} title="Keine Interessenten gefunden" sub="Versuche einen anderen Filter oder lege einen neuen Interessenten an" />
+              overdueFilter || statusFilter !== "aktiv" ? (
+                <EmptyState
+                  icon={Users}
+                  title="Keine Treffer für diesen Filter."
+                  action={
+                    <button type="button" onClick={resetFilters} className="text-xs font-medium text-primary hover:underline">
+                      Filter zurücksetzen
+                    </button>
+                  }
+                />
+              ) : (
+                <EmptyState icon={Users} title="Keine Interessenten gefunden" sub="Versuche einen anderen Filter oder lege einen neuen Interessenten an" />
+              )
             ) : sorted.map((lead: any) => {
               const sc = leadStatusCfg[lead.status] ?? leadStatusCfg.neu;
               const src = getSource(lead);
@@ -741,9 +773,8 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
 const ABSCHLUSS_STATUSES = ["entwurf", "eingegangen", "gezeichnet"];
 
 function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeamFilter, initialFilter }: { search: string; highlightId?: string; missingEmailCount: number; matchesTeamFilter: (id?: string | null) => boolean; initialFilter?: string }) {
-  const [statusFilter, setStatusFilter] = useState<string>(
-    initialFilter === "missing_email" || initialFilter === "missing_confirmation" || initialFilter === "waiting_payment" ? "eingegangen" : "alle"
-  );
+  // Deep-Link setzt ausschließlich contractFilter; statusFilter bleibt "alle" (isWaitingForMandate ist SSOT)
+  const [statusFilter, setStatusFilter] = useState<string>("alle");
   const [contractFilter, setContractFilter] = useState<"missing_email" | "missing_confirmation" | "waiting_payment" | null>(
     initialFilter === "missing_email" ? "missing_email" : initialFilter === "missing_confirmation" ? "missing_confirmation" : initialFilter === "waiting_payment" ? "waiting_payment" : null
   );
@@ -755,13 +786,23 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
     else sp.delete("filter");
     setSearchParams(sp, { replace: true });
   };
+  // Konfliktmenge: contractFilter vs. staleFilter — nur eines gleichzeitig aktiv
   const toggleContractFilter = (key: "missing_email" | "waiting_payment") => {
     const next = contractFilter === key ? null : key;
     setContractFilter(next);
     syncUrlFilter(next);
-    if (next) setStatusFilter("eingegangen");
+    if (next) setStaleFilter(false);
   };
-  const toggleStale = () => setStaleFilter((v) => !v);
+  const toggleStale = () => {
+    setStaleFilter((v) => {
+      const next = !v;
+      if (next && contractFilter) {
+        setContractFilter(null);
+        syncUrlFilter(null);
+      }
+      return next;
+    });
+  };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
