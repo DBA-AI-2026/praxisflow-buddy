@@ -325,13 +325,32 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     else sp.delete("filter");
     setSearchParams(sp, { replace: true });
   };
+  // Konfliktmenge: overdueFilter vs. statusFilter "qualifiziert" — nur eines gleichzeitig aktiv
   const toggleOverdue = (key: "overdue7" | "overdue14") => {
     const next = overdueFilter === key ? null : key;
     setOverdueFilter(next);
     syncUrlFilter(next);
+    if (next && statusFilter === "qualifiziert") setStatusFilter("aktiv");
   };
   const toggleQualifiziert = () => {
-    setStatusFilter(statusFilter === "qualifiziert" ? "aktiv" : "qualifiziert");
+    const next = statusFilter === "qualifiziert" ? "aktiv" : "qualifiziert";
+    setStatusFilter(next);
+    if (next === "qualifiziert" && overdueFilter) {
+      setOverdueFilter(null);
+      syncUrlFilter(null);
+    }
+  };
+  const selectStatus = (next: LeadStatusFilter) => {
+    setStatusFilter(next);
+    if (overdueFilter) {
+      setOverdueFilter(null);
+      syncUrlFilter(null);
+    }
+  };
+  const resetFilters = () => {
+    setStatusFilter("aktiv");
+    setOverdueFilter(null);
+    syncUrlFilter(null);
   };
 
   useEffect(() => {
