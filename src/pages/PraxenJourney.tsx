@@ -803,6 +803,15 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
       return next;
     });
   };
+  // Status-Pillen sind exklusiv zu contractFilter/staleFilter
+  const selectStatus = (next: string) => {
+    setStatusFilter(next);
+    setStaleFilter(false);
+    if (contractFilter) {
+      setContractFilter(null);
+      syncUrlFilter(null);
+    }
+  };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
@@ -977,7 +986,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
 
       {/* Status filter pills */}
       <div className="p-4 border-b border-border flex flex-wrap gap-2 items-center">
-        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={teamContracts.length} />
+        <FilterPill active={statusFilter === "alle"} onClick={() => selectStatus("alle")} label="Alle" count={teamContracts.length} />
         {ABSCHLUSS_STATUSES.map((st) => {
           const cfg = CONTRACT_STATUS_CONFIG[st as keyof typeof CONTRACT_STATUS_CONFIG];
           if (!cfg) return null;
@@ -985,7 +994,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
             <FilterPill
               key={st}
               active={statusFilter === st}
-              onClick={() => setStatusFilter(st)}
+              onClick={() => selectStatus(st)}
               label={cfg.label}
               count={statusCounts[st] ?? 0}
             />
