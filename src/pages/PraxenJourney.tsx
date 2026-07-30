@@ -1282,7 +1282,7 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
         <FilterPill active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")} label="Aktiv" count={statusCounts.aktiv ?? 0} />
         <FilterPill active={statusFilter === "gekuendigt"} onClick={() => setStatusFilter("gekuendigt")} label="Gekündigt" count={statusCounts.gekuendigt ?? 0} />
         <FilterPill active={statusFilter === "beendet"} onClick={() => setStatusFilter("beendet")} label="Beendet" count={statusCounts.beendet ?? 0} />
-        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={teamContracts.length} />
+        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={alleCustomerCount} />
       </div>
 
       {/* Table */}
