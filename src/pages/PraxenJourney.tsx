@@ -587,10 +587,10 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
       {/* Unified Toolbar */}
       <div className="p-4 border-b border-border flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex items-center gap-2 flex-wrap">
-          <FilterPill active={statusFilter === "aktiv"} onClick={() => setStatusFilter("aktiv")} label="Im Prozess" count={activeCount} />
-          <FilterPill active={statusFilter === "kein_abschluss"} onClick={() => setStatusFilter("kein_abschluss")} label="Kein Abschluss" count={closedKeinCount} />
-          <FilterPill active={statusFilter === "abgelehnt"} onClick={() => setStatusFilter("abgelehnt")} label="Abgelehnt" count={closedAblCount} />
-          <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={teamLeads.length} />
+          <FilterPill active={statusFilter === "aktiv"} onClick={() => selectStatus("aktiv")} label="Im Prozess" count={activeCount} />
+          <FilterPill active={statusFilter === "kein_abschluss"} onClick={() => selectStatus("kein_abschluss")} label="Kein Abschluss" count={closedKeinCount} />
+          <FilterPill active={statusFilter === "abgelehnt"} onClick={() => selectStatus("abgelehnt")} label="Abgelehnt" count={closedAblCount} />
+          <FilterPill active={statusFilter === "alle"} onClick={() => selectStatus("alle")} label="Alle" count={teamLeads.length} />
 
           <span className="h-5 w-px bg-border mx-1" />
 
