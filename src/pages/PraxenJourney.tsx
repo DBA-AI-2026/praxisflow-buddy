@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { isWaitingForMandate } from "@/lib/contractLifecycle";
+import { countDistinctCustomers } from "@/lib/multiLocation";
 import { de } from "date-fns/locale";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -932,7 +933,7 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
 
       {/* Status filter pills */}
       <div className="p-4 border-b border-border flex flex-wrap gap-2 items-center">
-        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={teamContracts.length} />
+        <FilterPill active={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" count={alleCustomerCount} />
         {ABSCHLUSS_STATUSES.map((st) => {
           const cfg = CONTRACT_STATUS_CONFIG[st as keyof typeof CONTRACT_STATUS_CONFIG];
           if (!cfg) return null;
@@ -1195,10 +1196,12 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
   // back-compat alias for older code paths in this file
   const providerFlags = qodiaFlags;
 
+  // Phase 3: Pillen zählen distinkte Kunden je Status (Contract-vs-Customer)
   const statusCounts = KUNDEN_STATUSES.reduce((acc, s) => {
-    acc[s] = teamContracts.filter((c: any) => c.status === s).length;
+    acc[s] = countDistinctCustomers(teamContracts.filter((c: any) => c.status === s));
     return acc;
   }, {} as Record<string, number>);
+  const alleCustomerCount = countDistinctCustomers(teamContracts as any);
 
   const s = search.toLowerCase();
 
@@ -1566,7 +1569,7 @@ export default function PraxenJourney() {
     queryKey: ["kpi-contracts-all", user?.id],
     queryFn: async () => {
       if (isTippgeber) return [];
-      let q = supabase.from("contracts").select("id, status, created_at, start_date, hfx_customer_number, sales_partner_id, created_by, monthly_price, updated_at, mandate_email_sent_at, customer_confirmed_at");
+      let q = supabase.from("contracts").select("id, status, created_at, start_date, hfx_customer_number, customer_id, praxis, customer_name, sales_partner_id, created_by, monthly_price, updated_at, mandate_email_sent_at, customer_confirmed_at");
       if (isSalesPartner && user?.id) q = q.or(`sales_partner_id.eq.${user.id},created_by.eq.${user.id}`);
       const { data } = await q;
       return data ?? [];
@@ -1592,7 +1595,8 @@ export default function PraxenJourney() {
   const counts = useMemo(() => ({
     leads: kpiTeamLeads.filter((l: any) => ACTIVE_LEAD_STATUSES.includes(l.status)).length,
     abschluss: kpiTeamContracts.filter((c: any) => ["entwurf", "eingegangen", "gezeichnet"].includes(c.status)).length,
-    kunden: kpiTeamContracts.filter((c: any) => c.status === "aktiv").length,
+    // Phase 3: Badge zählt distinkte Kunden, nicht Verträge (Träger + Standorte = 1 Kunde)
+    kunden: countDistinctCustomers(kpiTeamContracts.filter((c: any) => c.status === "aktiv")),
     missingEmail: kpiTeamContracts.filter((c: any) => c.status === "eingegangen" && !c.mandate_email_sent_at).length,
   }), [kpiTeamLeads, kpiTeamContracts]);
 
@@ -1615,6 +1619,7 @@ export default function PraxenJourney() {
           allLeads={kpiLeadsNonKunde}
           allContracts={kpiTeamContracts}
           kundeLeads={kpiLeadsKunde}
+          activeCustomerCount={countDistinctCustomers(kpiTeamContracts.filter((c: any) => c.status === "aktiv"))}
         />
         <JourneyTabBar activeTab={tab} onSelect={(t) => setTab(t as any)} tabs={tabs} />
 
