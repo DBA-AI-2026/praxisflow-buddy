@@ -210,6 +210,20 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads, active
   return (
     <TooltipProvider delayDuration={200}>
     <div className="border-b border-border">
+      {!expanded && (
+        <div className="px-4 py-1.5 flex items-center bg-card/50">
+          <button
+            onClick={() => setExpanded(true)}
+            aria-expanded={false}
+            className="ml-auto flex items-center gap-1 px-3 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+            Kennzahlen
+            <ChevronDown className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+      {expanded && (
       <div className="px-4 py-3 flex items-center gap-3 flex-wrap bg-card/50">
         {tab === "interessenten" && (
           <>
