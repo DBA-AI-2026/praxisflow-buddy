@@ -1372,6 +1372,54 @@ export type Database = {
         }
         Relationships: []
       }
+      goae_commission_config: {
+        Row: {
+          ad_signup_bonus: number
+          ad_usage_months: number
+          ad_usage_rate: number
+          created_at: string
+          created_by: string | null
+          id: string
+          is_current: boolean
+          note: string | null
+          partner_usage_rate: number
+          tippgeber_bonus: number
+          tippgeber_revenue_threshold: number
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          ad_signup_bonus: number
+          ad_usage_months: number
+          ad_usage_rate: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_current?: boolean
+          note?: string | null
+          partner_usage_rate: number
+          tippgeber_bonus: number
+          tippgeber_revenue_threshold: number
+          updated_at?: string
+          version: number
+        }
+        Update: {
+          ad_signup_bonus?: number
+          ad_usage_months?: number
+          ad_usage_rate?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_current?: boolean
+          note?: string | null
+          partner_usage_rate?: number
+          tippgeber_bonus?: number
+          tippgeber_revenue_threshold?: number
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       integration_settings: {
         Row: {
           api_key_encrypted: string | null
@@ -2852,6 +2900,38 @@ export type Database = {
           p_storage_path: string
         }
         Returns: number
+      }
+      create_goae_commission_config: {
+        Args: {
+          p_ad_signup_bonus: number
+          p_ad_usage_months: number
+          p_ad_usage_rate: number
+          p_note?: string
+          p_partner_usage_rate: number
+          p_tippgeber_bonus: number
+          p_tippgeber_revenue_threshold: number
+        }
+        Returns: {
+          ad_signup_bonus: number
+          ad_usage_months: number
+          ad_usage_rate: number
+          created_at: string
+          created_by: string | null
+          id: string
+          is_current: boolean
+          note: string | null
+          partner_usage_rate: number
+          tippgeber_bonus: number
+          tippgeber_revenue_threshold: number
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "goae_commission_config"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       get_cron_secret: { Args: never; Returns: string }
       get_fk_unique_columns: {
