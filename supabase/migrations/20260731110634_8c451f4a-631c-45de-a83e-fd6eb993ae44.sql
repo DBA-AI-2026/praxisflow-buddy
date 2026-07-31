@@ -1,0 +1,2 @@
+REVOKE EXECUTE ON FUNCTION public.create_goae_commission_config(numeric, numeric, integer, numeric, numeric, numeric, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.create_goae_commission_config(numeric, numeric, integer, numeric, numeric, numeric, text) TO authenticated;
