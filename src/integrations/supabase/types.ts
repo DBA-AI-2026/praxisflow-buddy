@@ -1375,14 +1375,17 @@ export type Database = {
       goae_commission_config: {
         Row: {
           ad_signup_bonus: number
+          ad_signup_sprint_amount: number
+          ad_signup_sprint_end: string
+          ad_signup_sprint_threshold: number
           ad_usage_months: number
-          ad_usage_rate: number
+          ad_usage_percent: number
           created_at: string
           created_by: string | null
           id: string
           is_current: boolean
           note: string | null
-          partner_usage_rate: number
+          partner_usage_percent: number
           tippgeber_bonus: number
           tippgeber_revenue_threshold: number
           updated_at: string
@@ -1390,14 +1393,17 @@ export type Database = {
         }
         Insert: {
           ad_signup_bonus: number
+          ad_signup_sprint_amount: number
+          ad_signup_sprint_end: string
+          ad_signup_sprint_threshold: number
           ad_usage_months: number
-          ad_usage_rate: number
+          ad_usage_percent: number
           created_at?: string
           created_by?: string | null
           id?: string
           is_current?: boolean
           note?: string | null
-          partner_usage_rate: number
+          partner_usage_percent: number
           tippgeber_bonus: number
           tippgeber_revenue_threshold: number
           updated_at?: string
@@ -1405,14 +1411,17 @@ export type Database = {
         }
         Update: {
           ad_signup_bonus?: number
+          ad_signup_sprint_amount?: number
+          ad_signup_sprint_end?: string
+          ad_signup_sprint_threshold?: number
           ad_usage_months?: number
-          ad_usage_rate?: number
+          ad_usage_percent?: number
           created_at?: string
           created_by?: string | null
           id?: string
           is_current?: boolean
           note?: string | null
-          partner_usage_rate?: number
+          partner_usage_percent?: number
           tippgeber_bonus?: number
           tippgeber_revenue_threshold?: number
           updated_at?: string
@@ -2904,23 +2913,29 @@ export type Database = {
       create_goae_commission_config: {
         Args: {
           p_ad_signup_bonus: number
+          p_ad_signup_sprint_amount: number
+          p_ad_signup_sprint_end: string
+          p_ad_signup_sprint_threshold: number
           p_ad_usage_months: number
-          p_ad_usage_rate: number
+          p_ad_usage_percent: number
           p_note?: string
-          p_partner_usage_rate: number
+          p_partner_usage_percent: number
           p_tippgeber_bonus: number
           p_tippgeber_revenue_threshold: number
         }
         Returns: {
           ad_signup_bonus: number
+          ad_signup_sprint_amount: number
+          ad_signup_sprint_end: string
+          ad_signup_sprint_threshold: number
           ad_usage_months: number
-          ad_usage_rate: number
+          ad_usage_percent: number
           created_at: string
           created_by: string | null
           id: string
           is_current: boolean
           note: string | null
-          partner_usage_rate: number
+          partner_usage_percent: number
           tippgeber_bonus: number
           tippgeber_revenue_threshold: number
           updated_at: string
