@@ -1302,26 +1302,48 @@ async function processFailedInvoiceRetry(params: {
       .eq("id", invoice.id);
 
     // 3) Items explizit attachen
+    let itemAmountSum = 0;
     for (const pos of positions) {
-      if (pos.quantity * pos.unit_price <= 0) continue;
+      // === 0 statt <= 0: negative Positionen (Freikontingent-Abzug,
+      // EBM-Sondervereinbarung) MÜSSEN an Stripe übermittelt werden.
+      // Ein <=-Vergleich verschluckte sie und zog den Rohbetrag ein
+      // (Vorfall RE-2026-0032, 01.08.2026).
+      // ROLLBACK 03.08.2026: === 0 zurück auf <= 0 und Summenprüfung
+      // vor finalizeInvoice entfernen.
+      if (pos.quantity * pos.unit_price === 0) continue;
+      const itemAmount = Math.round(pos.quantity * pos.unit_price * 100);
       const item = await stripe.invoiceItems.create({
         customer: contract.stripe_customer_id,
         invoice: stripeInvoice.id,
-        amount: Math.round(pos.quantity * pos.unit_price * 100),
+        amount: itemAmount,
         currency: "eur",
         description: pos.description,
         tax_rates: [],
       });
+      itemAmountSum += itemAmount;
       createdItemIds.push(item.id);
     }
+    const taxItemAmount = Math.round(taxAmount * 100);
     const taxItem = await stripe.invoiceItems.create({
       customer: contract.stripe_customer_id,
       invoice: stripeInvoice.id,
-      amount: Math.round(taxAmount * 100),
+      amount: taxItemAmount,
       currency: "eur",
       description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
     });
+    itemAmountSum += taxItemAmount;
     createdItemIds.push(taxItem.id);
+
+    // Summenprüfung vor finalize: Stripe-Items vs. interne Bruttosumme
+    const expectedCents = Math.round(grossAmount * 100);
+    const diffCents = Math.abs(itemAmountSum - expectedCents);
+    if (diffCents === 1) {
+      console.warn(`[auto-invoice][retry] Rundungstoleranz 1 Cent bei ${invoice.invoice_number} (contract ${contract.id})`);
+    } else if (diffCents >= 2) {
+      console.error(`[auto-invoice][retry] Summenabweichung ${diffCents} Cent bei ${invoice.invoice_number} (contract ${contract.id}): Soll ${expectedCents}, Ist ${itemAmountSum}`);
+      throw new Error(`Summenabweichung Stripe-Items (${itemAmountSum}) vs. Bruttobetrag (${expectedCents}) = ${diffCents} Cent – Einzug abgebrochen`);
+    }
+
 
     // 4) Finalize + Pay
     const finalized = await stripe.invoices.finalizeInvoice(stripeInvoice.id);
