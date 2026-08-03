@@ -1042,6 +1042,44 @@ async function handleSepaMandateSetup(
     }
   }
 
+  // ── Ensure default_payment_method is set on the Stripe customer ──
+  // Beim Umbau auf den sepa_mandate_setup-Pfad (08.05.2026) blieb
+  // dieser Block im deprecated contract_activation-Zweig zurück.
+  // Ohne ihn hat kein Kunde eine Standard-Zahlungsmethode und jeder
+  // automatische Einzug scheitert mit HTTP 402.
+  // Bewusst NICHT unter dem carrierJustActivated-Gate: Bestandsverträge
+  // sind bereits aktiv, das Gate bliebe bei ihnen geschlossen.
+  // SYNCHRONIZE WITH stripe-webhook:770-797 (deprecated Zwilling).
+  // ROLLBACK 03.08.2026: diesen Block ersatzlos entfernen.
+  if (stripeCustomerId) {
+    try {
+      const customer = await stripe.customers.retrieve(stripeCustomerId) as Stripe.Customer;
+      const currentDefault = customer.invoice_settings?.default_payment_method;
+      if (!currentDefault) {
+        const pms = await stripe.paymentMethods.list({
+          customer: stripeCustomerId,
+          type: "sepa_debit",
+        });
+        if (pms.data.length === 1) {
+          await stripe.customers.update(stripeCustomerId, {
+            invoice_settings: { default_payment_method: pms.data[0].id },
+          });
+          log("Set SEPA default_payment_method after contract activation", {
+            stripeCustomerId,
+            pmId: pms.data[0].id,
+          });
+        } else if (pms.data.length > 1) {
+          log("WARN: multiple SEPA PMs, cannot auto-set default", {
+            stripeCustomerId,
+            count: pms.data.length,
+          });
+        }
+      }
+    } catch (pmErr) {
+      log("WARN: could not ensure default_payment_method", String(pmErr));
+    }
+  }
+
   // ── Multi-Standort: Geschwister-Sweep ────────────────────────────────────────
   // Nur bei echter Träger-Aktivierung dieses Events (S1). Streng kunden-gescoped
   // (S4: customer_id IS NOT NULL). Niemals über stripe_customer_id.
