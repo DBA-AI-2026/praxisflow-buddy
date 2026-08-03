@@ -636,7 +636,13 @@ Deno.serve(async (req) => {
               .eq("id", invoice.id);
 
             for (const pos of positions) {
-              if (pos.quantity * pos.unit_price <= 0) continue;
+              // === 0 statt <= 0: negative Positionen (Freikontingent-Abzug,
+              // EBM-Sondervereinbarung) MÜSSEN an Stripe übermittelt werden.
+              // Ein <=-Vergleich verschluckte sie und zog den Rohbetrag ein
+              // (Vorfall RE-2026-0032, 01.08.2026).
+              // ROLLBACK 03.08.2026: === 0 zurück auf <= 0 und Summenprüfung
+              // vor finalizeInvoice entfernen.
+              if (pos.quantity * pos.unit_price === 0) continue;
               const item = await stripe.invoiceItems.create({
                 customer: contract.stripe_customer_id,
                 invoice: stripeInvoice.id,
