@@ -409,6 +409,16 @@ export default function Dashboard() {
                       to="/pipeline?tab=abschlussphase&filter=waiting_payment"
                     />
                   )}
+                  {role === "admin" && failedInvoices.length > 0 && (
+                    <AlertRow
+                      icon={AlertTriangle}
+                      iconClass="text-destructive"
+                      bgClass="bg-destructive/5"
+                      label={`${failedInvoices.length} Rechnung(en) mit fehlgeschlagenem Einzug`}
+                      sub="SEPA-Einzug gescheitert – bitte prüfen und erneut auslösen"
+                      to="/rechnungen?status=zahlung_fehlgeschlagen"
+                    />
+                  )}
                 </>
               )}
             </div>
