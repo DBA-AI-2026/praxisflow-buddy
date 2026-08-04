@@ -415,7 +415,10 @@ export default function Rechnungen() {
   };
 
   // Einzug wiederholen (admin-only). Beliebig oft drückbar, kein Zähler, keine Sperre.
-  const handleRetryCharge = async (invoice: Invoice) => {
+  const handleRetryCharge = async () => {
+    if (!retryTarget) return;
+    const invoice = retryTarget;
+    setRetryTarget(null);
     setRetryingId(invoice.id);
     try {
       const { data, error } = await supabase.functions.invoke("auto-invoice", {
@@ -431,6 +434,7 @@ export default function Rechnungen() {
       setRetryingId(null);
     }
   };
+
 
   const filtered = invoices.filter((inv) =>
     (!statusParam || inv.status === statusParam) &&
