@@ -135,6 +135,21 @@ export default function Dashboard() {
     },
   });
 
+  // ── Rechnungen mit fehlgeschlagenem SEPA-Einzug (nur Admin) ──
+  const { data: failedInvoices = [] } = useQuery({
+    queryKey: ["dashboard-failed-invoices", role],
+    enabled: role === "admin",
+    staleTime: 0,
+    refetchOnMount: "always",
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("invoices")
+        .select("id, invoice_number, customer_name, gross_amount, status")
+        .eq("status", "zahlung_fehlgeschlagen");
+      return data ?? [];
+    },
+  });
+
   // ── BLOCK 2: "Seit gestern reingekommen" ──
   const { data: newSinceYesterday } = useQuery({
     queryKey: ["dashboard-new-since-yesterday", role, user?.id],
