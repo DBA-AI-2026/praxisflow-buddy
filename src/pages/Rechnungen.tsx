@@ -147,7 +147,11 @@ function calcAmounts(positions: InvoicePosition[], taxRate: number) {
 
 export default function Rechnungen() {
   const { toast } = useToast();
-  const { isAdmin } = useUserRole();
+  const { isAdmin, role } = useUserRole();
+  const [searchParams] = useSearchParams();
+  // Deep-Link aus der Dashboard-Kachel: /rechnungen?status=zahlung_fehlgeschlagen
+  const statusParam = searchParams.get("status");
+  const [retryingId, setRetryingId] = useState<string | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
