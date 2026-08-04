@@ -345,65 +345,69 @@ Deno.serve(async (req) => {
     }
 
     // 4) Send invoice email (SSOT: renderBrandedEmail + _shared/invoiceEmailParts)
-    const positionsHtml = renderPositionsRows(positions);
-    const tableHtml = renderPositionsTable(positionsHtml);
-    const totalsHtml = renderTotalsBlock({ net: netAmount, tax: taxAmount, gross: grossAmount });
-    const noticeHtml = stripeChargeFailed
-      ? renderStripeFailedBox({ includeRetryHint: false })
-      : renderSepaOkBox();
+    // 0-€-Gate: bei vollständigem Freikontingent-Abzug keine Rechnungsmail.
+    let sendResult: any = null;
+    if (grossAmount > 0) {
+      const positionsHtml = renderPositionsRows(positions);
+      const tableHtml = renderPositionsTable(positionsHtml);
+      const totalsHtml = renderTotalsBlock({ net: netAmount, tax: taxAmount, gross: grossAmount });
+      const noticeHtml = stripeChargeFailed
+        ? renderStripeFailedBox({ includeRetryHint: false })
+        : renderSepaOkBox();
 
-    const introHtml = `
-    <p style="font-size:15px;color:#333;">Sehr geehrte Damen und Herren,</p>
-    <p style="color:#555;font-size:14px;line-height:1.6;">anbei erhalten Sie Ihre <strong>Zwischenabrechnung ${invoice.invoice_number}</strong> vom <strong>${fmtDeDate(todayStr)}</strong> für den Verbrauchszeitraum <strong>${fmtDeDate(periodFrom)} – ${fmtDeDate(periodTo)}</strong>.</p>
-    <p style="color:#555;font-size:14px;"><strong>Rechnungsempfänger:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</p>`;
+      const introHtml = `
+      <p style="font-size:15px;color:#333;">Sehr geehrte Damen und Herren,</p>
+      <p style="color:#555;font-size:14px;line-height:1.6;">anbei erhalten Sie Ihre <strong>Zwischenabrechnung ${invoice.invoice_number}</strong> vom <strong>${fmtDeDate(todayStr)}</strong> für den Verbrauchszeitraum <strong>${fmtDeDate(periodFrom)} – ${fmtDeDate(periodTo)}</strong>.</p>
+      <p style="color:#555;font-size:14px;"><strong>Rechnungsempfänger:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</p>`;
 
-    const bodyHtml = `${introHtml}
-    ${tableHtml}
-    ${totalsHtml}
-    ${noticeHtml}
-    <p style="font-size:12px;color:#9ca3af;margin-top:8px;">Diese Zwischenabrechnung wurde manuell ausgelöst.</p>`;
+      const bodyHtml = `${introHtml}
+      ${tableHtml}
+      ${totalsHtml}
+      ${noticeHtml}
+      <p style="font-size:12px;color:#9ca3af;margin-top:8px;">Diese Zwischenabrechnung wurde manuell ausgelöst.</p>`;
 
-    const bodyText = [
-      `Sehr geehrte Damen und Herren,`,
-      ``,
-      `anbei erhalten Sie Ihre Zwischenabrechnung ${invoice.invoice_number} vom ${fmtDeDate(todayStr)} für den Verbrauchszeitraum ${fmtDeDate(periodFrom)} – ${fmtDeDate(periodTo)}.`,
-      `Rechnungsempfänger: ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}`,
-      ``,
-      ...positions.map((p) => `- ${p.description} | ${p.quantity} × ${Number(p.unit_price).toFixed(2)} € = ${(p.quantity * p.unit_price).toFixed(2)} €`),
-      ``,
-      `Nettobetrag: ${netAmount.toFixed(2)} €`,
-      `MwSt. (19%): ${taxAmount.toFixed(2)} €`,
-      `Gesamtbetrag: ${grossAmount.toFixed(2)} €`,
-      ``,
-      stripeChargeFailed
-        ? `Hinweis: Automatischer Einzug aktuell nicht möglich. Bei Rückfragen: info@hfx-honorarfuchs.de.`
-        : `Der Betrag wird automatisch von Ihrem hinterlegten SEPA-Konto eingezogen.`,
-      ``,
-      `Diese Zwischenabrechnung wurde manuell ausgelöst.`,
-    ].join("\n");
+      const bodyText = [
+        `Sehr geehrte Damen und Herren,`,
+        ``,
+        `anbei erhalten Sie Ihre Zwischenabrechnung ${invoice.invoice_number} vom ${fmtDeDate(todayStr)} für den Verbrauchszeitraum ${fmtDeDate(periodFrom)} – ${fmtDeDate(periodTo)}.`,
+        `Rechnungsempfänger: ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}`,
+        ``,
+        ...positions.map((p) => `- ${p.description} | ${p.quantity} × ${Number(p.unit_price).toFixed(2)} € = ${(p.quantity * p.unit_price).toFixed(2)} €`),
+        ``,
+        `Nettobetrag: ${netAmount.toFixed(2)} €`,
+        `MwSt. (19%): ${taxAmount.toFixed(2)} €`,
+        `Gesamtbetrag: ${grossAmount.toFixed(2)} €`,
+        ``,
+        stripeChargeFailed
+          ? `Hinweis: Automatischer Einzug aktuell nicht möglich. Bei Rückfragen: info@hfx-honorarfuchs.de.`
+          : `Der Betrag wird automatisch von Ihrem hinterlegten SEPA-Konto eingezogen.`,
+        ``,
+        `Diese Zwischenabrechnung wurde manuell ausgelöst.`,
+      ].join("\n");
 
-    const { html: emailHtml } = renderBrandedEmail({
-      subheadline: "Ihre Zwischenabrechnung",
-      bodyHtml,
-      bodyText,
-    });
+      const { html: emailHtml } = renderBrandedEmail({
+        subheadline: "Ihre Zwischenabrechnung",
+        bodyHtml,
+        bodyText,
+      });
 
-    const sendResult = await resend.emails.send({
-      from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
-      reply_to: "info@hfx-honorarfuchs.de",
-      to: [emailTo],
-      subject: `Zwischenabrechnung ${invoice.invoice_number} – ${contract.customer_name}`,
-      html: emailHtml,
-      text: bodyText,
-    });
+      sendResult = await resend.emails.send({
+        from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+        reply_to: "info@hfx-honorarfuchs.de",
+        to: [emailTo],
+        subject: `Zwischenabrechnung ${invoice.invoice_number} – ${contract.customer_name}`,
+        html: emailHtml,
+        text: bodyText,
+      });
 
-    if (stripeChargeFailed) {
-      await supabase.from("invoices").update({ email_sent_at: nowIso }).eq("id", invoice.id);
-    } else {
-      await supabase.from("invoices")
-        .update({ status: "versendet", email_sent_at: nowIso })
-        .eq("id", invoice.id)
-        .not("status", "in", "(bezahlt,storniert)");
+      if (stripeChargeFailed) {
+        await supabase.from("invoices").update({ email_sent_at: nowIso }).eq("id", invoice.id);
+      } else {
+        await supabase.from("invoices")
+          .update({ status: "versendet", email_sent_at: nowIso })
+          .eq("id", invoice.id)
+          .not("status", "in", "(bezahlt,storniert)");
+      }
     }
 
     // 5) FiBu event: invoice_usage_created (only when Stripe succeeded — same rule as auto-invoice)
