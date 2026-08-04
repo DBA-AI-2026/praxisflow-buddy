@@ -721,6 +721,19 @@ export default function Rechnungen() {
                                   <Send className="h-4 w-4" />
                                 </Button>
                               )}
+                              {inv.status === "zahlung_fehlgeschlagen" && role === "admin" && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-1.5"
+                                  onClick={() => handleRetryCharge(inv)}
+                                  disabled={retryingId === inv.id}
+                                  title="SEPA-Einzug erneut auslösen"
+                                >
+                                  <RefreshCw className={`h-3.5 w-3.5 ${retryingId === inv.id ? "animate-spin" : ""}`} />
+                                  {retryingId === inv.id ? "Läuft…" : "Einzug wiederholen"}
+                                </Button>
+                              )}
                               {inv.status === "entwurf" && (
                                 <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(inv)} title="Löschen">
                                   <Trash2 className="h-4 w-4 text-destructive" />
