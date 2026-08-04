@@ -173,6 +173,8 @@ export default function Rechnungen() {
   const [showCreate, setShowCreate] = useState(false);
   const [showDetail, setShowDetail] = useState<Invoice | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null);
+  const [retryTarget, setRetryTarget] = useState<Invoice | null>(null);
+
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [detailEmail, setDetailEmail] = useState<string>("");
