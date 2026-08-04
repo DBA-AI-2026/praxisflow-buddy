@@ -1373,11 +1373,20 @@ async function processFailedInvoiceRetry(params: {
       },
     });
 
-    // 2) stripe_invoice_id sofort persistieren
+    // 2) stripe_invoice_id sofort persistieren.
+    //    Vorher die alte (voidete) Stripe-ID revisionssicher in notes festhalten,
+    //    damit die Historie des fehlgeschlagenen Einzugs nicht verloren geht.
+    const previousStripeInvoiceId: string | null = invoice.stripe_invoice_id ?? null;
+    const notesUpdate = previousStripeInvoiceId
+      ? {
+          notes: `${invoice.notes ?? ""} | Vorheriger Stripe-Einzug fehlgeschlagen: ${previousStripeInvoiceId} (storniert)`.replace(/^ \| /, ""),
+        }
+      : {};
     await supabase
       .from("invoices")
-      .update({ stripe_invoice_id: stripeInvoice.id })
+      .update({ stripe_invoice_id: stripeInvoice.id, ...notesUpdate })
       .eq("id", invoice.id);
+
 
     // 3) Items explizit attachen
     let itemAmountSum = 0;
