@@ -4,6 +4,7 @@ import Stripe from "npm:stripe@14.21.0";
 import { isGoaeProduct, isCarrierContract, healCustomerStripeId } from "../_shared/multiLocation.ts";
 import { createGoaeCommissions } from "../_shared/goaeCommissions.ts";
 import { computeEffectiveUsageNet } from "../_shared/freeQuota.ts";
+import { requireActiveRole } from "../_shared/auth.ts";
 import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
 import {
   renderPositionsRows,
