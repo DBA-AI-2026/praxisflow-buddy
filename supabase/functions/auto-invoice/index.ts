@@ -1284,16 +1284,19 @@ async function processFailedInvoiceRetry(params: {
     .maybeSingle();
   if (contractErr || !contract) {
     console.error(`[auto-invoice][retry] Vertrag für Invoice ${invoice.invoice_number} nicht gefunden.`);
+    note("Zugehöriger Vertrag nicht gefunden – kein Einzug möglich.");
     return "skipped";
   }
 
   if (!contract.stripe_customer_id) {
     console.warn(`[auto-invoice][retry] Vertrag ${contract.id} hat (mehr) kein stripe_customer_id – Retry übersprungen.`);
+    note("Vertrag hat keine Stripe-Kundennummer – kein Einzug möglich.");
     return "skipped";
   }
 
   if (contract.status === "gesperrt") {
     console.log(`[auto-invoice][retry] Vertrag ${contract.id} ist gesperrt – Retry übersprungen.`);
+    note("Vertrag ist gesperrt – kein Einzug möglich.");
     return "skipped";
   }
 
@@ -1305,8 +1308,10 @@ async function processFailedInvoiceRetry(params: {
 
   if (grossAmount <= 0 || positions.length === 0) {
     console.warn(`[auto-invoice][retry] Invoice ${invoice.invoice_number} hat keine Positionen / 0 €, kein Retry.`);
+    note("Rechnung hat keine Positionen bzw. 0 € – kein Einzug möglich.");
     return "skipped";
   }
+
 
   // Period rekonstruieren
   const [py, pm] = periodMonthStr.split("-").map((s: string) => Number(s));
