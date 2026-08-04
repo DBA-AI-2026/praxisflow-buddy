@@ -1200,7 +1200,34 @@ export default function Rechnungen() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Ungeklaert – Vertrag zuordnen Modal */}
+      {/* Retry payment confirm */}
+      <AlertDialog open={!!retryTarget} onOpenChange={() => setRetryTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Einzug wiederholen?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Kunde: <strong>{retryTarget?.customer_name}</strong>
+                <br />
+                Rechnung: <strong>{retryTarget?.invoice_number}</strong>
+                <br />
+                Bruttobetrag: <strong>{retryTarget ? `${retryTarget.gross_amount.toFixed(2)} €` : ""}</strong>
+              </p>
+              <p>
+                Es wird sofort eine neue Stripe-Rechnung erzeugt und der Betrag per SEPA-Lastschrift eingezogen. Der Kunde wird nicht automatisch informiert.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setRetryTarget(null)}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRetryCharge} className="bg-destructive hover:bg-destructive/90">
+              Einzug jetzt auslösen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+
       {resolveCharge && (
         <Dialog open={!!resolveCharge} onOpenChange={(o) => { if (!o) { setResolveCharge(null); setResolveContractId(""); } }}>
           <DialogContent className="max-w-lg">
