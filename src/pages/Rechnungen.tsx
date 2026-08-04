@@ -173,6 +173,8 @@ export default function Rechnungen() {
   const [showCreate, setShowCreate] = useState(false);
   const [showDetail, setShowDetail] = useState<Invoice | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null);
+  const [retryTarget, setRetryTarget] = useState<Invoice | null>(null);
+
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [detailEmail, setDetailEmail] = useState<string>("");
@@ -413,7 +415,10 @@ export default function Rechnungen() {
   };
 
   // Einzug wiederholen (admin-only). Beliebig oft drückbar, kein Zähler, keine Sperre.
-  const handleRetryCharge = async (invoice: Invoice) => {
+  const handleRetryCharge = async () => {
+    if (!retryTarget) return;
+    const invoice = retryTarget;
+    setRetryTarget(null);
     setRetryingId(invoice.id);
     try {
       const { data, error } = await supabase.functions.invoke("auto-invoice", {
@@ -429,6 +434,7 @@ export default function Rechnungen() {
       setRetryingId(null);
     }
   };
+
 
   const filtered = invoices.filter((inv) =>
     (!statusParam || inv.status === statusParam) &&
@@ -726,7 +732,7 @@ export default function Rechnungen() {
                                   variant="outline"
                                   size="sm"
                                   className="gap-1.5"
-                                  onClick={() => handleRetryCharge(inv)}
+                                  onClick={() => setRetryTarget(inv)}
                                   disabled={retryingId === inv.id}
                                   title="SEPA-Einzug erneut auslösen"
                                 >
@@ -734,6 +740,7 @@ export default function Rechnungen() {
                                   {retryingId === inv.id ? "Läuft…" : "Einzug wiederholen"}
                                 </Button>
                               )}
+
                               {inv.status === "entwurf" && (
                                 <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(inv)} title="Löschen">
                                   <Trash2 className="h-4 w-4 text-destructive" />
@@ -1193,7 +1200,34 @@ export default function Rechnungen() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Ungeklaert – Vertrag zuordnen Modal */}
+      {/* Retry payment confirm */}
+      <AlertDialog open={!!retryTarget} onOpenChange={() => setRetryTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Einzug wiederholen?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Kunde: <strong>{retryTarget?.customer_name}</strong>
+                <br />
+                Rechnung: <strong>{retryTarget?.invoice_number}</strong>
+                <br />
+                Bruttobetrag: <strong>{retryTarget ? `${retryTarget.gross_amount.toFixed(2)} €` : ""}</strong>
+              </p>
+              <p>
+                Es wird sofort eine neue Stripe-Rechnung erzeugt und der Betrag per SEPA-Lastschrift eingezogen. Der Kunde wird nicht automatisch informiert.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setRetryTarget(null)}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRetryCharge} className="bg-destructive hover:bg-destructive/90">
+              Einzug jetzt auslösen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+
       {resolveCharge && (
         <Dialog open={!!resolveCharge} onOpenChange={(o) => { if (!o) { setResolveCharge(null); setResolveContractId(""); } }}>
           <DialogContent className="max-w-lg">
