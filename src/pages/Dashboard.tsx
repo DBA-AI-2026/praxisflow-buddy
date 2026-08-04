@@ -209,7 +209,7 @@ export default function Dashboard() {
   );
   const contractsWaitingPayment = filteredContractAlerts.filter((c: any) => isWaitingForMandate(c));
 
-  const totalAlerts = overdueLeads14.length + overdueLeads7.length + contractsMissingMandateMail.length + contractsMissingConfirmationMail.length + contractsWaitingPayment.length;
+  const totalAlerts = overdueLeads14.length + overdueLeads7.length + contractsMissingMandateMail.length + contractsMissingConfirmationMail.length + contractsWaitingPayment.length + failedInvoices.length;
 
   // "Seit gestern" — team-filter for regional leads
   const newLeads = useMemo(() => {
