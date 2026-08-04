@@ -412,11 +412,31 @@ export default function Rechnungen() {
     setDeleteTarget(null);
   };
 
+  // Einzug wiederholen (admin-only). Beliebig oft drückbar, kein Zähler, keine Sperre.
+  const handleRetryCharge = async (invoice: Invoice) => {
+    setRetryingId(invoice.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("auto-invoice", {
+        body: { invoice_id: invoice.id },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Einzug erneut fehlgeschlagen.");
+      toast({ title: "Einzug erfolgreich", description: `Rechnung ${invoice.invoice_number} wurde eingezogen.` });
+      fetchInvoices();
+    } catch (e: any) {
+      toast({ title: "Einzug fehlgeschlagen", description: e.message, variant: "destructive" });
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
   const filtered = invoices.filter((inv) =>
-    !search ||
-    inv.invoice_number.toLowerCase().includes(search.toLowerCase()) ||
-    inv.customer_name.toLowerCase().includes(search.toLowerCase())
+    (!statusParam || inv.status === statusParam) &&
+    (!search ||
+      inv.invoice_number.toLowerCase().includes(search.toLowerCase()) ||
+      inv.customer_name.toLowerCase().includes(search.toLowerCase()))
   );
+
 
   const filteredUsage = usageCharges.filter((uc) =>
     !usageSearch ||
