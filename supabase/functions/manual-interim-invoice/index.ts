@@ -265,16 +265,18 @@ Deno.serve(async (req) => {
         itemAmountSum += itemAmount;
         createdItemIds.push(item.id);
       }
-      const taxItemAmount = Math.round(taxAmount * 100);
-      const taxItem = await stripe.invoiceItems.create({
-        customer: contract.stripe_customer_id,
-        invoice: stripeInvoice.id,
-        amount: taxItemAmount,
-        currency: "eur",
-        description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
-      });
-      itemAmountSum += taxItemAmount;
-      createdItemIds.push(taxItem.id);
+      if (taxAmount !== 0) {
+        const taxItemAmount = Math.round(taxAmount * 100);
+        const taxItem = await stripe.invoiceItems.create({
+          customer: contract.stripe_customer_id,
+          invoice: stripeInvoice.id,
+          amount: taxItemAmount,
+          currency: "eur",
+          description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
+        });
+        itemAmountSum += taxItemAmount;
+        createdItemIds.push(taxItem.id);
+      }
 
       // Summenprüfung vor finalize: Stripe-Items vs. interne Bruttosumme
       const expectedCents = Math.round(grossAmount * 100);
