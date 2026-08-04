@@ -216,7 +216,8 @@ Deno.serve(async (req) => {
     let stripeInvoice: any = null;
     const createdItemIds: string[] = [];
 
-    try {
+    // 0-€-Gate: bei vollständigem Freikontingent-Abzug kein Stripe-Einzug.
+    if (grossAmount > 0) try {
       const stripeDescription = `Zwischenabrechnung – ${contract.product_name} – Verbrauch ${periodFrom} bis ${periodTo} (${usageChargeIds.length} Positionen)`;
 
       // 1) Leere Draft-Invoice ZUERST anlegen
