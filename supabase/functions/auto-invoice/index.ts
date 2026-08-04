@@ -90,6 +90,63 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Body EINMAL lesen — req.json() ist nur einmal konsumierbar.
+  // Unterstützte Felder: { contract_id } (manueller Monatslauf für einen Vertrag),
+  //                      { invoice_id }  (Einzel-Retry einer fehlgeschlagenen Rechnung, admin-only)
+  let body: any = null;
+  if (req.method === "POST") {
+    try {
+      const rawBody = await req.text();
+      if (rawBody && rawBody.trim().length > 0) body = JSON.parse(rawBody);
+    } catch { /* no body = cron mode */ }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Einzelaufruf: "Einzug wiederholen" aus der Rechnungsliste (admin-only).
+  // Läuft KEINE Monatsschleife, berührt KEINE anderen Verträge.
+  // Rollenprüfung analog manual-interim-invoice.
+  // ────────────────────────────────────────────────────────────────────────
+  if (body?.invoice_id) {
+    const guard = await requireActiveRole(req, ["admin"], corsHeaders);
+    if (guard instanceof Response) return guard;
+    const admin = guard.admin;
+
+    const { data: inv, error: invErr } = await admin
+      .from("invoices")
+      .select("*")
+      .eq("id", body.invoice_id)
+      .maybeSingle();
+
+    if (invErr || !inv) {
+      return new Response(JSON.stringify({ error: `Rechnung ${body.invoice_id} nicht gefunden.` }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (inv.status !== "zahlung_fehlgeschlagen") {
+      return new Response(JSON.stringify({
+        error: `Rechnung ${inv.invoice_number} hat Status '${inv.status}' – Einzug-Wiederholung ist nur bei 'zahlung_fehlgeschlagen' möglich.`,
+      }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const errorRef: { message: string | null } = { message: null };
+    try {
+      const result = await processFailedInvoiceRetry({ supabase: admin, invoice: inv, force: true, errorRef });
+      return new Response(JSON.stringify({
+        success: result === "success",
+        result,
+        invoice_number: inv.invoice_number,
+        error: errorRef.message,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    } catch (e: any) {
+      return new Response(JSON.stringify({
+        success: false,
+        result: "failed",
+        invoice_number: inv.invoice_number,
+        error: errorRef.message || e?.message || String(e),
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+  }
+
   // Validate cron secret for security (consistent with usage-sync: CRON_SECRET_2)
   const cronSecret = req.headers.get("x-cron-secret") ?? "";
   const expectedSecret = Deno.env.get("CRON_SECRET_2") ?? "";
@@ -108,17 +165,13 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, serviceKey);
 
-  // Parse optional body for single-contract manual trigger
+  // Optionaler Single-Contract-Trigger (Monatslauf für genau einen Vertrag)
   let targetContractId: string | null = null;
-  if (req.method === "POST") {
-    try {
-      const body = await req.json();
-      if (body?.contract_id) {
-        targetContractId = body.contract_id;
-        console.log(`[auto-invoice] Manual trigger for contract: ${targetContractId}`);
-      }
-    } catch { /* no body = cron mode */ }
+  if (body?.contract_id) {
+    targetContractId = body.contract_id;
+    console.log(`[auto-invoice] Manual trigger for contract: ${targetContractId}`);
   }
+
 
   try {
     const today = new Date();
