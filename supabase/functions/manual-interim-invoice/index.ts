@@ -102,17 +102,46 @@ Deno.serve(async (req) => {
       });
     }
 
-    const usageChargeIds = usageCharges.map((u: any) => u.id);
     const periodFrom = usageCharges.reduce((min: string, u: any) =>
       !min || u.period_from < min ? u.period_from : min, "");
     const periodTo = usageCharges.reduce((max: string, u: any) =>
       !max || u.period_to > max ? u.period_to : max, "");
+    const billingPeriodLabel = `${fmtDeDate(periodFrom)} – ${fmtDeDate(periodTo)}`;
 
-    const positions = usageCharges.map((uc: any) => ({
-      description: uc.unit_description || `Geprüfte GOÄ-Rechnungen ${fmtDeDate(uc.period_from)} – ${fmtDeDate(uc.period_to)}`,
-      quantity: uc.quantity,
-      unit_price: Number(uc.unit_price),
-    }));
+    // ROLLBACK 04.08.2026: Aufruf von computeEffectiveUsageNet, die beiden
+    // Vorab-Abfragen (grantsTotal/usageInvoicedPrior) und das 0-€-Gate
+    // entfernen; positions wieder direkt aus usage_charges bauen.
+    //
+    // Kontingent ist auf hfx_customer_number geschlüsselt, nicht auf den
+    // Vertrag. Kein Periodenfilter: Zwischenabrechnungen laufen
+    // periodenübergreifend, die Regel ist Lebensverbrauch
+    // (max(0, Grants − bereits fakturierte Menge)).
+    // Muss VOR jedem Statuswechsel der Charges laufen.
+    let grantsTotal = 0;
+    let usageInvoicedPrior = 0;
+    if (contract.hfx_customer_number) {
+      const [{ data: grantRows }, { data: priorRows }] = await Promise.all([
+        supabase
+          .from("free_quota_grants")
+          .select("menge")
+          .eq("hfx_customer_number", contract.hfx_customer_number),
+        supabase
+          .from("usage_charges")
+          .select("quantity")
+          .eq("hfx_customer_number", contract.hfx_customer_number)
+          .eq("status", "invoiced"),
+      ]);
+      grantsTotal = (grantRows || []).reduce((s: number, g: any) => s + (Number(g.menge) || 0), 0);
+      usageInvoicedPrior = (priorRows || []).reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0);
+    }
+
+    // Geteilter SSOT-Helper – KEINE Kopie der Formel (Drift war die Ursache).
+    const eff = computeEffectiveUsageNet(usageCharges as any, grantsTotal, usageInvoicedPrior, billingPeriodLabel);
+    const usageChargeIds = eff.usageChargeIds;
+    const positions = eff.positions;
+    if (eff.freiQty > 0) {
+      console.log(`[manual-interim-invoice] Freikontingent: contract=${contract.id} hfx=${contract.hfx_customer_number} grants=${grantsTotal} priorInvoiced=${usageInvoicedPrior} saldo=${eff.saldo} periodQty=${eff.periodUsageQty} frei=${eff.freiQty} deduction=${eff.grantDeductionNet.toFixed(2)}€`);
+    }
 
     const taxRate = 19;
     const netAmount = Math.round(positions.reduce((s, p) => s + p.quantity * p.unit_price, 0) * 100) / 100;
@@ -124,7 +153,9 @@ Deno.serve(async (req) => {
     const dueDateStr = addDaysISO(today, 14);
     const nowIso = today.toISOString();
 
-    const notesText = `Zwischenabrechnung – manuell ausgelöst am ${nowIso} von ${userEmail} | ${usageChargeIds.length} Positionen | Verbrauch ${periodFrom} bis ${periodTo}`;
+    const notesText = `Zwischenabrechnung – manuell ausgelöst am ${nowIso} von ${userEmail} | ${usageChargeIds.length} Positionen | Verbrauch ${periodFrom} bis ${periodTo}`
+      + (grossAmount === 0 ? ` | Kein Einzug: vollständiger Freikontingent-Abzug (${eff.freiQty} Rechnungen)` : "");
+
 
     // 1) Atomar claimen: pending → invoicing. Conditional update fungiert als Lock.
     // Bei parallelem Aufruf updated der zweite Request 0 Rows und bricht ab.
