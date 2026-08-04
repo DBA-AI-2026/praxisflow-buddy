@@ -1438,6 +1438,7 @@ async function processFailedInvoiceRetry(params: {
     stripeInvoiceId = stripeInvoice.id;
   } catch (stripeErr: any) {
     stripeErrorMessage = stripeErr?.message || String(stripeErr);
+    note(stripeErrorMessage);
     console.error(`[auto-invoice][retry] Stripe-Failure für ${invoice.invoice_number}:`, stripeErrorMessage);
     // Cleanup Items
     for (const itemId of createdItemIds) {
