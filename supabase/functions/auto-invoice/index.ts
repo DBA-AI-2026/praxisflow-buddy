@@ -4,6 +4,7 @@ import Stripe from "npm:stripe@14.21.0";
 import { isGoaeProduct, isCarrierContract, healCustomerStripeId } from "../_shared/multiLocation.ts";
 import { createGoaeCommissions } from "../_shared/goaeCommissions.ts";
 import { computeEffectiveUsageNet } from "../_shared/freeQuota.ts";
+import { requireActiveRole } from "../_shared/auth.ts";
 import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
 import {
   renderPositionsRows,
@@ -90,6 +91,63 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Body EINMAL lesen — req.json() ist nur einmal konsumierbar.
+  // Unterstützte Felder: { contract_id } (manueller Monatslauf für einen Vertrag),
+  //                      { invoice_id }  (Einzel-Retry einer fehlgeschlagenen Rechnung, admin-only)
+  let body: any = null;
+  if (req.method === "POST") {
+    try {
+      const rawBody = await req.text();
+      if (rawBody && rawBody.trim().length > 0) body = JSON.parse(rawBody);
+    } catch { /* no body = cron mode */ }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Einzelaufruf: "Einzug wiederholen" aus der Rechnungsliste (admin-only).
+  // Läuft KEINE Monatsschleife, berührt KEINE anderen Verträge.
+  // Rollenprüfung analog manual-interim-invoice.
+  // ────────────────────────────────────────────────────────────────────────
+  if (body?.invoice_id) {
+    const guard = await requireActiveRole(req, ["admin"], corsHeaders);
+    if (guard instanceof Response) return guard;
+    const admin = guard.admin;
+
+    const { data: inv, error: invErr } = await admin
+      .from("invoices")
+      .select("*")
+      .eq("id", body.invoice_id)
+      .maybeSingle();
+
+    if (invErr || !inv) {
+      return new Response(JSON.stringify({ error: `Rechnung ${body.invoice_id} nicht gefunden.` }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (inv.status !== "zahlung_fehlgeschlagen") {
+      return new Response(JSON.stringify({
+        error: `Rechnung ${inv.invoice_number} hat Status '${inv.status}' – Einzug-Wiederholung ist nur bei 'zahlung_fehlgeschlagen' möglich.`,
+      }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const errorRef: { message: string | null } = { message: null };
+    try {
+      const result = await processFailedInvoiceRetry({ supabase: admin, invoice: inv, force: true, errorRef });
+      return new Response(JSON.stringify({
+        success: result === "success",
+        result,
+        invoice_number: inv.invoice_number,
+        error: errorRef.message,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    } catch (e: any) {
+      return new Response(JSON.stringify({
+        success: false,
+        result: "failed",
+        invoice_number: inv.invoice_number,
+        error: errorRef.message || e?.message || String(e),
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+  }
+
   // Validate cron secret for security (consistent with usage-sync: CRON_SECRET_2)
   const cronSecret = req.headers.get("x-cron-secret") ?? "";
   const expectedSecret = Deno.env.get("CRON_SECRET_2") ?? "";
@@ -108,17 +166,13 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, serviceKey);
 
-  // Parse optional body for single-contract manual trigger
+  // Optionaler Single-Contract-Trigger (Monatslauf für genau einen Vertrag)
   let targetContractId: string | null = null;
-  if (req.method === "POST") {
-    try {
-      const body = await req.json();
-      if (body?.contract_id) {
-        targetContractId = body.contract_id;
-        console.log(`[auto-invoice] Manual trigger for contract: ${targetContractId}`);
-      }
-    } catch { /* no body = cron mode */ }
+  if (body?.contract_id) {
+    targetContractId = body.contract_id;
+    console.log(`[auto-invoice] Manual trigger for contract: ${targetContractId}`);
   }
+
 
   try {
     const today = new Date();
@@ -1180,28 +1234,47 @@ function buildMandateRequestEmail(params: {
 async function processFailedInvoiceRetry(params: {
   supabase: any;
   invoice: any;
+  // force: nur für den manuellen Einzelaufruf aus der Rechnungsliste. Der Cron-Pfad
+  // ruft OHNE force auf — sein Verhalten (einmaliger Retry via retry_attempted_at-Lock)
+  // bleibt exakt unverändert.
+  force?: boolean;
+  // Klartext-Fehler/Grund für die UI-Rückmeldung beim Einzelaufruf.
+  errorRef?: { message: string | null };
 }): Promise<"success" | "failed" | "skipped"> {
-  const { supabase, invoice } = params;
+  const { supabase, invoice, force = false, errorRef } = params;
+  const note = (m: string) => { if (errorRef) errorRef.message = m; };
 
   // B5: retry_attempted_at SOFORT (vor jedem Stripe-Call) setzen, mit Idempotenz-Schutz.
   // Nur wenn retry_attempted_at IS NULL noch — verhindert Doppelläufe bei parallelen Crons.
+  // Bei force === true wird der Lock übersprungen und der Zeitstempel unbedingt gesetzt.
   const nowTs = new Date().toISOString();
-  const { data: lockedRow, error: lockErr } = await supabase
-    .from("invoices")
-    .update({ retry_attempted_at: nowTs })
-    .eq("id", invoice.id)
-    .is("retry_attempted_at", null)
-    .select("id")
-    .maybeSingle();
+  if (force) {
+    const { error: forceErr } = await supabase
+      .from("invoices")
+      .update({ retry_attempted_at: nowTs })
+      .eq("id", invoice.id);
+    if (forceErr) {
+      console.error(`[auto-invoice][retry] Zeitstempel-Update (force) für ${invoice.invoice_number} fehlgeschlagen:`, forceErr.message);
+    }
+  } else {
+    const { data: lockedRow, error: lockErr } = await supabase
+      .from("invoices")
+      .update({ retry_attempted_at: nowTs })
+      .eq("id", invoice.id)
+      .is("retry_attempted_at", null)
+      .select("id")
+      .maybeSingle();
 
-  if (lockErr) {
-    console.error(`[auto-invoice][retry] Lock-Update für ${invoice.invoice_number} fehlgeschlagen:`, lockErr.message);
-    return "skipped";
+    if (lockErr) {
+      console.error(`[auto-invoice][retry] Lock-Update für ${invoice.invoice_number} fehlgeschlagen:`, lockErr.message);
+      return "skipped";
+    }
+    if (!lockedRow) {
+      console.log(`[auto-invoice][retry] ${invoice.invoice_number}: bereits retried (race condition), überspringe.`);
+      return "skipped";
+    }
   }
-  if (!lockedRow) {
-    console.log(`[auto-invoice][retry] ${invoice.invoice_number}: bereits retried (race condition), überspringe.`);
-    return "skipped";
-  }
+
 
   // Vertrag laden
   const { data: contract, error: contractErr } = await supabase
@@ -1211,16 +1284,19 @@ async function processFailedInvoiceRetry(params: {
     .maybeSingle();
   if (contractErr || !contract) {
     console.error(`[auto-invoice][retry] Vertrag für Invoice ${invoice.invoice_number} nicht gefunden.`);
+    note("Zugehöriger Vertrag nicht gefunden – kein Einzug möglich.");
     return "skipped";
   }
 
   if (!contract.stripe_customer_id) {
     console.warn(`[auto-invoice][retry] Vertrag ${contract.id} hat (mehr) kein stripe_customer_id – Retry übersprungen.`);
+    note("Vertrag hat keine Stripe-Kundennummer – kein Einzug möglich.");
     return "skipped";
   }
 
   if (contract.status === "gesperrt") {
     console.log(`[auto-invoice][retry] Vertrag ${contract.id} ist gesperrt – Retry übersprungen.`);
+    note("Vertrag ist gesperrt – kein Einzug möglich.");
     return "skipped";
   }
 
@@ -1232,8 +1308,10 @@ async function processFailedInvoiceRetry(params: {
 
   if (grossAmount <= 0 || positions.length === 0) {
     console.warn(`[auto-invoice][retry] Invoice ${invoice.invoice_number} hat keine Positionen / 0 €, kein Retry.`);
+    note("Rechnung hat keine Positionen bzw. 0 € – kein Einzug möglich.");
     return "skipped";
   }
+
 
   // Period rekonstruieren
   const [py, pm] = periodMonthStr.split("-").map((s: string) => Number(s));
@@ -1295,11 +1373,20 @@ async function processFailedInvoiceRetry(params: {
       },
     });
 
-    // 2) stripe_invoice_id sofort persistieren
+    // 2) stripe_invoice_id sofort persistieren.
+    //    Vorher die alte (voidete) Stripe-ID revisionssicher in notes festhalten,
+    //    damit die Historie des fehlgeschlagenen Einzugs nicht verloren geht.
+    const previousStripeInvoiceId: string | null = invoice.stripe_invoice_id ?? null;
+    const notesUpdate = previousStripeInvoiceId
+      ? {
+          notes: `${invoice.notes ?? ""} | Vorheriger Stripe-Einzug fehlgeschlagen: ${previousStripeInvoiceId} (storniert)`.replace(/^ \| /, ""),
+        }
+      : {};
     await supabase
       .from("invoices")
-      .update({ stripe_invoice_id: stripeInvoice.id })
+      .update({ stripe_invoice_id: stripeInvoice.id, ...notesUpdate })
       .eq("id", invoice.id);
+
 
     // 3) Items explizit attachen
     let itemAmountSum = 0;
@@ -1351,6 +1438,7 @@ async function processFailedInvoiceRetry(params: {
     stripeInvoiceId = stripeInvoice.id;
   } catch (stripeErr: any) {
     stripeErrorMessage = stripeErr?.message || String(stripeErr);
+    note(stripeErrorMessage);
     console.error(`[auto-invoice][retry] Stripe-Failure für ${invoice.invoice_number}:`, stripeErrorMessage);
     // Cleanup Items
     for (const itemId of createdItemIds) {

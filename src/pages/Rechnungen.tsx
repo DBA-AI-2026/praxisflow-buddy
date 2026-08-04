@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { supabase } from "@/lib/supabaseClient";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -146,7 +147,11 @@ function calcAmounts(positions: InvoicePosition[], taxRate: number) {
 
 export default function Rechnungen() {
   const { toast } = useToast();
-  const { isAdmin } = useUserRole();
+  const { isAdmin, role } = useUserRole();
+  const [searchParams] = useSearchParams();
+  // Deep-Link aus der Dashboard-Kachel: /rechnungen?status=zahlung_fehlgeschlagen
+  const statusParam = searchParams.get("status");
+  const [retryingId, setRetryingId] = useState<string | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
@@ -407,11 +412,31 @@ export default function Rechnungen() {
     setDeleteTarget(null);
   };
 
+  // Einzug wiederholen (admin-only). Beliebig oft drückbar, kein Zähler, keine Sperre.
+  const handleRetryCharge = async (invoice: Invoice) => {
+    setRetryingId(invoice.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("auto-invoice", {
+        body: { invoice_id: invoice.id },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Einzug erneut fehlgeschlagen.");
+      toast({ title: "Einzug erfolgreich", description: `Rechnung ${invoice.invoice_number} wurde eingezogen.` });
+      fetchInvoices();
+    } catch (e: any) {
+      toast({ title: "Einzug fehlgeschlagen", description: e.message, variant: "destructive" });
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
   const filtered = invoices.filter((inv) =>
-    !search ||
-    inv.invoice_number.toLowerCase().includes(search.toLowerCase()) ||
-    inv.customer_name.toLowerCase().includes(search.toLowerCase())
+    (!statusParam || inv.status === statusParam) &&
+    (!search ||
+      inv.invoice_number.toLowerCase().includes(search.toLowerCase()) ||
+      inv.customer_name.toLowerCase().includes(search.toLowerCase()))
   );
+
 
   const filteredUsage = usageCharges.filter((uc) =>
     !usageSearch ||
@@ -694,6 +719,19 @@ export default function Rechnungen() {
                                   title="Per E-Mail versenden"
                                 >
                                   <Send className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {inv.status === "zahlung_fehlgeschlagen" && role === "admin" && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-1.5"
+                                  onClick={() => handleRetryCharge(inv)}
+                                  disabled={retryingId === inv.id}
+                                  title="SEPA-Einzug erneut auslösen"
+                                >
+                                  <RefreshCw className={`h-3.5 w-3.5 ${retryingId === inv.id ? "animate-spin" : ""}`} />
+                                  {retryingId === inv.id ? "Läuft…" : "Einzug wiederholen"}
                                 </Button>
                               )}
                               {inv.status === "entwurf" && (

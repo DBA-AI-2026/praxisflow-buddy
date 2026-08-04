@@ -135,6 +135,21 @@ export default function Dashboard() {
     },
   });
 
+  // ── Rechnungen mit fehlgeschlagenem SEPA-Einzug (nur Admin) ──
+  const { data: failedInvoices = [] } = useQuery({
+    queryKey: ["dashboard-failed-invoices", role],
+    enabled: role === "admin",
+    staleTime: 0,
+    refetchOnMount: "always",
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("invoices")
+        .select("id, invoice_number, customer_name, gross_amount, status")
+        .eq("status", "zahlung_fehlgeschlagen");
+      return data ?? [];
+    },
+  });
+
   // ── BLOCK 2: "Seit gestern reingekommen" ──
   const { data: newSinceYesterday } = useQuery({
     queryKey: ["dashboard-new-since-yesterday", role, user?.id],
@@ -194,7 +209,7 @@ export default function Dashboard() {
   );
   const contractsWaitingPayment = filteredContractAlerts.filter((c: any) => isWaitingForMandate(c));
 
-  const totalAlerts = overdueLeads14.length + overdueLeads7.length + contractsMissingMandateMail.length + contractsMissingConfirmationMail.length + contractsWaitingPayment.length;
+  const totalAlerts = overdueLeads14.length + overdueLeads7.length + contractsMissingMandateMail.length + contractsMissingConfirmationMail.length + contractsWaitingPayment.length + failedInvoices.length;
 
   // "Seit gestern" — team-filter for regional leads
   const newLeads = useMemo(() => {
@@ -392,6 +407,16 @@ export default function Dashboard() {
                       label={`${contractsWaitingPayment.length} Vertrag/Verträge warten auf Mandat-Erteilung`}
                       sub="SEPA-Mandat-Mail versendet, Kunde hat Bankverbindung noch nicht hinterlegt"
                       to="/pipeline?tab=abschlussphase&filter=waiting_payment"
+                    />
+                  )}
+                  {role === "admin" && failedInvoices.length > 0 && (
+                    <AlertRow
+                      icon={AlertTriangle}
+                      iconClass="text-destructive"
+                      bgClass="bg-destructive/5"
+                      label={`${failedInvoices.length} Rechnung(en) mit fehlgeschlagenem Einzug`}
+                      sub="SEPA-Einzug gescheitert – bitte prüfen und erneut auslösen"
+                      to="/rechnungen?status=zahlung_fehlgeschlagen"
                     />
                   )}
                 </>
