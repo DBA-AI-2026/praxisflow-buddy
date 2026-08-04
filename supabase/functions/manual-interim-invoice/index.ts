@@ -462,7 +462,7 @@ Deno.serve(async (req) => {
         stripe_error: stripeErrorMessage,
         usage_charge_count: usageChargeIds.length,
         period_from: periodFrom, period_to: periodTo,
-        email_sent: !sendResult.error,
+        email_sent: !!sendResult && !sendResult.error,
       }),
     });
 
