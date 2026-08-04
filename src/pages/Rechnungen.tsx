@@ -732,7 +732,7 @@ export default function Rechnungen() {
                                   variant="outline"
                                   size="sm"
                                   className="gap-1.5"
-                                  onClick={() => handleRetryCharge(inv)}
+                                  onClick={() => setRetryTarget(inv)}
                                   disabled={retryingId === inv.id}
                                   title="SEPA-Einzug erneut auslösen"
                                 >
@@ -740,6 +740,7 @@ export default function Rechnungen() {
                                   {retryingId === inv.id ? "Läuft…" : "Einzug wiederholen"}
                                 </Button>
                               )}
+
                               {inv.status === "entwurf" && (
                                 <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(inv)} title="Löschen">
                                   <Trash2 className="h-4 w-4 text-destructive" />
