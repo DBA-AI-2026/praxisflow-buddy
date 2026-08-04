@@ -1234,28 +1234,47 @@ function buildMandateRequestEmail(params: {
 async function processFailedInvoiceRetry(params: {
   supabase: any;
   invoice: any;
+  // force: nur für den manuellen Einzelaufruf aus der Rechnungsliste. Der Cron-Pfad
+  // ruft OHNE force auf — sein Verhalten (einmaliger Retry via retry_attempted_at-Lock)
+  // bleibt exakt unverändert.
+  force?: boolean;
+  // Klartext-Fehler/Grund für die UI-Rückmeldung beim Einzelaufruf.
+  errorRef?: { message: string | null };
 }): Promise<"success" | "failed" | "skipped"> {
-  const { supabase, invoice } = params;
+  const { supabase, invoice, force = false, errorRef } = params;
+  const note = (m: string) => { if (errorRef) errorRef.message = m; };
 
   // B5: retry_attempted_at SOFORT (vor jedem Stripe-Call) setzen, mit Idempotenz-Schutz.
   // Nur wenn retry_attempted_at IS NULL noch — verhindert Doppelläufe bei parallelen Crons.
+  // Bei force === true wird der Lock übersprungen und der Zeitstempel unbedingt gesetzt.
   const nowTs = new Date().toISOString();
-  const { data: lockedRow, error: lockErr } = await supabase
-    .from("invoices")
-    .update({ retry_attempted_at: nowTs })
-    .eq("id", invoice.id)
-    .is("retry_attempted_at", null)
-    .select("id")
-    .maybeSingle();
+  if (force) {
+    const { error: forceErr } = await supabase
+      .from("invoices")
+      .update({ retry_attempted_at: nowTs })
+      .eq("id", invoice.id);
+    if (forceErr) {
+      console.error(`[auto-invoice][retry] Zeitstempel-Update (force) für ${invoice.invoice_number} fehlgeschlagen:`, forceErr.message);
+    }
+  } else {
+    const { data: lockedRow, error: lockErr } = await supabase
+      .from("invoices")
+      .update({ retry_attempted_at: nowTs })
+      .eq("id", invoice.id)
+      .is("retry_attempted_at", null)
+      .select("id")
+      .maybeSingle();
 
-  if (lockErr) {
-    console.error(`[auto-invoice][retry] Lock-Update für ${invoice.invoice_number} fehlgeschlagen:`, lockErr.message);
-    return "skipped";
+    if (lockErr) {
+      console.error(`[auto-invoice][retry] Lock-Update für ${invoice.invoice_number} fehlgeschlagen:`, lockErr.message);
+      return "skipped";
+    }
+    if (!lockedRow) {
+      console.log(`[auto-invoice][retry] ${invoice.invoice_number}: bereits retried (race condition), überspringe.`);
+      return "skipped";
+    }
   }
-  if (!lockedRow) {
-    console.log(`[auto-invoice][retry] ${invoice.invoice_number}: bereits retried (race condition), überspringe.`);
-    return "skipped";
-  }
+
 
   // Vertrag laden
   const { data: contract, error: contractErr } = await supabase
