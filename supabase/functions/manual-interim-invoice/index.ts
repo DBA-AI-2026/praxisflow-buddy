@@ -333,6 +333,15 @@ Deno.serve(async (req) => {
         .update({ status: "pending", invoice_id: null })
         .in("id", usageChargeIds)
         .eq("status", "invoicing");
+    } else {
+      // 0-€-Pfad (analog auto-invoice): Beleg bleibt, Charges werden final markiert,
+      // Status bleibt 'entwurf', keine Rechnungsmail, kein Stripe-Einzug.
+      await supabase
+        .from("usage_charges")
+        .update({ status: "invoiced", invoice_id: invoice.id })
+        .in("id", usageChargeIds)
+        .eq("status", "invoicing");
+      console.log(`[manual-interim-invoice] fully free by grant – Contract ${contract.id} (Invoice ${invoice.invoice_number}, ${eff.freiQty} Rechnungen gedeckt)`);
     }
 
     // 4) Send invoice email (SSOT: renderBrandedEmail + _shared/invoiceEmailParts)
