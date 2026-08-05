@@ -97,6 +97,47 @@ export default function AdminUsers() {
   const queryClient = useQueryClient();
   const { isAdmin } = useUserRole();
 
+  // Ghost-Accounts (Wartung): Dry-run beim Öffnen, scharfer Lauf nur nach Bestätigung.
+  const [ghostDialogOpen, setGhostDialogOpen] = useState(false);
+  const [ghostLoading, setGhostLoading] = useState(false);
+  const [ghostBanning, setGhostBanning] = useState(false);
+  const [ghostPreview, setGhostPreview] = useState<{ count: number; emails: string[] } | null>(null);
+  const [ghostResult, setGhostResult] = useState<{ banned: string[]; failed: { email: string | null; error: string }[] } | null>(null);
+
+  const loadGhostPreview = async () => {
+    setGhostLoading(true);
+    setGhostPreview(null);
+    setGhostResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("ban-ghost-users", {
+        body: { dryRun: true },
+      });
+      if (error || data?.error) throw new Error(error?.message || data?.error);
+      setGhostPreview({ count: data.count ?? 0, emails: data.emails ?? [] });
+    } catch (e) {
+      toast({ title: "Fehler", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setGhostLoading(false);
+    }
+  };
+
+  const runGhostBan = async () => {
+    setGhostBanning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ban-ghost-users", {
+        body: { dryRun: false },
+      });
+      if (error || data?.error) throw new Error(error?.message || data?.error);
+      setGhostResult({ banned: data.banned ?? [], failed: data.failed ?? [] });
+      setGhostPreview(null);
+      toast({ title: "Ghost-Accounts gebannt", description: `${data.count ?? 0} Konto(en) neutralisiert.` });
+    } catch (e) {
+      toast({ title: "Fehler", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setGhostBanning(false);
+    }
+  };
+
   // Fetch active roles + profiles, group by user_id
   const { data: users = [], isLoading } = useQuery<UserGrouped[]>({
     queryKey: ["admin-users"],
