@@ -381,23 +381,53 @@ Deno.serve(async (req) => {
                     : `Menge ${monthQty} > 5× Durchschnitt (${avgPrior?.toFixed(1)}) der letzten ${lastThree.length} fakturierten Monate`;
                   console.error(`[auto-invoice] Plausibilitätsbremse: Vertrag ${contract.id} (${contract.hfx_customer_number}) ${periodMonthStr} übersprungen – ${reason}`);
                   errors.push(`Plausibilität [${contract.id} ${periodMonthStr}]: ${reason}`);
+                  // ROLLBACK 04.08.2026: Empfänger zurück auf BUCHHALTUNG_EMAIL,
+                  // customer_events-Insert und den VerlaufTab-case entfernen.
+                  const adEmail = await resolveSalesPartnerEmail(supabase, contract.sales_partner_id);
+                  const brakeRecipients = adEmail ? [adEmail] : [BUCHHALTUNG_EMAIL];
+                  if (!adEmail) console.warn(`[auto-invoice] Plausibilitätsbremse: kein AD ermittelbar für Vertrag ${contract.id} – Mail an Buchhaltung`);
                   try {
                     await resend.emails.send({
                       from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
                       reply_to: "info@hfx-honorarfuchs.de",
-                      to: [BUCHHALTUNG_EMAIL],
+                      to: brakeRecipients,
                       subject: `[Plausibilitätsbremse] ${contract.customer_name} – ${periodMonthStr}`,
-                      html: `<p>Die automatische Abrechnung wurde für einen Monat angehalten.</p>
+                      html: `<p>die automatische Abrechnung wurde für einen Ihrer Kunden angehalten, weil der gemeldete Verbrauch auffällig hoch ist.</p>
 <ul>
   <li><strong>Kunde:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</li>
   <li><strong>Vertrag-ID:</strong> ${contract.id}</li>
   <li><strong>Abrechnungsmonat:</strong> ${periodMonthStr}</li>
+  <li><strong>Menge:</strong> ${monthQty}</li>
   <li><strong>Grund:</strong> ${reason}</li>
 </ul>
-<p>Die Verbrauchsposten bleiben offen (<strong>pending</strong>). Es wurde keine Rechnung erzeugt und kein Einzug ausgelöst. Bitte prüfen und ggf. manuell abrechnen.</p>`,
+<p>Die Verbrauchsposten bleiben offen (<strong>pending</strong>). Es wurde keine Rechnung erzeugt und kein Einzug ausgelöst.</p>
+<p>Eine typische Ursache ist ein versehentlicher Demo-Upload. Bitte gleichen Sie den Verbrauch mit dem Kunden ab.</p>
+<p>Bitte dokumentieren Sie den Vorfall anschließend im Kundenverlauf.</p>`,
                     });
                   } catch (brakeMailErr) {
                     console.error(`[auto-invoice] Plausibilitäts-Mail fehlgeschlagen:`, String(brakeMailErr));
+                  }
+                  // ROLLBACK 04.08.2026: Empfänger zurück auf BUCHHALTUNG_EMAIL,
+                  // customer_events-Insert und den VerlaufTab-case entfernen.
+                  try {
+                    await supabase.from("customer_events").insert({
+                      event_type: "USAGE_PLAUSIBILITY_BLOCKED",
+                      entity_type: "contract",
+                      entity_id: contract.id,
+                      contract_id: contract.id,
+                      hfx_customer_number: contract.hfx_customer_number ?? null,
+                      created_by: null,
+                      event_data: {
+                        hfx_customer_number: contract.hfx_customer_number ?? null,
+                        billing_period_month: periodMonthStr,
+                        quantity: monthQty,
+                        threshold: PLAUSIBILITAET_SCHWELLE,
+                        reason,
+                        ad_email: adEmail,
+                      },
+                    });
+                  } catch (evErr) {
+                    console.error(`[auto-invoice] customer_events-Insert (Plausibilität) fehlgeschlagen:`, String(evErr));
                   }
                   skipped++;
                   continue;
