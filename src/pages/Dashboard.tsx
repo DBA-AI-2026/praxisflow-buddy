@@ -150,6 +150,26 @@ export default function Dashboard() {
     },
   });
 
+  // ── Verbrauch über Plausibilitätsschwelle, Abrechnung angehalten (nur Admin) ──
+  // Selbstberechnend: kein Marker, kein gespeicherter Zustand.
+  const { data: blockedUsage = [] } = useQuery({
+    queryKey: ["dashboard-blocked-usage", role],
+    enabled: role === "admin",
+    staleTime: 0,
+    refetchOnMount: "always",
+    queryFn: async () => {
+      const now = new Date();
+      const currentMonthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+      const { data } = await supabase
+        .from("usage_charges")
+        .select("id, hfx_customer_number, period_from, quantity")
+        .eq("status", "pending")
+        .lt("period_to", currentMonthStart)
+        .gte("quantity", PLAUSIBILITAET_SCHWELLE);
+      return data ?? [];
+    },
+  });
+
   // ── BLOCK 2: "Seit gestern reingekommen" ──
   const { data: newSinceYesterday } = useQuery({
     queryKey: ["dashboard-new-since-yesterday", role, user?.id],
