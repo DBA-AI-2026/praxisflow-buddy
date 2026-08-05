@@ -535,10 +535,24 @@ export default function AdminUsers() {
         <div className="text-xs text-muted-foreground">
           {users.length} Personen · {users.reduce((n, u) => n + u.roles.length, 0)} aktive Rollen
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Benutzer anlegen
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setGhostDialogOpen(true);
+                loadGhostPreview();
+              }}
+            >
+              <Ghost className="h-4 w-4 mr-2" />
+              Ghost-Accounts
+            </Button>
+          )}
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Benutzer anlegen
+          </Button>
+        </div>
       </div>
 
       {/* Duplikat-Warnung */}
