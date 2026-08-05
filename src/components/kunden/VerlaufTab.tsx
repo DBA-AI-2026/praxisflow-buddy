@@ -257,6 +257,20 @@ function renderEvent(event: EventRow): {
         icon: <Key className="h-4 w-4 text-green-500" />,
         label: "Zugangsdaten gesendet",
       };
+    // ROLLBACK 04.08.2026: Empfänger zurück auf BUCHHALTUNG_EMAIL,
+    // customer_events-Insert und den VerlaufTab-case entfernen.
+    case "USAGE_PLAUSIBILITY_BLOCKED": {
+      const parts = [
+        d.billing_period_month ? `Monat ${d.billing_period_month}` : null,
+        d.quantity != null ? `Menge ${d.quantity}` : null,
+        typeof d.reason === "string" ? d.reason : null,
+      ].filter(Boolean);
+      return {
+        icon: <AlertTriangle className="h-4 w-4 text-orange-500" />,
+        label: "Abrechnung angehalten (Plausibilitätsbremse)",
+        detail: parts.length ? parts.join(" · ") : undefined,
+      };
+    }
     case "NOTE_ADDED":
       return {
         icon: <StickyNote className="h-4 w-4 text-yellow-500" />,
