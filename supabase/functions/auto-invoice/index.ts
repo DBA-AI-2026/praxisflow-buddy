@@ -1300,10 +1300,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[auto-invoice] Done. Processed: ${processed}, Skipped: ${skipped}, Errors: ${errors.length}`);
+    if (limitReached) {
+      console.warn(`[auto-invoice] Globales Limit von ${MAX_INVOICES_PER_RUN} Rechnungen pro Lauf erreicht – Abbruch. Verbleibende Monate werden im nächsten Lauf nachgeholt.`);
+    }
+    console.log(`[auto-invoice] Done. Rechnungen erstellt: ${processed}, Rechnungen übersprungen: ${skipped}, Errors: ${errors.length}`);
 
     return new Response(
-      JSON.stringify({ success: true, processed, skipped, errors, billingPeriod: periodMonthStr, retries: { attempted: retriesAttempted, succeeded: retriesSucceeded, failed: retriesFailed } }),
+      JSON.stringify({
+        success: true,
+        invoicesCreated: processed,
+        invoicesSkipped: skipped,
+        limitReached,
+        maxInvoicesPerRun: MAX_INVOICES_PER_RUN,
+        // Rückwärtskompatible Aliasse (zählen jetzt Rechnungen, nicht Verträge)
+        processed,
+        skipped,
+        errors,
+        billingPeriod: regularPeriodMonthStr,
+        retries: { attempted: retriesAttempted, succeeded: retriesSucceeded, failed: retriesFailed },
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
