@@ -924,6 +924,85 @@ export default function AdminUsers() {
       {/* Create User Dialog */}
       <CreateUserDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
 
+      {/* Ghost-Accounts: Wartungs-Dialog (nur Admin) */}
+      <Dialog open={ghostDialogOpen} onOpenChange={setGhostDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Ghost-Accounts</DialogTitle>
+            <DialogDescription>
+              Konten ohne Login, ohne Rolle und ohne interne E-Mail-Domain. Ein Bann ist
+              reversibel — es wird nichts gelöscht.
+            </DialogDescription>
+          </DialogHeader>
+
+          {ghostLoading && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+              <Loader2 className="h-4 w-4 animate-spin" /> Prüfe Konten …
+            </div>
+          )}
+
+          {!ghostLoading && ghostPreview && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{ghostPreview.count} Ghost-Account(s) gefunden</p>
+              <div className="max-h-64 overflow-y-auto rounded border p-2 text-xs space-y-1">
+                {ghostPreview.emails.length === 0 ? (
+                  <span className="text-muted-foreground">Keine Treffer.</span>
+                ) : (
+                  ghostPreview.emails.map((e) => <div key={e}>{e}</div>)
+                )}
+              </div>
+            </div>
+          )}
+
+          {!ghostLoading && ghostResult && (
+            <div className="space-y-2 text-sm">
+              <p className="font-medium">{ghostResult.banned.length} Konto(en) gebannt</p>
+              <div className="max-h-48 overflow-y-auto rounded border p-2 text-xs space-y-1">
+                {ghostResult.banned.map((e) => <div key={e}>{e}</div>)}
+              </div>
+              {ghostResult.failed.length > 0 && (
+                <div className="text-xs text-destructive">
+                  {ghostResult.failed.length} Fehler:{" "}
+                  {ghostResult.failed.map((f) => `${f.email ?? "?"} (${f.error})`).join(", ")}
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGhostDialogOpen(false)}>
+              Schließen
+            </Button>
+            {ghostPreview && ghostPreview.count > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={ghostBanning}>
+                    {ghostBanning && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Bannen
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {ghostPreview.count} Ghost-Accounts dauerhaft bannen?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Die Konten können sich danach nicht mehr anmelden. Der Bann ist
+                      reversibel, es werden keine Daten gelöscht.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                    <AlertDialogAction onClick={runGhostBan}>Bannen</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
       {/* Regional Assignment Dialog */}
       <RegionalAssignmentDialog
         open={assignDialogOpen}
