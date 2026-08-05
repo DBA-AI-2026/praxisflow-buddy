@@ -125,21 +125,12 @@ Deno.serve(async (req) => {
       }
       console.log(`Password updated for existing auth user: ${authUser.id}`);
     } else {
-      // No auth user exists yet (manually captured lead) — create one now
-      const { data: newAuthUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-        email: lead.email,
-        password: newPassword,
-        email_confirm: true,
-        user_metadata: {
-          full_name: `${lead.vorname} ${lead.nachname}`,
-        },
-      });
-      if (createError) {
-        console.error("Error creating auth user:", createError);
-        return new Response(JSON.stringify({ error: "Fehler beim Anlegen des Benutzerkontos." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      console.log(`New auth user created for manually captured lead: ${newAuthUser.user.id}`);
+      // Bewusst KEIN auth.admin.createUser — Lead-Kunden loggen sich bei Qodia ein,
+      // nicht in HFX-Supabase; ein rollenloser HFX-Auth-User ist zweckfrei (D3/L1).
+      // Mailversand und leads-Update laufen unverändert weiter.
+      console.log(`No HFX auth user for ${lead.email} — skipping auth user creation by design (D3/L1).`);
     }
+
 
     const resend = new Resend(Deno.env.get("RESEND_API_KEY")!);
 
