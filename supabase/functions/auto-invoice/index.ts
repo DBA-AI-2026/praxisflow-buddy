@@ -276,11 +276,15 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Zähler zählen RECHNUNGEN (nicht Verträge) – ein Vertrag kann mehrere
+    // Monate nachholen.
     let processed = 0;
     let skipped = 0;
+    let limitReached = false;
     const errors: string[] = [];
 
     for (const contract of contracts) {
+      if (limitReached) break;
       try {
         // ── Vertragsebene: ohne E-Mail ist für keinen Monat eine Rechnung möglich ──
         if (!contract.rechnungs_email && !contract.email) {
