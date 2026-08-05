@@ -673,8 +673,16 @@ Deno.serve(async (req) => {
           // ── Stripe SEPA Prüfung ──────────────────────────────────────────────
           const hasStripeCustomer = !!contract.stripe_customer_id;
 
-          // Kein SEPA-Mandat → Checkout-Setup-Link senden
+          // Kein SEPA-Mandat → Checkout-Setup-Link senden.
+          // Nur der ERSTE Monat ohne Mandat löst Mail und stripe.customers.create()
+          // aus; folgende Monate desselben Vertrags überspringen still.
+          if (!hasStripeCustomer && mandateMailSentThisRun) {
+            console.log(`[auto-invoice] Contract ${contract.id}: Mandatsanforderung in diesem Lauf bereits versandt – ${periodMonthStr} still übersprungen.`);
+            skipped++;
+            continue;
+          }
           if (!hasStripeCustomer) {
+            mandateMailSentThisRun = true;
             console.warn(`[auto-invoice] Contract ${contract.id} (${contract.customer_name}) hat kein Stripe-Mandat – sende Mandatsanforderungs-E-Mail`);
             try {
               const emailRecipient = contract.rechnungs_email || contract.email;
