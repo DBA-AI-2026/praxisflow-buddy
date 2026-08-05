@@ -9,6 +9,7 @@ import { useMemo, useState } from "react";
 import { format, isSameDay, startOfDay, subDays } from "date-fns";
 import {
   Activity,
+  AlertTriangle,
   FileText,
   Key,
   Loader2,
