@@ -22,7 +22,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText, UserCog, Clock, Upload, Download, CheckCircle, Mail, Eye, ShieldOff, Plus, X } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Search, MoreHorizontal, Pencil, Trash2, Shield, Users, Loader2, UserPlus, FileText, UserCog, Clock, Upload, Download, CheckCircle, Mail, Eye, ShieldOff, Plus, X, Ghost } from "lucide-react";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { RegionalAssignmentDialog } from "@/components/admin/RegionalAssignmentDialog";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -85,6 +96,47 @@ export default function AdminUsers() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isAdmin } = useUserRole();
+
+  // Ghost-Accounts (Wartung): Dry-run beim Öffnen, scharfer Lauf nur nach Bestätigung.
+  const [ghostDialogOpen, setGhostDialogOpen] = useState(false);
+  const [ghostLoading, setGhostLoading] = useState(false);
+  const [ghostBanning, setGhostBanning] = useState(false);
+  const [ghostPreview, setGhostPreview] = useState<{ count: number; emails: string[] } | null>(null);
+  const [ghostResult, setGhostResult] = useState<{ banned: string[]; failed: { email: string | null; error: string }[] } | null>(null);
+
+  const loadGhostPreview = async () => {
+    setGhostLoading(true);
+    setGhostPreview(null);
+    setGhostResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("ban-ghost-users", {
+        body: { dryRun: true },
+      });
+      if (error || data?.error) throw new Error(error?.message || data?.error);
+      setGhostPreview({ count: data.count ?? 0, emails: data.emails ?? [] });
+    } catch (e) {
+      toast({ title: "Fehler", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setGhostLoading(false);
+    }
+  };
+
+  const runGhostBan = async () => {
+    setGhostBanning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ban-ghost-users", {
+        body: { dryRun: false },
+      });
+      if (error || data?.error) throw new Error(error?.message || data?.error);
+      setGhostResult({ banned: data.banned ?? [], failed: data.failed ?? [] });
+      setGhostPreview(null);
+      toast({ title: "Ghost-Accounts gebannt", description: `${data.count ?? 0} Konto(en) neutralisiert.` });
+    } catch (e) {
+      toast({ title: "Fehler", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setGhostBanning(false);
+    }
+  };
 
   // Fetch active roles + profiles, group by user_id
   const { data: users = [], isLoading } = useQuery<UserGrouped[]>({
@@ -483,10 +535,24 @@ export default function AdminUsers() {
         <div className="text-xs text-muted-foreground">
           {users.length} Personen · {users.reduce((n, u) => n + u.roles.length, 0)} aktive Rollen
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Benutzer anlegen
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setGhostDialogOpen(true);
+                loadGhostPreview();
+              }}
+            >
+              <Ghost className="h-4 w-4 mr-2" />
+              Ghost-Accounts
+            </Button>
+          )}
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Benutzer anlegen
+          </Button>
+        </div>
       </div>
 
       {/* Duplikat-Warnung */}
@@ -857,6 +923,85 @@ export default function AdminUsers() {
 
       {/* Create User Dialog */}
       <CreateUserDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+
+      {/* Ghost-Accounts: Wartungs-Dialog (nur Admin) */}
+      <Dialog open={ghostDialogOpen} onOpenChange={setGhostDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Ghost-Accounts</DialogTitle>
+            <DialogDescription>
+              Konten ohne Login, ohne Rolle und ohne interne E-Mail-Domain. Ein Bann ist
+              reversibel — es wird nichts gelöscht.
+            </DialogDescription>
+          </DialogHeader>
+
+          {ghostLoading && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+              <Loader2 className="h-4 w-4 animate-spin" /> Prüfe Konten …
+            </div>
+          )}
+
+          {!ghostLoading && ghostPreview && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{ghostPreview.count} Ghost-Account(s) gefunden</p>
+              <div className="max-h-64 overflow-y-auto rounded border p-2 text-xs space-y-1">
+                {ghostPreview.emails.length === 0 ? (
+                  <span className="text-muted-foreground">Keine Treffer.</span>
+                ) : (
+                  ghostPreview.emails.map((e) => <div key={e}>{e}</div>)
+                )}
+              </div>
+            </div>
+          )}
+
+          {!ghostLoading && ghostResult && (
+            <div className="space-y-2 text-sm">
+              <p className="font-medium">{ghostResult.banned.length} Konto(en) gebannt</p>
+              <div className="max-h-48 overflow-y-auto rounded border p-2 text-xs space-y-1">
+                {ghostResult.banned.map((e) => <div key={e}>{e}</div>)}
+              </div>
+              {ghostResult.failed.length > 0 && (
+                <div className="text-xs text-destructive">
+                  {ghostResult.failed.length} Fehler:{" "}
+                  {ghostResult.failed.map((f) => `${f.email ?? "?"} (${f.error})`).join(", ")}
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGhostDialogOpen(false)}>
+              Schließen
+            </Button>
+            {ghostPreview && ghostPreview.count > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={ghostBanning}>
+                    {ghostBanning && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Bannen
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {ghostPreview.count} Ghost-Accounts dauerhaft bannen?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Die Konten können sich danach nicht mehr anmelden. Der Bann ist
+                      reversibel, es werden keine Daten gelöscht.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                    <AlertDialogAction onClick={runGhostBan}>Bannen</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Regional Assignment Dialog */}
       <RegionalAssignmentDialog
