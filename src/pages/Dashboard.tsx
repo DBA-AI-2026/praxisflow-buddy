@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { differenceInDays } from "date-fns";
 import { isWaitingForMandate } from "@/lib/contractLifecycle";
+import { PLAUSIBILITAET_SCHWELLE } from "@/lib/plausibility";
 import { AnleitungDialog } from "@/components/help/AnleitungDialog";
 import { Button } from "@/components/ui/button";
 import { useRolePreview } from "@/contexts/RolePreviewContext";
@@ -150,6 +151,26 @@ export default function Dashboard() {
     },
   });
 
+  // ── Verbrauch über Plausibilitätsschwelle, Abrechnung angehalten (nur Admin) ──
+  // Selbstberechnend: kein Marker, kein gespeicherter Zustand.
+  const { data: blockedUsage = [] } = useQuery({
+    queryKey: ["dashboard-blocked-usage", role],
+    enabled: role === "admin",
+    staleTime: 0,
+    refetchOnMount: "always",
+    queryFn: async () => {
+      const now = new Date();
+      const currentMonthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+      const { data } = await supabase
+        .from("usage_charges")
+        .select("id, hfx_customer_number, period_from, quantity")
+        .eq("status", "pending")
+        .lt("period_to", currentMonthStart)
+        .gte("quantity", PLAUSIBILITAET_SCHWELLE);
+      return data ?? [];
+    },
+  });
+
   // ── BLOCK 2: "Seit gestern reingekommen" ──
   const { data: newSinceYesterday } = useQuery({
     queryKey: ["dashboard-new-since-yesterday", role, user?.id],
@@ -209,7 +230,7 @@ export default function Dashboard() {
   );
   const contractsWaitingPayment = filteredContractAlerts.filter((c: any) => isWaitingForMandate(c));
 
-  const totalAlerts = overdueLeads14.length + overdueLeads7.length + contractsMissingMandateMail.length + contractsMissingConfirmationMail.length + contractsWaitingPayment.length + failedInvoices.length;
+  const totalAlerts = overdueLeads14.length + overdueLeads7.length + contractsMissingMandateMail.length + contractsMissingConfirmationMail.length + contractsWaitingPayment.length + failedInvoices.length + blockedUsage.length;
 
   // "Seit gestern" — team-filter for regional leads
   const newLeads = useMemo(() => {
@@ -417,6 +438,16 @@ export default function Dashboard() {
                       label={`${failedInvoices.length} Rechnung(en) mit fehlgeschlagenem Einzug`}
                       sub="SEPA-Einzug gescheitert – bitte prüfen und erneut auslösen"
                       to="/rechnungen?status=zahlung_fehlgeschlagen"
+                    />
+                  )}
+                  {role === "admin" && blockedUsage.length > 0 && (
+                    <AlertRow
+                      icon={AlertTriangle}
+                      iconClass="text-orange-600"
+                      bgClass="bg-orange-500/5"
+                      label={`${blockedUsage.length} Verbrauchsmonat(e) über Plausibilitätsschwelle (${PLAUSIBILITAET_SCHWELLE})`}
+                      sub="Abrechnung angehalten – Verbrauch prüfen und ggf. manuell abrechnen"
+                      to="/qodia-verbrauch"
                     />
                   )}
                 </>

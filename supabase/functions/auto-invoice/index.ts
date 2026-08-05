@@ -177,20 +177,32 @@ Deno.serve(async (req) => {
   try {
     const today = new Date();
 
-    // ── Vormonat als Abrechnungszeitraum ──────────────────────────────────
-    const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const billingYear = prevMonthDate.getFullYear();
-    const billingMonth = prevMonthDate.getMonth(); // 0-based
-    const daysInBillingMonth = new Date(billingYear, billingMonth + 1, 0).getDate();
-
-    const periodMonthStr = `${billingYear}-${String(billingMonth + 1).padStart(2, "0")}`;
-    const periodStart = `${billingYear}-${String(billingMonth + 1).padStart(2, "0")}-01`;
-    const periodEnd = `${billingYear}-${String(billingMonth + 1).padStart(2, "0")}-${String(daysInBillingMonth).padStart(2, "0")}`;
-
+    // ── Abrechnungsmonate ────────────────────────────────────────────────
+    // Quelle für nachzuholende Monate sind AUSSCHLIESSLICH usage_charges,
+    // NICHT der Kalender. BEWUSSTE EINSCHRÄNKUNG: Monate ganz ohne Verbrauch
+    // werden nicht nachgeholt, es entsteht also keine rückwirkende
+    // Grundgebühr. Solange monthly_price = 0 ist, folgenlos.
+    // → Vor dem 01.01.2027 erneut bewerten.
     const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
-    const billingPeriod = `${monthNames[billingMonth]} ${billingYear}`;
 
-    console.log(`[auto-invoice] Running for ${today.toISOString()} – billing period: ${periodMonthStr} (${billingPeriod})`);
+    // Regulärer Abrechnungsmonat = Vormonat
+    const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const regularPeriodMonthStr = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, "0")}`;
+
+    // Erster Tag des laufenden Monats – Grenze für "abgeschlossene Periode"
+    const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const currentMonthStartStr = `${currentMonthStart.getFullYear()}-${String(currentMonthStart.getMonth() + 1).padStart(2, "0")}-01`;
+
+    // Kappung: max. 6 Monate rückwirkend pro Vertrag
+    const lookbackFloorDate = new Date(prevMonthDate.getFullYear(), prevMonthDate.getMonth() - 5, 1);
+    const lookbackFloorStr = `${lookbackFloorDate.getFullYear()}-${String(lookbackFloorDate.getMonth() + 1).padStart(2, "0")}`;
+
+    // Globales Limit: max. 200 Rechnungen pro Lauf
+    const MAX_INVOICES_PER_RUN = 200;
+    // SYNCHRONIZE: identischer Wert in src/lib/plausibility.ts (PLAUSIBILITAET_SCHWELLE)
+    const PLAUSIBILITAET_SCHWELLE = 500;
+
+    console.log(`[auto-invoice] Running for ${today.toISOString()} – regulärer Abrechnungsmonat: ${regularPeriodMonthStr}, Rücklauf-Grenze: ${lookbackFloorStr}`);
 
     // Load contracts – either single (manual) or all active (cron)
     let contractQuery = supabase
@@ -264,870 +276,957 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Zähler zählen RECHNUNGEN (nicht Verträge) – ein Vertrag kann mehrere
+    // Monate nachholen.
     let processed = 0;
     let skipped = 0;
+    let limitReached = false;
     const errors: string[] = [];
 
     for (const contract of contracts) {
+      if (limitReached) break;
       try {
-        // ── Duplikat-Check: Robuste Prüfung über billing_period_month ──
-        const { data: existing } = await supabase
-          .from("invoices")
-          .select("id")
-          .eq("contract_id", contract.id)
-          .eq("billing_period_month", periodMonthStr)
-          .maybeSingle();
-
-        if (existing) {
-          console.log(`[auto-invoice] Invoice already exists for contract ${contract.id} in ${periodMonthStr}, skipping.`);
-          skipped++;
-          continue;
-        }
-
-        // ── Übergangsguard: Wenn Usage für diese Periode bereits invoiced ist,
-        //    aber kein pending-Charge mehr existiert, darf keine leere Folgerechnung entstehen ──
-        if (contract.hfx_customer_number) {
-          const { data: alreadyInvoicedUsage } = await supabase
-            .from("usage_charges")
-            .select("id")
-            .eq("hfx_customer_number", contract.hfx_customer_number)
-            .eq("period_from", periodStart)
-            .eq("status", "invoiced")
-            .limit(1);
-
-          if (alreadyInvoicedUsage && alreadyInvoicedUsage.length > 0) {
-            const { data: pendingUsage } = await supabase
-              .from("usage_charges")
-              .select("id")
-              .eq("hfx_customer_number", contract.hfx_customer_number)
-              .eq("period_from", periodStart)
-              .eq("status", "pending")
-              .limit(1);
-
-            if (!pendingUsage || pendingUsage.length === 0) {
-              console.log(`[auto-invoice] Usage for ${contract.hfx_customer_number} in ${periodMonthStr} already invoiced, no pending charges – skipping to avoid duplicate.`);
-              skipped++;
-              continue;
-            }
-          }
-        }
-
+        // ── Vertragsebene: ohne E-Mail ist für keinen Monat eine Rechnung möglich ──
         if (!contract.rechnungs_email && !contract.email) {
           console.log(`[auto-invoice] No email for contract ${contract.id}, skipping.`);
           skipped++;
           continue;
         }
 
-        // ── Multi-Standort: Trägervertrag ermitteln (NULL = Träger) ──────────
-        // Identische Bedingung wird unten bei Grundgebühr UND in
-        // createGoaeCommissions (AD-Signup-Bonus) verwendet.
-        let customerBaseFeeContractId: string | null = null;
-        if (contract.customer_id) {
-          try {
-            const { data: cust } = await supabase
-              .from("customers")
-              .select("base_fee_contract_id")
-              .eq("id", contract.customer_id)
-              .maybeSingle();
-            customerBaseFeeContractId = (cust as any)?.base_fee_contract_id ?? null;
-          } catch (e) {
-            console.warn(`[auto-invoice] customer lookup failed for ${contract.id}:`, String(e));
+        // Notabdichtung gegen Mehrfachversand: pro Vertrag und Lauf genau EINE
+        // Mandatsanforderung. (Loch 2 – Rechnung ohne Mandat – bleibt eigene Phase.)
+        let mandateMailSentThisRun = false;
+
+        // ── Kandidatenmonate: DISTINCT period_from aus pending usage_charges mit
+        //    abgeschlossener Periode, UNION regulärer Vormonat, untere Grenze
+        //    Vertragsstart, gekappt auf 6 Monate Rücklauf ──
+        const candidateMonths = new Set<string>([regularPeriodMonthStr]);
+        if (contract.hfx_customer_number) {
+          const { data: pendingMonthRows } = await supabase
+            .from("usage_charges")
+            .select("period_from")
+            .eq("hfx_customer_number", contract.hfx_customer_number)
+            .eq("status", "pending")
+            .lt("period_to", currentMonthStartStr);
+          for (const row of (pendingMonthRows || [])) {
+            const m = String((row as any).period_from || "").slice(0, 7);
+            if (m) candidateMonths.add(m);
           }
         }
-        const isCarrier = isCarrierContract(contract.id, contract.customer_id, customerBaseFeeContractId);
-        const isGoae = isGoaeProduct(contract.product_name);
-        const isLocationGoae = isGoae && !isCarrier;
-        if (isLocationGoae) {
-          console.log(`[auto-invoice] Standort-GOÄ erkannt für Vertrag ${contract.id} (Träger=${customerBaseFeeContractId}) — Grundgebühr & AD-Signup-Bonus werden ausgesetzt`);
+        const contractStartMonth = String(contract.start_date || "").slice(0, 7);
+        const monthsToBill = Array.from(candidateMonths)
+          .filter((m) => m <= regularPeriodMonthStr && m >= lookbackFloorStr && (!contractStartMonth || m >= contractStartMonth))
+          .sort(); // CHRONOLOGISCH AUFSTEIGEND – nicht optional: sichert die korrekte
+                   // Fortschreibung des Freikontingent-Saldos (.lt("period_from", periodStart)).
+
+        if (monthsToBill.length > 1) {
+          console.log(`[auto-invoice] Vertrag ${contract.id}: ${monthsToBill.length} abzurechnende Monate → ${monthsToBill.join(", ")}`);
         }
 
-        // ── Grundgebühr-Waiver-Logik (aus Vertragsfeldern statt hart codiert) ──
-        const isInWaiverPeriod = contract.base_fee_waived === true &&
-          contract.base_fee_waived_until != null &&
-          new Date(periodEnd) <= new Date(contract.base_fee_waived_until);
-        const waiverUntilFormatted = contract.base_fee_waived_until
-          ? new Date(contract.base_fee_waived_until).toLocaleDateString("de-DE")
-          : "";
+        // ROLLBACK 04.08.2026: Monatsschleife entfernen, Periodenvariablen
+        // zurück nach oben vor die Vertragsschleife (Z. 178-191),
+        // Plausibilitätsbremse und mandateMailSentThisRun-Flag entfernen.
+        for (const periodMonthStr of monthsToBill) {
+          if (processed >= MAX_INVOICES_PER_RUN) {
+            limitReached = true;
+            break;
+          }
+          // Zweiter try/catch INNERHALB der Monatsschleife: ein fehlerhafter Monat
+          // bricht die übrigen Monate desselben Vertrags nicht ab.
+          try {
+            const billingYear = Number(periodMonthStr.slice(0, 4));
+            const billingMonth = Number(periodMonthStr.slice(5, 7)) - 1; // 0-based
+            const daysInBillingMonth = new Date(billingYear, billingMonth + 1, 0).getDate();
+            const periodStart = `${periodMonthStr}-01`;
+            const periodEnd = `${periodMonthStr}-${String(daysInBillingMonth).padStart(2, "0")}`;
+            const billingPeriod = `${monthNames[billingMonth]} ${billingYear}`;
 
-        const contractMonthly = Number(contract.monthly_price) || 0;
-        if (isInWaiverPeriod) {
-          console.log(`[auto-invoice] Waiver aktiv für Vertrag ${contract.id} (bis ${contract.base_fee_waived_until}) – alle Positionen 0 €`);
-        }
-        const waiverHint = isInWaiverPeriod ? ` (Einführungsaktion – ausgesetzt bis ${waiverUntilFormatted})` : "";
-        const priceOrZero = (v: number) => (isInWaiverPeriod ? 0 : v);
+            // ── Plausibilitätsbremse ──────────────────────────────────────────
+            // Fester Schwellwert ODER > 5× Durchschnitt der letzten 3 fakturierten
+            // Monate (nur bei ≥ 2 Vorperioden). Greift sie, wird NUR dieser Monat
+            // übersprungen; Charges bleiben 'pending', kein Invoice-Insert.
+            if (contract.hfx_customer_number) {
+              const { data: brakeRows } = await supabase
+                .from("usage_charges")
+                .select("quantity")
+                .eq("hfx_customer_number", contract.hfx_customer_number)
+                .eq("status", "pending")
+                .eq("period_from", periodStart)
+                .eq("period_to", periodEnd);
+              const monthQty = (brakeRows || []).reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0);
+              if (monthQty > 0) {
+                const { data: priorRowsForBrake } = await supabase
+                  .from("usage_charges")
+                  .select("period_from, quantity")
+                  .eq("hfx_customer_number", contract.hfx_customer_number)
+                  .eq("status", "invoiced")
+                  .lt("period_from", periodStart);
+                const byMonth = new Map<string, number>();
+                for (const r of (priorRowsForBrake || [])) {
+                  const key = String((r as any).period_from);
+                  byMonth.set(key, (byMonth.get(key) || 0) + (Number((r as any).quantity) || 0));
+                }
+                const lastThree = Array.from(byMonth.entries())
+                  .sort((a, b) => b[0].localeCompare(a[0]))
+                  .slice(0, 3)
+                  .map((e) => e[1]);
+                const avgPrior = lastThree.length >= 2
+                  ? lastThree.reduce((s, v) => s + v, 0) / lastThree.length
+                  : null;
+                const hitsFixed = monthQty >= PLAUSIBILITAET_SCHWELLE;
+                const hitsAvg = avgPrior !== null && avgPrior > 0 && monthQty > 5 * avgPrior;
+                if (hitsFixed || hitsAvg) {
+                  const reason = hitsFixed
+                    ? `Menge ${monthQty} ≥ Schwellwert ${PLAUSIBILITAET_SCHWELLE}`
+                    : `Menge ${monthQty} > 5× Durchschnitt (${avgPrior?.toFixed(1)}) der letzten ${lastThree.length} fakturierten Monate`;
+                  console.error(`[auto-invoice] Plausibilitätsbremse: Vertrag ${contract.id} (${contract.hfx_customer_number}) ${periodMonthStr} übersprungen – ${reason}`);
+                  errors.push(`Plausibilität [${contract.id} ${periodMonthStr}]: ${reason}`);
+                  try {
+                    await resend.emails.send({
+                      from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+                      reply_to: "info@hfx-honorarfuchs.de",
+                      to: [BUCHHALTUNG_EMAIL],
+                      subject: `[Plausibilitätsbremse] ${contract.customer_name} – ${periodMonthStr}`,
+                      html: `<p>Die automatische Abrechnung wurde für einen Monat angehalten.</p>
+<ul>
+  <li><strong>Kunde:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</li>
+  <li><strong>Vertrag-ID:</strong> ${contract.id}</li>
+  <li><strong>Abrechnungsmonat:</strong> ${periodMonthStr}</li>
+  <li><strong>Grund:</strong> ${reason}</li>
+</ul>
+<p>Die Verbrauchsposten bleiben offen (<strong>pending</strong>). Es wurde keine Rechnung erzeugt und kein Einzug ausgelöst. Bitte prüfen und ggf. manuell abrechnen.</p>`,
+                    });
+                  } catch (brakeMailErr) {
+                    console.error(`[auto-invoice] Plausibilitäts-Mail fehlgeschlagen:`, String(brakeMailErr));
+                  }
+                  skipped++;
+                  continue;
+                }
+              }
+            }
 
-        // Build invoice positions
-        const taxRate = 19;
-        const positions: { description: string; quantity: number; unit_price: number }[] = [];
-
-        // ── EBM-spezifischer Aufbau (Variante 2: Module + Grundgebühr + LANR-Aufschlag + Korrektur) ──
-        const isEbm = (contract.product_name || "").includes("HFX EBM");
-
-        if (isEbm) {
-          // Lade HFX EBM Produkt + Module
-          const { data: ebmProduct } = await supabase
-            .from("products")
-            .select("id, monthly_price")
-            .eq("name", "HFX EBM")
+          // ── Duplikat-Check: Robuste Prüfung über billing_period_month ──
+          const { data: existing } = await supabase
+            .from("invoices")
+            .select("id")
+            .eq("contract_id", contract.id)
+            .eq("billing_period_month", periodMonthStr)
             .maybeSingle();
 
-          const ebmBasePrice = Number(ebmProduct?.monthly_price) || 0;
+          if (existing) {
+            console.log(`[auto-invoice] Invoice already exists for contract ${contract.id} in ${periodMonthStr}, skipping.`);
+            skipped++;
+            continue;
+          }
 
-          let modulesById: Record<string, { name: string; monthly_price: number }> = {};
-          let modulesByName: Record<string, { name: string; monthly_price: number }> = {};
-          if (ebmProduct?.id) {
-            const { data: pm } = await supabase
-              .from("product_modules")
-              .select("id, name, monthly_price")
-              .eq("product_id", ebmProduct.id);
-            for (const m of (pm || [])) {
-              const entry = { name: m.name, monthly_price: Number(m.monthly_price) || 0 };
-              modulesById[m.id] = entry;
-              modulesByName[m.name] = entry;
+          // ── Übergangsguard: Wenn Usage für diese Periode bereits invoiced ist,
+          //    aber kein pending-Charge mehr existiert, darf keine leere Folgerechnung entstehen ──
+          if (contract.hfx_customer_number) {
+            const { data: alreadyInvoicedUsage } = await supabase
+              .from("usage_charges")
+              .select("id")
+              .eq("hfx_customer_number", contract.hfx_customer_number)
+              .eq("period_from", periodStart)
+              .eq("status", "invoiced")
+              .limit(1);
+
+            if (alreadyInvoicedUsage && alreadyInvoicedUsage.length > 0) {
+              const { data: pendingUsage } = await supabase
+                .from("usage_charges")
+                .select("id")
+                .eq("hfx_customer_number", contract.hfx_customer_number)
+                .eq("period_from", periodStart)
+                .eq("status", "pending")
+                .limit(1);
+
+              if (!pendingUsage || pendingUsage.length === 0) {
+                console.log(`[auto-invoice] Usage for ${contract.hfx_customer_number} in ${periodMonthStr} already invoiced, no pending charges – skipping to avoid duplicate.`);
+                skipped++;
+                continue;
+              }
             }
           }
 
-          // 1) Module-Positionen (eine je selected_addon_modules-Eintrag)
-          const selectedModules: string[] = Array.isArray(contract.selected_addon_modules)
-            ? contract.selected_addon_modules
-            : [];
-          let modulesSum = 0;
-          for (const key of selectedModules) {
-            const m = modulesByName[key] || modulesById[key];
-            if (!m) {
-              console.warn(`[auto-invoice] EBM-Modul nicht gefunden: "${key}" (Vertrag ${contract.id})`);
-              continue;
+          // ── Multi-Standort: Trägervertrag ermitteln (NULL = Träger) ──────────
+          // Identische Bedingung wird unten bei Grundgebühr UND in
+          // createGoaeCommissions (AD-Signup-Bonus) verwendet.
+          let customerBaseFeeContractId: string | null = null;
+          if (contract.customer_id) {
+            try {
+              const { data: cust } = await supabase
+                .from("customers")
+                .select("base_fee_contract_id")
+                .eq("id", contract.customer_id)
+                .maybeSingle();
+              customerBaseFeeContractId = (cust as any)?.base_fee_contract_id ?? null;
+            } catch (e) {
+              console.warn(`[auto-invoice] customer lookup failed for ${contract.id}:`, String(e));
             }
-            modulesSum += m.monthly_price;
-            positions.push({
-              description: `${m.name} – ${billingPeriod}${waiverHint}`,
-              quantity: 1,
-              unit_price: priceOrZero(m.monthly_price),
-            });
           }
-
-          // 2) Grundgebühr (aus products.monthly_price, NICHT contract.monthly_price)
-          positions.push({
-            description: `Grundgebühr HFX EBM (1 BSNR + 3 LANR inkl.) – ${billingPeriod}${waiverHint}`,
-            quantity: 1,
-            unit_price: priceOrZero(ebmBasePrice),
-          });
-
-          // 3) LANR-Aufschlag falls > 3
-          const lanrCount = Number(contract.lanr_count) || 0;
-          const extraLanr = Math.max(0, lanrCount - 3);
-          const LANR_UNIT_PRICE = 22;
-          if (extraLanr > 0) {
-            positions.push({
-              description: `Zusätzliche LANR (${extraLanr} über inkludiert) – ${billingPeriod}${waiverHint}`,
-              quantity: extraLanr,
-              unit_price: priceOrZero(LANR_UNIT_PRICE),
-            });
-          }
-
-          // 4) Korrektur-Position (Diff zu contract.monthly_price = SSOT)
-          const computedSum = ebmBasePrice + modulesSum + extraLanr * LANR_UNIT_PRICE;
-          const diff = Math.round((contractMonthly - computedSum) * 100) / 100;
-          if (diff !== 0) {
-            const label = diff > 0 ? "Sondervereinbarung Aufschlag" : "Sondervereinbarung Rabatt";
-            positions.push({
-              description: `${label} – ${billingPeriod}${waiverHint}`,
-              quantity: 1,
-              unit_price: priceOrZero(diff),
-            });
-          }
-        } else {
-          // ── Bestehender, produkt-agnostischer Pfad (GOÄ, Live-Check, etc.) ──
-          // Multi-Standort: Bei GOÄ-Standortverträgen (nicht-Träger) entfällt die Grundgebühr,
-          // weil sie einmalig auf dem Hauptaccount-Vertrag abgerechnet wird.
+          const isCarrier = isCarrierContract(contract.id, contract.customer_id, customerBaseFeeContractId);
+          const isGoae = isGoaeProduct(contract.product_name);
+          const isLocationGoae = isGoae && !isCarrier;
           if (isLocationGoae) {
-            positions.push({
-              description: `Grundgebühr ${contract.product_name} – ${billingPeriod} (Standortvertrag – Grundgebühr läuft über Hauptaccount)`,
-              quantity: contract.license_count || 1,
-              unit_price: 0,
-            });
-          } else {
-            const baseNetAmount = isInWaiverPeriod ? 0 : contractMonthly;
-            if (baseNetAmount > 0) {
+            console.log(`[auto-invoice] Standort-GOÄ erkannt für Vertrag ${contract.id} (Träger=${customerBaseFeeContractId}) — Grundgebühr & AD-Signup-Bonus werden ausgesetzt`);
+          }
+
+          // ── Grundgebühr-Waiver-Logik (aus Vertragsfeldern statt hart codiert) ──
+          const isInWaiverPeriod = contract.base_fee_waived === true &&
+            contract.base_fee_waived_until != null &&
+            new Date(periodEnd) <= new Date(contract.base_fee_waived_until);
+          const waiverUntilFormatted = contract.base_fee_waived_until
+            ? new Date(contract.base_fee_waived_until).toLocaleDateString("de-DE")
+            : "";
+
+          const contractMonthly = Number(contract.monthly_price) || 0;
+          if (isInWaiverPeriod) {
+            console.log(`[auto-invoice] Waiver aktiv für Vertrag ${contract.id} (bis ${contract.base_fee_waived_until}) – alle Positionen 0 €`);
+          }
+          const waiverHint = isInWaiverPeriod ? ` (Einführungsaktion – ausgesetzt bis ${waiverUntilFormatted})` : "";
+          const priceOrZero = (v: number) => (isInWaiverPeriod ? 0 : v);
+
+          // Build invoice positions
+          const taxRate = 19;
+          const positions: { description: string; quantity: number; unit_price: number }[] = [];
+
+          // ── EBM-spezifischer Aufbau (Variante 2: Module + Grundgebühr + LANR-Aufschlag + Korrektur) ──
+          const isEbm = (contract.product_name || "").includes("HFX EBM");
+
+          if (isEbm) {
+            // Lade HFX EBM Produkt + Module
+            const { data: ebmProduct } = await supabase
+              .from("products")
+              .select("id, monthly_price")
+              .eq("name", "HFX EBM")
+              .maybeSingle();
+
+            const ebmBasePrice = Number(ebmProduct?.monthly_price) || 0;
+
+            let modulesById: Record<string, { name: string; monthly_price: number }> = {};
+            let modulesByName: Record<string, { name: string; monthly_price: number }> = {};
+            if (ebmProduct?.id) {
+              const { data: pm } = await supabase
+                .from("product_modules")
+                .select("id, name, monthly_price")
+                .eq("product_id", ebmProduct.id);
+              for (const m of (pm || [])) {
+                const entry = { name: m.name, monthly_price: Number(m.monthly_price) || 0 };
+                modulesById[m.id] = entry;
+                modulesByName[m.name] = entry;
+              }
+            }
+
+            // 1) Module-Positionen (eine je selected_addon_modules-Eintrag)
+            const selectedModules: string[] = Array.isArray(contract.selected_addon_modules)
+              ? contract.selected_addon_modules
+              : [];
+            let modulesSum = 0;
+            for (const key of selectedModules) {
+              const m = modulesByName[key] || modulesById[key];
+              if (!m) {
+                console.warn(`[auto-invoice] EBM-Modul nicht gefunden: "${key}" (Vertrag ${contract.id})`);
+                continue;
+              }
+              modulesSum += m.monthly_price;
               positions.push({
-                description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
-                quantity: contract.license_count || 1,
-                unit_price: baseNetAmount / (contract.license_count || 1),
+                description: `${m.name} – ${billingPeriod}${waiverHint}`,
+                quantity: 1,
+                unit_price: priceOrZero(m.monthly_price),
               });
-            } else if (isInWaiverPeriod) {
+            }
+
+            // 2) Grundgebühr (aus products.monthly_price, NICHT contract.monthly_price)
+            positions.push({
+              description: `Grundgebühr HFX EBM (1 BSNR + 3 LANR inkl.) – ${billingPeriod}${waiverHint}`,
+              quantity: 1,
+              unit_price: priceOrZero(ebmBasePrice),
+            });
+
+            // 3) LANR-Aufschlag falls > 3
+            const lanrCount = Number(contract.lanr_count) || 0;
+            const extraLanr = Math.max(0, lanrCount - 3);
+            const LANR_UNIT_PRICE = 22;
+            if (extraLanr > 0) {
               positions.push({
-                description: `Grundgebühr ${contract.product_name} – ${billingPeriod} (Einführungsaktion – Grundgebühr ausgesetzt bis ${waiverUntilFormatted})`,
+                description: `Zusätzliche LANR (${extraLanr} über inkludiert) – ${billingPeriod}${waiverHint}`,
+                quantity: extraLanr,
+                unit_price: priceOrZero(LANR_UNIT_PRICE),
+              });
+            }
+
+            // 4) Korrektur-Position (Diff zu contract.monthly_price = SSOT)
+            const computedSum = ebmBasePrice + modulesSum + extraLanr * LANR_UNIT_PRICE;
+            const diff = Math.round((contractMonthly - computedSum) * 100) / 100;
+            if (diff !== 0) {
+              const label = diff > 0 ? "Sondervereinbarung Aufschlag" : "Sondervereinbarung Rabatt";
+              positions.push({
+                description: `${label} – ${billingPeriod}${waiverHint}`,
+                quantity: 1,
+                unit_price: priceOrZero(diff),
+              });
+            }
+          } else {
+            // ── Bestehender, produkt-agnostischer Pfad (GOÄ, Live-Check, etc.) ──
+            // Multi-Standort: Bei GOÄ-Standortverträgen (nicht-Träger) entfällt die Grundgebühr,
+            // weil sie einmalig auf dem Hauptaccount-Vertrag abgerechnet wird.
+            if (isLocationGoae) {
+              positions.push({
+                description: `Grundgebühr ${contract.product_name} – ${billingPeriod} (Standortvertrag – Grundgebühr läuft über Hauptaccount)`,
                 quantity: contract.license_count || 1,
                 unit_price: 0,
               });
             } else {
-              positions.push({
-                description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
-                quantity: contract.license_count || 1,
-                unit_price: 0,
-              });
+              const baseNetAmount = isInWaiverPeriod ? 0 : contractMonthly;
+              if (baseNetAmount > 0) {
+                positions.push({
+                  description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
+                  quantity: contract.license_count || 1,
+                  unit_price: baseNetAmount / (contract.license_count || 1),
+                });
+              } else if (isInWaiverPeriod) {
+                positions.push({
+                  description: `Grundgebühr ${contract.product_name} – ${billingPeriod} (Einführungsaktion – Grundgebühr ausgesetzt bis ${waiverUntilFormatted})`,
+                  quantity: contract.license_count || 1,
+                  unit_price: 0,
+                });
+              } else {
+                positions.push({
+                  description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
+                  quantity: contract.license_count || 1,
+                  unit_price: 0,
+                });
+              }
             }
           }
-        }
 
-        // Nutzungsgebühren (GOÄ-Verbrauch) – NUR für den exakten Abrechnungs-Vormonat.
-        let usageChargeIds: string[] = [];
-        let usageNetAmount = 0;
-        // Freikontingent-Bookkeeping (Phase 2/Baustein 3)
-        let grantsTotal = 0;
-        let usageInvoicedPrior = 0;
-        let periodUsageQty = 0;
-        let freiQty = 0;
-        let grantDeductionNet = 0;
-        if (contract.hfx_customer_number) {
-          const { data: usageCharges } = await supabase
-            .from("usage_charges")
-            .select("*")
-            .eq("hfx_customer_number", contract.hfx_customer_number)
-            .eq("status", "pending")
-            .eq("period_from", periodStart)
-            .eq("period_to", periodEnd);
+          // Nutzungsgebühren (GOÄ-Verbrauch) – NUR für den exakten Abrechnungs-Vormonat.
+          let usageChargeIds: string[] = [];
+          let usageNetAmount = 0;
+          // Freikontingent-Bookkeeping (Phase 2/Baustein 3)
+          let grantsTotal = 0;
+          let usageInvoicedPrior = 0;
+          let periodUsageQty = 0;
+          let freiQty = 0;
+          let grantDeductionNet = 0;
+          if (contract.hfx_customer_number) {
+            const { data: usageCharges } = await supabase
+              .from("usage_charges")
+              .select("*")
+              .eq("hfx_customer_number", contract.hfx_customer_number)
+              .eq("status", "pending")
+              .eq("period_from", periodStart)
+              .eq("period_to", periodEnd);
 
-          if (usageCharges && usageCharges.length > 0) {
-            // Freikontingent-Grants + bereits fakturierter Vorperioden-Verbrauch
-            const [{ data: grantRows }, { data: priorRows }] = await Promise.all([
-              supabase
-                .from("free_quota_grants")
-                .select("menge")
-                .eq("hfx_customer_number", contract.hfx_customer_number),
-              supabase
-                .from("usage_charges")
-                .select("quantity")
-                .eq("hfx_customer_number", contract.hfx_customer_number)
-                .eq("status", "invoiced")
-                .lt("period_from", periodStart),
-            ]);
-            grantsTotal = (grantRows || []).reduce((s: number, g: any) => s + (Number(g.menge) || 0), 0);
-            usageInvoicedPrior = (priorRows || []).reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0);
+            if (usageCharges && usageCharges.length > 0) {
+              // Freikontingent-Grants + bereits fakturierter Vorperioden-Verbrauch
+              const [{ data: grantRows }, { data: priorRows }] = await Promise.all([
+                supabase
+                  .from("free_quota_grants")
+                  .select("menge")
+                  .eq("hfx_customer_number", contract.hfx_customer_number),
+                supabase
+                  .from("usage_charges")
+                  .select("quantity")
+                  .eq("hfx_customer_number", contract.hfx_customer_number)
+                  .eq("status", "invoiced")
+                  .lt("period_from", periodStart),
+              ]);
+              grantsTotal = (grantRows || []).reduce((s: number, g: any) => s + (Number(g.menge) || 0), 0);
+              usageInvoicedPrior = (priorRows || []).reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0);
 
-            // Formel geteilt via _shared/freeQuota.ts (VERBATIM aus vorheriger Inline-Version).
-            // HINWEIS: Der Description-Prefix "Freikontingent-Abzug" bleibt API-relevant für
-            // processFailedInvoiceRetry (description.startsWith + unit_price < 0).
-            const eff = computeEffectiveUsageNet(usageCharges as any, grantsTotal, usageInvoicedPrior, billingPeriod);
-            usageChargeIds = eff.usageChargeIds;
-            usageNetAmount = eff.usageNetAmount;
-            periodUsageQty = eff.periodUsageQty;
-            freiQty = eff.freiQty;
-            grantDeductionNet = eff.grantDeductionNet;
-            positions.push(...eff.positions);
+              // Formel geteilt via _shared/freeQuota.ts (VERBATIM aus vorheriger Inline-Version).
+              // HINWEIS: Der Description-Prefix "Freikontingent-Abzug" bleibt API-relevant für
+              // processFailedInvoiceRetry (description.startsWith + unit_price < 0).
+              const eff = computeEffectiveUsageNet(usageCharges as any, grantsTotal, usageInvoicedPrior, billingPeriod);
+              usageChargeIds = eff.usageChargeIds;
+              usageNetAmount = eff.usageNetAmount;
+              periodUsageQty = eff.periodUsageQty;
+              freiQty = eff.freiQty;
+              grantDeductionNet = eff.grantDeductionNet;
+              positions.push(...eff.positions);
 
-            if (freiQty > 0) {
-              console.log(`[auto-invoice] Freikontingent: contract=${contract.id} hfx=${contract.hfx_customer_number} grants=${grantsTotal} priorInvoiced=${usageInvoicedPrior} saldo=${eff.saldo} periodQty=${periodUsageQty} frei=${freiQty} deduction=${grantDeductionNet.toFixed(2)}€`);
+              if (freiQty > 0) {
+                console.log(`[auto-invoice] Freikontingent: contract=${contract.id} hfx=${contract.hfx_customer_number} grants=${grantsTotal} priorInvoiced=${usageInvoicedPrior} saldo=${eff.saldo} periodQty=${periodUsageQty} frei=${freiQty} deduction=${grantDeductionNet.toFixed(2)}€`);
+              }
             }
           }
-        }
 
-        // Recalculate totals
-        const netAmount = positions.reduce((s, p) => s + p.quantity * p.unit_price, 0);
-        const taxAmount = Math.round(netAmount * taxRate) / 100;
-        const grossAmount = Math.round((netAmount + taxAmount) * 100) / 100;
+          // Recalculate totals
+          const netAmount = positions.reduce((s, p) => s + p.quantity * p.unit_price, 0);
+          const taxAmount = Math.round(netAmount * taxRate) / 100;
+          const grossAmount = Math.round((netAmount + taxAmount) * 100) / 100;
 
-        // Echter Null-Beleg: monthly_price=0, kein Waiver, keine Usage, kein Standort-GOÄ.
-        // Beleg wird angelegt (Ledger-Parität), aber NICHT per Mail versendet.
-        const isZeroNonWaiver = grossAmount === 0 && !isInWaiverPeriod && !isLocationGoae;
-        // Waiver-0-€-Fall: Grundgebühr im Waiver, keine Usage → 0 €. Beleg bleibt (Ledger-Parität),
-        // Kundenmail wird unterdrückt. Standort-GOÄ bleibt bewusst ausgenommen (dessen 0-€-Mail
-        // klärt „zentral über Hauptstandort" und wird an anderer Stelle entschieden).
-        const isZeroWaiverSuppressed = grossAmount === 0 && isInWaiverPeriod && !isLocationGoae;
-        const suppressZeroInvoiceMail = isZeroNonWaiver || isZeroWaiverSuppressed;
+          // Echter Null-Beleg: monthly_price=0, kein Waiver, keine Usage, kein Standort-GOÄ.
+          // Beleg wird angelegt (Ledger-Parität), aber NICHT per Mail versendet.
+          const isZeroNonWaiver = grossAmount === 0 && !isInWaiverPeriod && !isLocationGoae;
+          // Waiver-0-€-Fall: Grundgebühr im Waiver, keine Usage → 0 €. Beleg bleibt (Ledger-Parität),
+          // Kundenmail wird unterdrückt. Standort-GOÄ bleibt bewusst ausgenommen (dessen 0-€-Mail
+          // klärt „zentral über Hauptstandort" und wird an anderer Stelle entschieden).
+          const isZeroWaiverSuppressed = grossAmount === 0 && isInWaiverPeriod && !isLocationGoae;
+          const suppressZeroInvoiceMail = isZeroNonWaiver || isZeroWaiverSuppressed;
 
-        const collectionDate = addBusinessDays(today, 3);
-        const dueDateStr = collectionDate.toISOString().split("T")[0];
-        const collectionDateFormatted = collectionDate.toLocaleDateString("de-DE");
-        const todayStr = today.toISOString().split("T")[0];
+          const collectionDate = addBusinessDays(today, 3);
+          const dueDateStr = collectionDate.toISOString().split("T")[0];
+          const collectionDateFormatted = collectionDate.toLocaleDateString("de-DE");
+          const todayStr = today.toISOString().split("T")[0];
 
-        // ── Stripe SEPA Prüfung ──────────────────────────────────────────────
-        const hasStripeCustomer = !!contract.stripe_customer_id;
+          // ── Stripe SEPA Prüfung ──────────────────────────────────────────────
+          const hasStripeCustomer = !!contract.stripe_customer_id;
 
-        // Kein SEPA-Mandat → Checkout-Setup-Link senden
-        if (!hasStripeCustomer) {
-          console.warn(`[auto-invoice] Contract ${contract.id} (${contract.customer_name}) hat kein Stripe-Mandat – sende Mandatsanforderungs-E-Mail`);
-          try {
-            const emailRecipient = contract.rechnungs_email || contract.email;
-            if (emailRecipient) {
-              const stripeCustomer = await stripe.customers.create({
-                name: contract.customer_name,
-                email: emailRecipient,
-                metadata: { hfx_contract_id: contract.id, hfx_customer_number: contract.hfx_customer_number || "" },
-              });
+          // Kein SEPA-Mandat → Checkout-Setup-Link senden.
+          // Nur der ERSTE Monat ohne Mandat löst Mail und stripe.customers.create()
+          // aus; folgende Monate desselben Vertrags überspringen still.
+          if (!hasStripeCustomer && mandateMailSentThisRun) {
+            console.log(`[auto-invoice] Contract ${contract.id}: Mandatsanforderung in diesem Lauf bereits versandt – ${periodMonthStr} still übersprungen.`);
+            skipped++;
+            continue;
+          }
+          if (!hasStripeCustomer) {
+            mandateMailSentThisRun = true;
+            console.warn(`[auto-invoice] Contract ${contract.id} (${contract.customer_name}) hat kein Stripe-Mandat – sende Mandatsanforderungs-E-Mail`);
+            try {
+              const emailRecipient = contract.rechnungs_email || contract.email;
+              if (emailRecipient) {
+                const stripeCustomer = await stripe.customers.create({
+                  name: contract.customer_name,
+                  email: emailRecipient,
+                  metadata: { hfx_contract_id: contract.id, hfx_customer_number: contract.hfx_customer_number || "" },
+                });
 
-              const { error: scErr } = await supabase
-                .from("contracts")
-                .update({ stripe_customer_id: stripeCustomer.id } as any)
-                .eq("id", contract.id);
-              if (scErr) throw new Error(`stripe_customer_id persist failed: ${scErr.message}`);
+                const { error: scErr } = await supabase
+                  .from("contracts")
+                  .update({ stripe_customer_id: stripeCustomer.id } as any)
+                  .eq("id", contract.id);
+                if (scErr) throw new Error(`stripe_customer_id persist failed: ${scErr.message}`);
 
-              // Multi-Standort Self-Heal (NULL-only, kein breites WHERE):
-              await healCustomerStripeId(supabase, contract.customer_id, stripeCustomer.id);
+                // Multi-Standort Self-Heal (NULL-only, kein breites WHERE):
+                await healCustomerStripeId(supabase, contract.customer_id, stripeCustomer.id);
 
-              const setupSession = await stripe.checkout.sessions.create({
-                mode: "setup",
-                customer: stripeCustomer.id,
-                payment_method_types: ["sepa_debit"],
-                success_url: "https://sales.hfx-honorarfuchs.de/mandate-success?session_id={CHECKOUT_SESSION_ID}",
-                cancel_url: "https://sales.hfx-honorarfuchs.de/mandate-success?cancelled=1",
+                const setupSession = await stripe.checkout.sessions.create({
+                  mode: "setup",
+                  customer: stripeCustomer.id,
+                  payment_method_types: ["sepa_debit"],
+                  success_url: "https://sales.hfx-honorarfuchs.de/mandate-success?session_id={CHECKOUT_SESSION_ID}",
+                  cancel_url: "https://sales.hfx-honorarfuchs.de/mandate-success?cancelled=1",
+                  metadata: {
+                    source: "sepa_mandate_setup",
+                    contract_id: contract.id,
+                    hfx_customer_number: contract.hfx_customer_number || "",
+                  },
+                });
+
+                // Stabiler HFX-Mandat-Link. Verfällt nie — `mandate-link` mintet bei
+                // jedem Klick eine frische Stripe-Session (Thread #16, Phase A/B).
+                // Gate 6 in `mandate-link` lässt aktive Verträge nur durch, solange der
+                // Customer keine SEPA-Zahlungsmethode hat — genau dieser Recovery-Fall.
+                const mandateUrl = `https://sales.hfx-honorarfuchs.de/mandat?contract_id=${contract.id}`;
+
+                const { html: mandateEmailHtml, text: mandateEmailText } = buildMandateRequestEmail({
+                  customerName: contract.customer_name,
+                  productName: contract.product_name,
+                  mandateUrl,
+                  billingPeriod,
+                });
+                await resend.emails.send({
+                  from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+                  reply_to: "info@hfx-honorarfuchs.de",
+                  to: [emailRecipient],
+                  subject: `Zahlungsmethode hinterlegen – ${contract.customer_name}`,
+                  html: mandateEmailHtml,
+                  text: mandateEmailText,
+                });
+                console.log(`[auto-invoice] Mandatsanforderung gesendet an ${emailRecipient} (Contract: ${contract.id})`);
+              }
+            } catch (mandateErr: any) {
+              console.error(`[auto-invoice] Mandate request error for contract ${contract.id}:`, mandateErr?.message);
+              errors.push(`Mandate [${contract.id}]: ${mandateErr?.message}`);
+            }
+            skipped++;
+            continue;
+          }
+
+          // ── 1. ZUERST interner Rechnungsdatensatz anlegen ──────────────────
+          const { data: invoice, error: insertError } = await supabase
+            .from("invoices")
+            .insert({
+              contract_id: contract.id,
+              customer_name: contract.customer_name,
+              customer_number: contract.hfx_customer_number,
+              rechnungs_email: contract.rechnungs_email || contract.email,
+              adresse: contract.adresse || contract.praxisanschrift,
+              plz: contract.plz,
+              ort: contract.ort,
+              invoice_date: todayStr,
+              due_date: dueDateStr,
+              billing_period_month: periodMonthStr,
+              positions: positions,
+              net_amount: netAmount,
+              tax_rate: taxRate,
+              tax_amount: taxAmount,
+              gross_amount: grossAmount,
+              status: "entwurf",
+              notes: `Automatisch generiert – Abrechnungszeitraum: ${billingPeriod} (${periodMonthStr})${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} geprüfte GOÄ-Rechnungen: ${usageNetAmount.toFixed(2)} € netto` : ""}${freiQty > 0 ? ` | Freikontingent-Abzug: ${freiQty} Rechnungen (-${grantDeductionNet.toFixed(2)} € netto)` : ""}${isZeroNonWaiver ? " | fully free by grant" : ""}${isZeroWaiverSuppressed ? " | Grundgebühr-Waiver 0 € – ohne Versand" : ""}`,
+            } as any)
+            .select()
+            .single();
+
+          if (insertError || !invoice) {
+            // Unique-Constraint-Verletzung = bereits fakturiert
+            if ((insertError as any)?.code === "23505") {
+              console.log(`[auto-invoice] Duplicate blocked by unique constraint for contract ${contract.id} in ${periodMonthStr}`);
+              skipped++;
+            } else {
+              errors.push(`Contract ${contract.id}: ${insertError?.message}`);
+            }
+            continue;
+          }
+
+          // ── 2. Usage charges als invoiced markieren ──────────────────────────
+          if (usageChargeIds.length > 0) {
+            await supabase
+              .from("usage_charges")
+              .update({ status: "invoiced", invoice_id: invoice.id })
+              .in("id", usageChargeIds);
+            console.log(`[auto-invoice] Attached ${usageChargeIds.length} usage charges to invoice ${invoice.invoice_number}`);
+          }
+
+          // ── 3. DANACH Stripe-Zahlung auslösen ───────────────────────────────
+          let stripeInvoiceId: string | null = null;
+          // A1: Flag, damit nachfolgende Blöcke (Status, fibu_events, Provisionen) reagieren können
+          let stripeChargeFailed = false;
+          let stripeErrorMessage: string | null = null;
+          if (hasStripeCustomer && grossAmount > 0) {
+            const createdItemIds: string[] = [];
+            let stripeInvoice: any = null;
+            try {
+              const stripeDescription = `${contract.product_name} – ${billingPeriod}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}${usageChargeIds.length > 0 ? ` | Nutzung: ${usageChargeIds.length} geprüfte GOÄ-Rechnungen (${usageNetAmount.toFixed(2)} €)` : ""}`;
+
+              // SYNCHRONIZE WITH manual-interim-invoice (V2 flow):
+              // 1) Draft-Invoice zuerst, 2) stripe_invoice_id sofort persistieren,
+              // 3) Items mit invoice:<id> hängen, 4) finalize+pay.
+              stripeInvoice = await stripe.invoices.create({
+                customer: contract.stripe_customer_id,
+                auto_advance: false,
+                collection_method: "charge_automatically",
+                pending_invoice_items_behavior: "exclude",
+                description: stripeDescription,
                 metadata: {
-                  source: "sepa_mandate_setup",
-                  contract_id: contract.id,
+                  hfx_contract_id: contract.id,
                   hfx_customer_number: contract.hfx_customer_number || "",
+                  billing_period: periodMonthStr,
+                  hfx_invoice_id: invoice.id,
+                  hfx_invoice_number: invoice.invoice_number,
                 },
               });
 
-              // Stabiler HFX-Mandat-Link. Verfällt nie — `mandate-link` mintet bei
-              // jedem Klick eine frische Stripe-Session (Thread #16, Phase A/B).
-              // Gate 6 in `mandate-link` lässt aktive Verträge nur durch, solange der
-              // Customer keine SEPA-Zahlungsmethode hat — genau dieser Recovery-Fall.
-              const mandateUrl = `https://sales.hfx-honorarfuchs.de/mandat?contract_id=${contract.id}`;
+              // Stripe-ID sofort persistieren — sichert Verknüpfung selbst bei
+              // späterem Fehler in Items/finalize/pay.
+              await supabase
+                .from("invoices")
+                .update({ stripe_invoice_id: stripeInvoice.id })
+                .eq("id", invoice.id);
 
-              const { html: mandateEmailHtml, text: mandateEmailText } = buildMandateRequestEmail({
-                customerName: contract.customer_name,
-                productName: contract.product_name,
-                mandateUrl,
-                billingPeriod,
-              });
-              await resend.emails.send({
-                from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
-                reply_to: "info@hfx-honorarfuchs.de",
-                to: [emailRecipient],
-                subject: `Zahlungsmethode hinterlegen – ${contract.customer_name}`,
-                html: mandateEmailHtml,
-                text: mandateEmailText,
-              });
-              console.log(`[auto-invoice] Mandatsanforderung gesendet an ${emailRecipient} (Contract: ${contract.id})`);
-            }
-          } catch (mandateErr: any) {
-            console.error(`[auto-invoice] Mandate request error for contract ${contract.id}:`, mandateErr?.message);
-            errors.push(`Mandate [${contract.id}]: ${mandateErr?.message}`);
-          }
-          skipped++;
-          continue;
-        }
+              let itemAmountSum = 0;
+              for (const pos of positions) {
+                // === 0 statt <= 0: negative Positionen (Freikontingent-Abzug,
+                // EBM-Sondervereinbarung) MÜSSEN an Stripe übermittelt werden.
+                // Ein <=-Vergleich verschluckte sie und zog den Rohbetrag ein
+                // (Vorfall RE-2026-0032, 01.08.2026).
+                // ROLLBACK 03.08.2026: === 0 zurück auf <= 0 und Summenprüfung
+                // vor finalizeInvoice entfernen.
+                if (pos.quantity * pos.unit_price === 0) continue;
+                const itemAmount = Math.round(pos.quantity * pos.unit_price * 100);
+                const item = await stripe.invoiceItems.create({
+                  customer: contract.stripe_customer_id,
+                  invoice: stripeInvoice.id,
+                  amount: itemAmount,
+                  currency: "eur",
+                  description: pos.description,
+                  tax_rates: [],
+                });
+                itemAmountSum += itemAmount;
+                createdItemIds.push(item.id);
+              }
 
-        // ── 1. ZUERST interner Rechnungsdatensatz anlegen ──────────────────
-        const { data: invoice, error: insertError } = await supabase
-          .from("invoices")
-          .insert({
-            contract_id: contract.id,
-            customer_name: contract.customer_name,
-            customer_number: contract.hfx_customer_number,
-            rechnungs_email: contract.rechnungs_email || contract.email,
-            adresse: contract.adresse || contract.praxisanschrift,
-            plz: contract.plz,
-            ort: contract.ort,
-            invoice_date: todayStr,
-            due_date: dueDateStr,
-            billing_period_month: periodMonthStr,
-            positions: positions,
-            net_amount: netAmount,
-            tax_rate: taxRate,
-            tax_amount: taxAmount,
-            gross_amount: grossAmount,
-            status: "entwurf",
-            notes: `Automatisch generiert – Abrechnungszeitraum: ${billingPeriod} (${periodMonthStr})${isInWaiverPeriod ? " | Grundgebühr-Waiver aktiv (0 €)" : ""}${usageChargeIds.length > 0 ? ` | ${usageChargeIds.length} geprüfte GOÄ-Rechnungen: ${usageNetAmount.toFixed(2)} € netto` : ""}${freiQty > 0 ? ` | Freikontingent-Abzug: ${freiQty} Rechnungen (-${grantDeductionNet.toFixed(2)} € netto)` : ""}${isZeroNonWaiver ? " | fully free by grant" : ""}${isZeroWaiverSuppressed ? " | Grundgebühr-Waiver 0 € – ohne Versand" : ""}`,
-          } as any)
-          .select()
-          .single();
-
-        if (insertError || !invoice) {
-          // Unique-Constraint-Verletzung = bereits fakturiert
-          if ((insertError as any)?.code === "23505") {
-            console.log(`[auto-invoice] Duplicate blocked by unique constraint for contract ${contract.id} in ${periodMonthStr}`);
-            skipped++;
-          } else {
-            errors.push(`Contract ${contract.id}: ${insertError?.message}`);
-          }
-          continue;
-        }
-
-        // ── 2. Usage charges als invoiced markieren ──────────────────────────
-        if (usageChargeIds.length > 0) {
-          await supabase
-            .from("usage_charges")
-            .update({ status: "invoiced", invoice_id: invoice.id })
-            .in("id", usageChargeIds);
-          console.log(`[auto-invoice] Attached ${usageChargeIds.length} usage charges to invoice ${invoice.invoice_number}`);
-        }
-
-        // ── 3. DANACH Stripe-Zahlung auslösen ───────────────────────────────
-        let stripeInvoiceId: string | null = null;
-        // A1: Flag, damit nachfolgende Blöcke (Status, fibu_events, Provisionen) reagieren können
-        let stripeChargeFailed = false;
-        let stripeErrorMessage: string | null = null;
-        if (hasStripeCustomer && grossAmount > 0) {
-          const createdItemIds: string[] = [];
-          let stripeInvoice: any = null;
-          try {
-            const stripeDescription = `${contract.product_name} – ${billingPeriod}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}${usageChargeIds.length > 0 ? ` | Nutzung: ${usageChargeIds.length} geprüfte GOÄ-Rechnungen (${usageNetAmount.toFixed(2)} €)` : ""}`;
-
-            // SYNCHRONIZE WITH manual-interim-invoice (V2 flow):
-            // 1) Draft-Invoice zuerst, 2) stripe_invoice_id sofort persistieren,
-            // 3) Items mit invoice:<id> hängen, 4) finalize+pay.
-            stripeInvoice = await stripe.invoices.create({
-              customer: contract.stripe_customer_id,
-              auto_advance: false,
-              collection_method: "charge_automatically",
-              pending_invoice_items_behavior: "exclude",
-              description: stripeDescription,
-              metadata: {
-                hfx_contract_id: contract.id,
-                hfx_customer_number: contract.hfx_customer_number || "",
-                billing_period: periodMonthStr,
-                hfx_invoice_id: invoice.id,
-                hfx_invoice_number: invoice.invoice_number,
-              },
-            });
-
-            // Stripe-ID sofort persistieren — sichert Verknüpfung selbst bei
-            // späterem Fehler in Items/finalize/pay.
-            await supabase
-              .from("invoices")
-              .update({ stripe_invoice_id: stripeInvoice.id })
-              .eq("id", invoice.id);
-
-            let itemAmountSum = 0;
-            for (const pos of positions) {
-              // === 0 statt <= 0: negative Positionen (Freikontingent-Abzug,
-              // EBM-Sondervereinbarung) MÜSSEN an Stripe übermittelt werden.
-              // Ein <=-Vergleich verschluckte sie und zog den Rohbetrag ein
-              // (Vorfall RE-2026-0032, 01.08.2026).
-              // ROLLBACK 03.08.2026: === 0 zurück auf <= 0 und Summenprüfung
-              // vor finalizeInvoice entfernen.
-              if (pos.quantity * pos.unit_price === 0) continue;
-              const itemAmount = Math.round(pos.quantity * pos.unit_price * 100);
-              const item = await stripe.invoiceItems.create({
+              const taxItemAmount = Math.round(taxAmount * 100);
+              const taxItem = await stripe.invoiceItems.create({
                 customer: contract.stripe_customer_id,
                 invoice: stripeInvoice.id,
-                amount: itemAmount,
+                amount: taxItemAmount,
                 currency: "eur",
-                description: pos.description,
-                tax_rates: [],
+                description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
               });
-              itemAmountSum += itemAmount;
-              createdItemIds.push(item.id);
-            }
+              itemAmountSum += taxItemAmount;
+              createdItemIds.push(taxItem.id);
 
-            const taxItemAmount = Math.round(taxAmount * 100);
-            const taxItem = await stripe.invoiceItems.create({
-              customer: contract.stripe_customer_id,
-              invoice: stripeInvoice.id,
-              amount: taxItemAmount,
-              currency: "eur",
-              description: `MwSt. 19% auf ${netAmount.toFixed(2)} €`,
-            });
-            itemAmountSum += taxItemAmount;
-            createdItemIds.push(taxItem.id);
-
-            // Summenprüfung vor finalize: Stripe-Items vs. interne Bruttosumme
-            const expectedCents = Math.round(grossAmount * 100);
-            const diffCents = Math.abs(itemAmountSum - expectedCents);
-            if (diffCents === 1) {
-              console.warn(`[auto-invoice] Rundungstoleranz 1 Cent bei ${invoice.invoice_number} (contract ${contract.id})`);
-            } else if (diffCents >= 2) {
-              console.error(`[auto-invoice] Summenabweichung ${diffCents} Cent bei ${invoice.invoice_number} (contract ${contract.id}): Soll ${expectedCents}, Ist ${itemAmountSum}`);
-              throw new Error(`Summenabweichung Stripe-Items (${itemAmountSum}) vs. Bruttobetrag (${expectedCents}) = ${diffCents} Cent – Einzug abgebrochen`);
-            }
-
-            const finalizedInvoice = await stripe.invoices.finalizeInvoice(stripeInvoice.id);
-            await stripe.invoices.pay(finalizedInvoice.id);
-
-            stripeInvoiceId = stripeInvoice.id;
-
-            console.log(`[auto-invoice] Stripe invoice ${stripeInvoice.id} created and payment initiated for contract ${contract.id}`);
-          } catch (stripeErr: any) {
-            console.error(`[auto-invoice] Stripe error for contract ${contract.id}:`, stripeErr?.message);
-            errors.push(`Stripe [${contract.id}]: ${stripeErr?.message}`);
-            // A1: Flag setzen
-            stripeChargeFailed = true;
-            stripeErrorMessage = stripeErr?.message || String(stripeErr);
-
-            // Cleanup Items
-            for (const itemId of createdItemIds) {
-              try {
-                await stripe.invoiceItems.del(itemId);
-              } catch (cleanupErr: any) {
-                console.error(`[auto-invoice] Cleanup failed for invoiceItem ${itemId}:`, cleanupErr?.message);
+              // Summenprüfung vor finalize: Stripe-Items vs. interne Bruttosumme
+              const expectedCents = Math.round(grossAmount * 100);
+              const diffCents = Math.abs(itemAmountSum - expectedCents);
+              if (diffCents === 1) {
+                console.warn(`[auto-invoice] Rundungstoleranz 1 Cent bei ${invoice.invoice_number} (contract ${contract.id})`);
+              } else if (diffCents >= 2) {
+                console.error(`[auto-invoice] Summenabweichung ${diffCents} Cent bei ${invoice.invoice_number} (contract ${contract.id}): Soll ${expectedCents}, Ist ${itemAmountSum}`);
+                throw new Error(`Summenabweichung Stripe-Items (${itemAmountSum}) vs. Bruttobetrag (${expectedCents}) = ${diffCents} Cent – Einzug abgebrochen`);
               }
-            }
-            // Cleanup Invoice: draft → del, open → void, sonst noop (paid/uncollectible/void)
-            if (stripeInvoice?.id) {
-              try {
-                const fresh = await stripe.invoices.retrieve(stripeInvoice.id);
-                if (fresh.status === "draft") {
-                  try { await stripe.invoices.del(stripeInvoice.id); } catch (_) {}
-                } else if (fresh.status === "open") {
-                  try { await stripe.invoices.voidInvoice(stripeInvoice.id); } catch (_) {}
+
+              const finalizedInvoice = await stripe.invoices.finalizeInvoice(stripeInvoice.id);
+              await stripe.invoices.pay(finalizedInvoice.id);
+
+              stripeInvoiceId = stripeInvoice.id;
+
+              console.log(`[auto-invoice] Stripe invoice ${stripeInvoice.id} created and payment initiated for contract ${contract.id}`);
+            } catch (stripeErr: any) {
+              console.error(`[auto-invoice] Stripe error for contract ${contract.id}:`, stripeErr?.message);
+              errors.push(`Stripe [${contract.id}]: ${stripeErr?.message}`);
+              // A1: Flag setzen
+              stripeChargeFailed = true;
+              stripeErrorMessage = stripeErr?.message || String(stripeErr);
+
+              // Cleanup Items
+              for (const itemId of createdItemIds) {
+                try {
+                  await stripe.invoiceItems.del(itemId);
+                } catch (cleanupErr: any) {
+                  console.error(`[auto-invoice] Cleanup failed for invoiceItem ${itemId}:`, cleanupErr?.message);
                 }
-              } catch (cleanupErr: any) {
-                console.error(`[auto-invoice] Invoice cleanup retrieve failed for ${stripeInvoice.id}:`, cleanupErr?.message);
+              }
+              // Cleanup Invoice: draft → del, open → void, sonst noop (paid/uncollectible/void)
+              if (stripeInvoice?.id) {
+                try {
+                  const fresh = await stripe.invoices.retrieve(stripeInvoice.id);
+                  if (fresh.status === "draft") {
+                    try { await stripe.invoices.del(stripeInvoice.id); } catch (_) {}
+                  } else if (fresh.status === "open") {
+                    try { await stripe.invoices.voidInvoice(stripeInvoice.id); } catch (_) {}
+                  }
+                } catch (cleanupErr: any) {
+                  console.error(`[auto-invoice] Invoice cleanup retrieve failed for ${stripeInvoice.id}:`, cleanupErr?.message);
+                }
+              }
+
+              // A2: Interne Rechnung als 'zahlung_fehlgeschlagen' markieren – mit Status-Schutz
+              await supabase
+                .from("invoices")
+                .update({ status: "zahlung_fehlgeschlagen" })
+                .eq("id", invoice.id)
+                .not("status", "in", "(bezahlt,storniert)");
+
+              // A7: Audit-Event in fibu_events (idempotent via idx_fibu_events_source_unique)
+              try {
+                const { error: auditErr } = await supabase.from("fibu_events").insert({
+                  event_type: "auto_invoice_charge_failed",
+                  source_module: "invoices",
+                  source_reference_id: invoice.id,
+                  contract_id: contract.id,
+                  customer_id: contract.customer_id ?? null,
+                  product_name: contract.product_name,
+                  period_start: periodStart,
+                  period_end: periodEnd,
+                  amount_net: Number(invoice.net_amount) || 0,
+                  tax_amount: Number(invoice.tax_amount) || 0,
+                  amount_gross: Number(invoice.gross_amount) || 0,
+                  currency: "EUR",
+                  status: "draft",
+                  export_status: "open",
+                  description: `Stripe-Charge fehlgeschlagen für ${invoice.invoice_number} – ${stripeErrorMessage}`,
+                  created_by: null,
+                  metadata: {
+                    invoice_id: invoice.id,
+                    invoice_number: invoice.invoice_number,
+                    hfx_customer_number: contract.hfx_customer_number ?? null,
+                    stripe_error: stripeErrorMessage,
+                    billing_period: billingPeriod,
+                    period_month: periodMonthStr,
+                    attempt: "initial",
+                  },
+                } as any);
+                if (auditErr && (auditErr as any).code !== "23505") {
+                  console.error(`[auto-invoice] fibu_events auto_invoice_charge_failed insert failed:`, auditErr.message);
+                }
+              } catch (auditEx) {
+                console.error(`[auto-invoice] fibu_events auto_invoice_charge_failed exception:`, String(auditEx));
+              }
+
+              // A9: Buchhaltungs- + Vertriebs-Mail (Failure-Notification, einmalig)
+              try {
+                const partnerEmail = await resolveSalesPartnerEmail(supabase, contract.sales_partner_id);
+                const recipients = [BUCHHALTUNG_EMAIL];
+                if (partnerEmail && partnerEmail !== BUCHHALTUNG_EMAIL) recipients.push(partnerEmail);
+                await resend.emails.send({
+                  from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
+                  reply_to: "info@hfx-honorarfuchs.de",
+                  to: recipients,
+                  subject: `[Stripe-Failure] Rechnung ${invoice.invoice_number} – ${contract.customer_name}`,
+                  html: `<p>Die automatische Stripe-Abbuchung ist fehlgeschlagen.</p>
+  <ul>
+    <li><strong>Rechnung:</strong> ${invoice.invoice_number}</li>
+    <li><strong>Kunde:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</li>
+    <li><strong>Vertrag-ID:</strong> ${contract.id}</li>
+    <li><strong>Abrechnungszeitraum:</strong> ${billingPeriod}</li>
+    <li><strong>Bruttobetrag:</strong> ${Number(invoice.gross_amount).toFixed(2)} €</li>
+    <li><strong>Stripe-Fehler:</strong> ${stripeErrorMessage}</li>
+  </ul>
+  <p>Interner Status: <strong>zahlung_fehlgeschlagen</strong>. Es erfolgt automatisch <strong>ein einmaliger Retry</strong> frühestens 1 Werktag nach Versand der Rechnung.</p>`,
+                });
+              } catch (mailErr) {
+                console.error(`[auto-invoice] Buchhaltungs-/Vertriebs-Failure-Mail fehlgeschlagen:`, String(mailErr));
               }
             }
+          } else if (grossAmount === 0) {
+            console.log(`[auto-invoice] Contract ${contract.id} – Gesamtbetrag 0 €, kein Stripe-Einzug nötig`);
+          }
 
-            // A2: Interne Rechnung als 'zahlung_fehlgeschlagen' markieren – mit Status-Schutz
-            await supabase
-              .from("invoices")
-              .update({ status: "zahlung_fehlgeschlagen" })
-              .eq("id", invoice.id)
-              .not("status", "in", "(bezahlt,storniert)");
+          // ── Send invoice email ────────────────────────────────────────────────
+          // [REVIEW REQUIRED] Migrated to SSOT (renderBrandedEmail + _shared/invoiceEmailParts.ts).
+          // Guardrail: Cron feuert am 1. des Monats; Deploy außerhalb dieses Fensters.
+          // Rollback: diesen Block auf den vorherigen Inline-Stand (Gradient-Header + fox-logo + Inline-Footer) zurücksetzen.
+          const filteredPositions = positions
+            .filter(p => p.unit_price !== 0 || (isInWaiverPeriod && p === positions[0]) || (isLocationGoae && p === positions[0]));
+          const positionsHtml = renderPositionsRows(filteredPositions);
+          const positionsTableHtml = renderPositionsTable(positionsHtml);
+          const totalsHtml = renderTotalsBlock({ net: netAmount, tax: taxAmount, gross: grossAmount });
 
-            // A7: Audit-Event in fibu_events (idempotent via idx_fibu_events_source_unique)
-            try {
-              const { error: auditErr } = await supabase.from("fibu_events").insert({
-                event_type: "auto_invoice_charge_failed",
-                source_module: "invoices",
-                source_reference_id: invoice.id,
-                contract_id: contract.id,
-                customer_id: contract.customer_id ?? null,
-                product_name: contract.product_name,
-                period_start: periodStart,
-                period_end: periodEnd,
-                amount_net: Number(invoice.net_amount) || 0,
-                tax_amount: Number(invoice.tax_amount) || 0,
-                amount_gross: Number(invoice.gross_amount) || 0,
-                currency: "EUR",
-                status: "draft",
-                export_status: "open",
-                description: `Stripe-Charge fehlgeschlagen für ${invoice.invoice_number} – ${stripeErrorMessage}`,
-                created_by: null,
-                metadata: {
-                  invoice_id: invoice.id,
-                  invoice_number: invoice.invoice_number,
-                  hfx_customer_number: contract.hfx_customer_number ?? null,
-                  stripe_error: stripeErrorMessage,
-                  billing_period: billingPeriod,
-                  period_month: periodMonthStr,
-                  attempt: "initial",
-                },
-              } as any);
-              if (auditErr && (auditErr as any).code !== "23505") {
-                console.error(`[auto-invoice] fibu_events auto_invoice_charge_failed insert failed:`, auditErr.message);
-              }
-            } catch (auditEx) {
-              console.error(`[auto-invoice] fibu_events auto_invoice_charge_failed exception:`, String(auditEx));
-            }
-
-            // A9: Buchhaltungs- + Vertriebs-Mail (Failure-Notification, einmalig)
-            try {
-              const partnerEmail = await resolveSalesPartnerEmail(supabase, contract.sales_partner_id);
-              const recipients = [BUCHHALTUNG_EMAIL];
-              if (partnerEmail && partnerEmail !== BUCHHALTUNG_EMAIL) recipients.push(partnerEmail);
-              await resend.emails.send({
-                from: "HFX Sales Portal <noreply@hfx-honorarfuchs.de>",
-                reply_to: "info@hfx-honorarfuchs.de",
-                to: recipients,
-                subject: `[Stripe-Failure] Rechnung ${invoice.invoice_number} – ${contract.customer_name}`,
-                html: `<p>Die automatische Stripe-Abbuchung ist fehlgeschlagen.</p>
-<ul>
-  <li><strong>Rechnung:</strong> ${invoice.invoice_number}</li>
-  <li><strong>Kunde:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</li>
-  <li><strong>Vertrag-ID:</strong> ${contract.id}</li>
-  <li><strong>Abrechnungszeitraum:</strong> ${billingPeriod}</li>
-  <li><strong>Bruttobetrag:</strong> ${Number(invoice.gross_amount).toFixed(2)} €</li>
-  <li><strong>Stripe-Fehler:</strong> ${stripeErrorMessage}</li>
-</ul>
-<p>Interner Status: <strong>zahlung_fehlgeschlagen</strong>. Es erfolgt automatisch <strong>ein einmaliger Retry</strong> frühestens 1 Werktag nach Versand der Rechnung.</p>`,
+          // ── Zahlungshinweis ──
+          // [REVIEW REQUIRED] Der frühere "Überweisungs"-Zweig (!hasStripeCustomer && grossAmount>0)
+          // war unerreichbar: oben wird für diesen Fall eine Mandat-Recovery-Mail versandt und
+          // per `continue` zur nächsten Rechnung gesprungen. Rollback: letzten ELSE-Zweig wieder einsetzen.
+          const noticeHtml = stripeChargeFailed
+            ? renderStripeFailedBox({ includeRetryHint: true })
+            : grossAmount === 0
+            ? `<div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
+                <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>Diese Rechnung weist keinen Zahlbetrag aus.</strong></p>
+                <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">Es sind keine Zahlungen erforderlich. Diese Abrechnung dient als Nachweis für den Abrechnungszeitraum ${billingPeriod}.</p>
+              </div>`
+            : renderSepaOkBox({
+                collectionDate: collectionDateFormatted,
+                usageHint: usageNetAmount > 0
+                  ? `${usageNetAmount.toFixed(2)} € netto (${usageChargeIds.length} geprüfte GOÄ-Rechnungen, zzgl. MwSt.)`
+                  : undefined,
               });
-            } catch (mailErr) {
-              console.error(`[auto-invoice] Buchhaltungs-/Vertriebs-Failure-Mail fehlgeschlagen:`, String(mailErr));
-            }
-          }
-        } else if (grossAmount === 0) {
-          console.log(`[auto-invoice] Contract ${contract.id} – Gesamtbetrag 0 €, kein Stripe-Einzug nötig`);
-        }
 
-        // ── Send invoice email ────────────────────────────────────────────────
-        // [REVIEW REQUIRED] Migrated to SSOT (renderBrandedEmail + _shared/invoiceEmailParts.ts).
-        // Guardrail: Cron feuert am 1. des Monats; Deploy außerhalb dieses Fensters.
-        // Rollback: diesen Block auf den vorherigen Inline-Stand (Gradient-Header + fox-logo + Inline-Footer) zurücksetzen.
-        const filteredPositions = positions
-          .filter(p => p.unit_price !== 0 || (isInWaiverPeriod && p === positions[0]) || (isLocationGoae && p === positions[0]));
-        const positionsHtml = renderPositionsRows(filteredPositions);
-        const positionsTableHtml = renderPositionsTable(positionsHtml);
-        const totalsHtml = renderTotalsBlock({ net: netAmount, tax: taxAmount, gross: grossAmount });
+          const bodyText = grossAmount > 0
+            ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nGesamtbetrag: ${grossAmount.toFixed(2)} €\nEinzugsdatum: ${collectionDateFormatted}\nDiese Rechnung wurde automatisch generiert.`
+            : isInWaiverPeriod
+            ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus (Einführungsangebot aktiv).\nDiese Rechnung wurde automatisch generiert.`
+            : isLocationGoae
+            ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus. Die Grundgebühr wird zentral über Ihren Hauptstandort abgerechnet.\nDiese Rechnung wurde automatisch generiert.`
+            : `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus.\nDiese Rechnung wurde automatisch generiert.`;
 
-        // ── Zahlungshinweis ──
-        // [REVIEW REQUIRED] Der frühere "Überweisungs"-Zweig (!hasStripeCustomer && grossAmount>0)
-        // war unerreichbar: oben wird für diesen Fall eine Mandat-Recovery-Mail versandt und
-        // per `continue` zur nächsten Rechnung gesprungen. Rollback: letzten ELSE-Zweig wieder einsetzen.
-        const noticeHtml = stripeChargeFailed
-          ? renderStripeFailedBox({ includeRetryHint: true })
-          : grossAmount === 0
-          ? `<div style="background:#e8f4e8;border:1px solid #c3e6c3;border-radius:8px;padding:14px 16px;margin-top:20px;">
-              <p style="margin:0;font-size:14px;color:#2d6a2d;"><strong>Diese Rechnung weist keinen Zahlbetrag aus.</strong></p>
-              <p style="margin:6px 0 0;font-size:13px;color:#3d7a3d;">Es sind keine Zahlungen erforderlich. Diese Abrechnung dient als Nachweis für den Abrechnungszeitraum ${billingPeriod}.</p>
-            </div>`
-          : renderSepaOkBox({
-              collectionDate: collectionDateFormatted,
-              usageHint: usageNetAmount > 0
-                ? `${usageNetAmount.toFixed(2)} € netto (${usageChargeIds.length} geprüfte GOÄ-Rechnungen, zzgl. MwSt.)`
-                : undefined,
-            });
+          const bodyHtml = `<p style="font-size:15px;color:#333;">Sehr geehrte Damen und Herren,</p>
+  <p style="color:#555;font-size:14px;line-height:1.6;">anbei erhalten Sie Ihre Rechnung <strong>${invoice.invoice_number}</strong> vom <strong>${new Date(todayStr).toLocaleDateString("de-DE")}</strong> für den Abrechnungszeitraum <strong>${billingPeriod}</strong>.</p>
+  <p style="color:#555;font-size:14px;"><strong>Rechnungsempfänger:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</p>
+  ${positionsTableHtml}
+  ${totalsHtml}
+  ${noticeHtml}
+  <p style="font-size:12px;color:#9ca3af;margin-top:8px;">Diese Rechnung wurde automatisch generiert.</p>`;
 
-        const bodyText = grossAmount > 0
-          ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nGesamtbetrag: ${grossAmount.toFixed(2)} €\nEinzugsdatum: ${collectionDateFormatted}\nDiese Rechnung wurde automatisch generiert.`
-          : isInWaiverPeriod
-          ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus (Einführungsangebot aktiv).\nDiese Rechnung wurde automatisch generiert.`
-          : isLocationGoae
-          ? `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus. Die Grundgebühr wird zentral über Ihren Hauptstandort abgerechnet.\nDiese Rechnung wurde automatisch generiert.`
-          : `Rechnung ${invoice.invoice_number} für ${contract.customer_name}.\nAbrechnungszeitraum: ${billingPeriod}\nDiese Rechnung weist keinen Zahlbetrag aus.\nDiese Rechnung wurde automatisch generiert.`;
-
-        const bodyHtml = `<p style="font-size:15px;color:#333;">Sehr geehrte Damen und Herren,</p>
-<p style="color:#555;font-size:14px;line-height:1.6;">anbei erhalten Sie Ihre Rechnung <strong>${invoice.invoice_number}</strong> vom <strong>${new Date(todayStr).toLocaleDateString("de-DE")}</strong> für den Abrechnungszeitraum <strong>${billingPeriod}</strong>.</p>
-<p style="color:#555;font-size:14px;"><strong>Rechnungsempfänger:</strong> ${contract.customer_name}${contract.hfx_customer_number ? ` (${contract.hfx_customer_number})` : ""}</p>
-${positionsTableHtml}
-${totalsHtml}
-${noticeHtml}
-<p style="font-size:12px;color:#9ca3af;margin-top:8px;">Diese Rechnung wurde automatisch generiert.</p>`;
-
-        const { html: emailHtml } = renderBrandedEmail({
-          subheadline: "Ihre Rechnung",
-          bodyHtml,
-          bodyText,
-        });
-
-        const nowTs = new Date().toISOString();
-
-        if (suppressZeroInvoiceMail) {
-          // Suppress-Pfad: Beleg wurde angelegt, usage_charges wurden auf 'invoiced' markiert (Z. 583–588),
-          // nur die Kundenmail wird unterdrückt. Status bleibt 'entwurf', email_sent_at bleibt leer.
-          if (isZeroNonWaiver) {
-            console.log(`[auto-invoice] fully free by grant – Contract ${contract.id}, Periode ${periodMonthStr} (Invoice ${invoice.invoice_number}, ${freiQty} Rechnungen gedeckt)`);
-          } else {
-            console.log(`[auto-invoice] Grundgebühr-Waiver 0 € – ohne Versand – Contract ${contract.id}, Periode ${periodMonthStr} (Invoice ${invoice.invoice_number})`);
-          }
-        } else {
-          const emailTo = contract.rechnungs_email || contract.email;
-          const subjectSuffix = grossAmount === 0 ? " (kein Zahlbetrag)" : "";
-          await resend.emails.send({
-            from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
-            reply_to: "info@hfx-honorarfuchs.de",
-            to: [emailTo],
-            subject: `Rechnung ${invoice.invoice_number} – ${contract.customer_name} – ${billingPeriod}${subjectSuffix}`,
-            html: emailHtml,
-            text: bodyText,
+          const { html: emailHtml } = renderBrandedEmail({
+            subheadline: "Ihre Rechnung",
+            bodyHtml,
+            bodyText,
           });
 
-          // A4: email_sent_at IMMER setzen (Kunden-Mail wurde versendet, ggf. mit Hinweisblock).
-          // Status nur auf 'versendet' anheben, wenn Stripe nicht fehlgeschlagen ist – sonst bleibt
-          // 'zahlung_fehlgeschlagen' (aus Catch). Status-Schutz verhindert Überschreiben von bezahlt/storniert.
-          if (stripeChargeFailed) {
-            await supabase
-              .from("invoices")
-              .update({ email_sent_at: nowTs })
-              .eq("id", invoice.id);
+          const nowTs = new Date().toISOString();
+
+          if (suppressZeroInvoiceMail) {
+            // Suppress-Pfad: Beleg wurde angelegt, usage_charges wurden auf 'invoiced' markiert (Z. 583–588),
+            // nur die Kundenmail wird unterdrückt. Status bleibt 'entwurf', email_sent_at bleibt leer.
+            if (isZeroNonWaiver) {
+              console.log(`[auto-invoice] fully free by grant – Contract ${contract.id}, Periode ${periodMonthStr} (Invoice ${invoice.invoice_number}, ${freiQty} Rechnungen gedeckt)`);
+            } else {
+              console.log(`[auto-invoice] Grundgebühr-Waiver 0 € – ohne Versand – Contract ${contract.id}, Periode ${periodMonthStr} (Invoice ${invoice.invoice_number})`);
+            }
           } else {
-            await supabase
-              .from("invoices")
-              .update({ status: "versendet", email_sent_at: nowTs })
-              .eq("id", invoice.id)
-              .not("status", "in", "(bezahlt,storniert)");
-          }
-        }
-
-        // A5/A6: Provisionen + fibu_events nur wenn Stripe-Charge erfolgreich war.
-        // Auto-generate commission payout
-        if (!contract.sales_partner_id) {
-          console.warn(`[auto-invoice] commission-skip contract=${contract.id} invoice=${invoice.id} reason=missing_sales_partner_id sales_partner_name=${contract.sales_partner_name ?? "null"}`);
-        } else if (stripeChargeFailed) {
-          console.warn(`[auto-invoice] commission-skip contract=${contract.id} invoice=${invoice.id} reason=stripe_charge_failed`);
-        }
-        if (!stripeChargeFailed && contract.sales_partner_id) {
-          const isGoae = /GOÄ|GOA/i.test(contract.product_name || "");
-
-          if (isGoae) {
-            await createGoaeCommissions({
-              supabase,
-              contract,
-              invoice,
-              netAmount,
-              baseNetAmount,
-              usageChargeIds,
-              usageNetAmountEffective: usageNetAmount,
-              periodMonthStr,
-              periodStart,
-              periodEnd,
-              billingPeriod,
-              today,
-              isCarrier,
+            const emailTo = contract.rechnungs_email || contract.email;
+            const subjectSuffix = grossAmount === 0 ? " (kein Zahlbetrag)" : "";
+            await resend.emails.send({
+              from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+              reply_to: "info@hfx-honorarfuchs.de",
+              to: [emailTo],
+              subject: `Rechnung ${invoice.invoice_number} – ${contract.customer_name} – ${billingPeriod}${subjectSuffix}`,
+              html: emailHtml,
+              text: bodyText,
             });
-          } else {
-            // Andere Produkte: Provisionsberechnung mit Override-Hierarchie
-            const [{ data: productCommission }, { data: partnerOverride }] = await Promise.all([
-              supabase
-                .from("product_commissions")
-                .select("commission_type, commission_value, is_active")
-                .eq("product_name", contract.product_name)
-                .eq("is_active", true)
-                .maybeSingle(),
-              contract.sales_partner_id
-                ? supabase
-                    .from("partner_commission_overrides")
-                    .select("commission_type, commission_value")
-                    .eq("user_id", contract.sales_partner_id)
-                    .eq("product_name", contract.product_name)
-                    .maybeSingle()
-                : Promise.resolve({ data: null, error: null }),
-            ]);
 
-            const effectiveRule = partnerOverride ?? productCommission;
-            const overrideApplied = !!partnerOverride;
+            // A4: email_sent_at IMMER setzen (Kunden-Mail wurde versendet, ggf. mit Hinweisblock).
+            // Status nur auf 'versendet' anheben, wenn Stripe nicht fehlgeschlagen ist – sonst bleibt
+            // 'zahlung_fehlgeschlagen' (aus Catch). Status-Schutz verhindert Überschreiben von bezahlt/storniert.
+            if (stripeChargeFailed) {
+              await supabase
+                .from("invoices")
+                .update({ email_sent_at: nowTs })
+                .eq("id", invoice.id);
+            } else {
+              await supabase
+                .from("invoices")
+                .update({ status: "versendet", email_sent_at: nowTs })
+                .eq("id", invoice.id)
+                .not("status", "in", "(bezahlt,storniert)");
+            }
+          }
 
-            if (effectiveRule) {
-              let commissionAmount = 0;
-              if (effectiveRule.commission_type === "prozent") {
-                commissionAmount = Math.round(baseNetAmount * effectiveRule.commission_value) / 100;
-              } else {
-                commissionAmount = Number(effectiveRule.commission_value);
-              }
+          // A5/A6: Provisionen + fibu_events nur wenn Stripe-Charge erfolgreich war.
+          // Auto-generate commission payout
+          if (!contract.sales_partner_id) {
+            console.warn(`[auto-invoice] commission-skip contract=${contract.id} invoice=${invoice.id} reason=missing_sales_partner_id sales_partner_name=${contract.sales_partner_name ?? "null"}`);
+          } else if (stripeChargeFailed) {
+            console.warn(`[auto-invoice] commission-skip contract=${contract.id} invoice=${invoice.id} reason=stripe_charge_failed`);
+          }
+          if (!stripeChargeFailed && contract.sales_partner_id) {
+            const isGoae = /GOÄ|GOA/i.test(contract.product_name || "");
 
-              if (commissionAmount > 0) {
-                const { data: existingPayout } = await supabase
-                  .from("commission_payouts")
-                  .select("id")
-                  .eq("invoice_id", invoice.id)
-                  .maybeSingle();
+            if (isGoae) {
+              await createGoaeCommissions({
+                supabase,
+                contract,
+                invoice,
+                netAmount,
+                baseNetAmount,
+                usageChargeIds,
+                usageNetAmountEffective: usageNetAmount,
+                periodMonthStr,
+                periodStart,
+                periodEnd,
+                billingPeriod,
+                today,
+                isCarrier,
+              });
+            } else {
+              // Andere Produkte: Provisionsberechnung mit Override-Hierarchie
+              const [{ data: productCommission }, { data: partnerOverride }] = await Promise.all([
+                supabase
+                  .from("product_commissions")
+                  .select("commission_type, commission_value, is_active")
+                  .eq("product_name", contract.product_name)
+                  .eq("is_active", true)
+                  .maybeSingle(),
+                contract.sales_partner_id
+                  ? supabase
+                      .from("partner_commission_overrides")
+                      .select("commission_type, commission_value")
+                      .eq("user_id", contract.sales_partner_id)
+                      .eq("product_name", contract.product_name)
+                      .maybeSingle()
+                  : Promise.resolve({ data: null, error: null }),
+              ]);
 
-                if (!existingPayout) {
-                  const ruleVersion = overrideApplied
-                    ? (effectiveRule.commission_type === "prozent"
-                        ? `OVERRIDE-PARTNER-${effectiveRule.commission_value}PCT-v1`
-                        : `OVERRIDE-PARTNER-FIXED-${effectiveRule.commission_value}EUR-v1`)
-                    : (effectiveRule.commission_type === "prozent"
-                        ? `STD-PARTNER-${effectiveRule.commission_value}PCT-v1`
-                        : `STD-PARTNER-FIXED-${effectiveRule.commission_value}EUR-v1`);
+              const effectiveRule = partnerOverride ?? productCommission;
+              const overrideApplied = !!partnerOverride;
 
-                  await supabase.from("commission_payouts").insert({
-                    sales_partner_id: contract.sales_partner_id,
-                    sales_partner_name: contract.sales_partner_name || "Unbekannt",
-                    contract_id: contract.id,
-                    invoice_id: invoice.id,
-                    product_name: contract.product_name,
-                    commission_type: effectiveRule.commission_type,
-                    commission_rate: effectiveRule.commission_value,
-                    commission_amount: commissionAmount,
-                    commission_base_amount: baseNetAmount,
-                    commission_rule_version: ruleVersion,
-                    period_month: periodMonthStr,
-                    status: "pending",
-                  });
-                  console.log(`[auto-invoice] Created commission payout ${commissionAmount} € for partner ${contract.sales_partner_name} (rule: ${ruleVersion})`);
+              if (effectiveRule) {
+                let commissionAmount = 0;
+                if (effectiveRule.commission_type === "prozent") {
+                  commissionAmount = Math.round(baseNetAmount * effectiveRule.commission_value) / 100;
+                } else {
+                  commissionAmount = Number(effectiveRule.commission_value);
+                }
 
-                  // FiBu: partner_commission_approved event
-                  try {
-                    const { error: fibuCommErr } = await supabase.from("fibu_events").insert({
-                      event_type: "partner_commission_approved",
-                      source_module: "commission_payouts",
-                      source_reference_id: invoice.id,
+                if (commissionAmount > 0) {
+                  const { data: existingPayout } = await supabase
+                    .from("commission_payouts")
+                    .select("id")
+                    .eq("invoice_id", invoice.id)
+                    .maybeSingle();
+
+                  if (!existingPayout) {
+                    const ruleVersion = overrideApplied
+                      ? (effectiveRule.commission_type === "prozent"
+                          ? `OVERRIDE-PARTNER-${effectiveRule.commission_value}PCT-v1`
+                          : `OVERRIDE-PARTNER-FIXED-${effectiveRule.commission_value}EUR-v1`)
+                      : (effectiveRule.commission_type === "prozent"
+                          ? `STD-PARTNER-${effectiveRule.commission_value}PCT-v1`
+                          : `STD-PARTNER-FIXED-${effectiveRule.commission_value}EUR-v1`);
+
+                    await supabase.from("commission_payouts").insert({
+                      sales_partner_id: contract.sales_partner_id,
+                      sales_partner_name: contract.sales_partner_name || "Unbekannt",
                       contract_id: contract.id,
-                      customer_id: contract.customer_id ?? null,
+                      invoice_id: invoice.id,
                       product_name: contract.product_name,
-                      period_start: periodStart,
-                      period_end: periodEnd,
-                      amount_net: commissionAmount,
-                      tax_amount: 0,
-                      amount_gross: commissionAmount,
-                      currency: "EUR",
                       commission_type: effectiveRule.commission_type,
-                      commission_base_amount: baseNetAmount,
                       commission_rate: effectiveRule.commission_value,
                       commission_amount: commissionAmount,
+                      commission_base_amount: baseNetAmount,
                       commission_rule_version: ruleVersion,
-                      beneficiary_type: "sales_partner",
-                      beneficiary_id: contract.sales_partner_id,
-                      status: "draft",
-                      export_status: "open",
-                      description: `Partner-Provision ${contract.sales_partner_name} – ${contract.product_name} – ${periodMonthStr}${overrideApplied ? " (individuelle Regel)" : ""}`,
-                      created_by: null,
-                      metadata: {
-                        invoice_id: invoice.id,
-                        invoice_number: invoice.invoice_number,
+                      period_month: periodMonthStr,
+                      status: "pending",
+                    });
+                    console.log(`[auto-invoice] Created commission payout ${commissionAmount} € for partner ${contract.sales_partner_name} (rule: ${ruleVersion})`);
+
+                    // FiBu: partner_commission_approved event
+                    try {
+                      const { error: fibuCommErr } = await supabase.from("fibu_events").insert({
+                        event_type: "partner_commission_approved",
+                        source_module: "commission_payouts",
+                        source_reference_id: invoice.id,
+                        contract_id: contract.id,
+                        customer_id: contract.customer_id ?? null,
+                        product_name: contract.product_name,
+                        period_start: periodStart,
+                        period_end: periodEnd,
+                        amount_net: commissionAmount,
+                        tax_amount: 0,
+                        amount_gross: commissionAmount,
+                        currency: "EUR",
+                        commission_type: effectiveRule.commission_type,
+                        commission_base_amount: baseNetAmount,
+                        commission_rate: effectiveRule.commission_value,
+                        commission_amount: commissionAmount,
                         commission_rule_version: ruleVersion,
-                        override_applied: overrideApplied,
-                        period_month: periodMonthStr,
-                        hfx_customer_number: contract.hfx_customer_number ?? null,
-                      },
-                    } as any);
-                    if (fibuCommErr && (fibuCommErr as any).code !== "23505") {
-                      console.error(`[auto-invoice] fibu_events partner_commission_approved failed:`, fibuCommErr.message);
+                        beneficiary_type: "sales_partner",
+                        beneficiary_id: contract.sales_partner_id,
+                        status: "draft",
+                        export_status: "open",
+                        description: `Partner-Provision ${contract.sales_partner_name} – ${contract.product_name} – ${periodMonthStr}${overrideApplied ? " (individuelle Regel)" : ""}`,
+                        created_by: null,
+                        metadata: {
+                          invoice_id: invoice.id,
+                          invoice_number: invoice.invoice_number,
+                          commission_rule_version: ruleVersion,
+                          override_applied: overrideApplied,
+                          period_month: periodMonthStr,
+                          hfx_customer_number: contract.hfx_customer_number ?? null,
+                        },
+                      } as any);
+                      if (fibuCommErr && (fibuCommErr as any).code !== "23505") {
+                        console.error(`[auto-invoice] fibu_events partner_commission_approved failed:`, fibuCommErr.message);
+                      }
+                    } catch (fibuCommEx) {
+                      console.error(`[auto-invoice] fibu_events partner_commission_approved exception:`, String(fibuCommEx));
                     }
-                  } catch (fibuCommEx) {
-                    console.error(`[auto-invoice] fibu_events partner_commission_approved exception:`, String(fibuCommEx));
                   }
                 }
               }
             }
           }
-        }
 
-        // ── FiBu-Vorbereitungs-Events ──────────────────────────────────────────
-        // A5: Bei Stripe-Failure KEINE fibu_events anlegen (Audit-Event wurde im Catch geschrieben).
-        if (!stripeChargeFailed) {
-        try {
-          const fibuCustomerId: string | null = contract.customer_id ?? null;
+          // ── FiBu-Vorbereitungs-Events ──────────────────────────────────────────
+          // A5: Bei Stripe-Failure KEINE fibu_events anlegen (Audit-Event wurde im Catch geschrieben).
+          if (!stripeChargeFailed) {
+          try {
+            const fibuCustomerId: string | null = contract.customer_id ?? null;
 
-          const baseShare = netAmount > 0 ? baseNetAmount / netAmount : 0;
-          const baseTaxAmount = Math.round(taxAmount * baseShare * 100) / 100;
-          const baseGrossAmount = Math.round((baseNetAmount + baseTaxAmount) * 100) / 100;
+            const baseShare = netAmount > 0 ? baseNetAmount / netAmount : 0;
+            const baseTaxAmount = Math.round(taxAmount * baseShare * 100) / 100;
+            const baseGrossAmount = Math.round((baseNetAmount + baseTaxAmount) * 100) / 100;
 
-          // Event 1: invoice_base_fee_created
-          const { error: fibuBaseErr } = await supabase.from("fibu_events").insert({
-            event_type: "invoice_base_fee_created",
-            source_module: "invoices",
-            source_reference_id: invoice.id,
-            contract_id: contract.id,
-            customer_id: fibuCustomerId,
-            product_name: contract.product_name,
-            period_start: periodStart,
-            period_end: periodEnd,
-            amount_net: baseNetAmount,
-            tax_amount: baseTaxAmount,
-            amount_gross: baseGrossAmount,
-            currency: "EUR",
-            status: "approved",
-            export_status: "open",
-            description: `Grundgebühr ${invoice.invoice_number} – ${contract.product_name} – ${billingPeriod}${isInWaiverPeriod ? " (Waiver 0 €)" : ""}`,
-            created_by: null,
-            metadata: {
-              invoice_number: invoice.invoice_number,
-              invoice_id: invoice.id,
-              stripe_invoice_id: stripeInvoiceId,
-              contract_id: contract.id,
-              hfx_customer_number: contract.hfx_customer_number ?? null,
-              waiver_active: isInWaiverPeriod,
-              billing_period: billingPeriod,
-              period_month: periodMonthStr,
-            },
-          } as any);
-          if (fibuBaseErr && (fibuBaseErr as any).code !== "23505") {
-            console.error(`[auto-invoice] fibu_events invoice_base_fee_created failed for ${invoice.invoice_number}:`, fibuBaseErr.message);
-          }
-
-          // Event 2: invoice_usage_created (nur wenn Nutzungsgebühren > 0)
-          if (usageNetAmount > 0) {
-            const usageShare = netAmount > 0 ? usageNetAmount / netAmount : 0;
-            const usageTaxAmount = Math.round(taxAmount * usageShare * 100) / 100;
-            const usageGrossAmount = Math.round((usageNetAmount + usageTaxAmount) * 100) / 100;
-
-            const { error: fibuUsageErr } = await supabase.from("fibu_events").insert({
-              event_type: "invoice_usage_created",
+            // Event 1: invoice_base_fee_created
+            const { error: fibuBaseErr } = await supabase.from("fibu_events").insert({
+              event_type: "invoice_base_fee_created",
               source_module: "invoices",
-              source_reference_id: `${invoice.id}:usage`,
+              source_reference_id: invoice.id,
               contract_id: contract.id,
               customer_id: fibuCustomerId,
               product_name: contract.product_name,
               period_start: periodStart,
               period_end: periodEnd,
-              amount_net: usageNetAmount,
-              tax_amount: usageTaxAmount,
-              amount_gross: usageGrossAmount,
+              amount_net: baseNetAmount,
+              tax_amount: baseTaxAmount,
+              amount_gross: baseGrossAmount,
               currency: "EUR",
               status: "approved",
               export_status: "open",
-              description: `Nutzungsgebühren ${invoice.invoice_number} – Geprüfte GOÄ-Rechnungen – ${billingPeriod} (${usageChargeIds.length} Vorgänge)`,
+              description: `Grundgebühr ${invoice.invoice_number} – ${contract.product_name} – ${billingPeriod}${isInWaiverPeriod ? " (Waiver 0 €)" : ""}`,
               created_by: null,
               metadata: {
                 invoice_number: invoice.invoice_number,
@@ -1135,41 +1234,99 @@ ${noticeHtml}
                 stripe_invoice_id: stripeInvoiceId,
                 contract_id: contract.id,
                 hfx_customer_number: contract.hfx_customer_number ?? null,
-                usage_charge_ids: usageChargeIds,
-                charge_count: usageChargeIds.length,
-                usage_net_amount: usageNetAmount,
+                waiver_active: isInWaiverPeriod,
                 billing_period: billingPeriod,
                 period_month: periodMonthStr,
               },
             } as any);
-            if (fibuUsageErr && (fibuUsageErr as any).code !== "23505") {
-              console.error(`[auto-invoice] fibu_events invoice_usage_created failed for ${invoice.invoice_number}:`, fibuUsageErr.message);
+            if (fibuBaseErr && (fibuBaseErr as any).code !== "23505") {
+              console.error(`[auto-invoice] fibu_events invoice_base_fee_created failed for ${invoice.invoice_number}:`, fibuBaseErr.message);
             }
+
+            // Event 2: invoice_usage_created (nur wenn Nutzungsgebühren > 0)
+            if (usageNetAmount > 0) {
+              const usageShare = netAmount > 0 ? usageNetAmount / netAmount : 0;
+              const usageTaxAmount = Math.round(taxAmount * usageShare * 100) / 100;
+              const usageGrossAmount = Math.round((usageNetAmount + usageTaxAmount) * 100) / 100;
+
+              const { error: fibuUsageErr } = await supabase.from("fibu_events").insert({
+                event_type: "invoice_usage_created",
+                source_module: "invoices",
+                source_reference_id: `${invoice.id}:usage`,
+                contract_id: contract.id,
+                customer_id: fibuCustomerId,
+                product_name: contract.product_name,
+                period_start: periodStart,
+                period_end: periodEnd,
+                amount_net: usageNetAmount,
+                tax_amount: usageTaxAmount,
+                amount_gross: usageGrossAmount,
+                currency: "EUR",
+                status: "approved",
+                export_status: "open",
+                description: `Nutzungsgebühren ${invoice.invoice_number} – Geprüfte GOÄ-Rechnungen – ${billingPeriod} (${usageChargeIds.length} Vorgänge)`,
+                created_by: null,
+                metadata: {
+                  invoice_number: invoice.invoice_number,
+                  invoice_id: invoice.id,
+                  stripe_invoice_id: stripeInvoiceId,
+                  contract_id: contract.id,
+                  hfx_customer_number: contract.hfx_customer_number ?? null,
+                  usage_charge_ids: usageChargeIds,
+                  charge_count: usageChargeIds.length,
+                  usage_net_amount: usageNetAmount,
+                  billing_period: billingPeriod,
+                  period_month: periodMonthStr,
+                },
+              } as any);
+              if (fibuUsageErr && (fibuUsageErr as any).code !== "23505") {
+                console.error(`[auto-invoice] fibu_events invoice_usage_created failed for ${invoice.invoice_number}:`, fibuUsageErr.message);
+              }
+            }
+
+            console.log(`[auto-invoice] fibu_events created for ${invoice.invoice_number} (base: ${baseNetAmount} €${usageNetAmount > 0 ? `, usage: ${usageNetAmount} €` : ""})`);
+          } catch (fibuErr) {
+            console.error(`[auto-invoice] fibu_events block failed for ${invoice.invoice_number} – operative flow unaffected:`, String(fibuErr));
+          }
+          } // end if (!stripeChargeFailed) — fibu/commissions block
+
+          if (sendResult.error) {
+            errors.push(`Invoice email [${invoice.invoice_number}]: ${sendResult.error.message}`);
+            continue;
           }
 
-          console.log(`[auto-invoice] fibu_events created for ${invoice.invoice_number} (base: ${baseNetAmount} €${usageNetAmount > 0 ? `, usage: ${usageNetAmount} €` : ""})`);
-        } catch (fibuErr) {
-          console.error(`[auto-invoice] fibu_events block failed for ${invoice.invoice_number} – operative flow unaffected:`, String(fibuErr));
+          console.log(`[auto-invoice] ✓ Invoice ${invoice.invoice_number} sent to ${emailTo}${stripeInvoiceId ? ` | Stripe: ${stripeInvoiceId}` : ""} | Zeitraum: ${billingPeriod}`);
+          processed++;
+          } catch (monthErr) {
+            console.error(`[auto-invoice] Error processing contract ${contract.id} for ${periodMonthStr}:`, monthErr);
+            errors.push(`Contract ${contract.id} [${periodMonthStr}]: ${String(monthErr)}`);
+          }
         }
-        } // end if (!stripeChargeFailed) — fibu/commissions block
-
-        if (sendResult.error) {
-          errors.push(`Invoice email [${invoice.invoice_number}]: ${sendResult.error.message}`);
-          continue;
-        }
-
-        console.log(`[auto-invoice] ✓ Invoice ${invoice.invoice_number} sent to ${emailTo}${stripeInvoiceId ? ` | Stripe: ${stripeInvoiceId}` : ""} | Zeitraum: ${billingPeriod}`);
-        processed++;
       } catch (contractErr) {
         console.error(`[auto-invoice] Error processing contract ${contract.id}:`, contractErr);
         errors.push(`Contract ${contract.id}: ${String(contractErr)}`);
       }
     }
 
-    console.log(`[auto-invoice] Done. Processed: ${processed}, Skipped: ${skipped}, Errors: ${errors.length}`);
+    if (limitReached) {
+      console.warn(`[auto-invoice] Globales Limit von ${MAX_INVOICES_PER_RUN} Rechnungen pro Lauf erreicht – Abbruch. Verbleibende Monate werden im nächsten Lauf nachgeholt.`);
+    }
+    console.log(`[auto-invoice] Done. Rechnungen erstellt: ${processed}, Rechnungen übersprungen: ${skipped}, Errors: ${errors.length}`);
 
     return new Response(
-      JSON.stringify({ success: true, processed, skipped, errors, billingPeriod: periodMonthStr, retries: { attempted: retriesAttempted, succeeded: retriesSucceeded, failed: retriesFailed } }),
+      JSON.stringify({
+        success: true,
+        invoicesCreated: processed,
+        invoicesSkipped: skipped,
+        limitReached,
+        maxInvoicesPerRun: MAX_INVOICES_PER_RUN,
+        // Rückwärtskompatible Aliasse (zählen jetzt Rechnungen, nicht Verträge)
+        processed,
+        skipped,
+        errors,
+        billingPeriod: regularPeriodMonthStr,
+        retries: { attempted: retriesAttempted, succeeded: retriesSucceeded, failed: retriesFailed },
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
