@@ -177,20 +177,32 @@ Deno.serve(async (req) => {
   try {
     const today = new Date();
 
-    // ── Vormonat als Abrechnungszeitraum ──────────────────────────────────
-    const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const billingYear = prevMonthDate.getFullYear();
-    const billingMonth = prevMonthDate.getMonth(); // 0-based
-    const daysInBillingMonth = new Date(billingYear, billingMonth + 1, 0).getDate();
-
-    const periodMonthStr = `${billingYear}-${String(billingMonth + 1).padStart(2, "0")}`;
-    const periodStart = `${billingYear}-${String(billingMonth + 1).padStart(2, "0")}-01`;
-    const periodEnd = `${billingYear}-${String(billingMonth + 1).padStart(2, "0")}-${String(daysInBillingMonth).padStart(2, "0")}`;
-
+    // ── Abrechnungsmonate ────────────────────────────────────────────────
+    // Quelle für nachzuholende Monate sind AUSSCHLIESSLICH usage_charges,
+    // NICHT der Kalender. BEWUSSTE EINSCHRÄNKUNG: Monate ganz ohne Verbrauch
+    // werden nicht nachgeholt, es entsteht also keine rückwirkende
+    // Grundgebühr. Solange monthly_price = 0 ist, folgenlos.
+    // → Vor dem 01.01.2027 erneut bewerten.
     const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
-    const billingPeriod = `${monthNames[billingMonth]} ${billingYear}`;
 
-    console.log(`[auto-invoice] Running for ${today.toISOString()} – billing period: ${periodMonthStr} (${billingPeriod})`);
+    // Regulärer Abrechnungsmonat = Vormonat
+    const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const regularPeriodMonthStr = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, "0")}`;
+
+    // Erster Tag des laufenden Monats – Grenze für "abgeschlossene Periode"
+    const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const currentMonthStartStr = `${currentMonthStart.getFullYear()}-${String(currentMonthStart.getMonth() + 1).padStart(2, "0")}-01`;
+
+    // Kappung: max. 6 Monate rückwirkend pro Vertrag
+    const lookbackFloorDate = new Date(prevMonthDate.getFullYear(), prevMonthDate.getMonth() - 5, 1);
+    const lookbackFloorStr = `${lookbackFloorDate.getFullYear()}-${String(lookbackFloorDate.getMonth() + 1).padStart(2, "0")}`;
+
+    // Globales Limit: max. 200 Rechnungen pro Lauf
+    const MAX_INVOICES_PER_RUN = 200;
+    // SYNCHRONIZE: identischer Wert in src/lib/plausibility.ts (PLAUSIBILITAET_SCHWELLE)
+    const PLAUSIBILITAET_SCHWELLE = 500;
+
+    console.log(`[auto-invoice] Running for ${today.toISOString()} – regulärer Abrechnungsmonat: ${regularPeriodMonthStr}, Rücklauf-Grenze: ${lookbackFloorStr}`);
 
     // Load contracts – either single (manual) or all active (cron)
     let contractQuery = supabase
