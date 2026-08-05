@@ -440,6 +440,16 @@ export default function Dashboard() {
                       to="/rechnungen?status=zahlung_fehlgeschlagen"
                     />
                   )}
+                  {role === "admin" && blockedUsage.length > 0 && (
+                    <AlertRow
+                      icon={AlertTriangle}
+                      iconClass="text-orange-600"
+                      bgClass="bg-orange-500/5"
+                      label={`${blockedUsage.length} Verbrauchsmonat(e) über Plausibilitätsschwelle (${PLAUSIBILITAET_SCHWELLE})`}
+                      sub="Abrechnung angehalten – Verbrauch prüfen und ggf. manuell abrechnen"
+                      to="/qodia-verbrauch"
+                    />
+                  )}
                 </>
               )}
             </div>
