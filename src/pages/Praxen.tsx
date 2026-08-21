@@ -550,17 +550,21 @@ export default function Praxen() {
                             <Eye className="h-4 w-4 mr-2" />
                             Details anzeigen
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => sendCredentials(praxis)}
-                            disabled={sendingCredentialsId === praxis.id || !praxis.email}
-                          >
-                            {sendingCredentialsId === praxis.id ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <Send className="h-4 w-4 mr-2" />
-                            )}
-                            Zugangsdaten senden
-                          </DropdownMenuItem>
+                          <TooltipProvider delayDuration={150}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <DropdownMenuItem disabled>
+                                    <Send className="h-4 w-4 mr-2" />
+                                    Zugangsdaten senden
+                                  </DropdownMenuItem>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Vorübergehend gesperrt: Der Versand setzt das Passwort nicht bei Qodia zurück. Bei Login-Problemen bitte an den Admin wenden.
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                           <DropdownMenuItem
                             onClick={() => syncToSalesforce(praxis)}
                             disabled={syncingId === praxis.id || !sfConnection.isConnected}
