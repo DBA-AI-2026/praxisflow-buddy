@@ -55,6 +55,10 @@ export async function sendQodiaCredentials(params: {
   userId?: string | null;
 }): Promise<LeadActionResult> {
   const { leadId, queryClient, hfxCustomerNumber, userId } = params;
+  // 21.08.2026: Vorübergehend gesperrt. resend-lead-credentials setzt das Passwort
+  // nur in Supabase Auth zurück, propagiert es aber nicht zu Qodia – der Kunde
+  // würde sich danach nicht mehr im Qodia-Tool anmelden können.
+  return { success: false, error: "Zugangsdaten-Versand ist vorübergehend gesperrt." };
   try {
     const { data, error } = await supabase.functions.invoke("resend-lead-credentials", {
       body: { leadId },
