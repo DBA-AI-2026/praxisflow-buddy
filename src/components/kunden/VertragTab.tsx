@@ -485,20 +485,24 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
               <TooltipContent>Erst bei Qodia registrieren</TooltipContent>
             </Tooltip>
           ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              disabled={sendingCreds}
-              onClick={handleSendCreds}
-            >
-              {sendingCreds ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <KeyRound className="h-3.5 w-3.5" />
-              )}
-              Zugangsdaten zusenden
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled
+                  >
+                    <KeyRound className="h-3.5 w-3.5" />
+                    Zugangsdaten zusenden
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                Vorübergehend gesperrt: Der Versand setzt das Passwort nicht bei Qodia zurück. Bei Login-Problemen bitte an den Admin wenden.
+              </TooltipContent>
+            </Tooltip>
           )}
         </TooltipProvider>
       </div>

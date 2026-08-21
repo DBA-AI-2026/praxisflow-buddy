@@ -54,26 +54,8 @@ export async function sendQodiaCredentials(params: {
   hfxCustomerNumber?: string | null;
   userId?: string | null;
 }): Promise<LeadActionResult> {
-  const { leadId, queryClient, hfxCustomerNumber, userId } = params;
-  try {
-    const { data, error } = await supabase.functions.invoke("resend-lead-credentials", {
-      body: { leadId },
-    });
-    if (error) return { success: false, error: error.message };
-    const r = (data ?? {}) as any;
-    if (r.error) return { success: false, error: r.error };
-    await logCustomerEvent({
-      eventType: "MAIL_SENT_CREDENTIALS",
-      entityType: "lead",
-      entityId: leadId,
-      hfxCustomerNumber: hfxCustomerNumber ?? null,
-      leadId,
-      createdBy: userId ?? null,
-      eventData: { source: "kunden_dialog_vertrag_tab" },
-    });
-    invalidateAfterLead(queryClient);
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err?.message ?? "Unbekannter Fehler" };
-  }
+  // 21.08.2026: Vorübergehend gesperrt. resend-lead-credentials setzt das Passwort
+  // nur in Supabase Auth zurück, propagiert es aber nicht zu Qodia – der Kunde
+  // würde sich danach nicht mehr im Qodia-Tool anmelden können.
+  return { success: false, error: "Zugangsdaten-Versand ist vorübergehend gesperrt." };
 }
