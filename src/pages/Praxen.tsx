@@ -610,20 +610,26 @@ export default function Praxen() {
                 )}
               </div>
               {selectedPraxis?.email && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="shrink-0 mt-0.5"
-                  disabled={sendingCredentialsId === selectedPraxis.id}
-                  onClick={() => sendCredentials(selectedPraxis)}
-                >
-                  {sendingCredentialsId === selectedPraxis.id ? (
-                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4 mr-1.5" />
-                  )}
-                  Zugangsdaten senden
-                </Button>
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0 mt-0.5"
+                          disabled
+                        >
+                          <Send className="h-4 w-4 mr-1.5" />
+                          Zugangsdaten senden
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Vorübergehend gesperrt: Der Versand setzt das Passwort nicht bei Qodia zurück. Bei Login-Problemen bitte an den Admin wenden.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
             </div>
           </DialogHeader>
