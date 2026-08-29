@@ -208,7 +208,15 @@ Deno.serve(async (req) => {
     let contractQuery = supabase
       .from("contracts")
       .select("*")
-      .eq("status", "aktiv");
+      .eq("status", "aktiv")
+      // Testaccount-Cluster HFX-I01070 (Träger + Standorte -01..-04) ist von
+      // jeder geldwirksamen Verarbeitung ausgenommen (Beschluss-Log).
+      // Gleiche Bedingung wie in stripe-webhook, backfill-sepa-iban und
+      // commission-forecast — SYNCHRONIZE.
+      // Am Cluster hängt ein funktionierendes Zahlungsmittel
+      // (cus_UE07CH7uRTNhz7, RE-2026-0013 wurde tatsächlich eingezogen).
+      // ROLLBACK 29.08.2026: diese Zeile ersatzlos entfernen.
+      .not("hfx_customer_number", "ilike", "HFX-I01070%");
 
     if (targetContractId) {
       contractQuery = contractQuery.eq("id", targetContractId);
