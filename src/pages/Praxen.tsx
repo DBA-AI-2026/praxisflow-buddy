@@ -22,7 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Plus, Search, Download, MoreHorizontal, Pencil, Trash2, RefreshCw,
   Loader2, UserCheck, FileText, Eye, Building2, Mail, Phone, MapPin,
-  Calendar, Euro, Package, GitMerge, CheckCircle2, XCircle, Send,
+  Calendar, Euro, Package, GitMerge, CheckCircle2, XCircle,
 } from "lucide-react";
 import { CONTRACT_STATUS_CONFIG } from "@/lib/statusConfig";
 import {
