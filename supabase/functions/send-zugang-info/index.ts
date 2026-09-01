@@ -44,14 +44,16 @@ function getCorsHeaders(origin: string | null) {
 const FROM_ADDRESS = "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>";
 const REPLY_TO = "info@hfx-honorarfuchs.de";
 
+// Aus capture-lead/index.ts übernommen (Windows-Download, s. Abnahme für MAC-URL)
+const DOWNLOAD_URL = "https://download.qodia.de/production/hfx/latest/windows/hfx-desktop.exe";
+
 const ASSET_BUCKET = "email-assets";
 const ASSET_PATH = "zugang/hfx-zugang-einrichten.pdf";
 const ATTACHMENT_FILENAME = "HFX-GOAe_Zugang-einrichten.pdf";
 
 const EVENT_TYPE = "MAIL_SENT_ZUGANGSINFO";
 
-// [PLATZHALTER – Text folgt in Auftrag B]
-const SUBJECT = "[PLATZHALTER – Text folgt in Auftrag B]";
+const SUBJECT = "Ihr Zugang zur HFX.GOÄ-Anwendung – so richten Sie Ihr Passwort ein";
 
 type Mode = "dry_run" | "canary" | "send";
 
