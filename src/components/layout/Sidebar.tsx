@@ -89,6 +89,7 @@ const verwaltungNav: NavItem[] = [
   { name: "Test-Leads aufräumen", href: "/admin/lead-cleanup", icon: AlertTriangle },
   { name: "Campaign Mint", href: "/admin/campaign-mint", icon: FileSignature },
   { name: "GOÄ-Kampagne", href: "/admin/kampagne", icon: Mail },
+  { name: "Zugang einrichten", href: "/admin/zugang-info", icon: Mail },
 ];
 
 interface NavSectionProps {
