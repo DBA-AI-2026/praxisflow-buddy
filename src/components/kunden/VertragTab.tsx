@@ -72,6 +72,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -396,6 +397,35 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
   const queryClient = useQueryClient();
   const [registering, setRegistering] = useState(false);
   const [sendingCreds, setSendingCreds] = useState(false);
+  const [sendingZugangInfo, setSendingZugangInfo] = useState(false);
+
+  const handleSendZugangInfo = async () => {
+    if (!lead.hfx_customer_number) return;
+    setSendingZugangInfo(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-zugang-info", {
+        body: { mode: "send", hfx_numbers: [lead.hfx_customer_number] },
+      });
+      if (error) throw error;
+      const row = (data?.results ?? [])[0];
+      if (!row || row.outcome !== "gesendet") {
+        throw new Error(row?.error || row?.outcome || "Unbekannter Fehler");
+      }
+      toast({
+        title: "Einrichtungs-Mail gesendet",
+        description: `E-Mail an ${row.sent_to} verschickt.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: err?.message ?? String(err),
+      });
+    } finally {
+      setSendingZugangInfo(false);
+    }
+  };
+
 
   const qodiaSynced = !!lead.qodia_synced;
 
@@ -504,7 +534,35 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
               </TooltipContent>
             </Tooltip>
           )}
+
+          {/* Einrichtungs-Mail „Zugang einrichten" (send-zugang-info, eine Nummer). */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={sendingZugangInfo || !lead.hfx_customer_number}
+                  onClick={handleSendZugangInfo}
+                >
+                  {sendingZugangInfo ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Mail className="h-3.5 w-3.5" />
+                  )}
+                  Zugang einrichten senden
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              {lead.hfx_customer_number
+                ? "Sendet die Einrichtungs-Anleitung inkl. PDF an die Lead-Adresse."
+                : "Keine HFX-Nummer am Lead hinterlegt."}
+            </TooltipContent>
+          </Tooltip>
         </TooltipProvider>
+
       </div>
     </div>
   );

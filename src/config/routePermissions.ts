@@ -98,6 +98,9 @@ export const routePermissions: RoutePermission[] = [
   // GOÄ-Kampagne (Mailversand — admin-only)
   { path: "/admin/kampagne", allowedRoles: ["admin"] },
 
+  // Einrichtungs-Mail „Zugang einrichten" (Mailversand — admin-only)
+  { path: "/admin/zugang-info", allowedRoles: ["admin"] },
+
 
 
 ];

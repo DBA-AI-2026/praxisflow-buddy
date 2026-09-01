@@ -58,6 +58,7 @@ import ContractInspect from "./pages/admin/ContractInspect";
 import LeadCleanup from "./pages/admin/LeadCleanup";
 import CampaignMint from "./pages/admin/CampaignMint";
 import Kampagne from "./pages/admin/Kampagne";
+import ZugangInfo from "./pages/admin/ZugangInfo";
 
 const queryClient = new QueryClient();
 
@@ -129,6 +130,7 @@ const App = () => (
             <Route path="/admin/lead-cleanup" element={<ProtectedRoute><LeadCleanup /></ProtectedRoute>} />
             <Route path="/admin/campaign-mint" element={<ProtectedRoute requiredRoles={["admin"]}><CampaignMint /></ProtectedRoute>} />
             <Route path="/admin/kampagne" element={<ProtectedRoute requiredRoles={["admin"]}><Kampagne /></ProtectedRoute>} />
+            <Route path="/admin/zugang-info" element={<ProtectedRoute requiredRoles={["admin"]}><ZugangInfo /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
