@@ -19,7 +19,6 @@
 // Datei, bricht die Function mit klarer Fehlermeldung ab — es wird NIEMALS
 // ohne Anhang gesendet.
 //
-// Betreff/Body sind PLATZHALTER — verbindlicher Text folgt in Auftrag B.
 
 import { Resend } from "npm:resend@2.0.0";
 import { requireActiveRole } from "../_shared/auth.ts";
