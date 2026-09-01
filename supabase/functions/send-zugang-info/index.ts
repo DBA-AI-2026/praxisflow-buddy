@@ -63,6 +63,7 @@ interface LeadRow {
   nachname: string | null;
   praxis_name: string | null;
   status: string;
+  qodia_synced: boolean;
 }
 
 interface ResultRow {
@@ -180,7 +181,7 @@ Deno.serve(async (req) => {
   // === Leads zu den Nummern laden ===
   const { data: leads, error: lErr } = await admin
     .from("leads")
-    .select("id, hfx_customer_number, email, vorname, nachname, praxis_name, status")
+    .select("id, hfx_customer_number, email, vorname, nachname, praxis_name, status, qodia_synced")
     .in("hfx_customer_number", numbers);
 
   if (lErr) {
@@ -234,6 +235,7 @@ Deno.serve(async (req) => {
             name: l ? displayName(l) : null,
             email: l?.email ?? null,
             status: l?.status ?? null,
+            qodia_synced: l?.qodia_synced ?? null,
             found: !!l,
             last_zugang_info_at: lastZugang.get(n) ?? null,
             last_credentials_at: lastCreds.get(n) ?? null,
@@ -343,6 +345,18 @@ Deno.serve(async (req) => {
         name: "(nicht gefunden)",
         outcome: "übersprungen: nicht gefunden",
       });
+      continue;
+    }
+
+    if (!lead.qodia_synced) {
+      const name = displayName(lead);
+      results.push({
+        lead_id: lead.id,
+        hfx_customer_number: n,
+        name,
+        outcome: "übersprungen: nicht bei Qodia registriert",
+      });
+      log("skipped: not qodia_synced", { lead_id: lead.id, hfx_customer_number: n });
       continue;
     }
 
