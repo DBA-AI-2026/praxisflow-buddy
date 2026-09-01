@@ -1,13 +1,14 @@
 /**
- * leadActions — Helper für Lead-bezogene externe Aktionen (Etappe 3b-ii + 4).
+ * leadActions — Helper für Lead-bezogene externe Aktionen.
  *
  * - registerLeadAtQodia: Edge Function `sync-lead-qodia`
- * - sendQodiaCredentials: Edge Function `resend-lead-credentials`
- *   + customer_events MAIL_SENT_CREDENTIALS
+ *
+ * Hinweis: Der frühere Zugangsdaten-Versand (`sendQodiaCredentials` →
+ * `resend-lead-credentials`) wurde am 01.09.2026 entfernt. Die Einrichtung
+ * läuft ausschließlich über die Einrichtungs-Mail `send-zugang-info`.
  */
 import type { QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
-import { logCustomerEvent } from "@/lib/customerEvents";
 
 export interface LeadActionResult {
   success: boolean;
@@ -46,16 +47,4 @@ export async function registerLeadAtQodia(params: {
   } catch (err: any) {
     return { success: false, error: err?.message ?? "Unbekannter Fehler" };
   }
-}
-
-export async function sendQodiaCredentials(params: {
-  leadId: string;
-  queryClient: QueryClient;
-  hfxCustomerNumber?: string | null;
-  userId?: string | null;
-}): Promise<LeadActionResult> {
-  // 21.08.2026: Vorübergehend gesperrt. resend-lead-credentials setzt das Passwort
-  // nur in Supabase Auth zurück, propagiert es aber nicht zu Qodia – der Kunde
-  // würde sich danach nicht mehr im Qodia-Tool anmelden können.
-  return { success: false, error: "Zugangsdaten-Versand ist vorübergehend gesperrt." };
 }

@@ -102,10 +102,7 @@ import {
   resendConfirmationMail,
   copyBuchungslink,
 } from "@/lib/contractMailActions";
-import {
-  registerLeadAtQodia,
-  sendQodiaCredentials,
-} from "@/lib/leadActions";
+import { registerLeadAtQodia } from "@/lib/leadActions";
 import {
   createContractCase,
   CASE_TYPE_LABELS,
@@ -402,7 +399,6 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
   const queryClient = useQueryClient();
   const canCreate = useCanCreate();
   const [registering, setRegistering] = useState(false);
-  const [sendingCreds, setSendingCreds] = useState(false);
   const [sendingZugangInfo, setSendingZugangInfo] = useState(false);
 
   const handleSendZugangInfo = async () => {
@@ -455,25 +451,6 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
     }
   };
 
-  const handleSendCreds = async () => {
-    setSendingCreds(true);
-    const res = await sendQodiaCredentials({
-      leadId: lead.id,
-      queryClient,
-      hfxCustomerNumber: lead.hfx_customer_number ?? null,
-      userId: user?.id ?? null,
-    });
-    setSendingCreds(false);
-    if (res.success) {
-      toast({
-        title: "Zugangsdaten gesendet",
-        description: `E-Mail an ${lead.email} verschickt.`,
-      });
-    } else {
-      toast({ variant: "destructive", title: "Fehler", description: res.error });
-    }
-  };
-
   return (
     <div className="rounded-lg border bg-card p-4 space-y-2">
       <div className="text-sm font-medium text-foreground">Lead-Aktionen</div>
@@ -508,7 +485,7 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
             </Button>
           )}
 
-          {!qodiaSynced ? (
+          {!qodiaSynced && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
@@ -519,25 +496,6 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
                 </span>
               </TooltipTrigger>
               <TooltipContent>Erst bei Qodia registrieren</TooltipContent>
-            </Tooltip>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    disabled
-                  >
-                    <KeyRound className="h-3.5 w-3.5" />
-                    Zugangsdaten zusenden
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                Vorübergehend gesperrt: Der Versand setzt das Passwort nicht bei Qodia zurück. Bei Login-Problemen bitte an den Admin wenden.
-              </TooltipContent>
             </Tooltip>
           )}
 

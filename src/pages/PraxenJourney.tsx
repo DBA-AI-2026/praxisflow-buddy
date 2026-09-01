@@ -313,7 +313,6 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("aktiv");
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<any>(null);
-  const [sendingId, setSendingId] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [overdueFilter, setOverdueFilter] = useState<"overdue7" | "overdue14" | null>(
     initialFilter === "overdue7" ? "overdue7" : initialFilter === "overdue14" ? "overdue14" : null
@@ -510,19 +509,6 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     },
   });
 
-  const sendCredentials = async (leadId: string) => {
-    setSendingId(leadId);
-    try {
-      const { data, error } = await supabase.functions.invoke("resend-lead-credentials", { body: { leadId } });
-      if (error) throw error;
-      if (data?.error) toast.error(data.error);
-      else toast.success(data?.message || "Zugangsdaten versendet");
-    } catch (err: any) {
-      toast.error(err.message || "Versand fehlgeschlagen");
-    } finally {
-      setSendingId(null);
-    }
-  };
 
   const syncQodia = async (leadId: string) => {
     setSyncingId(leadId);
