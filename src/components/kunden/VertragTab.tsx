@@ -485,7 +485,7 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
             </Button>
           )}
 
-          {!qodiaSynced ? (
+          {!qodiaSynced && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
@@ -496,25 +496,6 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
                 </span>
               </TooltipTrigger>
               <TooltipContent>Erst bei Qodia registrieren</TooltipContent>
-            </Tooltip>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    disabled
-                  >
-                    <KeyRound className="h-3.5 w-3.5" />
-                    Zugangsdaten zusenden
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                Vorübergehend gesperrt: Der Versand setzt das Passwort nicht bei Qodia zurück. Bei Login-Problemen bitte an den Admin wenden.
-              </TooltipContent>
             </Tooltip>
           )}
 
