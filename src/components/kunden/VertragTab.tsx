@@ -399,7 +399,6 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
   const queryClient = useQueryClient();
   const canCreate = useCanCreate();
   const [registering, setRegistering] = useState(false);
-  const [sendingCreds, setSendingCreds] = useState(false);
   const [sendingZugangInfo, setSendingZugangInfo] = useState(false);
 
   const handleSendZugangInfo = async () => {
@@ -449,25 +448,6 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
         title: res.conflict ? "Konflikt" : "Fehler",
         description: res.error,
       });
-    }
-  };
-
-  const handleSendCreds = async () => {
-    setSendingCreds(true);
-    const res = await sendQodiaCredentials({
-      leadId: lead.id,
-      queryClient,
-      hfxCustomerNumber: lead.hfx_customer_number ?? null,
-      userId: user?.id ?? null,
-    });
-    setSendingCreds(false);
-    if (res.success) {
-      toast({
-        title: "Zugangsdaten gesendet",
-        description: `E-Mail an ${lead.email} verschickt.`,
-      });
-    } else {
-      toast({ variant: "destructive", title: "Fehler", description: res.error });
     }
   };
 

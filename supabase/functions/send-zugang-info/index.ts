@@ -18,7 +18,6 @@
 // Anhang ist PFLICHT: email-assets/zugang/hfx-zugang-einrichten.pdf. Fehlt die
 // Datei, bricht die Function mit klarer Fehlermeldung ab — es wird NIEMALS
 // ohne Anhang gesendet.
-//
 
 import { Resend } from "npm:resend@2.0.0";
 import { requireActiveRole } from "../_shared/auth.ts";
