@@ -100,27 +100,64 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-/** [PLATZHALTER – Text folgt in Auftrag B] */
 function buildMailParts(lead: LeadRow) {
   const name = displayName(lead);
+  const email = lead.email ?? "";
+  const hfx = lead.hfx_customer_number ?? "";
 
   const bodyHtml = `
-      <p>Sehr geehrte Damen und Herren,</p>
-      <p>[PLATZHALTER – Text folgt in Auftrag B]</p>
-      <p>Die Schritt-für-Schritt-Anleitung finden Sie im angehängten PDF.</p>
-      <p>Bei Fragen erreichen Sie uns jederzeit unter
-        <a href="mailto:info@hfx-honorarfuchs.de">info@hfx-honorarfuchs.de</a>.
+      <p>Guten Tag,</p>
+      <p>damit Sie sich in der HFX.GOÄ-Anwendung anmelden können, hier das Wichtigste in Kürze:</p>
+      <p>
+        <strong>Ihre Anmelde-Adresse:</strong> ${email}<br>
+        <strong>Ihre HFX-Kundennummer:</strong> ${hfx}
       </p>
+      <p>Ihr Passwort vergeben Sie selbst – direkt in der Anwendung. Ein Passwort aus einer früheren E-Mail brauchen Sie dafür nicht.</p>
+      <p>So geht es:</p>
+      <ol>
+        <li>HFX.GOÄ-Anwendung öffnen.</li>
+        <li>Ihre Anmelde-Adresse (siehe oben) in das Feld „E-Mail" eintragen – nicht die Kundennummer.</li>
+        <li>Auf „Passwort vergessen?" klicken. Der Link wird erst aktiv, wenn die Adresse eingetragen ist.</li>
+        <li>Den 6-stelligen Code aus der E-Mail eingeben. Kommt er nicht innerhalb weniger Minuten, bitte im Spam-Ordner nachsehen.</li>
+        <li>Eigenes Passwort vergeben – fertig.</li>
+      </ol>
+      <p>Die Anleitung finden Sie auch im angehängten PDF, gerne zum Ausdrucken für die Praxis.</p>
+      <p>Anwendung noch nicht installiert? Hier herunterladen:
+        <a href="${DOWNLOAD_URL}" target="_blank" rel="noopener noreferrer">${DOWNLOAD_URL}</a>
+      </p>
+      <p>Wenn Sie sich bereits mit einem eigenen Passwort anmelden können, ist nichts weiter zu tun.</p>
+      <p>Es klappt nicht? Antworten Sie einfach auf diese E-Mail mit einem Bildschirmfoto der Stelle, an der es hakt – wir helfen sofort.</p>
+      <p>Mit freundlichen Grüßen<br>Ihr Team von HFX Honorarfuchs</p>
   `.trim();
 
   const bodyText = [
-    "Sehr geehrte Damen und Herren,",
+    "Guten Tag,",
     "",
-    "[PLATZHALTER – Text folgt in Auftrag B]",
+    "damit Sie sich in der HFX.GOÄ-Anwendung anmelden können, hier das Wichtigste in Kürze:",
     "",
-    "Die Schritt-für-Schritt-Anleitung finden Sie im angehängten PDF.",
+    `Ihre Anmelde-Adresse: ${email}`,
+    `Ihre HFX-Kundennummer: ${hfx}`,
     "",
-    "Bei Fragen erreichen Sie uns jederzeit unter info@hfx-honorarfuchs.de.",
+    "Ihr Passwort vergeben Sie selbst – direkt in der Anwendung. Ein Passwort aus einer früheren E-Mail brauchen Sie dafür nicht.",
+    "",
+    "So geht es:",
+    "",
+    "1. HFX.GOÄ-Anwendung öffnen.",
+    "2. Ihre Anmelde-Adresse (siehe oben) in das Feld „E-Mail" eintragen – nicht die Kundennummer.",
+    "3. Auf „Passwort vergessen?" klicken. Der Link wird erst aktiv, wenn die Adresse eingetragen ist.",
+    "4. Den 6-stelligen Code aus der E-Mail eingeben. Kommt er nicht innerhalb weniger Minuten, bitte im Spam-Ordner nachsehen.",
+    "5. Eigenes Passwort vergeben – fertig.",
+    "",
+    "Die Anleitung finden Sie auch im angehängten PDF, gerne zum Ausdrucken für die Praxis.",
+    "",
+    `Anwendung noch nicht installiert? Hier herunterladen: ${DOWNLOAD_URL}`,
+    "",
+    "Wenn Sie sich bereits mit einem eigenen Passwort anmelden können, ist nichts weiter zu tun.",
+    "",
+    "Es klappt nicht? Antworten Sie einfach auf diese E-Mail mit einem Bildschirmfoto der Stelle, an der es hakt – wir helfen sofort.",
+    "",
+    "Mit freundlichen Grüßen",
+    "Ihr Team von HFX Honorarfuchs",
   ].join("\n");
 
   const { html, text } = renderBrandedEmail({
