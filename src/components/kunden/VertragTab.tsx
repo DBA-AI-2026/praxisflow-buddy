@@ -250,6 +250,12 @@ export function VertragTab({ data, onSwitchToTab }: VertragTabProps) {
 
 /* ─────────────────── Standort hinzufügen (Multi-Standort) ─────────────────── */
 
+// SSOT für die Vertrags-/Lead-Aktionsberechtigung im Kunden-Dialog.
+function useCanCreate() {
+  const { isAdmin, isVertragsabteilung, isSalesLead, isUser, isRegionalLead } = useUserRole();
+  return isAdmin || isVertragsabteilung || isSalesLead || isUser || isRegionalLead;
+}
+
 function AddLocationButton({
   customer,
   contracts,
@@ -258,8 +264,7 @@ function AddLocationButton({
   contracts: ContractRow[];
 }) {
   const navigate = useNavigate();
-  const { isAdmin, isVertragsabteilung, isSalesLead, isUser, isRegionalLead } = useUserRole();
-  const canCreate = isAdmin || isVertragsabteilung || isSalesLead || isUser || isRegionalLead;
+  const canCreate = useCanCreate();
   if (!customer || !canCreate) return null;
   const hasGoae = contracts.some((c) => /GOÄ|GOA/i.test(c.product_name ?? ""));
   if (!hasGoae) return null;
