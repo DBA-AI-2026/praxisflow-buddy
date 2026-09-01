@@ -400,6 +400,7 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const canCreate = useCanCreate();
   const [registering, setRegistering] = useState(false);
   const [sendingCreds, setSendingCreds] = useState(false);
   const [sendingZugangInfo, setSendingZugangInfo] = useState(false);
