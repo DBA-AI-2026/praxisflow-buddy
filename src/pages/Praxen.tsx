@@ -74,7 +74,6 @@ export default function Praxen() {
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
-  const [sendingCredentialsId, setSendingCredentialsId] = useState<string | null>(null);
   const [selectedPraxis, setSelectedPraxis] = useState<Praxis | null>(null);
   const [praxisContracts, setPraxisContracts] = useState<any[]>([]);
   const [loadingContracts, setLoadingContracts] = useState(false);
@@ -263,29 +262,6 @@ export default function Praxen() {
     }
   };
 
-  const sendCredentials = async (praxis: Praxis) => {
-    if (!praxis.email) {
-      toast.error("Für diesen Kunden ist keine E-Mail-Adresse hinterlegt.");
-      return;
-    }
-    setSendingCredentialsId(praxis.id);
-    try {
-      const { data, error } = await supabase.functions.invoke("resend-lead-credentials", {
-        body: {
-          email: praxis.email,
-          vorname: "",
-          nachname: praxis.name,
-          hfxCustomerNumber: praxis.hfxNr || praxis.mpNr || "",
-        },
-      });
-      if (error) throw error;
-      if (data?.error) toast.error(data.error);
-      else toast.success(`Zugangsdaten wurden an ${praxis.email} gesendet.`);
-    } catch (err: any) {
-      toast.error(err.message || "Fehler beim Versenden der Zugangsdaten");
-    } finally {
-      setSendingCredentialsId(null);
-    }
   };
 
   const filteredPraxen = praxen.filter(
@@ -550,21 +526,6 @@ export default function Praxen() {
                             <Eye className="h-4 w-4 mr-2" />
                             Details anzeigen
                           </DropdownMenuItem>
-                          <TooltipProvider delayDuration={150}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span>
-                                  <DropdownMenuItem disabled>
-                                    <Send className="h-4 w-4 mr-2" />
-                                    Zugangsdaten senden
-                                  </DropdownMenuItem>
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                Vorübergehend gesperrt: Der Versand setzt das Passwort nicht bei Qodia zurück. Bei Login-Problemen bitte an den Admin wenden.
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
                           <DropdownMenuItem
                             onClick={() => syncToSalesforce(praxis)}
                             disabled={syncingId === praxis.id || !sfConnection.isConnected}
@@ -609,28 +570,6 @@ export default function Praxen() {
                   <p className="text-xs font-mono text-muted-foreground pt-1">{selectedPraxis.hfxNr}</p>
                 )}
               </div>
-              {selectedPraxis?.email && (
-                <TooltipProvider delayDuration={150}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="shrink-0 mt-0.5"
-                          disabled
-                        >
-                          <Send className="h-4 w-4 mr-1.5" />
-                          Zugangsdaten senden
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      Vorübergehend gesperrt: Der Versand setzt das Passwort nicht bei Qodia zurück. Bei Login-Problemen bitte an den Admin wenden.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
             </div>
           </DialogHeader>
 
