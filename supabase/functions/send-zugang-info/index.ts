@@ -179,9 +179,14 @@ Deno.serve(async (req) => {
     });
   }
 
-  const authResult = await requireActiveRole(req, ["admin"], corsHeaders);
+  const authResult = await requireActiveRole(
+    req,
+    ["admin", "sales_lead", "regional_lead", "user", "vertragsabteilung"],
+    corsHeaders,
+  );
   if (authResult instanceof Response) return authResult;
-  const { admin, userId } = authResult;
+  const { admin, userId, roles } = authResult;
+  const isAdmin = roles.includes("admin");
 
   let body: { mode?: Mode; hfx_numbers?: unknown; canary_to?: string } = {};
   try {
