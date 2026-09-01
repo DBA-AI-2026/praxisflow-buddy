@@ -102,10 +102,7 @@ import {
   resendConfirmationMail,
   copyBuchungslink,
 } from "@/lib/contractMailActions";
-import {
-  registerLeadAtQodia,
-  sendQodiaCredentials,
-} from "@/lib/leadActions";
+import { registerLeadAtQodia } from "@/lib/leadActions";
 import {
   createContractCase,
   CASE_TYPE_LABELS,

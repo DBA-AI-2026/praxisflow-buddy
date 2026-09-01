@@ -1,6 +1,9 @@
 // send-zugang-info — Einrichtungs-Mail „Zugang einrichten" (GOÄ)
 //
-// Admin-JWT-geschützt. Drei Modi (Muster wie campaign-mail-send):
+// JWT-geschützt für die Rollen admin, sales_lead, regional_lead, user,
+// vertragsabteilung. Nicht-Admins: nur mode="send" mit genau EINER HFX-Nummer
+// (dry_run, canary oder mehrere Nummern → 403 „Batch und Test nur für Admins").
+// Drei Modi (Muster wie campaign-mail-send):
 //
 //   dry_run  → liefert die Zielliste zu den übergebenen HFX-Nummern inkl.
 //              Vorgeschichte (letztes MAIL_SENT_ZUGANGSINFO, letztes

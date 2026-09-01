@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
   }
 });
 
-// ⚠ SYNCHRONIZE MIT resend-lead-credentials/index.ts (buildCredentialsEmail).
+// resend-lead-credentials entfernt am 01.09.2026; Layout-Referenz ist jetzt send-zugang-info.
 // Etappe 2b duplicate; spätere Konsolidierung nach _shared offen.
 function buildCredentialsEmail(fields: {
   praxis_name: string;
