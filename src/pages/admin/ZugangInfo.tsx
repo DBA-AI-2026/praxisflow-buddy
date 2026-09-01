@@ -59,6 +59,7 @@ interface TargetRow {
   name: string | null;
   email: string | null;
   status: string | null;
+  qodia_synced: boolean | null;
   found: boolean;
   last_zugang_info_at: string | null;
   last_credentials_at: string | null;
@@ -469,6 +470,7 @@ export default function ZugangInfo() {
                     <TableHead>Name</TableHead>
                     <TableHead>E-Mail</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Qodia</TableHead>
                     <TableHead>Zugangsdaten-Mail</TableHead>
                     <TableHead>Zugang-Info zuletzt</TableHead>
                   </TableRow>
@@ -487,6 +489,15 @@ export default function ZugangInfo() {
                       <TableCell className="text-xs">{t.email ?? "—"}</TableCell>
                       <TableCell className="text-xs">
                         {t.status ? <Badge variant="secondary">{t.status}</Badge> : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {t.qodia_synced === true ? (
+                          <span className="text-green-700">synced</span>
+                        ) : t.qodia_synced === false ? (
+                          <span className="text-destructive">nicht synced</span>
+                        ) : (
+                          "—"
+                        )}
                       </TableCell>
                       <TableCell className="text-xs">{fmtDate(t.last_credentials_at)}</TableCell>
                       <TableCell className="text-xs">
