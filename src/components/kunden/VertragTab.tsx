@@ -250,6 +250,12 @@ export function VertragTab({ data, onSwitchToTab }: VertragTabProps) {
 
 /* ─────────────────── Standort hinzufügen (Multi-Standort) ─────────────────── */
 
+// SSOT für die Vertrags-/Lead-Aktionsberechtigung im Kunden-Dialog.
+function useCanCreate() {
+  const { isAdmin, isVertragsabteilung, isSalesLead, isUser, isRegionalLead } = useUserRole();
+  return isAdmin || isVertragsabteilung || isSalesLead || isUser || isRegionalLead;
+}
+
 function AddLocationButton({
   customer,
   contracts,
@@ -258,8 +264,7 @@ function AddLocationButton({
   contracts: ContractRow[];
 }) {
   const navigate = useNavigate();
-  const { isAdmin, isVertragsabteilung, isSalesLead, isUser, isRegionalLead } = useUserRole();
-  const canCreate = isAdmin || isVertragsabteilung || isSalesLead || isUser || isRegionalLead;
+  const canCreate = useCanCreate();
   if (!customer || !canCreate) return null;
   const hasGoae = contracts.some((c) => /GOÄ|GOA/i.test(c.product_name ?? ""));
   if (!hasGoae) return null;
@@ -395,6 +400,7 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const canCreate = useCanCreate();
   const [registering, setRegistering] = useState(false);
   const [sendingCreds, setSendingCreds] = useState(false);
   const [sendingZugangInfo, setSendingZugangInfo] = useState(false);
@@ -536,31 +542,33 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
           )}
 
           {/* Einrichtungs-Mail „Zugang einrichten" (send-zugang-info, eine Nummer). */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  disabled={sendingZugangInfo || !lead.hfx_customer_number}
-                  onClick={handleSendZugangInfo}
-                >
-                  {sendingZugangInfo ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Mail className="h-3.5 w-3.5" />
-                  )}
-                  Zugang einrichten senden
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              {lead.hfx_customer_number
-                ? "Sendet die Einrichtungs-Anleitung inkl. PDF an die Lead-Adresse."
-                : "Keine HFX-Nummer am Lead hinterlegt."}
-            </TooltipContent>
-          </Tooltip>
+          {canCreate && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={sendingZugangInfo || !lead.hfx_customer_number}
+                    onClick={handleSendZugangInfo}
+                  >
+                    {sendingZugangInfo ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Mail className="h-3.5 w-3.5" />
+                    )}
+                    Zugang einrichten senden
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {lead.hfx_customer_number
+                  ? "Sendet die Einrichtungs-Anleitung inkl. PDF an die Lead-Adresse."
+                  : "Keine HFX-Nummer am Lead hinterlegt."}
+              </TooltipContent>
+            </Tooltip>
+          )}
         </TooltipProvider>
 
       </div>

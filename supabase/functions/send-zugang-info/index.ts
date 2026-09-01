@@ -179,9 +179,14 @@ Deno.serve(async (req) => {
     });
   }
 
-  const authResult = await requireActiveRole(req, ["admin"], corsHeaders);
+  const authResult = await requireActiveRole(
+    req,
+    ["admin", "sales_lead", "regional_lead", "user", "vertragsabteilung"],
+    corsHeaders,
+  );
   if (authResult instanceof Response) return authResult;
-  const { admin, userId } = authResult;
+  const { admin, userId, roles } = authResult;
+  const isAdmin = roles.includes("admin");
 
   let body: { mode?: Mode; hfx_numbers?: unknown; canary_to?: string } = {};
   try {
@@ -217,6 +222,16 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
+  // Nicht-Admins: nur Einzelversand, kein Batch und kein Test
+  if (!isAdmin && (mode !== "send" || numbers.length !== 1)) {
+    return new Response(JSON.stringify({ error: "Batch und Test nur für Admins" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+
 
   // === Leads zu den Nummern laden ===
   const { data: leads, error: lErr } = await admin
