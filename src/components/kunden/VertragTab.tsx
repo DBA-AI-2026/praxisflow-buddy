@@ -542,31 +542,33 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
           )}
 
           {/* Einrichtungs-Mail „Zugang einrichten" (send-zugang-info, eine Nummer). */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  disabled={sendingZugangInfo || !lead.hfx_customer_number}
-                  onClick={handleSendZugangInfo}
-                >
-                  {sendingZugangInfo ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Mail className="h-3.5 w-3.5" />
-                  )}
-                  Zugang einrichten senden
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              {lead.hfx_customer_number
-                ? "Sendet die Einrichtungs-Anleitung inkl. PDF an die Lead-Adresse."
-                : "Keine HFX-Nummer am Lead hinterlegt."}
-            </TooltipContent>
-          </Tooltip>
+          {canCreate && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={sendingZugangInfo || !lead.hfx_customer_number}
+                    onClick={handleSendZugangInfo}
+                  >
+                    {sendingZugangInfo ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Mail className="h-3.5 w-3.5" />
+                    )}
+                    Zugang einrichten senden
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {lead.hfx_customer_number
+                  ? "Sendet die Einrichtungs-Anleitung inkl. PDF an die Lead-Adresse."
+                  : "Keine HFX-Nummer am Lead hinterlegt."}
+              </TooltipContent>
+            </Tooltip>
+          )}
         </TooltipProvider>
 
       </div>
