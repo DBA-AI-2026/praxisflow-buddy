@@ -262,7 +262,6 @@ export default function Praxen() {
     }
   };
 
-  };
 
   const filteredPraxen = praxen.filter(
     (p) =>
