@@ -46,8 +46,8 @@ function getCorsHeaders(origin: string | null) {
 const FROM_ADDRESS = "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>";
 const REPLY_TO = "info@hfx-honorarfuchs.de";
 
-// Aus capture-lead/index.ts übernommen (Windows-Download, s. Abnahme für MAC-URL)
-const DOWNLOAD_URL = "https://download.qodia.de/production/hfx/latest/windows/hfx-desktop.exe";
+const DOWNLOAD_URL_WINDOWS = "https://download.qodia.de/production/hfx/latest/windows/hfx-desktop.exe";
+const DOWNLOAD_URL_MAC = "https://download.qodia.de/production/hfx/latest/mac/hfx-desktop.dmg";
 
 const ASSET_BUCKET = "email-assets";
 const ASSET_PATH = "zugang/hfx-zugang-einrichten.pdf";
@@ -124,8 +124,9 @@ function buildMailParts(lead: LeadRow) {
         <li>Eigenes Passwort vergeben – fertig.</li>
       </ol>
       <p>Die Anleitung finden Sie auch im angehängten PDF, gerne zum Ausdrucken für die Praxis.</p>
-      <p>Anwendung noch nicht installiert? Hier herunterladen:
-        <a href="${DOWNLOAD_URL}" target="_blank" rel="noopener noreferrer">${DOWNLOAD_URL}</a>
+      <p>Anwendung noch nicht installiert?<br>
+        Download für Windows: <a href="${DOWNLOAD_URL_WINDOWS}" target="_blank" rel="noopener noreferrer">${DOWNLOAD_URL_WINDOWS}</a><br>
+        Download für Mac: <a href="${DOWNLOAD_URL_MAC}" target="_blank" rel="noopener noreferrer">${DOWNLOAD_URL_MAC}</a>
       </p>
       <p>Wenn Sie sich bereits mit einem eigenen Passwort anmelden können, ist nichts weiter zu tun.</p>
       <p>Es klappt nicht? Antworten Sie einfach auf diese E-Mail mit einem Bildschirmfoto der Stelle, an der es hakt – wir helfen sofort.</p>
@@ -152,7 +153,9 @@ function buildMailParts(lead: LeadRow) {
     "",
     "Die Anleitung finden Sie auch im angehängten PDF, gerne zum Ausdrucken für die Praxis.",
     "",
-    `Anwendung noch nicht installiert? Hier herunterladen: ${DOWNLOAD_URL}`,
+    "Anwendung noch nicht installiert?",
+    `Download für Windows: ${DOWNLOAD_URL_WINDOWS}`,
+    `Download für Mac: ${DOWNLOAD_URL_MAC}`,
     "",
     "Wenn Sie sich bereits mit einem eigenen Passwort anmelden können, ist nichts weiter zu tun.",
     "",
