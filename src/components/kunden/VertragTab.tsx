@@ -396,6 +396,35 @@ function LeadActionsCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult
   const queryClient = useQueryClient();
   const [registering, setRegistering] = useState(false);
   const [sendingCreds, setSendingCreds] = useState(false);
+  const [sendingZugangInfo, setSendingZugangInfo] = useState(false);
+
+  const handleSendZugangInfo = async () => {
+    if (!lead.hfx_customer_number) return;
+    setSendingZugangInfo(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-zugang-info", {
+        body: { mode: "send", hfx_numbers: [lead.hfx_customer_number] },
+      });
+      if (error) throw error;
+      const row = (data?.results ?? [])[0];
+      if (!row || row.outcome !== "gesendet") {
+        throw new Error(row?.error || row?.outcome || "Unbekannter Fehler");
+      }
+      toast({
+        title: "Einrichtungs-Mail gesendet",
+        description: `E-Mail an ${row.sent_to} verschickt.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Fehler",
+        description: err?.message ?? String(err),
+      });
+    } finally {
+      setSendingZugangInfo(false);
+    }
+  };
+
 
   const qodiaSynced = !!lead.qodia_synced;
 
