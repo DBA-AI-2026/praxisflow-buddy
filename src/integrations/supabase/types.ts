@@ -2868,6 +2868,21 @@ export type Database = {
       }
     }
     Functions: {
+      _plz_reassignment_candidates: {
+        Args: never
+        Returns: {
+          alter_ad_id: string
+          alter_ad_name: string
+          hfx_customer_number: string
+          lead_id: string
+          matched_rule: string
+          neuer_ad_id: string
+          neuer_ad_name: string
+          plz: string
+          praxis_name: string
+        }[]
+      }
+      apply_plz_reassignment: { Args: never; Returns: number }
       contract_uses_provider: {
         Args: { _contract_id: string; _provider: string }
         Returns: boolean
@@ -2995,6 +3010,20 @@ export type Database = {
       is_tippgeber_of: {
         Args: { _partner_user_id: string; _tippgeber_user_id: string }
         Returns: boolean
+      }
+      preview_plz_reassignment: {
+        Args: never
+        Returns: {
+          alter_ad_id: string
+          alter_ad_name: string
+          hfx_customer_number: string
+          lead_id: string
+          matched_rule: string
+          neuer_ad_id: string
+          neuer_ad_name: string
+          plz: string
+          praxis_name: string
+        }[]
       }
       reassign_contract_ad: {
         Args: { p_contract_id: string; p_new_ad: string; p_reason?: string }
