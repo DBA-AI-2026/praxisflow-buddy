@@ -82,6 +82,16 @@ export function PlzReassignmentDialog({ open, onOpenChange }: PlzReassignmentDia
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ["plz-reassignment-preview"] });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["journey-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["kpi-leads-all"] });
+      queryClient.invalidateQueries({ queryKey: ["kundenDialogData"] });
+      queryClient.invalidateQueries({ queryKey: ["kunden-dialog-lead"] });
+      queryClient.invalidateQueries({ queryKey: ["kunden-dialog-events"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-recent-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-overdue-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-new-since-yesterday"] });
+      queryClient.invalidateQueries({ queryKey: ["lead-current-ad-name"] });
+      queryClient.invalidateQueries({ queryKey: ["plz-mappings"] });
       toast({
         title: "Neuzuordnung durchgeführt",
         description: `${count} Lead${count === 1 ? "" : "s"} neu zugewiesen.`,
