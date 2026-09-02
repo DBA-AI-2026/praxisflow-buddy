@@ -649,6 +649,11 @@ export default function PlzMapping() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PlzReassignmentDialog
+        open={reassignmentOpen}
+        onOpenChange={setReassignmentOpen}
+      />
     </MainLayout>
   );
 }
