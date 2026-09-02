@@ -40,7 +40,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabaseClient";
-import { Plus, Pencil, Trash2, Loader2, MapPin, Search, Users, CheckCircle2, Map } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
+import { PlzReassignmentDialog } from "@/components/admin/PlzReassignmentDialog";
+import { Plus, Pencil, Trash2, Loader2, MapPin, Search, Users, CheckCircle2, Map, RefreshCw } from "lucide-react";
 
 interface PlzMapping {
   id: string;
