@@ -300,10 +300,22 @@ export default function PlzMapping() {
               </p>
             </div>
           </div>
-          <Button onClick={handleOpenCreate} size="sm">
-            <Plus className="h-4 w-4 mr-1.5" />
-            Neue Zuordnung
-          </Button>
+          <div className="flex items-center gap-2">
+            {(isAdmin || isSalesLead) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setReassignmentOpen(true)}
+              >
+                <RefreshCw className="h-4 w-4 mr-1.5" />
+                Neuzuordnung prüfen
+              </Button>
+            )}
+            <Button onClick={handleOpenCreate} size="sm">
+              <Plus className="h-4 w-4 mr-1.5" />
+              Neue Zuordnung
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
