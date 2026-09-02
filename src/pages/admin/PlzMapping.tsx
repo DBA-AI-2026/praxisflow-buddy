@@ -40,7 +40,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabaseClient";
-import { Plus, Pencil, Trash2, Loader2, MapPin, Search, Users, CheckCircle2, Map } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
+import { PlzReassignmentDialog } from "@/components/admin/PlzReassignmentDialog";
+import { Plus, Pencil, Trash2, Loader2, MapPin, Search, Users, CheckCircle2, Map, RefreshCw } from "lucide-react";
 
 interface PlzMapping {
   id: string;
@@ -88,12 +90,14 @@ function getRlColor(_name: string, index: number) {
 export default function PlzMapping() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAdmin, isSalesLead } = useUserRole();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editEntry, setEditEntry] = useState<PlzMapping | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [search, setSearch] = useState("");
   const [filterRl, setFilterRl] = useState<string>("all");
+  const [reassignmentOpen, setReassignmentOpen] = useState(false);
 
   const { data: mappings = [], isLoading } = useQuery({
     queryKey: ["plz-mappings"],
@@ -296,10 +300,22 @@ export default function PlzMapping() {
               </p>
             </div>
           </div>
-          <Button onClick={handleOpenCreate} size="sm">
-            <Plus className="h-4 w-4 mr-1.5" />
-            Neue Zuordnung
-          </Button>
+          <div className="flex items-center gap-2">
+            {(isAdmin || isSalesLead) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setReassignmentOpen(true)}
+              >
+                <RefreshCw className="h-4 w-4 mr-1.5" />
+                Neuzuordnung prüfen
+              </Button>
+            )}
+            <Button onClick={handleOpenCreate} size="sm">
+              <Plus className="h-4 w-4 mr-1.5" />
+              Neue Zuordnung
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -633,6 +649,11 @@ export default function PlzMapping() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PlzReassignmentDialog
+        open={reassignmentOpen}
+        onOpenChange={setReassignmentOpen}
+      />
     </MainLayout>
   );
 }
