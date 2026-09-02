@@ -90,12 +90,14 @@ function getRlColor(_name: string, index: number) {
 export default function PlzMapping() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAdmin, isSalesLead } = useUserRole();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editEntry, setEditEntry] = useState<PlzMapping | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [search, setSearch] = useState("");
   const [filterRl, setFilterRl] = useState<string>("all");
+  const [reassignmentOpen, setReassignmentOpen] = useState(false);
 
   const { data: mappings = [], isLoading } = useQuery({
     queryKey: ["plz-mappings"],
