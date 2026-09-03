@@ -66,9 +66,11 @@ export function ReassignLeadAdDialog({
   leadId,
   currentAssignedTo,
   hfxNumber,
+  plz,
   onChanged,
 }: Props) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [selected, setSelected] = useState<string | null>(currentAssignedTo);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
