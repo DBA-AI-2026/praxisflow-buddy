@@ -110,21 +110,29 @@ function buildConfirmationEmail(fields: {
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
 <tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Sie nutzen noch kein Abrechnungszentrum?</strong><br>Für die Nutzung von HFX.GOÄ benötigen Sie eine PAD- oder PADnext-Datei. Wenn Ihnen das gerade nichts sagt, kümmern wir uns darum: Ein Mitarbeiter meldet sich zeitnah bei Ihnen und begleitet Sie Schritt für Schritt durch die technischen Voraussetzungen.</td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="30">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Ihre Zugangsdaten für HFX.GOÄ:</strong></td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Ihr Zugang zu HFX.GOÄ:</strong></td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
 <tr><td>
 <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8; border-radius:8px; border:1px solid #d0d5dd;">
 <tr>
 <td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;">
-<strong>Registrierte E-Mail-Adresse:</strong> ${email}<br>
-<strong>Benutzername:</strong> ${hfx_customer_number}<br>
-<strong>Passwort:</strong> <code style="background:#fff; padding:2px 8px; border-radius:4px; font-size:13pt; letter-spacing:1px;">${generated_password}</code>
+<strong>Anmelde-E-Mail-Adresse:</strong> ${email}<br>
+<strong>Passwort:</strong> <code style="background:#fff; padding:2px 8px; border-radius:4px; font-size:13pt; letter-spacing:1px;">${generated_password}</code><br>
+<strong>Ihre HFX-Kundennummer:</strong> ${hfx_customer_number}
 </td>
 </tr>
 </table>
 </td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#888888; font-family:verdana, geneva, sans-serif; font-size:10pt; line-height:14pt;"><em>Bitte bewahren Sie diese Zugangsdaten sicher auf. Sie benötigen sie für die Anmeldung in HFX.GOÄ.</em></td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Melden Sie sich in der Anwendung mit Ihrer Anmelde-E-Mail-Adresse und dem Passwort an. Die Kundennummer brauchen Sie nur für Rückfragen an uns – sie ist kein Benutzername.</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Sie möchten lieber ein eigenes Passwort?</strong> Das geht jederzeit direkt in der Anwendung:</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">
+1. Anwendung öffnen und Ihre Anmelde-E-Mail-Adresse in das Feld „E-Mail" eintragen.<br>
+2. Auf „Passwort vergessen?" klicken. Der Link wird aktiv, sobald die Adresse im Feld steht.<br>
+3. Den 6-stelligen Code aus Ihrem Postfach eingeben (ggf. Spam-Ordner prüfen) und ein eigenes Passwort vergeben.
+</td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td></tr>
 <tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#444444;"><strong>Jetzt Testversion downloaden und starten!</strong></td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="5">&nbsp;</td></tr>
@@ -221,12 +229,19 @@ ${nachrichtSection}` : ""}
     "",
     "Mit HFX.GOÄ gewinnen Sie schnell Klarheit über Ihre Abrechnung. Erkennen Sie Optimierungspotenziale, prüfen Sie Ihre Daten strukturiert und verschaffen Sie sich ein besseres Gefühl für Ihre Privatliquidation – ganz ohne Aufwand.",
     "",
-    "Ihre Zugangsdaten für HFX.GOÄ:",
-    `Registrierte E-Mail-Adresse: ${email}`,
-    `Benutzername: ${hfx_customer_number}`,
-    `Passwort: ${generated_password}`,
+    "Ihr Zugang zu HFX.GOÄ:",
     "",
-    "Bitte bewahren Sie diese Zugangsdaten sicher auf. Sie benötigen sie für die Anmeldung in HFX.GOÄ.",
+    `Anmelde-E-Mail-Adresse: ${email}`,
+    `Passwort: ${generated_password}`,
+    `Ihre HFX-Kundennummer: ${hfx_customer_number}`,
+    "",
+    "Melden Sie sich in der Anwendung mit Ihrer Anmelde-E-Mail-Adresse und dem Passwort an. Die Kundennummer brauchen Sie nur für Rückfragen an uns – sie ist kein Benutzername.",
+    "",
+    "Sie möchten lieber ein eigenes Passwort? Das geht jederzeit direkt in der Anwendung:",
+    "",
+    "Anwendung öffnen und Ihre Anmelde-E-Mail-Adresse in das Feld „E-Mail\" eintragen.",
+    "Auf „Passwort vergessen?\" klicken. Der Link wird aktiv, sobald die Adresse im Feld steht.",
+    "Den 6-stelligen Code aus Ihrem Postfach eingeben (ggf. Spam-Ordner prüfen) und ein eigenes Passwort vergeben.",
     "",
     "Jetzt Testversion downloaden und starten (PAD/PAD.next-Schnittstelle erforderlich):",
     `Download MacOS: ${DOWNLOAD_URL_MAC}`,
@@ -342,7 +357,7 @@ Deno.serve(async (req) => {
         const resendApiKey = Deno.env.get("RESEND_API_KEY");
         if (resendApiKey) {
           const resend = new Resend(resendApiKey);
-          const existingPassword = existingLead.generated_password || "(gespeichertes Passwort nicht verfügbar)";
+          const existingPassword = existingLead.generated_password || "Sie haben bereits ein eigenes Passwort vergeben. Falls Sie es nicht mehr wissen: „Passwort vergessen?\" in der Anwendung – die Schritte stehen oben.";
           const { html: emailHtml, text: emailText } = buildConfirmationEmail({
             praxis_name: existingLead.praxis_name,
             vorname: existingLead.vorname,
