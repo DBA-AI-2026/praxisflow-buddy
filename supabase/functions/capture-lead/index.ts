@@ -357,7 +357,7 @@ Deno.serve(async (req) => {
         const resendApiKey = Deno.env.get("RESEND_API_KEY");
         if (resendApiKey) {
           const resend = new Resend(resendApiKey);
-          const existingPassword = existingLead.generated_password || "Sie haben bereits ein eigenes Passwort vergeben. Falls Sie es nicht mehr wissen: „Passwort vergessen?" in der Anwendung – die Schritte stehen oben.";
+          const existingPassword = existingLead.generated_password || "Sie haben bereits ein eigenes Passwort vergeben. Falls Sie es nicht mehr wissen: „Passwort vergessen?\" in der Anwendung – die Schritte stehen oben.";
           const { html: emailHtml, text: emailText } = buildConfirmationEmail({
             praxis_name: existingLead.praxis_name,
             vorname: existingLead.vorname,
