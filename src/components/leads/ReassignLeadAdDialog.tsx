@@ -35,6 +35,7 @@ import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logAuditEvent } from "@/hooks/useAuditLog";
 import { groupRolesByUser, pickPrimaryRole } from "@/lib/roles";
+import { useAuth } from "@/hooks/useAuth";
 
 type AdOption = {
   user_id: string;
