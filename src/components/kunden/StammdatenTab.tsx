@@ -387,6 +387,7 @@ export function StammdatenTab({ data }: StammdatenTabProps) {
           leadId={lead.id}
           currentAssignedTo={lead.assigned_to}
           hfxNumber={lead.hfx_customer_number}
+          plz={lead.plz}
         />
       )}
     </Form>

@@ -35,6 +35,7 @@ import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logAuditEvent } from "@/hooks/useAuditLog";
 import { groupRolesByUser, pickPrimaryRole } from "@/lib/roles";
+import { useAuth } from "@/hooks/useAuth";
 
 type AdOption = {
   user_id: string;
@@ -55,6 +56,7 @@ interface Props {
   leadId: string;
   currentAssignedTo: string | null;
   hfxNumber?: string | null;
+  plz?: string | null;
   onChanged?: () => void;
 }
 
@@ -64,9 +66,11 @@ export function ReassignLeadAdDialog({
   leadId,
   currentAssignedTo,
   hfxNumber,
+  plz,
   onChanged,
 }: Props) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [selected, setSelected] = useState<string | null>(currentAssignedTo);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
@@ -159,6 +163,22 @@ export function ReassignLeadAdDialog({
         });
       } catch (notifyErr) {
         console.warn("notify-lead-assignment failed:", notifyErr);
+      }
+
+      // Central PLZ assignment log — best effort, don't block on failure
+      try {
+        await supabase.from("plz_assignment_log").insert({
+          entity_type: "lead",
+          entity_id: leadId,
+          plz: plz ?? null,
+          resolved_gebietsleiter_id: selected,
+          resolved_gebietsleiter_name: newName,
+          assignment_source: "manual",
+          matched_rule: "manual",
+          changed_by: user?.id ?? null,
+        });
+      } catch (logErr) {
+        console.warn("plz_assignment_log insert failed:", logErr);
       }
 
       toast.success("Zuständigen AD geändert", {
