@@ -415,7 +415,7 @@ Deno.serve(async (req) => {
           assignedTo = resolved[0].gebietsleiter_id;
           assignedName = resolved[0].gebietsleiter_name;
           matchedRule = resolved[0].matched_rule;
-          assignmentSource = "auto_plz";
+          assignmentSource = "plz_auto";
           console.log(`Lead PLZ ${plz} → assigned to ${assignedName} (rule: ${matchedRule})`);
         } else {
           console.log(`No GL mapping found for PLZ ${plz}`);
