@@ -255,7 +255,70 @@ export default function PlzMapping() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.plz_prefix || !form.gebietsleiter_name) return;
+
+    const prefix = form.plz_prefix.trim();
+    const von = form.plz_von.trim();
+    const bis = form.plz_bis.trim();
+    const hasPrefix = prefix.length > 0;
+    const hasRange = von.length > 0 || bis.length > 0;
+
+    if (!form.gebietsleiter_name.trim()) {
+      toast({
+        title: "Gebietsleiter fehlt",
+        description: "Bitte einen Gebietsleiter auswählen.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (hasPrefix && hasRange) {
+      toast({
+        title: "Ungültige Eingabe",
+        description: "Bitte entweder ein PLZ-Präfix ODER eine PLZ-Range angeben – nicht beides.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!hasPrefix && !hasRange) {
+      toast({
+        title: "Ungültige Eingabe",
+        description: "Bitte entweder ein PLZ-Präfix oder eine PLZ-Range angeben.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (hasPrefix) {
+      if (!/^\d{1,5}$/.test(prefix)) {
+        toast({
+          title: "Ungültiges PLZ-Präfix",
+          description: "Das Präfix muss 1–5 Ziffern enthalten.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    if (hasRange) {
+      if (!/^\d{5}$/.test(von) || !/^\d{5}$/.test(bis)) {
+        toast({
+          title: "Ungültige PLZ-Range",
+          description: "PLZ-Von und PLZ-Bis müssen jeweils exakt 5 Ziffern enthalten.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (von > bis) {
+        toast({
+          title: "Ungültige PLZ-Range",
+          description: "PLZ-Von darf nicht größer als PLZ-Bis sein.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     upsertMutation.mutate(editEntry ? { ...form, id: editEntry.id } : form);
   };
 
