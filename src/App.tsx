@@ -59,6 +59,7 @@ import LeadCleanup from "./pages/admin/LeadCleanup";
 import CampaignMint from "./pages/admin/CampaignMint";
 import Kampagne from "./pages/admin/Kampagne";
 import ZugangInfo from "./pages/admin/ZugangInfo";
+import Zugang from "./pages/Zugang";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,7 @@ const App = () => (
             <Route path="/kampagne" element={<KampagneRedirect />} />
             <Route path="/kampagne-info" element={<KampagneInfo />} />
             <Route path="/buchen" element={<Buchen />} />
+            <Route path="/zugang" element={<Zugang />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/pipeline" element={<ProtectedRoute><PraxenJourney /></ProtectedRoute>} />
             {/* Legacy redirects → Pipeline */}
