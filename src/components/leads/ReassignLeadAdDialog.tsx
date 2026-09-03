@@ -165,6 +165,22 @@ export function ReassignLeadAdDialog({
         console.warn("notify-lead-assignment failed:", notifyErr);
       }
 
+      // Central PLZ assignment log — best effort, don't block on failure
+      try {
+        await supabase.from("plz_assignment_log").insert({
+          entity_type: "lead",
+          entity_id: leadId,
+          plz: plz ?? null,
+          resolved_gebietsleiter_id: selected,
+          resolved_gebietsleiter_name: newName,
+          assignment_source: "manual",
+          matched_rule: "manual",
+          changed_by: user?.id ?? null,
+        });
+      } catch (logErr) {
+        console.warn("plz_assignment_log insert failed:", logErr);
+      }
+
       toast.success("Zuständigen AD geändert", {
         description: newName ? `Neuer AD: ${newName}` : undefined,
       });
