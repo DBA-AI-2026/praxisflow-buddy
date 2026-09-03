@@ -56,6 +56,7 @@ interface Props {
   leadId: string;
   currentAssignedTo: string | null;
   hfxNumber?: string | null;
+  plz?: string | null;
   onChanged?: () => void;
 }
 
