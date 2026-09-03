@@ -59,6 +59,7 @@ import LeadCleanup from "./pages/admin/LeadCleanup";
 import CampaignMint from "./pages/admin/CampaignMint";
 import Kampagne from "./pages/admin/Kampagne";
 import ZugangInfo from "./pages/admin/ZugangInfo";
+import Zugang from "./pages/Zugang";
 
 const queryClient = new QueryClient();
 
