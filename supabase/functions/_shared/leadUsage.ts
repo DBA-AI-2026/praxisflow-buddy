@@ -10,7 +10,8 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 
 // ⚠ SYNCHRONIZE ↔ src/pages/PraxenJourney.tsx (CLOSED_LEAD_STATUSES)
 // Leads in diesen Status sind abgeschlossen und gehören nicht in die Kohorte.
-export const CLOSED_LEAD_STATUSES = ["kein_abschluss", "abgelehnt"];
+// ⚠ SYNCHRONIZE ↔ PraxenJourney.tsx (CLOSED_LEAD_STATUSES) — bewusst dupliziert.
+export const CLOSED_LEAD_STATUSES = ["kein_abschluss", "abgelehnt", "dublette"];
 
 // Vertragsstatus, die einen Lead NICHT aus der Kohorte werfen.
 // Ausschlusslogik (keine Whitelist!): Existiert zur hfx_customer_number

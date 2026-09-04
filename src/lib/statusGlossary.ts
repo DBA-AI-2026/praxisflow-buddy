@@ -15,6 +15,8 @@ export const LEAD_STATUS_TOOLTIPS: Record<string, string> = {
     "Vertrag ist in Erstellung. Der zugehörige Vertrag erscheint im Abschlussphase-Tab.",
   kein_abschluss: "Lead ist abgesprungen oder hat keinen Vertrag abgeschlossen.",
   abgelehnt: "Lead wurde vom Vertrieb als ungeeignet abgelehnt.",
+  dublette:
+    "Doppelt angelegter Datensatz — Original siehe Notiz. Kein echter Interessent.",
   kunde: "Lead wurde zu einem aktiven Vertrag konvertiert.",
 };
 

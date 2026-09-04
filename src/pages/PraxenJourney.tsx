@@ -62,6 +62,7 @@ const leadStatusCfg: Record<string, { label: string; cls: string; priority: numb
   neu:            { label: "Neu",            cls: "bg-primary/10 text-primary", priority: 4 },
   kein_abschluss: { label: "Kein Abschluss", cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400", priority: 10 },
   abgelehnt:      { label: "Abgelehnt",      cls: "bg-destructive/10 text-destructive", priority: 11 },
+  dublette:       { label: "Dublette",       cls: "bg-muted text-muted-foreground", priority: 12 },
 };
 
 // Status-Config: SSOT in @/lib/statusConfig (CONTRACT_STATUS_CONFIG).
@@ -320,11 +321,13 @@ function FilterPill({
 
 // ─── Tab: Interessenten ───────────────────────────────────────────────────────
 
+// ⚠ SYNCHRONIZE ↔ supabase/functions/_shared/leadUsage.ts (CLOSED_LEAD_STATUSES)
+// und PipelineKpiBar.tsx (ACTIVE_STATUSES / CLOSED_LOST) — bewusst dupliziert.
 const ACTIVE_LEAD_STATUSES = ["neu", "kontaktiert", "qualifiziert", "vertrag"];
-const CLOSED_LEAD_STATUSES = ["kein_abschluss", "abgelehnt"];
+const CLOSED_LEAD_STATUSES = ["kein_abschluss", "abgelehnt", "dublette"];
 
 type LeadSourceFilter = "alle" | "homepage" | "manuell" | "reservierung";
-type LeadStatusFilter = "aktiv" | "kein_abschluss" | "abgelehnt" | "alle" | "qualifiziert";
+type LeadStatusFilter = "aktiv" | "kein_abschluss" | "abgelehnt" | "dublette" | "alle" | "qualifiziert";
 
 function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, initialFilter, deepLinkLeadId, onClearDeepLink }: { search: string; highlightId?: string; teamFilter: string; matchesTeamFilter: (id?: string | null) => boolean; initialFilter?: string; deepLinkLeadId?: string; onClearDeepLink?: () => void }) {
   const navigate = useNavigate();
@@ -484,6 +487,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
   const activeCount = teamLeads.filter((l: any) => ACTIVE_LEAD_STATUSES.includes(l.status)).length;
   const closedKeinCount = teamLeads.filter((l: any) => l.status === "kein_abschluss").length;
   const closedAblCount = teamLeads.filter((l: any) => l.status === "abgelehnt").length;
+  const dubletteCount = teamLeads.filter((l: any) => l.status === "dublette").length;
   const homepageCount = teamLeads.filter((l: any) => getSource(l) === "homepage").length;
   const manuellCount = teamLeads.filter((l: any) => getSource(l) === "manuell").length;
   const reservierungCount = teamLeads.filter((l: any) => getSource(l) === "reservierung").length;
@@ -496,6 +500,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     if (statusFilter === "aktiv" && !ACTIVE_LEAD_STATUSES.includes(l.status)) return false;
     if (statusFilter === "kein_abschluss" && l.status !== "kein_abschluss") return false;
     if (statusFilter === "abgelehnt" && l.status !== "abgelehnt") return false;
+    if (statusFilter === "dublette" && l.status !== "dublette") return false;
     if (statusFilter === "qualifiziert" && l.status !== "qualifiziert") return false;
 
     // Deep-link overdue filter from Dashboard
@@ -657,6 +662,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
           <FilterPill active={statusFilter === "aktiv"} onClick={() => selectStatus("aktiv")} label="Im Prozess" count={activeCount} />
           <FilterPill active={statusFilter === "kein_abschluss"} onClick={() => selectStatus("kein_abschluss")} label="Kein Abschluss" count={closedKeinCount} />
           <FilterPill active={statusFilter === "abgelehnt"} onClick={() => selectStatus("abgelehnt")} label="Abgelehnt" count={closedAblCount} />
+          <FilterPill active={statusFilter === "dublette"} onClick={() => selectStatus("dublette")} label="Dublette" count={dubletteCount} />
           <FilterPill active={statusFilter === "alle"} onClick={() => selectStatus("alle")} label="Alle" count={teamLeads.length} />
 
           <span className="h-5 w-px bg-border mx-1" />
