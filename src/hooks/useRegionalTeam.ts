@@ -5,14 +5,15 @@
  * `teamFilter`-State und `Select`-fertige Optionen, damit jede Seite dasselbe
  * Dropdown einbauen kann.
  *
- * Zwei Zweige (sales_lead gewinnt bei Doppelrolle):
- * - sales_lead (Vertriebsleitung): alle aktiven Vertriebler
+ * Zwei Zweige (sales_lead gewinnt bei Doppelrolle; Admin ohne aktive
+ * Rollenvorschau läuft wie sales_lead):
+ * - sales_lead / Admin ohne Vorschau: alle aktiven Vertriebler
  *   (Rollen sales_partner, user, regional_lead) — Label "Alle Vertriebler".
- * - regional_lead (ohne sales_lead): nur die eigenen Gebietsleiter aus
- *   `user_regional_assignments` — Label "Alle Teammitglieder".
+ * - regional_lead (nur bei aktiver Regionalleiter-Rolle/Vorschau): nur die
+ *   eigenen Gebietsleiter aus `user_regional_assignments` — Label
+ *   "Alle Teammitglieder".
  *
  * Der eigene Nutzer wird immer aus der Liste ausgefiltert ("Nur ich" deckt ihn ab).
- * Admin ist bewusst ausgenommen (kein Dropdown).
  *
  * `showTeamFilter` ist das Gate für Dropdown-Anzeige UND Filteranwendung.
  */
@@ -21,6 +22,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "./useAuth";
 import { useUserRole } from "./useUserRole";
+import { useRolePreview } from "@/contexts/RolePreviewContext";
 
 export interface TeamMember {
   user_id: string;
@@ -30,11 +32,14 @@ export interface TeamMember {
 
 export function useRegionalTeam() {
   const { user } = useAuth();
-  const { isRegionalLead, isSalesLead } = useUserRole();
+  const { isRegionalLead, isSalesLead, roles } = useUserRole();
+  const { previewRole } = useRolePreview();
 
-  // sales_lead gewinnt bei Doppelrolle
-  const useSalesLeadBranch = isSalesLead;
-  const showTeamFilter = isRegionalLead || isSalesLead;
+  const isEffectiveAdmin = roles.includes("admin");
+
+  // sales_lead gewinnt bei Doppelrolle; Admin ohne aktive Vorschau läuft wie sales_lead
+  const useSalesLeadBranch = isSalesLead || (isEffectiveAdmin && !previewRole);
+  const showTeamFilter = isEffectiveAdmin || isRegionalLead || isSalesLead;
 
   // "alle" = alle Personen der Liste, "own" = nur man selbst, sonst eine user_id
   const [teamFilter, setTeamFilter] = useState<string>("alle");
