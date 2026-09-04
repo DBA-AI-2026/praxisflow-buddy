@@ -458,6 +458,11 @@ export function useKundenDialogData(
         setRegionalLeadTeamOk(false);
         return;
       }
+      // Selbst zugewiesene Leads dürfen Regionalleiter immer bearbeiten (RLS-Policy erlaubt assigned_to = auth.uid()).
+      if (assignedTo === user.id) {
+        setRegionalLeadTeamOk(true);
+        return;
+      }
       supabase
         .rpc("is_in_regional_lead_team", {
           _regional_lead_id: user.id,
