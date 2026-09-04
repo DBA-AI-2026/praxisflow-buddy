@@ -22,6 +22,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "./useAuth";
 import { useUserRole } from "./useUserRole";
+import { useRolePreview } from "@/contexts/RolePreviewContext";
 
 export interface TeamMember {
   user_id: string;
@@ -31,11 +32,14 @@ export interface TeamMember {
 
 export function useRegionalTeam() {
   const { user } = useAuth();
-  const { isRegionalLead, isSalesLead } = useUserRole();
+  const { isRegionalLead, isSalesLead, roles } = useUserRole();
+  const { previewRole } = useRolePreview();
 
-  // sales_lead gewinnt bei Doppelrolle
-  const useSalesLeadBranch = isSalesLead;
-  const showTeamFilter = isRegionalLead || isSalesLead;
+  const isEffectiveAdmin = roles.includes("admin");
+
+  // sales_lead gewinnt bei Doppelrolle; Admin ohne aktive Vorschau läuft wie sales_lead
+  const useSalesLeadBranch = isSalesLead || (isEffectiveAdmin && !previewRole);
+  const showTeamFilter = isEffectiveAdmin || isRegionalLead || isSalesLead;
 
   // "alle" = alle Personen der Liste, "own" = nur man selbst, sonst eine user_id
   const [teamFilter, setTeamFilter] = useState<string>("alle");
