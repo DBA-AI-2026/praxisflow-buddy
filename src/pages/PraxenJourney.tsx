@@ -39,7 +39,7 @@ import {
   type ProductOnboardingInput,
 } from "@/components/pipeline/OnboardingStatus";
 import { useActivityThresholds, useLeadActivityThresholds } from "@/hooks/useAppSettings";
-import { LeadUsageCell, computeLeadAmpel } from "@/components/pipeline/LeadUsageCell";
+import { LeadUsageCell, computeLeadAmpel, displayedLeadAmpel } from "@/components/pipeline/LeadUsageCell";
 import { ProductBadges, type ProductBadgeItem } from "@/components/pipeline/ProductBadges";
 import { useCarrierMap } from "@/hooks/useCarrierMap";
 import { StandortBadge } from "@/components/contracts/StandortBadge";
@@ -703,14 +703,30 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     }
   };
 
-  /** Row urgency class — subtle left border + bg tint for attention items */
+  /**
+   * Row urgency class — subtle left border + bg tint for attention items.
+   *
+   * Liegt eine sichtbare Aktivitäts-Ampel vor (displayedLeadAmpel), gewinnt sie:
+   * rot/gelb färben die Zeile, grün und grau lassen nur noch die
+   * qualifiziert-Regel zu. Das Lead-Alter wird dann NICHT mehr ausgewertet.
+   * Grund für Grau: die Schwellen sind über lead_activity_thresholds
+   * admin-konfigurierbar. Steht Gelb auf 30 Tagen, ist ein 20 Tage alter Lead
+   * grau ("noch nichts zu erwarten") — ein Altersrand ab 14 Tagen würde der
+   * Zelle direkt widersprechen. Nur ohne Ampel (null) gilt das Altersverhalten.
+   */
   const getRowUrgency = (lead: any) => {
     if (CLOSED_LEAD_STATUSES.includes(lead.status)) return "";
+    const qualifiziertCls = lead.status === "qualifiziert" ? "border-l-2 border-l-success bg-success/[0.02]" : "";
+    const ampel = displayedLeadAmpel(lead, leadThresholds, ampelNow)?.color;
+    if (ampel) {
+      if (ampel === "red") return "border-l-2 border-l-destructive bg-destructive/[0.03]";
+      if (ampel === "yellow") return "border-l-2 border-l-warning bg-warning/[0.03]";
+      return qualifiziertCls;
+    }
     const days = differenceInDays(new Date(), new Date(lead.created_at));
     if (days > 14) return "border-l-2 border-l-destructive bg-destructive/[0.03]";
     if (days > 7) return "border-l-2 border-l-warning bg-warning/[0.03]";
-    if (lead.status === "qualifiziert") return "border-l-2 border-l-success bg-success/[0.02]";
-    return "";
+    return qualifiziertCls;
   };
 
   return (
