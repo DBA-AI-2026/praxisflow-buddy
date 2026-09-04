@@ -504,6 +504,14 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
       if (overdueFilter === "overdue7" && (days < 7 || days >= 14)) return false;
     }
 
+    // Testphasen-Filter: Kohorte (frisch, fehlerfrei) ∩ Ampel rot oder gelb
+    if (inactiveFilter) {
+      if (!ACTIVE_LEAD_STATUSES.includes(l.status)) return false;
+      if (!isTestphaseCohort(l, ampelNow)) return false;
+      const c = computeLeadAmpel(l, leadThresholds, ampelNow)?.color;
+      if (c !== "red" && c !== "yellow") return false;
+    }
+
     if (!s) return true;
     return (
       l.praxis_name?.toLowerCase().includes(s) ||
@@ -518,6 +526,21 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
 
   // Sort by priority: qualifiziert first, then by age (oldest first for attention)
   const sorted = useMemo(() => {
+    if (inactiveFilter) {
+      // Rot vor Gelb; innerhalb gleicher Farbe älteste last_usage_at zuerst, NULL ans Ende
+      // (Sekundärkriterium für NULL-Fälle: created_at aufsteigend).
+      const rank = (l: any) => (computeLeadAmpel(l, leadThresholds, ampelNow)?.color === "red" ? 0 : 1);
+      return [...filtered].sort((a, b) => {
+        const ra = rank(a), rb = rank(b);
+        if (ra !== rb) return ra - rb;
+        const la = a.qodia_last_usage_at ? new Date(a.qodia_last_usage_at).getTime() : null;
+        const lb = b.qodia_last_usage_at ? new Date(b.qodia_last_usage_at).getTime() : null;
+        if (la !== null && lb !== null && la !== lb) return la - lb;
+        if (la !== null && lb === null) return -1;
+        if (la === null && lb !== null) return 1;
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
+    }
     return [...filtered].sort((a, b) => {
       const pa = (leadStatusCfg[a.status]?.priority ?? 99);
       const pb = (leadStatusCfg[b.status]?.priority ?? 99);
@@ -525,7 +548,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
       // Within same status, older first (needs attention sooner)
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
-  }, [filtered]);
+  }, [filtered, inactiveFilter, leadThresholds, ampelNow]);
 
   // Attention metrics
   // Attention metrics — based on team-filtered, active leads only
@@ -535,8 +558,12 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     const overdue7 = activeLeads.filter((l: any) => { const d = differenceInDays(new Date(), new Date(l.created_at)); return d > 7 && d <= 14; }).length;
     const qualifiziert = activeLeads.filter((l: any) => l.status === "qualifiziert").length;
     const neu = activeLeads.filter((l: any) => l.status === "neu").length;
-    return { overdue14, overdue7, qualifiziert, neu };
-  }, [teamLeads]);
+    // Testphase inaktiv: Kohorte (synced, fehlerfrei, frisch ≤ TESTPHASE_FRESHNESS_DAYS) ∩ Ampel ROT
+    const testphaseInaktiv = activeLeads.filter((l: any) =>
+      isTestphaseCohort(l, ampelNow) && computeLeadAmpel(l, leadThresholds, ampelNow)?.color === "red"
+    ).length;
+    return { overdue14, overdue7, qualifiziert, neu, testphaseInaktiv };
+  }, [teamLeads, leadThresholds, ampelNow]);
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
