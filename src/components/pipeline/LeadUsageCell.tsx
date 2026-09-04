@@ -157,6 +157,19 @@ export function LeadUsageCell({ lead, thresholds }: { lead: LeadUsageFields; thr
   const month = lead.qodia_invoice_count_month ?? 0;
   const ampel = computeLeadAmpel(lead, thresholds);
 
+  // total = 0 (synchronisiert, kein no_account): Label statt "0", Farbe ans Lead-Alter gekoppelt
+  if (total === 0 && ampel) {
+    return (
+      <div className="flex flex-col leading-tight items-start gap-0.5">
+        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground whitespace-nowrap">
+          <AmpelDot ampel={ampel} />
+          {ampel.label}
+        </span>
+        {errorNote}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col leading-tight items-start gap-0.5">
       <div className="flex items-center gap-1.5">
