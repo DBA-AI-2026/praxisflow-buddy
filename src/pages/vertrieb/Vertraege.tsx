@@ -1704,7 +1704,7 @@ export default function Vertraege() {
       const matchesPreSystem = preSystemFilter
         ? c.status === "aktiv" && !c.stripe_customer_id
         : true;
-      const matchesTeam = isRegionalLead
+      const matchesTeam = showTeamFilter
         ? matchesTeamFilter(c.sales_partner_id) || matchesTeamFilter(c.created_by)
         : true;
       return matchesSearch && matchesStatus && matchesPreSystem && matchesTeam;
