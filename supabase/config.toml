@@ -47,6 +47,8 @@ project_id = "gvsxentbbzuyanqbqvea"
     verify_jwt = false
   [functions.qodia-auto-usage-sync]
     verify_jwt = false
+  [functions.qodia-lead-usage-sync]
+    verify_jwt = false
   [functions.contract-merge-diagnose]
     verify_jwt = false
   [functions.seed-test-usage]

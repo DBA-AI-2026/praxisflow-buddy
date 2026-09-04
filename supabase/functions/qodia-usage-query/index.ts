@@ -1,4 +1,5 @@
 import { requireActiveRole } from "../_shared/auth.ts";
+import { loadLeadCohort, syncLeadUsage } from "../_shared/leadUsage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,11 +19,38 @@ Deno.serve(async (req) => {
 
     // Parse request body
     const body = await req.json().catch(() => ({}));
-    const { startDate, endDate, hfx_customer_number } = body as {
+    const { startDate, endDate, hfx_customer_number, source } = body as {
       startDate?: string;
       endDate?: string;
       hfx_customer_number?: string;
+      source?: "contract" | "lead";
     };
+
+    // ── source: "lead" ─────────────────────────────────────────────────────
+    // Live-Abruf für die Testphasen-Kohorte. Fenster sind fest (12 Monate +
+    // laufender Monat), startDate/endDate werden ignoriert. Ergebnis wird
+    // serverseitig auf public.leads zurückgeschrieben – exakt dieselbe
+    // Kohorten- und Delta-Logik wie der Cron (qodia-lead-usage-sync).
+    if (source === "lead") {
+      const qodiaApiKeyLead = Deno.env.get("QODIA_API_KEY");
+      if (!qodiaApiKeyLead) {
+        return new Response(JSON.stringify({ error: "API key not configured" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { leads, excludedByContract } = await loadLeadCohort(
+        supabase,
+        hfx_customer_number ? { hfx_customer_number } : undefined,
+      );
+      const now = new Date();
+      const results = [];
+      for (const lead of leads) {
+        results.push(await syncLeadUsage(supabase, qodiaApiKeyLead, lead, "[qodia-usage-query][lead]", now));
+      }
+      return new Response(JSON.stringify({ source: "lead", results, excluded_by_contract: excludedByContract }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Fetch active HFX GOÄ contracts with email
     let contractQuery = supabase
