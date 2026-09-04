@@ -95,6 +95,7 @@ import {
   type ContractStatus,
   type LeadStatus,
 } from "@/lib/statusConfig";
+import { LEAD_STATUS_TOOLTIPS } from "@/lib/statusGlossary";
 import { changeContractStatus } from "@/lib/contractStatusActions";
 import { changeLeadStatus } from "@/lib/leadStatusActions";
 import {
@@ -367,7 +368,7 @@ function LeadStatusCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult[
                 </Badge>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[200px]">
+            <DropdownMenuContent align="end" className="w-80 max-w-[90vw]">
               {LEAD_STATUS_ORDER.map((s) => {
                 const c = LEAD_STATUS_CONFIG[s];
                 const isCurrent = currentStatus === s;
@@ -376,10 +377,17 @@ function LeadStatusCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult[
                     key={s}
                     disabled={isCurrent}
                     onClick={() => onSelect(s)}
-                    className="gap-2"
+                    className="gap-2 items-start"
                   >
-                    <Badge variant={c.variant}>{c.label}</Badge>
-                    {isCurrent && <Check className="h-3 w-3 ml-auto" />}
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <Badge variant={c.variant} className="w-fit">{c.label}</Badge>
+                      {LEAD_STATUS_TOOLTIPS[s] && (
+                        <span className="text-xs text-muted-foreground whitespace-normal">
+                          {LEAD_STATUS_TOOLTIPS[s]}
+                        </span>
+                      )}
+                    </div>
+                    {isCurrent && <Check className="h-3 w-3 ml-auto mt-1 shrink-0" />}
                   </DropdownMenuItem>
                 );
               })}

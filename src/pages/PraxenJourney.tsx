@@ -51,7 +51,11 @@ import {
 
 import { useProviderStatusMap, useProductProviderFlags } from "@/hooks/useProviderStatus";
 import { useCustomerContractsMap } from "@/hooks/useCustomerContracts";
-import { CONTRACT_STATUS_CONFIG } from "@/lib/statusConfig";
+import { CONTRACT_STATUS_CONFIG, CONTRACT_STATUS_ORDER } from "@/lib/statusConfig";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { HelpCircle } from "lucide-react";
 
 // ─── Status configs ──────────────────────────────────────────────────────────
 
@@ -66,6 +70,86 @@ const leadStatusCfg: Record<string, { label: string; cls: string; priority: numb
 };
 
 // Status-Config: SSOT in @/lib/statusConfig (CONTRACT_STATUS_CONFIG).
+
+
+// ─── Status-Legende (Texte ausschließlich aus statusGlossary.ts) ─────────────
+
+type LegendEntry = { key: string; label: string; cls: string; desc: string };
+
+const LEAD_LEGEND_ENTRIES: LegendEntry[] = [
+  ...Object.entries(leadStatusCfg)
+    .sort((a, b) => a[1].priority - b[1].priority)
+    .map(([key, cfg]) => ({
+      key,
+      label: cfg.label,
+      cls: cfg.cls,
+      desc: LEAD_STATUS_TOOLTIPS[key] ?? "",
+    })),
+  {
+    key: "kunde",
+    label: "Kunde",
+    cls: "bg-muted text-muted-foreground",
+    desc: `${LEAD_STATUS_TOOLTIPS.kunde} (wird systemseitig gesetzt)`,
+  },
+];
+
+const CONTRACT_LEGEND_ENTRIES: LegendEntry[] = CONTRACT_STATUS_ORDER.map((st) => ({
+  key: st,
+  label: CONTRACT_STATUS_CONFIG[st].label,
+  cls: CONTRACT_STATUS_CONFIG[st].class,
+  desc: CONTRACT_STATUS_TOOLTIPS[st] ?? "",
+}));
+
+function LegendList({ entries }: { entries: LegendEntry[] }) {
+  return (
+    <ul className="space-y-3">
+      {entries.map((e) => (
+        <li key={e.key} className="flex flex-col gap-1">
+          <span className={`inline-flex w-fit items-center px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap ${e.cls}`}>
+            {e.label}
+          </span>
+          <span className="text-xs text-muted-foreground">{e.desc}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function StatusLegend({ entries, title }: { entries: LegendEntry[]; title: string }) {
+  const isMobile = useIsMobile();
+  const trigger = (
+    <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-muted-foreground">
+      <HelpCircle className="h-3.5 w-3.5" />
+      Legende
+    </Button>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet>
+        <SheetTrigger asChild>{trigger}</SheetTrigger>
+        <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto">
+          <SheetHeader className="text-left">
+            <SheetTitle>{title}</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4">
+            <LegendList entries={entries} />
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      <PopoverContent align="end" className="w-96 max-h-[70vh] overflow-y-auto">
+        <div className="text-sm font-medium mb-3">{title}</div>
+        <LegendList entries={entries} />
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -680,12 +764,15 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
           </Select>
         </div>
 
-        {!isTippgeber && (
-          <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5 h-8 shrink-0">
-            <UserPlus className="h-3.5 w-3.5" />
-            Neuer Interessent
-          </Button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          <StatusLegend entries={LEAD_LEGEND_ENTRIES} title="Status-Legende — Interessenten" />
+          {!isTippgeber && (
+            <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5 h-8 shrink-0">
+              <UserPlus className="h-3.5 w-3.5" />
+              Neuer Interessent
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Table */}
@@ -1077,6 +1164,9 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
             />
           );
         })}
+        <div className="ml-auto">
+          <StatusLegend entries={CONTRACT_LEGEND_ENTRIES} title="Status-Legende — Verträge" />
+        </div>
       </div>
 
       {/* Table */}
