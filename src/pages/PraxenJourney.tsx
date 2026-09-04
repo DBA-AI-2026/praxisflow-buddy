@@ -252,7 +252,7 @@ function AgeBadge({ dateStr }: { dateStr: string }) {
             {days} T.
           </span>
         </TooltipTrigger>
-        <TooltipContent>{format(new Date(dateStr), "dd.MM.yyyy", { locale: de })}</TooltipContent>
+        <TooltipContent>Im System seit {format(new Date(dateStr), "dd.MM.yyyy", { locale: de })}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
@@ -798,7 +798,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
             <tr>
               <TH>Praxis / Arzt</TH>
               <TH>Status</TH>
-              <TH>Alter</TH>
+              <TH>Im System</TH>
               <TH>Nächster Schritt</TH>
               <TH>Quelle</TH>
               <TH>Interesse an</TH>
