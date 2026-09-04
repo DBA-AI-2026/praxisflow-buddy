@@ -704,7 +704,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
             {isLoading ? (
               <tr><td colSpan={11} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : sorted.length === 0 ? (
-              overdueFilter || statusFilter !== "aktiv" ? (
+              overdueFilter || inactiveFilter || statusFilter !== "aktiv" ? (
                 <EmptyState
                   icon={Users}
                   title="Keine Treffer für diesen Filter."
