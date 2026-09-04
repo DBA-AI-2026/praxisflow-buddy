@@ -197,7 +197,10 @@ export async function syncLeadUsage(
   const stored = lead.qodia_invoice_count_total;
 
   let lastUsageAt = lead.qodia_last_usage_at;
-  if ((stored === null && countTotal > 0) || (stored !== null && countTotal > stored)) {
+  if (stored === null) {
+    // Erstbefüllung: nur echte Aktivität im laufenden Monat datieren.
+    if (countMonth > 0) lastUsageAt = now.toISOString();
+  } else if (countTotal > stored) {
     lastUsageAt = now.toISOString();
   }
 
