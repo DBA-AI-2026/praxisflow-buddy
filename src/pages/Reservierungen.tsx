@@ -196,7 +196,7 @@ export default function Reservierungen() {
   const { toast } = useToast();
   const { user, profile } = useAuth();
   const { isAdmin, isSalesLead, isRegionalLead } = useUserRole();
-  const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions } = useRegionalTeam();
+  const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions, showTeamFilter } = useRegionalTeam();
   const queryClient = useQueryClient();
 
   const { data: reservations, isLoading } = useQuery({
@@ -342,7 +342,7 @@ export default function Reservierungen() {
     if (!reservations) return [];
     const now = Date.now();
     return reservations.filter((r) => {
-      if (isRegionalLead && !matchesTeamFilter(r.reserved_by ?? r.assigned_ad_id ?? null)) {
+      if (showTeamFilter && !matchesTeamFilter(r.reserved_by ?? r.assigned_ad_id ?? null)) {
         return false;
       }
       if (filters.onlyMine && r.reserved_by !== user?.id) return false;
@@ -419,7 +419,7 @@ export default function Reservierungen() {
 
       return true;
     });
-  }, [reservations, filters, isRegionalLead, matchesTeamFilter, user?.id, dashboardFilter]);
+  }, [reservations, filters, showTeamFilter, matchesTeamFilter, user?.id, dashboardFilter]);
 
   const counts = useMemo(() => {
     const total = reservations?.length ?? 0;
@@ -468,7 +468,7 @@ export default function Reservierungen() {
             <CheckCircle2 className="h-3 w-3" />
             {counts.active} Aktiv
           </Badge>
-          {isRegionalLead && (
+          {showTeamFilter && (
             <Select value={teamFilter} onValueChange={setTeamFilter}>
               <SelectTrigger className="w-52 h-8 text-xs">
                 <SelectValue placeholder="Team filtern" />

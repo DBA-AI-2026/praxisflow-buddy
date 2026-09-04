@@ -1676,7 +1676,7 @@ export default function PraxenJourney() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlLead]);
 
-  const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions, isRegionalLead } = useRegionalTeam();
+  const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions, showTeamFilter } = useRegionalTeam();
   const { isSalesPartner, isTippgeber } = useUserRole();
   const { user } = useAuth();
 
@@ -1767,7 +1767,7 @@ export default function PraxenJourney() {
             />
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            {isRegionalLead && teamFilterOptions.length > 1 && (
+            {showTeamFilter && teamFilterOptions.length > 1 && (
               <Select value={teamFilter} onValueChange={setTeamFilter}>
                 <SelectTrigger className="h-8 w-52 text-xs">
                   <SelectValue />
