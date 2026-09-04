@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useSalesforceConnection } from "@/hooks/useSalesforceConnection";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useActivityThresholds } from "@/hooks/useAppSettings";
+import { useActivityThresholds, useLeadActivityThresholds } from "@/hooks/useAppSettings";
 import { useQueryClient } from "@tanstack/react-query";
 import { Save, Bell, Database, CheckCircle2, XCircle, Loader2, ExternalLink, Unplug, ShieldCheck, ShieldOff, Shield, Activity } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +44,19 @@ export default function AdminSettings() {
       setRedDays(thresholds.red_days);
     }
   }, [thresholds]);
+
+  // Interessenten-Schwellen (eigener Key lead_activity_thresholds)
+  const { data: leadThresholds } = useLeadActivityThresholds();
+  const [leadYellowDays, setLeadYellowDays] = useState<number>(7);
+  const [leadRedDays, setLeadRedDays] = useState<number>(14);
+  const [savingLeadThresholds, setSavingLeadThresholds] = useState(false);
+
+  useEffect(() => {
+    if (leadThresholds) {
+      setLeadYellowDays(leadThresholds.yellow_days);
+      setLeadRedDays(leadThresholds.red_days);
+    }
+  }, [leadThresholds]);
 
   // MFA state
   const [mfaEnabled, setMfaEnabled] = useState(false);
@@ -142,32 +155,40 @@ export default function AdminSettings() {
     });
   };
 
-  const saveThresholds = async () => {
-    if (!Number.isFinite(yellowDays) || !Number.isFinite(redDays) || yellowDays <= 0 || redDays <= 0) {
+  const saveThresholdPair = async (
+    key: "activity_thresholds" | "lead_activity_thresholds",
+    yellow: number,
+    red: number,
+    setSaving: (v: boolean) => void,
+  ) => {
+    if (!Number.isFinite(yellow) || !Number.isFinite(red) || yellow <= 0 || red <= 0) {
       toast({ title: "Ungültige Werte", description: "Beide Werte müssen größer als 0 sein.", variant: "destructive" });
       return;
     }
-    if (redDays <= yellowDays) {
+    if (red <= yellow) {
       toast({ title: "Ungültige Werte", description: "Rot ab Tagen muss größer als Gelb ab Tagen sein.", variant: "destructive" });
       return;
     }
-    setSavingThresholds(true);
+    setSaving(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
       const { error } = await supabase.from("app_settings").upsert({
-        key: "activity_thresholds",
-        value: { yellow_days: yellowDays, red_days: redDays },
+        key,
+        value: { yellow_days: yellow, red_days: red },
         updated_by: userData.user?.id ?? null,
       }, { onConflict: "key" });
       if (error) throw error;
-      qc.invalidateQueries({ queryKey: ["app-settings", "activity_thresholds"] });
+      qc.invalidateQueries({ queryKey: ["app-settings", key] });
       toast({ title: "Schwellen aktualisiert" });
     } catch (err: any) {
       toast({ title: "Fehler", description: err?.message ?? "Speichern fehlgeschlagen", variant: "destructive" });
     } finally {
-      setSavingThresholds(false);
+      setSaving(false);
     }
   };
+
+  const saveThresholds = () => saveThresholdPair("activity_thresholds", yellowDays, redDays, setSavingThresholds);
+  const saveLeadThresholds = () => saveThresholdPair("lead_activity_thresholds", leadYellowDays, leadRedDays, setSavingLeadThresholds);
 
   return (
     <MainLayout title="Einstellungen" subtitle="System- und Sicherheitseinstellungen">
@@ -194,7 +215,7 @@ export default function AdminSettings() {
         </TabsList>
 
         {isAdmin && (
-          <TabsContent value="aktivitaet">
+          <TabsContent value="aktivitaet" className="space-y-6">
             <div className="card-elevated p-6 max-w-xl space-y-4">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">Aktivitäts-Schwellen für Qodia-Kunden</h2>
@@ -226,6 +247,41 @@ export default function AdminSettings() {
               </div>
               <Button onClick={saveThresholds} disabled={savingThresholds}>
                 {savingThresholds ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                Schwellen speichern
+              </Button>
+            </div>
+
+            <div className="card-elevated p-6 max-w-xl space-y-4">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Aktivitäts-Schwellen für Interessenten (Testphase)</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Ab wie vielen Tagen ohne Einreichung – bzw. seit Registrierung ohne jede Einreichung – wird ein Interessent gelb bzw. rot markiert?
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="lead-yellow-days">Gelb ab Tagen</Label>
+                  <Input
+                    id="lead-yellow-days"
+                    type="number"
+                    min={1}
+                    value={leadYellowDays}
+                    onChange={(e) => setLeadYellowDays(parseInt(e.target.value, 10) || 0)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="lead-red-days">Rot ab Tagen</Label>
+                  <Input
+                    id="lead-red-days"
+                    type="number"
+                    min={1}
+                    value={leadRedDays}
+                    onChange={(e) => setLeadRedDays(parseInt(e.target.value, 10) || 0)}
+                  />
+                </div>
+              </div>
+              <Button onClick={saveLeadThresholds} disabled={savingLeadThresholds}>
+                {savingLeadThresholds ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                 Schwellen speichern
               </Button>
             </div>

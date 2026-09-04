@@ -38,7 +38,8 @@ import {
   OnboardingCell, ActivityCell, productMiniLabel,
   type ProductOnboardingInput,
 } from "@/components/pipeline/OnboardingStatus";
-import { useActivityThresholds } from "@/hooks/useAppSettings";
+import { useActivityThresholds, useLeadActivityThresholds } from "@/hooks/useAppSettings";
+import { LeadUsageCell } from "@/components/pipeline/LeadUsageCell";
 import { ProductBadges, type ProductBadgeItem } from "@/components/pipeline/ProductBadges";
 import { useCarrierMap } from "@/hooks/useCarrierMap";
 import { StandortBadge } from "@/components/contracts/StandortBadge";
@@ -308,6 +309,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
   const { isAdmin, isSalesLead, isRegionalLead, isSalesPartner, isTippgeber, role } = useUserRole();
   const { user } = useAuth();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
+  const { data: leadThresholds = { yellow_days: 7, red_days: 14 } } = useLeadActivityThresholds();
 
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("alle");
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("aktiv");
@@ -616,11 +618,12 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
               <TH>PLZ / Ort</TH>
               <TH>Betreuer</TH>
               <TH right>Qodia</TH>
+              <TH>Aktivität</TH>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={10} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              <tr><td colSpan={11} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : sorted.length === 0 ? (
               overdueFilter || statusFilter !== "aktiv" ? (
                 <EmptyState
@@ -734,6 +737,9 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
                         </TooltipProvider>
                       )}
                     </div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <LeadUsageCell lead={lead} thresholds={leadThresholds} />
                   </td>
                 </tr>
               );
