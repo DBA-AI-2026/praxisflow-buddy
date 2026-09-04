@@ -452,7 +452,7 @@ export default function Vertraege() {
     sales_partner_name: string | null;
     hfx_customer_number: string | null;
   } | null>(null);
-  const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions } = useRegionalTeam();
+  const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions, showTeamFilter } = useRegionalTeam();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -2269,7 +2269,7 @@ export default function Vertraege() {
               className="pl-9"
             />
           </div>
-          {isRegionalLead && (
+          {showTeamFilter && (
             <Select value={teamFilter} onValueChange={setTeamFilter}>
               <SelectTrigger className="w-52">
                 <SelectValue placeholder="Team filtern" />

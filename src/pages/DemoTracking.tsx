@@ -46,7 +46,7 @@ export default function DemoTracking() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { isRegionalLead } = useUserRole();
-  const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions } = useRegionalTeam();
+  const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions, showTeamFilter } = useRegionalTeam();
   const queryClient = useQueryClient();
 
   const { data: demos = [], isLoading } = useQuery({
@@ -95,7 +95,7 @@ export default function DemoTracking() {
       d.hfx_customer_number?.toLowerCase().includes(search.toLowerCase()) ||
       d.email?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "alle" || d.status === statusFilter;
-    const matchTeam = isRegionalLead ? matchesTeamFilter(d.created_by) : true;
+    const matchTeam = showTeamFilter ? matchesTeamFilter(d.created_by) : true;
     return matchSearch && matchStatus && matchTeam;
   });
 
@@ -160,7 +160,7 @@ export default function DemoTracking() {
               <SelectItem value="abgebrochen">Abgebrochen</SelectItem>
             </SelectContent>
           </Select>
-          {isRegionalLead && (
+          {showTeamFilter && (
             <Select value={teamFilter} onValueChange={setTeamFilter}>
               <SelectTrigger className="w-52">
                 <SelectValue placeholder="Team filtern" />
