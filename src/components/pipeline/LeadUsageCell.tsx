@@ -172,6 +172,7 @@ export function LeadUsageCell({ lead, thresholds }: { lead: LeadUsageFields; thr
   ) : null;
 
   // Zustand 2: Fehler ohne (jemals) erfolgreiche Zahlen
+  // ⚠ SYNCHRONIZE ↔ displayedLeadAmpel (gleiche Bedingung, oben in dieser Datei)
   if (err && (!hasNumbers || err === "no_account")) {
     return errorNote;
   }
