@@ -39,7 +39,7 @@ import {
   type ProductOnboardingInput,
 } from "@/components/pipeline/OnboardingStatus";
 import { useActivityThresholds, useLeadActivityThresholds } from "@/hooks/useAppSettings";
-import { LeadUsageCell } from "@/components/pipeline/LeadUsageCell";
+import { LeadUsageCell, computeLeadAmpel } from "@/components/pipeline/LeadUsageCell";
 import { ProductBadges, type ProductBadgeItem } from "@/components/pipeline/ProductBadges";
 import { useCarrierMap } from "@/hooks/useCarrierMap";
 import { StandortBadge } from "@/components/contracts/StandortBadge";
@@ -231,6 +231,8 @@ type AttentionItem = {
   cls?: string;
   onClick?: () => void;
   active?: boolean;
+  /** Optionaler Tooltip (rückwärtskompatibel — bestehende Items ohne Tooltip bleiben unverändert). */
+  tooltip?: string;
 };
 
 function AttentionBar({ items }: { items: AttentionItem[] }) {
@@ -246,29 +248,50 @@ function AttentionBar({ items }: { items: AttentionItem[] }) {
               item.active ? "ring-1 ring-warning/40 bg-warning/15" : ""
             }`
           : "";
-        if (item.onClick) {
-          return (
-            <button
-              key={i}
-              type="button"
-              onClick={item.onClick}
-              aria-pressed={!!item.active}
-              className={`${base} ${interactive}`}
-            >
-              {item.icon}
-              {item.text}
-            </button>
-          );
-        }
-        return (
+        const node = item.onClick ? (
+          <button
+            key={i}
+            type="button"
+            onClick={item.onClick}
+            aria-pressed={!!item.active}
+            className={`${base} ${interactive}`}
+          >
+            {item.icon}
+            {item.text}
+          </button>
+        ) : (
           <span key={i} className={base}>
             {item.icon}
             {item.text}
           </span>
         );
+        if (!item.tooltip) return node;
+        return (
+          <TooltipProvider key={i}>
+            <Tooltip>
+              <TooltipTrigger asChild>{node}</TooltipTrigger>
+              <TooltipContent>{item.tooltip}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
       })}
     </div>
   );
+}
+
+// ─── Testphasen-Monitoring: Frische-Guard ────────────────────────────────────
+/**
+ * Nur Leads, deren qodia_usage_synced_at innerhalb dieses Fensters liegt, zählen
+ * als "Testphase inaktiv" bzw. erscheinen im Filter. Der Cron läuft täglich;
+ * 3 Tage tolerieren einen Fehllauf. Ältere Stände (Kohorten-Austritt oder
+ * Cron-Ausfall) bedeuten "keine Aussage" — kein Fehlalarm.
+ */
+const TESTPHASE_FRESHNESS_DAYS = 3;
+
+/** Frontend-Kohorte für das Testphasen-Monitoring: synchronisiert, fehlerfrei, frisch. */
+function isTestphaseCohort(l: { qodia_usage_synced_at?: string | null; qodia_usage_error?: string | null }, now: Date): boolean {
+  if (!l.qodia_usage_synced_at || l.qodia_usage_error) return false;
+  return now.getTime() - new Date(l.qodia_usage_synced_at).getTime() <= TESTPHASE_FRESHNESS_DAYS * 24 * 60 * 60 * 1000;
 }
 
 // ─── Filter pill button ───────────────────────────────────────────────────────
@@ -310,6 +333,8 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
   const { user } = useAuth();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
   const { data: leadThresholds = { yellow_days: 7, red_days: 14 } } = useLeadActivityThresholds();
+  // Ein stabiler "jetzt"-Zeitpunkt pro Render für Ampel- und Frische-Berechnungen
+  const ampelNow = useMemo(() => new Date(), []);
 
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("alle");
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("aktiv");
@@ -319,6 +344,8 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
   const [overdueFilter, setOverdueFilter] = useState<"overdue7" | "overdue14" | null>(
     initialFilter === "overdue7" ? "overdue7" : initialFilter === "overdue14" ? "overdue14" : null
   );
+  // Testphasen-Filter (rot + gelb), URL-Param filter=testphase_inaktiv — erbt bewusst das Mount-only-Verhalten von initialFilter
+  const [inactiveFilter, setInactiveFilter] = useState<boolean>(initialFilter === "testphase_inaktiv");
   const [searchParams, setSearchParams] = useSearchParams();
   const syncUrlFilter = (next: string | null) => {
     const sp = new URLSearchParams(searchParams);
@@ -326,31 +353,46 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     else sp.delete("filter");
     setSearchParams(sp, { replace: true });
   };
-  // Konfliktmenge: overdueFilter vs. statusFilter "qualifiziert" — nur eines gleichzeitig aktiv
+  // Konfliktmenge: overdueFilter vs. inactiveFilter vs. statusFilter "qualifiziert" — nur eines gleichzeitig aktiv
   const toggleOverdue = (key: "overdue7" | "overdue14") => {
     const next = overdueFilter === key ? null : key;
     setOverdueFilter(next);
     syncUrlFilter(next);
-    if (next && statusFilter === "qualifiziert") setStatusFilter("aktiv");
+    if (next) {
+      setInactiveFilter(false);
+      if (statusFilter === "qualifiziert") setStatusFilter("aktiv");
+    }
+  };
+  const toggleInactive = () => {
+    const next = !inactiveFilter;
+    setInactiveFilter(next);
+    syncUrlFilter(next ? "testphase_inaktiv" : null);
+    if (next) {
+      setOverdueFilter(null);
+      if (statusFilter === "qualifiziert") setStatusFilter("aktiv");
+    }
   };
   const toggleQualifiziert = () => {
     const next = statusFilter === "qualifiziert" ? "aktiv" : "qualifiziert";
     setStatusFilter(next);
-    if (next === "qualifiziert" && overdueFilter) {
+    if (next === "qualifiziert" && (overdueFilter || inactiveFilter)) {
       setOverdueFilter(null);
+      setInactiveFilter(false);
       syncUrlFilter(null);
     }
   };
   const selectStatus = (next: LeadStatusFilter) => {
     setStatusFilter(next);
-    if (overdueFilter) {
+    if (overdueFilter || inactiveFilter) {
       setOverdueFilter(null);
+      setInactiveFilter(false);
       syncUrlFilter(null);
     }
   };
   const resetFilters = () => {
     setStatusFilter("aktiv");
     setOverdueFilter(null);
+    setInactiveFilter(false);
     syncUrlFilter(null);
   };
 
@@ -464,6 +506,14 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
       if (overdueFilter === "overdue7" && (days < 7 || days >= 14)) return false;
     }
 
+    // Testphasen-Filter: Kohorte (frisch, fehlerfrei) ∩ Ampel rot oder gelb
+    if (inactiveFilter) {
+      if (!ACTIVE_LEAD_STATUSES.includes(l.status)) return false;
+      if (!isTestphaseCohort(l, ampelNow)) return false;
+      const c = computeLeadAmpel(l, leadThresholds, ampelNow)?.color;
+      if (c !== "red" && c !== "yellow") return false;
+    }
+
     if (!s) return true;
     return (
       l.praxis_name?.toLowerCase().includes(s) ||
@@ -478,6 +528,21 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
 
   // Sort by priority: qualifiziert first, then by age (oldest first for attention)
   const sorted = useMemo(() => {
+    if (inactiveFilter) {
+      // Rot vor Gelb; innerhalb gleicher Farbe älteste last_usage_at zuerst, NULL ans Ende
+      // (Sekundärkriterium für NULL-Fälle: created_at aufsteigend).
+      const rank = (l: any) => (computeLeadAmpel(l, leadThresholds, ampelNow)?.color === "red" ? 0 : 1);
+      return [...filtered].sort((a, b) => {
+        const ra = rank(a), rb = rank(b);
+        if (ra !== rb) return ra - rb;
+        const la = a.qodia_last_usage_at ? new Date(a.qodia_last_usage_at).getTime() : null;
+        const lb = b.qodia_last_usage_at ? new Date(b.qodia_last_usage_at).getTime() : null;
+        if (la !== null && lb !== null && la !== lb) return la - lb;
+        if (la !== null && lb === null) return -1;
+        if (la === null && lb !== null) return 1;
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
+    }
     return [...filtered].sort((a, b) => {
       const pa = (leadStatusCfg[a.status]?.priority ?? 99);
       const pb = (leadStatusCfg[b.status]?.priority ?? 99);
@@ -485,7 +550,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
       // Within same status, older first (needs attention sooner)
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
-  }, [filtered]);
+  }, [filtered, inactiveFilter, leadThresholds, ampelNow]);
 
   // Attention metrics
   // Attention metrics — based on team-filtered, active leads only
@@ -495,8 +560,12 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     const overdue7 = activeLeads.filter((l: any) => { const d = differenceInDays(new Date(), new Date(l.created_at)); return d > 7 && d <= 14; }).length;
     const qualifiziert = activeLeads.filter((l: any) => l.status === "qualifiziert").length;
     const neu = activeLeads.filter((l: any) => l.status === "neu").length;
-    return { overdue14, overdue7, qualifiziert, neu };
-  }, [teamLeads]);
+    // Testphase inaktiv: Kohorte (synced, fehlerfrei, frisch ≤ TESTPHASE_FRESHNESS_DAYS) ∩ Ampel ROT
+    const testphaseInaktiv = activeLeads.filter((l: any) =>
+      isTestphaseCohort(l, ampelNow) && computeLeadAmpel(l, leadThresholds, ampelNow)?.color === "red"
+    ).length;
+    return { overdue14, overdue7, qualifiziert, neu, testphaseInaktiv };
+  }, [teamLeads, leadThresholds, ampelNow]);
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -558,13 +627,23 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
   return (
     <div>
       {/* Attention bar */}
-      {(statusFilter === "aktiv" || statusFilter === "qualifiziert") && (attentionMetrics.overdue14 > 0 || attentionMetrics.overdue7 > 0 || attentionMetrics.qualifiziert > 0) && (
+      {(statusFilter === "aktiv" || statusFilter === "qualifiziert") && (attentionMetrics.overdue14 > 0 || attentionMetrics.overdue7 > 0 || attentionMetrics.qualifiziert > 0 || attentionMetrics.testphaseInaktiv > 0) && (
         <AttentionBar items={[
           attentionMetrics.overdue14 > 0
             ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.overdue14} Lead${attentionMetrics.overdue14 > 1 ? "s" : ""} über 14 Tage alt`, cls: "text-destructive", onClick: () => toggleOverdue("overdue14"), active: overdueFilter === "overdue14" }
             : { icon: null, text: "" },
           attentionMetrics.overdue7 > 0
             ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.overdue7} Lead${attentionMetrics.overdue7 > 1 ? "s" : ""} über 7 Tage alt`, cls: "text-warning", onClick: () => toggleOverdue("overdue7"), active: overdueFilter === "overdue7" }
+            : { icon: null, text: "" },
+          attentionMetrics.testphaseInaktiv > 0
+            ? {
+                icon: <Ban className="h-3 w-3" />,
+                text: `${attentionMetrics.testphaseInaktiv} Testphase${attentionMetrics.testphaseInaktiv > 1 ? "n" : ""} inaktiv`,
+                cls: "text-destructive",
+                onClick: toggleInactive,
+                active: inactiveFilter,
+                tooltip: `Interessenten in Testphase ohne aktuelle Einreichungen (rot = ab ${leadThresholds.red_days} Tagen)`,
+              }
             : { icon: null, text: "" },
           attentionMetrics.qualifiziert > 0
             ? { icon: <FilePlus className="h-3 w-3" />, text: `${attentionMetrics.qualifiziert} qualifiziert — bereit für Vertrag`, cls: "text-success", onClick: toggleQualifiziert, active: statusFilter === "qualifiziert" }
@@ -625,7 +704,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
             {isLoading ? (
               <tr><td colSpan={11} className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : sorted.length === 0 ? (
-              overdueFilter || statusFilter !== "aktiv" ? (
+              overdueFilter || inactiveFilter || statusFilter !== "aktiv" ? (
                 <EmptyState
                   icon={Users}
                   title="Keine Treffer für diesen Filter."
