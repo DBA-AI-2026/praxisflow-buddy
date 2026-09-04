@@ -231,6 +231,8 @@ type AttentionItem = {
   cls?: string;
   onClick?: () => void;
   active?: boolean;
+  /** Optionaler Tooltip (rückwärtskompatibel — bestehende Items ohne Tooltip bleiben unverändert). */
+  tooltip?: string;
 };
 
 function AttentionBar({ items }: { items: AttentionItem[] }) {
@@ -246,29 +248,50 @@ function AttentionBar({ items }: { items: AttentionItem[] }) {
               item.active ? "ring-1 ring-warning/40 bg-warning/15" : ""
             }`
           : "";
-        if (item.onClick) {
-          return (
-            <button
-              key={i}
-              type="button"
-              onClick={item.onClick}
-              aria-pressed={!!item.active}
-              className={`${base} ${interactive}`}
-            >
-              {item.icon}
-              {item.text}
-            </button>
-          );
-        }
-        return (
+        const node = item.onClick ? (
+          <button
+            key={i}
+            type="button"
+            onClick={item.onClick}
+            aria-pressed={!!item.active}
+            className={`${base} ${interactive}`}
+          >
+            {item.icon}
+            {item.text}
+          </button>
+        ) : (
           <span key={i} className={base}>
             {item.icon}
             {item.text}
           </span>
         );
+        if (!item.tooltip) return node;
+        return (
+          <TooltipProvider key={i}>
+            <Tooltip>
+              <TooltipTrigger asChild>{node}</TooltipTrigger>
+              <TooltipContent>{item.tooltip}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
       })}
     </div>
   );
+}
+
+// ─── Testphasen-Monitoring: Frische-Guard ────────────────────────────────────
+/**
+ * Nur Leads, deren qodia_usage_synced_at innerhalb dieses Fensters liegt, zählen
+ * als "Testphase inaktiv" bzw. erscheinen im Filter. Der Cron läuft täglich;
+ * 3 Tage tolerieren einen Fehllauf. Ältere Stände (Kohorten-Austritt oder
+ * Cron-Ausfall) bedeuten "keine Aussage" — kein Fehlalarm.
+ */
+const TESTPHASE_FRESHNESS_DAYS = 3;
+
+/** Frontend-Kohorte für das Testphasen-Monitoring: synchronisiert, fehlerfrei, frisch. */
+function isTestphaseCohort(l: { qodia_usage_synced_at?: string | null; qodia_usage_error?: string | null }, now: Date): boolean {
+  if (!l.qodia_usage_synced_at || l.qodia_usage_error) return false;
+  return now.getTime() - new Date(l.qodia_usage_synced_at).getTime() <= TESTPHASE_FRESHNESS_DAYS * 24 * 60 * 60 * 1000;
 }
 
 // ─── Filter pill button ───────────────────────────────────────────────────────
