@@ -39,7 +39,7 @@ import {
   type ProductOnboardingInput,
 } from "@/components/pipeline/OnboardingStatus";
 import { useActivityThresholds, useLeadActivityThresholds } from "@/hooks/useAppSettings";
-import { LeadUsageCell } from "@/components/pipeline/LeadUsageCell";
+import { LeadUsageCell, computeLeadAmpel } from "@/components/pipeline/LeadUsageCell";
 import { ProductBadges, type ProductBadgeItem } from "@/components/pipeline/ProductBadges";
 import { useCarrierMap } from "@/hooks/useCarrierMap";
 import { StandortBadge } from "@/components/contracts/StandortBadge";
