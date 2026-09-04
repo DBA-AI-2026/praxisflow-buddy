@@ -150,9 +150,12 @@ function sumUsage(u: Record<string, number>): number {
  * auf den Lead zurück.
  *
  * Delta-Logik:
- *   - gespeichert NULL und total > 0        → last_usage_at = now (Erstbefüllung)
- *   - total > gespeichert                   → last_usage_at = now
- *   - sonst                                 → last_usage_at unverändert
+ *   - Erstbefüllung (gespeichert NULL): last_usage_at = now NUR wenn
+ *     count_month > 0. Bei total > 0 aber month = 0 bleibt NULL – die letzte
+ *     Aktivität liegt irgendwo in den 12 Monaten, ist aber unbekannt (UI zeigt
+ *     dafür den gelben Zustand „Letzte Aktivität unbekannt").
+ *   - Folgeläufe: total > gespeichert         → last_usage_at = now
+ *   - Rückgang / gleich                       → last_usage_at unverändert
  * Fehler: nur qodia_usage_error wird gesetzt; Zähler/synced_at bleiben stehen.
  */
 export async function syncLeadUsage(
