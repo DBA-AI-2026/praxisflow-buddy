@@ -483,6 +483,12 @@ export function useKundenDialogData(
         setRegionalLeadTeamOk(false);
         return;
       }
+      // Selbst als Vertragspartner oder Ersteller erfasste Kunden dürfen Regionalleiter immer bearbeiten
+      // (RLS-Policy erlaubt seit Migration 20260904131601 sales_partner_id/created_by = auth.uid()).
+      if (ids.includes(user.id)) {
+        setRegionalLeadTeamOk(true);
+        return;
+      }
       Promise.all(
         ids.map((uid) =>
           supabase
