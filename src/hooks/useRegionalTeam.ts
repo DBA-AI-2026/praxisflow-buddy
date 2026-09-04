@@ -1,13 +1,20 @@
 /**
  * useRegionalTeam
  *
- * Returns the list of Gebietsleiter (user role) that belong to the
- * currently logged-in Regionalleiter, plus the Regionalleiter themselves.
+ * Liefert die filterbare Personen-Liste für Führungsrollen plus einen
+ * `teamFilter`-State und `Select`-fertige Optionen, damit jede Seite dasselbe
+ * Dropdown einbauen kann.
  *
- * Also exposes a `teamFilter` state and a `Select`-ready list of options
- * so every page can just drop in the same filter dropdown.
+ * Zwei Zweige (sales_lead gewinnt bei Doppelrolle):
+ * - sales_lead (Vertriebsleitung): alle aktiven Vertriebler
+ *   (Rollen sales_partner, user, regional_lead) — Label "Alle Vertriebler".
+ * - regional_lead (ohne sales_lead): nur die eigenen Gebietsleiter aus
+ *   `user_regional_assignments` — Label "Alle Teammitglieder".
  *
- * Only active when the current user has the `regional_lead` role.
+ * Der eigene Nutzer wird immer aus der Liste ausgefiltert ("Nur ich" deckt ihn ab).
+ * Admin ist bewusst ausgenommen (kein Dropdown).
+ *
+ * `showTeamFilter` ist das Gate für Dropdown-Anzeige UND Filteranwendung.
  */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -23,25 +30,43 @@ export interface TeamMember {
 
 export function useRegionalTeam() {
   const { user } = useAuth();
-  const { isRegionalLead } = useUserRole();
+  const { isRegionalLead, isSalesLead } = useUserRole();
 
-  // "alle" = all team members, "own" = only the RL themselves, or a specific user_id
+  // sales_lead gewinnt bei Doppelrolle
+  const useSalesLeadBranch = isSalesLead;
+  const showTeamFilter = isRegionalLead || isSalesLead;
+
+  // "alle" = alle Personen der Liste, "own" = nur man selbst, sonst eine user_id
   const [teamFilter, setTeamFilter] = useState<string>("alle");
 
   const { data: teamMembers = [], isLoading } = useQuery({
-    queryKey: ["regional-team-members", user?.id],
-    enabled: !!user?.id && isRegionalLead,
+    queryKey: ["regional-team-members", user?.id, useSalesLeadBranch ? "sales_lead" : "regional_lead"],
+    enabled: !!user?.id && showTeamFilter,
     queryFn: async () => {
-      // Get user_ids that are assigned to this regional lead
-      const { data: assignments, error } = await supabase
-        .from("user_regional_assignments")
-        .select("user_id")
-        .eq("regional_lead_id", user!.id);
+      let userIds: string[] = [];
 
-      if (error) throw error;
-      if (!assignments?.length) return [];
+      if (useSalesLeadBranch) {
+        // Alle aktiven Vertriebler
+        const ALLOWED = ["sales_partner", "user", "regional_lead"] as const;
+        const { data, error } = await supabase
+          .from("user_roles")
+          .select("user_id, role, is_active")
+          .in("role", ALLOWED as unknown as string[])
+          .eq("is_active", true);
+        if (error) throw error;
+        userIds = Array.from(new Set((data ?? []).map((r: any) => r.user_id as string)));
+      } else {
+        const { data: assignments, error } = await supabase
+          .from("user_regional_assignments")
+          .select("user_id")
+          .eq("regional_lead_id", user!.id);
+        if (error) throw error;
+        userIds = (assignments ?? []).map((a) => a.user_id as string);
+      }
 
-      const userIds = assignments.map((a) => a.user_id);
+      // Eigenen Nutzer nie in der Liste zeigen ("Nur ich" deckt das ab)
+      userIds = userIds.filter((id) => id !== user?.id);
+      if (!userIds.length) return [];
 
       const { data: profiles } = await supabase
         .from("profiles")
@@ -65,7 +90,7 @@ export function useRegionalTeam() {
 
   /** Options for a Select dropdown */
   const teamFilterOptions: { value: string; label: string }[] = [
-    { value: "alle", label: "Alle Teammitglieder" },
+    { value: "alle", label: useSalesLeadBranch ? "Alle Vertriebler" : "Alle Teammitglieder" },
     { value: "own", label: "Nur ich" },
     ...teamMembers.map((m) => ({ value: m.user_id, label: m.full_name })),
   ];
@@ -78,6 +103,8 @@ export function useRegionalTeam() {
     matchesTeamFilter,
     teamFilterOptions,
     isRegionalLead,
+    isSalesLead,
+    showTeamFilter,
     currentUserId: user?.id,
   };
 }
