@@ -147,6 +147,7 @@ export function LeadUsageCell({ lead, thresholds }: { lead: LeadUsageFields; thr
   const hasNumbers = lead.qodia_invoice_count_total !== null && lead.qodia_invoice_count_total !== undefined;
 
   // Zustand 1: nie synchronisiert
+  // ⚠ SYNCHRONIZE ↔ displayedLeadAmpel (gleiche Bedingung, oben in dieser Datei)
   if (!synced && !err) {
     return <span className="text-[10px] text-muted-foreground/50">–</span>;
   }
