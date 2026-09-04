@@ -333,6 +333,8 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
   const { user } = useAuth();
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
   const { data: leadThresholds = { yellow_days: 7, red_days: 14 } } = useLeadActivityThresholds();
+  // Ein stabiler "jetzt"-Zeitpunkt pro Render für Ampel- und Frische-Berechnungen
+  const ampelNow = useMemo(() => new Date(), []);
 
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("alle");
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("aktiv");
