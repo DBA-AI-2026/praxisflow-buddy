@@ -35,6 +35,7 @@ export interface LeadUsageResult {
   hfx_customer_number: string | null;
   customer_name: string;
   email: string;
+  created_at: string;
   error: string | null;            // Klartext für UI
   error_code: "no_account" | "api_error" | "network_error" | null;
   usage: {
@@ -170,6 +171,7 @@ export async function syncLeadUsage(
     hfx_customer_number: lead.hfx_customer_number,
     customer_name: lead.praxis_name,
     email: lead.email,
+    created_at: lead.created_at, // für Alters-Kopplung der Ampel (total = 0) im UI
   };
 
   const today = fmt(now);

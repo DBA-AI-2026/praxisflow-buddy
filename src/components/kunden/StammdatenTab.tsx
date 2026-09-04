@@ -37,10 +37,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Lock, UserCog, Link2 } from "lucide-react";
+import { Lock, UserCog, Link2, Activity } from "lucide-react";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
 import { ReassignLeadAdDialog } from "@/components/leads/ReassignLeadAdDialog";
 import { copyKampagnenLink } from "@/lib/contractMailActions";
 import { toast } from "@/hooks/use-toast";
+import { useLeadActivityThresholds } from "@/hooks/useAppSettings";
+import { AmpelDot, computeLeadAmpel } from "@/components/pipeline/LeadUsageCell";
 import type {
   StammdatenFormValues,
   UseKundenDialogDataResult,
@@ -81,6 +85,10 @@ export function StammdatenTab({ data }: StammdatenTabProps) {
   const canCopyKampagne = ssot === "lead" && !!lead && (isAdmin || isSalesLead);
   const [reassignOpen, setReassignOpen] = useState(false);
   const [copyingKampagne, setCopyingKampagne] = useState(false);
+  const { data: leadThresholds = { yellow_days: 7, red_days: 14 } } = useLeadActivityThresholds();
+  // Aktivitätsblock nur in der Lead-Phase (SSOT = Interessent) und nur wenn Qodia-Account übergeben ist
+  const showActivity = ssot === "lead" && !!lead && !!lead.qodia_synced;
+
 
   const handleCopyKampagne = async () => {
     if (!lead) return;
@@ -193,6 +201,79 @@ export function StammdatenTab({ data }: StammdatenTabProps) {
             </Button>
           </div>
         )}
+
+        {showActivity && lead && (() => {
+          const synced = !!lead.qodia_usage_synced_at;
+          const err = lead.qodia_usage_error;
+          const hasNumbers = lead.qodia_invoice_count_total !== null && lead.qodia_invoice_count_total !== undefined;
+          const ampel = hasNumbers ? computeLeadAmpel(lead, leadThresholds) : null;
+          const stand = lead.qodia_usage_synced_at
+            ? format(new Date(lead.qodia_usage_synced_at), "dd.MM.yyyy HH:mm", { locale: de })
+            : "noch nie";
+          const fmtD = (v: string | null) => (v ? format(new Date(v), "dd.MM.yyyy", { locale: de }) : "–");
+          const errText: Record<string, string> = {
+            no_account: "Kein Qodia-Account zu dieser E-Mail gefunden.",
+            api_error: "Letzter Abgleich fehlgeschlagen (Qodia-API-Fehler).",
+            network_error: "Letzter Abgleich fehlgeschlagen (Netzwerkfehler).",
+          };
+          return (
+            <div className="rounded-md border bg-card px-3 py-2.5 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-1.5 text-sm font-medium">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  Aktivität Testphase
+                  {ampel && (
+                    <span className="inline-flex items-center gap-1.5 ml-2 text-xs font-normal text-muted-foreground">
+                      <AmpelDot ampel={ampel} size="md" />
+                      {ampel.label}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground whitespace-nowrap">Stand: {stand}</div>
+              </div>
+
+              {!synced && !err ? (
+                <div className="text-xs text-muted-foreground">Noch kein Abgleich mit Qodia erfolgt.</div>
+              ) : err && (!hasNumbers || err === "no_account") ? (
+                <div className="text-xs text-muted-foreground">
+                  Keine Daten abrufbar — {errText[err] ?? err}
+                </div>
+              ) : (
+                <>
+                  <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 text-xs">
+                    <div>
+                      <dt className="text-muted-foreground" title="Einreichungen der letzten 12 Monate">Letzte 12 Monate</dt>
+                      <dd className="font-semibold tabular-nums">{lead.qodia_invoice_count_total}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Laufender Monat</dt>
+                      <dd className="font-semibold tabular-nums">{lead.qodia_invoice_count_month ?? 0}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Letzte Einreichung</dt>
+                      <dd className="font-medium">
+                        {lead.qodia_last_usage_at
+                          ? fmtD(lead.qodia_last_usage_at)
+                          : (lead.qodia_invoice_count_total ?? 0) > 0
+                            ? <span title="Letzte Aktivität unbekannt — keine Einreichung im laufenden Monat">unbekannt</span>
+                            : "–"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Registriert</dt>
+                      <dd className="font-medium">{fmtD(lead.created_at)}</dd>
+                    </div>
+                  </dl>
+                  {err && (
+                    <div className="text-[11px] text-warning">{errText[err] ?? err} Zahlen vom letzten erfolgreichen Abgleich.</div>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })()}
+
+
 
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

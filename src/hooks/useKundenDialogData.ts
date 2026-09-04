@@ -64,6 +64,12 @@ type LeadRow = {
   status: string | null;
   qodia_synced: boolean | null;
   credentials_sent_at: string | null;
+  created_at: string;
+  qodia_invoice_count_total: number | null;
+  qodia_invoice_count_month: number | null;
+  qodia_last_usage_at: string | null;
+  qodia_usage_synced_at: string | null;
+  qodia_usage_error: string | null;
 };
 
 
@@ -317,7 +323,7 @@ export function useKundenDialogData(
       const { data, error } = await supabase
         .from("leads")
         .select(
-          "id,hfx_customer_number,praxis_name,vorname,nachname,email,mobilnummer,plz,ort,adresse,abrechnungszentrum,mp_nummer,nachricht,assigned_to,status,qodia_synced,credentials_sent_at",
+          "id,hfx_customer_number,praxis_name,vorname,nachname,email,mobilnummer,plz,ort,adresse,abrechnungszentrum,mp_nummer,nachricht,assigned_to,status,qodia_synced,credentials_sent_at,created_at,qodia_invoice_count_total,qodia_invoice_count_month,qodia_last_usage_at,qodia_usage_synced_at,qodia_usage_error",
         )
         .eq("hfx_customer_number", hfxNumber!)
         .maybeSingle();
