@@ -103,12 +103,17 @@ export function PipelineKpiBar({ tab, allLeads, allContracts, kundeLeads, active
   const [expanded, setExpanded] = useState(false);
 
   const kpis = useMemo(() => {
+    // ⚠ SYNCHRONIZE ↔ PraxenJourney.tsx (ACTIVE_LEAD_STATUSES / CLOSED_LEAD_STATUSES)
+    // und supabase/functions/_shared/leadUsage.ts — bewusst dupliziert.
     const ACTIVE_STATUSES = ["neu", "kontaktiert", "qualifiziert", "vertrag"];
     const CLOSED_LOST = ["kein_abschluss", "abgelehnt"];
 
-    const totalLeads = allLeads.length + kundeLeads.length;
-    const activeLeads = allLeads.filter((l: any) => ACTIVE_STATUSES.includes(l.status)).length;
-    const lostLeads = allLeads.filter((l: any) => CLOSED_LOST.includes(l.status)).length;
+    // Dubletten sind keine echten Interessenten: weder Zähler noch Nenner.
+    const countedLeads = allLeads.filter((l: any) => l.status !== "dublette");
+
+    const totalLeads = countedLeads.length + kundeLeads.length;
+    const activeLeads = countedLeads.filter((l: any) => ACTIVE_STATUSES.includes(l.status)).length;
+    const lostLeads = countedLeads.filter((l: any) => CLOSED_LOST.includes(l.status)).length;
     const kundenCount = kundeLeads.length;
     const conversionRate = totalLeads > 0 ? ((kundenCount / totalLeads) * 100) : 0;
 

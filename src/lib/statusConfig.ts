@@ -54,6 +54,7 @@ export type LeadStatus =
   | "vertrag"
   | "kein_abschluss"
   | "abgelehnt"
+  | "dublette"
   | "kunde";
 
 /**
@@ -68,6 +69,7 @@ export const LEAD_STATUS_ORDER: LeadStatus[] = [
   "vertrag",
   "kein_abschluss",
   "abgelehnt",
+  "dublette",
 ];
 
 export const LEAD_STATUS_CONFIG: Record<
@@ -80,5 +82,6 @@ export const LEAD_STATUS_CONFIG: Record<
   vertrag:        { label: "In Vertragserstellung", variant: "outline" },
   kein_abschluss: { label: "Kein Abschluss",      variant: "destructive" },
   abgelehnt:      { label: "Abgelehnt",           variant: "destructive" },
+  dublette:       { label: "Dublette",            variant: "secondary" },
   kunde:          { label: "Kunde",               variant: "default" },
 };
