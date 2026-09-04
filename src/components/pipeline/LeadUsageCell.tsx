@@ -180,7 +180,7 @@ export function LeadUsageCell({ lead, thresholds }: { lead: LeadUsageFields; thr
   // Zustand 3: Zahlen vorhanden (ggf. mit Fehlerhinweis vom letzten Lauf)
   const total = lead.qodia_invoice_count_total ?? 0;
   const month = lead.qodia_invoice_count_month ?? 0;
-  const ampel = computeLeadAmpel(lead, thresholds);
+  const ampel = displayedLeadAmpel(lead, thresholds);
 
   // total = 0 (synchronisiert, kein no_account): Label statt "0", Farbe ans Lead-Alter gekoppelt
   if (total === 0 && ampel) {
