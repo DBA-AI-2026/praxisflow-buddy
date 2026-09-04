@@ -342,6 +342,8 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
   const [overdueFilter, setOverdueFilter] = useState<"overdue7" | "overdue14" | null>(
     initialFilter === "overdue7" ? "overdue7" : initialFilter === "overdue14" ? "overdue14" : null
   );
+  // Testphasen-Filter (rot + gelb), URL-Param filter=testphase_inaktiv — erbt bewusst das Mount-only-Verhalten von initialFilter
+  const [inactiveFilter, setInactiveFilter] = useState<boolean>(initialFilter === "testphase_inaktiv");
   const [searchParams, setSearchParams] = useSearchParams();
   const syncUrlFilter = (next: string | null) => {
     const sp = new URLSearchParams(searchParams);
@@ -349,31 +351,46 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     else sp.delete("filter");
     setSearchParams(sp, { replace: true });
   };
-  // Konfliktmenge: overdueFilter vs. statusFilter "qualifiziert" — nur eines gleichzeitig aktiv
+  // Konfliktmenge: overdueFilter vs. inactiveFilter vs. statusFilter "qualifiziert" — nur eines gleichzeitig aktiv
   const toggleOverdue = (key: "overdue7" | "overdue14") => {
     const next = overdueFilter === key ? null : key;
     setOverdueFilter(next);
     syncUrlFilter(next);
-    if (next && statusFilter === "qualifiziert") setStatusFilter("aktiv");
+    if (next) {
+      setInactiveFilter(false);
+      if (statusFilter === "qualifiziert") setStatusFilter("aktiv");
+    }
+  };
+  const toggleInactive = () => {
+    const next = !inactiveFilter;
+    setInactiveFilter(next);
+    syncUrlFilter(next ? "testphase_inaktiv" : null);
+    if (next) {
+      setOverdueFilter(null);
+      if (statusFilter === "qualifiziert") setStatusFilter("aktiv");
+    }
   };
   const toggleQualifiziert = () => {
     const next = statusFilter === "qualifiziert" ? "aktiv" : "qualifiziert";
     setStatusFilter(next);
-    if (next === "qualifiziert" && overdueFilter) {
+    if (next === "qualifiziert" && (overdueFilter || inactiveFilter)) {
       setOverdueFilter(null);
+      setInactiveFilter(false);
       syncUrlFilter(null);
     }
   };
   const selectStatus = (next: LeadStatusFilter) => {
     setStatusFilter(next);
-    if (overdueFilter) {
+    if (overdueFilter || inactiveFilter) {
       setOverdueFilter(null);
+      setInactiveFilter(false);
       syncUrlFilter(null);
     }
   };
   const resetFilters = () => {
     setStatusFilter("aktiv");
     setOverdueFilter(null);
+    setInactiveFilter(false);
     syncUrlFilter(null);
   };
 
