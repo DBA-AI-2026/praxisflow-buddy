@@ -368,7 +368,7 @@ function LeadStatusCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult[
                 </Badge>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[200px]">
+            <DropdownMenuContent align="end" className="w-80 max-w-[90vw]">
               {LEAD_STATUS_ORDER.map((s) => {
                 const c = LEAD_STATUS_CONFIG[s];
                 const isCurrent = currentStatus === s;
