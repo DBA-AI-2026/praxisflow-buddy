@@ -51,7 +51,7 @@ export function useRegionalTeam() {
         const { data, error } = await supabase
           .from("user_roles")
           .select("user_id, role, is_active")
-          .in("role", ALLOWED as unknown as string[])
+          .in("role", ALLOWED as unknown as ("sales_partner" | "user" | "regional_lead")[])
           .eq("is_active", true);
         if (error) throw error;
         userIds = Array.from(new Set((data ?? []).map((r: any) => r.user_id as string)));
