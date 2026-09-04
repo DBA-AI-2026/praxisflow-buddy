@@ -118,6 +118,29 @@ const ERROR_LABEL: Record<string, string> = {
   network_error: "Letzter Abgleich fehlgeschlagen (Netzwerkfehler).",
 };
 
+/**
+ * Ampel, die in der Zelle tatsächlich sichtbar ist — oder null, wenn die Zelle
+ * ohne Ampel rendert (nie synchronisiert / "Keine Daten abrufbar").
+ * Genutzt von PraxenJourney.getRowUrgency, damit Zeilenrand und Zelle nie
+ * widersprechen.
+ *
+ * ⚠ SYNCHRONIZE ↔ LeadUsageCell (Frühausgänge "Zustand 1" und "Zustand 2"
+ * weiter unten in dieser Datei): die beiden Abbruchbedingungen hier müssen
+ * identisch bleiben, sonst driften Zellinhalt und Zeilenfarbe auseinander.
+ */
+export function displayedLeadAmpel(
+  lead: LeadUsageFields,
+  t: ActivityThresholds,
+  now: Date = new Date(),
+): LeadAmpel | null {
+  const synced = !!lead.qodia_usage_synced_at;
+  const err = lead.qodia_usage_error;
+  const hasNumbers = lead.qodia_invoice_count_total !== null && lead.qodia_invoice_count_total !== undefined;
+  if (!synced && !err) return null;
+  if (err && (!hasNumbers || err === "no_account")) return null;
+  return computeLeadAmpel(lead, t, now);
+}
+
 export function LeadUsageCell({ lead, thresholds }: { lead: LeadUsageFields; thresholds: ActivityThresholds }) {
   const synced = !!lead.qodia_usage_synced_at;
   const err = lead.qodia_usage_error;
