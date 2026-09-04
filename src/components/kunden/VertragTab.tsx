@@ -376,10 +376,17 @@ function LeadStatusCard({ lead }: { lead: NonNullable<UseKundenDialogDataResult[
                     key={s}
                     disabled={isCurrent}
                     onClick={() => onSelect(s)}
-                    className="gap-2"
+                    className="gap-2 items-start"
                   >
-                    <Badge variant={c.variant}>{c.label}</Badge>
-                    {isCurrent && <Check className="h-3 w-3 ml-auto" />}
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <Badge variant={c.variant} className="w-fit">{c.label}</Badge>
+                      {LEAD_STATUS_TOOLTIPS[s] && (
+                        <span className="text-xs text-muted-foreground whitespace-normal">
+                          {LEAD_STATUS_TOOLTIPS[s]}
+                        </span>
+                      )}
+                    </div>
+                    {isCurrent && <Check className="h-3 w-3 ml-auto mt-1 shrink-0" />}
                   </DropdownMenuItem>
                 );
               })}
