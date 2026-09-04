@@ -1655,7 +1655,12 @@ export type Database = {
           plz: string
           praxis_name: string
           qodia_conflict: boolean
+          qodia_invoice_count_month: number | null
+          qodia_invoice_count_total: number | null
+          qodia_last_usage_at: string | null
           qodia_synced: boolean
+          qodia_usage_error: string | null
+          qodia_usage_synced_at: string | null
           registration_attempts: number
           salesforce_id: string | null
           salesforce_synced: boolean
@@ -1691,7 +1696,12 @@ export type Database = {
           plz: string
           praxis_name: string
           qodia_conflict?: boolean
+          qodia_invoice_count_month?: number | null
+          qodia_invoice_count_total?: number | null
+          qodia_last_usage_at?: string | null
           qodia_synced?: boolean
+          qodia_usage_error?: string | null
+          qodia_usage_synced_at?: string | null
           registration_attempts?: number
           salesforce_id?: string | null
           salesforce_synced?: boolean
@@ -1727,7 +1737,12 @@ export type Database = {
           plz?: string
           praxis_name?: string
           qodia_conflict?: boolean
+          qodia_invoice_count_month?: number | null
+          qodia_invoice_count_total?: number | null
+          qodia_last_usage_at?: string | null
           qodia_synced?: boolean
+          qodia_usage_error?: string | null
+          qodia_usage_synced_at?: string | null
           registration_attempts?: number
           salesforce_id?: string | null
           salesforce_synced?: boolean
