@@ -95,6 +95,7 @@ import {
   type ContractStatus,
   type LeadStatus,
 } from "@/lib/statusConfig";
+import { LEAD_STATUS_TOOLTIPS } from "@/lib/statusGlossary";
 import { changeContractStatus } from "@/lib/contractStatusActions";
 import { changeLeadStatus } from "@/lib/leadStatusActions";
 import {
