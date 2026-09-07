@@ -831,13 +831,18 @@ function ContractActions({ contract }: { contract: ContractRow }) {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [pending, setPending] = useState<"mandate" | "resend-mandate" | "link" | "confirm" | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState<"resend-mandate" | "confirm" | null>(null);
+  const [pending, setPending] = useState<"mandate" | "resend-mandate" | "link" | "confirm" | "send-contract" | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState<"resend-mandate" | "confirm" | "send-contract" | null>(null);
 
   const status = (contract.status ?? "entwurf").toLowerCase();
   const mandateSent = !!contract.mandate_email_sent_at;
   const hfxNum = (contract.hfx_customer_number as string | null | undefined) ?? null;
   const userId = user?.id ?? null;
+
+  // Empfänger-Ableitung identisch zur Edge Function `send-mandate-setup`
+  // (rechnungs_email || email) — nur zur Anzeige/Gating im Confirm-Dialog.
+  const mandateRecipient: string | null =
+    (contract.rechnungs_email as string | null) || (contract.email as string | null) || null;
 
   const phase: "entwurf" | "eingegangen" | "gezeichnet" | "aktiv" | "final" | "other" =
     status === "entwurf"
@@ -854,13 +859,14 @@ function ContractActions({ contract }: { contract: ContractRow }) {
 
   const isPreSystemAktiv = phase === "aktiv" && !contract.stripe_customer_id;
 
-  if (phase === "entwurf" || phase === "final" || phase === "other") {
+  if (phase === "final" || phase === "other") {
     return (
       <div className="text-xs text-muted-foreground">
         Keine Aktionen in diesem Status verfügbar.
       </div>
     );
   }
+
 
   const runMandateInitial = async () => {
     setPending("mandate");
@@ -946,11 +952,81 @@ function ContractActions({ contract }: { contract: ContractRow }) {
     }
   };
 
+  /**
+   * Entwurf-Phase: kombinierte Aktion „Vertrag an Kunden senden".
+   * Sequenz: changeContractStatus(entwurf → eingegangen) → sendMandateMail(force:false).
+   * Kein Rollback bei Mail-Fehler — der Vertrag steht dann regulär in `eingegangen`,
+   * wo der bestehende Button „SEPA-Mandat-Mail senden" den Retry abdeckt.
+   */
+  const runSendContractToCustomer = async () => {
+    setPending("send-contract");
+    const statusRes = await changeContractStatus({
+      contractId: contract.id,
+      newStatus: "eingegangen" as ContractStatus,
+      oldStatus: contract.status ?? null,
+      hfxCustomerNumber: hfxNum,
+      userId,
+      queryClient,
+      contract,
+      source: "kunden_dialog_vertrag_tab_send_to_customer",
+    });
+    if (!statusRes.success) {
+      setPending(null);
+      toast({
+        variant: "destructive",
+        title: "Fehler beim Statuswechsel",
+        description: statusRes.error,
+      });
+      return;
+    }
+    const mailRes = await sendMandateMail({
+      contractId: contract.id,
+      force: false,
+      queryClient,
+      hfxCustomerNumber: hfxNum,
+      userId,
+    });
+    setPending(null);
+    if (mailRes.success) {
+      toast({
+        title: mailRes.skipped ? "Status gesetzt" : "Vertrag an Kunden gesendet",
+        description: mailRes.skipped
+          ? "Die Mandat-Mail wurde bereits zuvor versendet."
+          : "SEPA-Mandat-Mail wurde an den Kunden verschickt.",
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Mail konnte nicht gesendet werden",
+        description:
+          "Status gesetzt, Mail konnte nicht gesendet werden — bitte „SEPA-Mandat-Mail senden“ nutzen.",
+      });
+    }
+  };
+
   const anyPending = pending !== null;
 
   return (
     <>
       <div className="flex flex-wrap gap-2">
+        {phase === "entwurf" && (
+          <Button
+            size="sm"
+            className="gap-1.5"
+            disabled={anyPending || !mandateRecipient}
+            onClick={() => setConfirmOpen("send-contract")}
+          >
+            {pending === "send-contract" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Mail className="h-3.5 w-3.5" />
+            )}
+            Vertrag an Kunden senden
+          </Button>
+        )}
+
+
+
         {(phase === "eingegangen" || phase === "gezeichnet") && (
           <>
             {phase === "eingegangen" && !mandateSent && (
@@ -1043,6 +1119,14 @@ function ContractActions({ contract }: { contract: ContractRow }) {
         )}
       </div>
 
+      {phase === "entwurf" && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          {mandateRecipient
+            ? "Alternativ: Status manuell über die Status-Pille setzen."
+            : "Keine E-Mail-Adresse hinterlegt. Alternativ: Status manuell über die Status-Pille setzen."}
+        </p>
+      )}
+
       <AlertDialog
         open={confirmOpen !== null}
         onOpenChange={(o) => !o && setConfirmOpen(null)}
@@ -1050,14 +1134,18 @@ function ContractActions({ contract }: { contract: ContractRow }) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirmOpen === "resend-mandate"
-                ? "Mandat-Mail erneut senden?"
-                : "Vertragsbestätigungs-Mail erneut senden?"}
+              {confirmOpen === "send-contract"
+                ? "Vertrag an Kunden senden?"
+                : confirmOpen === "resend-mandate"
+                  ? "Mandat-Mail erneut senden?"
+                  : "Vertragsbestätigungs-Mail erneut senden?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmOpen === "resend-mandate"
-                ? "Der Kunde erhält die SEPA-Mandat-Mail noch einmal. Vorherige Links bleiben gültig."
-                : "Der Kunde erhält die Vertragsbestätigung inklusive Anhängen erneut."}
+              {confirmOpen === "send-contract"
+                ? `Der Vertrag wird festgeschrieben und die SEPA-Mandat-Mail an ${mandateRecipient ?? "den Kunden"} versendet. Danach ist der Vertrag nicht mehr frei editierbar.`
+                : confirmOpen === "resend-mandate"
+                  ? "Der Kunde erhält die SEPA-Mandat-Mail noch einmal. Vorherige Links bleiben gültig."
+                  : "Der Kunde erhält die Vertragsbestätigung inklusive Anhängen erneut."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1068,9 +1156,11 @@ function ContractActions({ contract }: { contract: ContractRow }) {
                 setConfirmOpen(null);
                 if (mode === "resend-mandate") runMandateResend();
                 if (mode === "confirm") runResendConfirm();
+                if (mode === "send-contract") runSendContractToCustomer();
               }}
             >
-              Erneut senden
+              {confirmOpen === "send-contract" ? "Senden" : "Erneut senden"}
+
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
