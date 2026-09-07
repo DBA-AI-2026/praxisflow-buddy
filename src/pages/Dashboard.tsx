@@ -17,6 +17,7 @@ import { de } from "date-fns/locale";
 import { differenceInDays } from "date-fns";
 import { isWaitingForMandate } from "@/lib/contractLifecycle";
 import { PLAUSIBILITAET_SCHWELLE } from "@/lib/plausibility";
+import { OVERDUE_LEAD_STATUSES } from "@/lib/leadUrgency";
 import { AnleitungDialog } from "@/components/help/AnleitungDialog";
 import { Button } from "@/components/ui/button";
 import { useRolePreview } from "@/contexts/RolePreviewContext";
@@ -107,7 +108,7 @@ export default function Dashboard() {
       let q = supabase
         .from("leads")
         .select("id, praxis_name, vorname, nachname, status, created_at, assigned_to")
-        .in("status", ["neu", "kontaktiert", "qualifiziert", "vertrag"])
+        .in("status", OVERDUE_LEAD_STATUSES)
         .order("created_at", { ascending: true });
       // sales_partner UND user (Gebietsleiter) sehen nur eigene Leads.
       // leads hat kein created_by; nur assigned_to + tippgeber_id.

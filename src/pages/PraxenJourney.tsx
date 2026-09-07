@@ -40,6 +40,7 @@ import {
 } from "@/components/pipeline/OnboardingStatus";
 import { useActivityThresholds, useLeadActivityThresholds } from "@/hooks/useAppSettings";
 import { LeadUsageCell, computeLeadAmpel, displayedLeadAmpel } from "@/components/pipeline/LeadUsageCell";
+import { leadOverdueTier, OVERDUE_LEAD_STATUSES } from "@/lib/leadUrgency";
 import { ProductBadges, type ProductBadgeItem } from "@/components/pipeline/ProductBadges";
 import { useCarrierMap } from "@/hooks/useCarrierMap";
 import { StandortBadge } from "@/components/contracts/StandortBadge";
@@ -589,10 +590,9 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
 
     // Deep-link overdue filter from Dashboard
     if (overdueFilter) {
-      if (!ACTIVE_LEAD_STATUSES.includes(l.status)) return false;
-      const days = differenceInDays(new Date(), new Date(l.created_at));
-      if (overdueFilter === "overdue14" && days < 14) return false;
-      if (overdueFilter === "overdue7" && (days < 7 || days >= 14)) return false;
+      const tier = leadOverdueTier(l, new Date());
+      if (overdueFilter === "overdue14" && tier !== "critical") return false;
+      if (overdueFilter === "overdue7" && tier !== "warning") return false;
     }
 
     // Testphasen-Filter: Kohorte (frisch, fehlerfrei) ∩ Ampel rot oder gelb
@@ -645,8 +645,8 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
   // Attention metrics — based on team-filtered, active leads only
   const attentionMetrics = useMemo(() => {
     const activeLeads = teamLeads.filter((l: any) => ACTIVE_LEAD_STATUSES.includes(l.status));
-    const overdue14 = activeLeads.filter((l: any) => differenceInDays(new Date(), new Date(l.created_at)) > 14).length;
-    const overdue7 = activeLeads.filter((l: any) => { const d = differenceInDays(new Date(), new Date(l.created_at)); return d > 7 && d <= 14; }).length;
+    const overdue14 = activeLeads.filter((l: any) => leadOverdueTier(l, new Date()) === "critical").length;
+    const overdue7 = activeLeads.filter((l: any) => leadOverdueTier(l, new Date()) === "warning").length;
     const qualifiziert = activeLeads.filter((l: any) => l.status === "qualifiziert").length;
     const neu = activeLeads.filter((l: any) => l.status === "neu").length;
     // Testphase inaktiv: Kohorte (synced, fehlerfrei, frisch ≤ TESTPHASE_FRESHNESS_DAYS) ∩ Ampel ROT
@@ -723,9 +723,9 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
       if (ampel === "yellow") return "border-l-2 border-l-warning bg-warning/[0.03]";
       return qualifiziertCls;
     }
-    const days = differenceInDays(new Date(), new Date(lead.created_at));
-    if (days > 14) return "border-l-2 border-l-destructive bg-destructive/[0.03]";
-    if (days > 7) return "border-l-2 border-l-warning bg-warning/[0.03]";
+    const tier = leadOverdueTier(lead, new Date());
+    if (tier === "critical") return "border-l-2 border-l-destructive bg-destructive/[0.03]";
+    if (tier === "warning") return "border-l-2 border-l-warning bg-warning/[0.03]";
     return qualifiziertCls;
   };
 
