@@ -1009,6 +1009,23 @@ function ContractActions({ contract }: { contract: ContractRow }) {
   return (
     <>
       <div className="flex flex-wrap gap-2">
+        {phase === "entwurf" && (
+          <Button
+            size="sm"
+            className="gap-1.5"
+            disabled={anyPending || !mandateRecipient}
+            onClick={() => setConfirmOpen("send-contract")}
+          >
+            {pending === "send-contract" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Mail className="h-3.5 w-3.5" />
+            )}
+            Vertrag an Kunden senden
+          </Button>
+        )}
+
+
 
         {(phase === "eingegangen" || phase === "gezeichnet") && (
           <>
