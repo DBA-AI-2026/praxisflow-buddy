@@ -831,13 +831,18 @@ function ContractActions({ contract }: { contract: ContractRow }) {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [pending, setPending] = useState<"mandate" | "resend-mandate" | "link" | "confirm" | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState<"resend-mandate" | "confirm" | null>(null);
+  const [pending, setPending] = useState<"mandate" | "resend-mandate" | "link" | "confirm" | "send-contract" | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState<"resend-mandate" | "confirm" | "send-contract" | null>(null);
 
   const status = (contract.status ?? "entwurf").toLowerCase();
   const mandateSent = !!contract.mandate_email_sent_at;
   const hfxNum = (contract.hfx_customer_number as string | null | undefined) ?? null;
   const userId = user?.id ?? null;
+
+  // Empfänger-Ableitung identisch zur Edge Function `send-mandate-setup`
+  // (rechnungs_email || email) — nur zur Anzeige/Gating im Confirm-Dialog.
+  const mandateRecipient: string | null =
+    (contract.rechnungs_email as string | null) || (contract.email as string | null) || null;
 
   const phase: "entwurf" | "eingegangen" | "gezeichnet" | "aktiv" | "final" | "other" =
     status === "entwurf"
@@ -854,13 +859,14 @@ function ContractActions({ contract }: { contract: ContractRow }) {
 
   const isPreSystemAktiv = phase === "aktiv" && !contract.stripe_customer_id;
 
-  if (phase === "entwurf" || phase === "final" || phase === "other") {
+  if (phase === "final" || phase === "other") {
     return (
       <div className="text-xs text-muted-foreground">
         Keine Aktionen in diesem Status verfügbar.
       </div>
     );
   }
+
 
   const runMandateInitial = async () => {
     setPending("mandate");
