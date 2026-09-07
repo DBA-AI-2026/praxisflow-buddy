@@ -952,11 +952,64 @@ function ContractActions({ contract }: { contract: ContractRow }) {
     }
   };
 
+  /**
+   * Entwurf-Phase: kombinierte Aktion „Vertrag an Kunden senden".
+   * Sequenz: changeContractStatus(entwurf → eingegangen) → sendMandateMail(force:false).
+   * Kein Rollback bei Mail-Fehler — der Vertrag steht dann regulär in `eingegangen`,
+   * wo der bestehende Button „SEPA-Mandat-Mail senden" den Retry abdeckt.
+   */
+  const runSendContractToCustomer = async () => {
+    setPending("send-contract");
+    const statusRes = await changeContractStatus({
+      contractId: contract.id,
+      newStatus: "eingegangen" as ContractStatus,
+      oldStatus: contract.status ?? null,
+      hfxCustomerNumber: hfxNum,
+      userId,
+      queryClient,
+      contract,
+      source: "kunden_dialog_vertrag_tab_send_to_customer",
+    });
+    if (!statusRes.success) {
+      setPending(null);
+      toast({
+        variant: "destructive",
+        title: "Fehler beim Statuswechsel",
+        description: statusRes.error,
+      });
+      return;
+    }
+    const mailRes = await sendMandateMail({
+      contractId: contract.id,
+      force: false,
+      queryClient,
+      hfxCustomerNumber: hfxNum,
+      userId,
+    });
+    setPending(null);
+    if (mailRes.success) {
+      toast({
+        title: mailRes.skipped ? "Status gesetzt" : "Vertrag an Kunden gesendet",
+        description: mailRes.skipped
+          ? "Die Mandat-Mail wurde bereits zuvor versendet."
+          : "SEPA-Mandat-Mail wurde an den Kunden verschickt.",
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Mail konnte nicht gesendet werden",
+        description:
+          "Status gesetzt, Mail konnte nicht gesendet werden — bitte „SEPA-Mandat-Mail senden“ nutzen.",
+      });
+    }
+  };
+
   const anyPending = pending !== null;
 
   return (
     <>
       <div className="flex flex-wrap gap-2">
+
         {(phase === "eingegangen" || phase === "gezeichnet") && (
           <>
             {phase === "eingegangen" && !mandateSent && (
