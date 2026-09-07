@@ -1158,9 +1158,9 @@ function ContractActions({ contract }: { contract: ContractRow }) {
                 if (mode === "confirm") runResendConfirm();
                 if (mode === "send-contract") runSendContractToCustomer();
               }}
-
             >
-              Erneut senden
+              {confirmOpen === "send-contract" ? "Senden" : "Erneut senden"}
+
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
