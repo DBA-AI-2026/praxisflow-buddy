@@ -81,15 +81,17 @@ export function AnleitungDialog({ open, onOpenChange }: AnleitungDialogProps) {
                     <li>eine HFX-I-Nummer (z. B. <code className="text-xs bg-muted px-1 rounded">HFX-I-01234</code>)</li>
                     <li>ein 12-stelliges Initialpasswort für den Interessentenzugang</li>
                     <li>eine Bestätigungs-E-Mail mit Zugangsdaten</li>
-                    <li>bei aktiver Verbindung: einen Salesforce-Sync</li>
                   </ul>
                 </Step>
 
                 <Step n={7} title="Folgeaktionen">
                   Status pflegen: <code className="text-xs bg-muted px-1 rounded">neu</code> →{" "}
                   <code className="text-xs bg-muted px-1 rounded">kontaktiert</code> →{" "}
-                  <code className="text-xs bg-muted px-1 rounded">qualifiziert</code> → Vertrag oder{" "}
-                  <code className="text-xs bg-muted px-1 rounded">abgelehnt</code>.
+                  <code className="text-xs bg-muted px-1 rounded">qualifiziert</code> → Vertrag, oder{" "}
+                  <code className="text-xs bg-muted px-1 rounded">abgelehnt</code> /{" "}
+                  <code className="text-xs bg-muted px-1 rounded">kein_abschluss</code>. Doppelt angelegte
+                  Datensätze werden als <code className="text-xs bg-muted px-1 rounded">dublette</code> markiert
+                  (Original steht in der Notiz).
                 </Step>
 
                 <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
@@ -134,12 +136,7 @@ export function AnleitungDialog({ open, onOpenChange }: AnleitungDialogProps) {
                   </ul>
                 </Step>
 
-                <Step n={4} title="Bonitätsprüfung (optional)">
-                  Bei Neuverträgen kann eine Creditreform-Prüfung ausgelöst werden. Bei reinen Nachpflegungen meist
-                  nicht nötig.
-                </Step>
-
-                <Step n={5} title="Status setzen">
+                <Step n={4} title="Status setzen">
                   <div className="mt-2 space-y-3">
                     <div className="rounded-md border border-border p-3">
                       <p className="font-semibold text-sm mb-1.5">A) Neuer Vertrag (digital)</p>
@@ -148,8 +145,8 @@ export function AnleitungDialog({ open, onOpenChange }: AnleitungDialogProps) {
                         <li>Digitale Unterschrift Vertriebler (Tablet/Gerät)</li>
                         <li>Digitale Unterschrift Kunde vor Ort</li>
                         <li>PDF wird automatisch generiert + Audit-Log</li>
-                        <li>Status: <em>Versendet, wartet auf Mandat</em> → Admin-Prüfung → <em>Aktiv</em></li>
-                        <li>Vertrag + Begrüßungsmail gehen automatisch raus</li>
+                        <li>Status: <em>Versendet, wartet auf Mandat</em> — Kunde erhält die SEPA-Mandat-Mail</li>
+                        <li>Kunde hinterlegt seine Bankverbindung über den Link → Vertrag wird automatisch aktiviert, Bestätigungsmail geht automatisch raus</li>
                       </ol>
                     </div>
                     <div className="rounded-md border border-border p-3">
@@ -164,13 +161,20 @@ export function AnleitungDialog({ open, onOpenChange }: AnleitungDialogProps) {
                   </div>
                 </Step>
 
-                <Step n={6} title="Zahlung einrichten">
-                  Zahlungsweg ist <strong>immer Stripe</strong> (SEPA-Lastschrift oder Kreditkarte). Manuelle
-                  Banküberweisungen sind nicht vorgesehen — die IBAN dient nur zur Dokumentation. Fehlt das Mandat,
-                  generiert das System am 1. des Folgemonats automatisch eine Setup-Session.
+                <Step n={5} title="Zahlung einrichten">
+                  Zahlungsweg ist <strong>immer SEPA-Lastschrift über Stripe</strong>. Manuelle Banküberweisungen
+                  oder Kreditkartenzahlung sind nicht vorgesehen — die IBAN im Formular dient nur zur Dokumentation.
+                  Der Kunde erhält per E-Mail einen Mandats-Link; dieser Link bleibt dauerhaft gültig und kann
+                  jederzeit erneut geklickt werden.
                 </Step>
 
-                <Step n={7} title="Kontrolle im Dashboard">
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+                  💡 <strong>Alternative Buchungslink:</strong> Über <strong>„Buchungslink kopieren"</strong> am
+                  Vertrag kann dem Kunden ein Link gegeben werden, über den er seine Daten selbst vervollständigt
+                  und direkt das SEPA-Mandat erteilt. Die Aktivierung läuft danach identisch automatisch.
+                </div>
+
+                <Step n={6} title="Kontrolle im Dashboard">
                   <ul className="mt-1 space-y-1 text-sm list-disc list-inside">
                     <li><strong>Verträge in Arbeit</strong> — offene Entwürfe und Genehmigungen</li>
                     <li><strong>Alerts</strong> — „Vertrag ohne SEPA-Mandat-Versand" oder „wartet auf Mandat-Erteilung" sofort behandeln</li>
