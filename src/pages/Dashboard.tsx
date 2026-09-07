@@ -14,10 +14,10 @@ import {
 import type { AppRole } from "@/hooks/useUserRole";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { differenceInDays } from "date-fns";
+
 import { isWaitingForMandate } from "@/lib/contractLifecycle";
 import { PLAUSIBILITAET_SCHWELLE } from "@/lib/plausibility";
-import { OVERDUE_LEAD_STATUSES } from "@/lib/leadUrgency";
+import { OVERDUE_LEAD_STATUSES, leadOverdueTier } from "@/lib/leadUrgency";
 import { AnleitungDialog } from "@/components/help/AnleitungDialog";
 import { Button } from "@/components/ui/button";
 import { useRolePreview } from "@/contexts/RolePreviewContext";
@@ -210,15 +210,11 @@ export default function Dashboard() {
 
   // Filtered "Heute wichtig" items
   const filteredOverdueLeads = useMemo(() => {
-    const items = applyTeamFilter(overdueLeads, "assigned_to");
-    const now = new Date();
-    return items
-      .map((l: any) => ({ ...l, daysSince: differenceInDays(now, new Date(l.created_at)) }))
-      .filter((l: any) => l.daysSince >= 7);
+    return applyTeamFilter(overdueLeads, "assigned_to");
   }, [overdueLeads, matchesTeamFilter, isRegionalLead]);
 
-  const overdueLeads7 = filteredOverdueLeads.filter((l: any) => l.daysSince >= 7 && l.daysSince < 14);
-  const overdueLeads14 = filteredOverdueLeads.filter((l: any) => l.daysSince >= 14);
+  const overdueLeads7 = filteredOverdueLeads.filter((l: any) => leadOverdueTier(l) === "warning");
+  const overdueLeads14 = filteredOverdueLeads.filter((l: any) => leadOverdueTier(l) === "critical");
 
   const filteredContractAlerts = useMemo(() => {
     if (!isRegionalLead) return contractAlerts;
@@ -386,7 +382,7 @@ export default function Dashboard() {
                       icon={AlertTriangle}
                       iconClass="text-destructive"
                       bgClass="bg-destructive/5"
-                      label={`${overdueLeads14.length} Lead${overdueLeads14.length > 1 ? "s" : ""} ohne Kontakt > 14 Tage`}
+                      label={`${overdueLeads14.length} Lead${overdueLeads14.length > 1 ? "s" : ""} unbearbeitet > 14 Tage`}
                       sub="Dringend – diese Leads drohen verloren zu gehen"
                       to="/pipeline?tab=interessenten&filter=overdue14"
                     />
@@ -396,7 +392,7 @@ export default function Dashboard() {
                       icon={Clock}
                       iconClass="text-amber-600"
                       bgClass="bg-amber-500/5"
-                      label={`${overdueLeads7.length} Lead${overdueLeads7.length > 1 ? "s" : ""} ohne Kontakt > 7 Tage`}
+                      label={`${overdueLeads7.length} Lead${overdueLeads7.length > 1 ? "s" : ""} unbearbeitet > 7 Tage`}
                       sub="Bitte zeitnah kontaktieren"
                       to="/pipeline?tab=interessenten&filter=overdue7"
                     />

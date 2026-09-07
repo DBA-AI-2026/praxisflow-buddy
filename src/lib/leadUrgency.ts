@@ -18,6 +18,7 @@ export interface LeadOverdueInput {
  * SSOT für Lead-Überfälligkeit nach Verweildauer im System.
  * Grenzen: ≥14 Tage = critical, ≥7 Tage = warning.
  * Nur Status in OVERDUE_LEAD_STATUSES können überfällig werden.
+ * Nie inline nachrechnen — alle Zählstellen konsumieren diese Funktion.
  */
 export function leadOverdueTier(
   lead: LeadOverdueInput,
