@@ -1119,6 +1119,14 @@ function ContractActions({ contract }: { contract: ContractRow }) {
         )}
       </div>
 
+      {phase === "entwurf" && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          {mandateRecipient
+            ? "Alternativ: Status manuell über die Status-Pille setzen."
+            : "Keine E-Mail-Adresse hinterlegt. Alternativ: Status manuell über die Status-Pille setzen."}
+        </p>
+      )}
+
       <AlertDialog
         open={confirmOpen !== null}
         onOpenChange={(o) => !o && setConfirmOpen(null)}
@@ -1126,14 +1134,18 @@ function ContractActions({ contract }: { contract: ContractRow }) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirmOpen === "resend-mandate"
-                ? "Mandat-Mail erneut senden?"
-                : "Vertragsbestätigungs-Mail erneut senden?"}
+              {confirmOpen === "send-contract"
+                ? "Vertrag an Kunden senden?"
+                : confirmOpen === "resend-mandate"
+                  ? "Mandat-Mail erneut senden?"
+                  : "Vertragsbestätigungs-Mail erneut senden?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmOpen === "resend-mandate"
-                ? "Der Kunde erhält die SEPA-Mandat-Mail noch einmal. Vorherige Links bleiben gültig."
-                : "Der Kunde erhält die Vertragsbestätigung inklusive Anhängen erneut."}
+              {confirmOpen === "send-contract"
+                ? `Der Vertrag wird festgeschrieben und die SEPA-Mandat-Mail an ${mandateRecipient ?? "den Kunden"} versendet. Danach ist der Vertrag nicht mehr frei editierbar.`
+                : confirmOpen === "resend-mandate"
+                  ? "Der Kunde erhält die SEPA-Mandat-Mail noch einmal. Vorherige Links bleiben gültig."
+                  : "Der Kunde erhält die Vertragsbestätigung inklusive Anhängen erneut."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1144,7 +1156,9 @@ function ContractActions({ contract }: { contract: ContractRow }) {
                 setConfirmOpen(null);
                 if (mode === "resend-mandate") runMandateResend();
                 if (mode === "confirm") runResendConfirm();
+                if (mode === "send-contract") runSendContractToCustomer();
               }}
+
             >
               Erneut senden
             </AlertDialogAction>
