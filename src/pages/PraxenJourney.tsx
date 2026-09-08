@@ -755,31 +755,6 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
 
   return (
     <div>
-      {/* Attention bar */}
-      {(statusFilter === "aktiv" || statusFilter === "qualifiziert") && (attentionMetrics.overdue14 > 0 || attentionMetrics.overdue7 > 0 || attentionMetrics.qualifiziert > 0 || attentionMetrics.testphaseInaktiv > 0) && (
-        <AttentionBar items={[
-          attentionMetrics.overdue14 > 0
-            ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.overdue14} Lead${attentionMetrics.overdue14 > 1 ? "s" : ""} über 14 Tage unbearbeitet`, cls: "text-destructive", onClick: () => toggleOverdue("overdue14"), active: overdueFilter === "overdue14" }
-            : { icon: null, text: "" },
-          attentionMetrics.overdue7 > 0
-            ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.overdue7} Lead${attentionMetrics.overdue7 > 1 ? "s" : ""} über 7 Tage unbearbeitet`, cls: "text-warning", onClick: () => toggleOverdue("overdue7"), active: overdueFilter === "overdue7" }
-            : { icon: null, text: "" },
-          attentionMetrics.testphaseInaktiv > 0
-            ? {
-                icon: <Ban className="h-3 w-3" />,
-                text: `${attentionMetrics.testphaseInaktiv} Testphase${attentionMetrics.testphaseInaktiv > 1 ? "n" : ""} inaktiv`,
-                cls: "text-destructive",
-                onClick: toggleInactive,
-                active: inactiveFilter,
-                tooltip: `Interessenten in Testphase ohne aktuelle Einreichungen (rot = ab ${leadThresholds.red_days} Tagen)`,
-              }
-            : { icon: null, text: "" },
-          attentionMetrics.qualifiziert > 0
-            ? { icon: <FilePlus className="h-3 w-3" />, text: `${attentionMetrics.qualifiziert} qualifiziert — bereit für Vertrag`, cls: "text-success", onClick: toggleQualifiziert, active: statusFilter === "qualifiziert" }
-            : { icon: null, text: "" },
-        ]} />
-      )}
-
       {/* Unified Toolbar */}
       <div className="p-4 border-b border-border flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex items-center gap-2 flex-wrap">
@@ -788,6 +763,30 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
           <FilterPill active={statusFilter === "abgelehnt"} onClick={() => selectStatus("abgelehnt")} label="Abgelehnt" count={closedAblCount} />
           <FilterPill active={statusFilter === "dublette"} onClick={() => selectStatus("dublette")} label="Dublette" count={dubletteCount} />
           <FilterPill active={statusFilter === "alle"} onClick={() => selectStatus("alle")} label="Alle" count={teamLeads.length} />
+
+          {(statusFilter === "aktiv" || statusFilter === "qualifiziert") && (
+            <AttentionChips items={[
+              attentionMetrics.overdue14 > 0
+                ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.overdue14} über 14 T. unbearbeitet`, tone: "destructive", onClick: () => toggleOverdue("overdue14"), active: overdueFilter === "overdue14" }
+                : { icon: null, text: "" },
+              attentionMetrics.overdue7 > 0
+                ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.overdue7} über 7 T. unbearbeitet`, tone: "warning", onClick: () => toggleOverdue("overdue7"), active: overdueFilter === "overdue7" }
+                : { icon: null, text: "" },
+              attentionMetrics.testphaseInaktiv > 0
+                ? {
+                    icon: <Ban className="h-3 w-3" />,
+                    text: `${attentionMetrics.testphaseInaktiv} Testphase${attentionMetrics.testphaseInaktiv > 1 ? "n" : ""} inaktiv`,
+                    tone: "destructive",
+                    onClick: toggleInactive,
+                    active: inactiveFilter,
+                    tooltip: `Interessenten in Testphase ohne aktuelle Einreichungen (rot = ab ${leadThresholds.red_days} Tagen)`,
+                  }
+                : { icon: null, text: "" },
+              attentionMetrics.qualifiziert > 0
+                ? { icon: <FilePlus className="h-3 w-3" />, text: `${attentionMetrics.qualifiziert} qualifiziert`, tone: "success", onClick: toggleQualifiziert, active: statusFilter === "qualifiziert" }
+                : { icon: null, text: "" },
+            ]} />
+          )}
 
           <span className="h-5 w-px bg-border mx-1" />
 
@@ -803,6 +802,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
             </SelectContent>
           </Select>
         </div>
+
 
         <div className="flex items-center gap-2 shrink-0">
           <StatusLegend entries={LEAD_LEGEND_ENTRIES} title="Status-Legende — Interessenten" />
