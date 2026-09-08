@@ -893,7 +893,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
                   <td className="py-3 px-4 hidden 2xl:table-cell">
                     <VorbezugBadge value={lead.abrechnungszentrum} />
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
+                  <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap hidden 2xl:table-cell">
                     {lead.plz}{lead.ort ? ` ${lead.ort}` : ""}
                   </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground">
