@@ -800,12 +800,12 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
               <TH>Status</TH>
               <TH>Im System</TH>
               <TH>Nächster Schritt</TH>
-              <TH>Quelle</TH>
-              <TH>Interesse an</TH>
-              <TH>Abrechnungszentrum</TH>
-              <TH>PLZ / Ort</TH>
-              <TH>Betreuer</TH>
-              <TH right>Qodia</TH>
+              <TH tier="tertiary">Quelle</TH>
+              <TH tier="tertiary">Interesse an</TH>
+              <TH tier="tertiary">Abrechnungszentrum</TH>
+              <TH tier="tertiary">PLZ / Ort</TH>
+              <TH tier="secondary">Betreuer</TH>
+              <TH right tier="secondary">Qodia</TH>
               <TH>Aktivität</TH>
             </tr>
           </thead>
