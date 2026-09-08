@@ -1671,7 +1671,6 @@ export type Database = {
           created_at: string
           credentials_sent_at: string | null
           email: string
-          generated_password: string | null
           hfx_customer_number: string | null
           honorarplus_synced: boolean
           id: string
@@ -1712,7 +1711,6 @@ export type Database = {
           created_at?: string
           credentials_sent_at?: string | null
           email: string
-          generated_password?: string | null
           hfx_customer_number?: string | null
           honorarplus_synced?: boolean
           id?: string
@@ -1753,7 +1751,6 @@ export type Database = {
           created_at?: string
           credentials_sent_at?: string | null
           email?: string
-          generated_password?: string | null
           hfx_customer_number?: string | null
           honorarplus_synced?: boolean
           id?: string
