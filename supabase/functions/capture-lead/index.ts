@@ -341,7 +341,7 @@ Deno.serve(async (req) => {
     const normalizedEmail = email.trim().toLowerCase();
     const { data: existingLead } = await supabase
       .from("leads")
-      .select("id, hfx_customer_number, generated_password, praxis_name, vorname, nachname, registration_attempts")
+      .select("id, hfx_customer_number, praxis_name, vorname, nachname, registration_attempts")
       .eq("email", normalizedEmail)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -357,14 +357,13 @@ Deno.serve(async (req) => {
         const resendApiKey = Deno.env.get("RESEND_API_KEY");
         if (resendApiKey) {
           const resend = new Resend(resendApiKey);
-          // Credential-Read: lead_credentials bevorzugen, Spalte bleibt Fallback (Bruecke/Gap).
-          let storedPassword = existingLead.generated_password;
+          // Credential-Read: ausschliesslich aus der geschuetzten Tabelle lead_credentials.
           const { data: cred } = await supabase
             .from("lead_credentials")
             .select("generated_password")
             .eq("lead_id", existingLead.id)
             .maybeSingle();
-          if (cred?.generated_password) storedPassword = cred.generated_password;
+          const storedPassword = cred?.generated_password ?? null;
           const existingPassword = storedPassword || "Sie haben bereits ein eigenes Passwort vergeben. Falls Sie es nicht mehr wissen: „Passwort vergessen?\" in der Anwendung – die Schritte stehen oben.";
           const { html: emailHtml, text: emailText } = buildConfirmationEmail({
             praxis_name: existingLead.praxis_name,
@@ -488,7 +487,6 @@ Deno.serve(async (req) => {
         adresse: adresse?.trim().slice(0, 300) || null,
         ort: ort?.trim().slice(0, 100) || null,
         interested_products: rawBody.interested_products || [],
-        generated_password: generatedPassword,
         assigned_to: assignedTo,
         tippgeber_id: rawBody.tippgeber_id || null,
         source: leadSource,
@@ -508,8 +506,11 @@ Deno.serve(async (req) => {
 
     console.log(`Lead created: ${lead.hfx_customer_number} for ${email} (source: ${leadSource}, assignment: ${assignmentSource})`);
 
-    // Dual-Write: Credential zusaetzlich in die geschuetzte Tabelle lead_credentials.
-    // Best-effort — leads.generated_password bleibt in dieser Phase die Bruecke.
+    // Credential-Speicherung: alleiniger Schreibpfad ist die geschuetzte Tabelle
+    // lead_credentials. Ein Fehler hier ist hart (500) — ohne Credential ist der
+    // Lead fachlich unvollstaendig. Kein Rollback des Lead-Inserts (bewusste
+    // Entscheidung): der Lead bleibt erhalten, das Passwort ist ueber den
+    // Sync-Pfad nachtraeglich erzeugbar.
     const { error: credErr } = await supabase
       .from("lead_credentials")
       .upsert({
@@ -517,7 +518,13 @@ Deno.serve(async (req) => {
         generated_password: generatedPassword,
         updated_at: new Date().toISOString(),
       }, { onConflict: "lead_id" });
-    if (credErr) console.error("lead_credentials upsert failed (non-fatal):", credErr);
+    if (credErr) {
+      console.error("lead_credentials upsert failed (fatal):", credErr);
+      return new Response(
+        JSON.stringify({ error: "Fehler beim Speichern" }),
+        { status: 500, headers: { ...headers, "Content-Type": "application/json" } }
+      );
+    }
 
 
 
