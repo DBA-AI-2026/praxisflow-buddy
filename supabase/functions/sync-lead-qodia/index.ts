@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     // Fetch lead
     const { data: lead, error: leadError } = await supabase
       .from("leads")
-      .select("id, hfx_customer_number, email, generated_password, qodia_synced")
+      .select("id, hfx_customer_number, email, qodia_synced")
       .eq("id", leadId)
       .single();
 
@@ -85,14 +85,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Credential-Read: lead_credentials bevorzugen, Spalte bleibt Fallback (Bruecke/Gap).
-    let password = lead.generated_password;
+    // Credential-Read: ausschliesslich aus der geschuetzten Tabelle lead_credentials.
     const { data: cred } = await supabase
       .from("lead_credentials")
       .select("generated_password")
       .eq("lead_id", lead.id)
       .maybeSingle();
-    if (cred?.generated_password) password = cred.generated_password;
+    let password = cred?.generated_password ?? null;
 
     // If no password is stored, generate a new one and update it in Auth + DB
     if (!password) {
@@ -106,8 +105,7 @@ Deno.serve(async (req) => {
         await supabase.auth.admin.updateUserById(authUser.id, { password });
       }
 
-      // Store the new password so future syncs can reuse it (Dual-Write)
-      await supabase.from("leads").update({ generated_password: password }).eq("id", lead.id);
+      // Alleiniger Schreibpfad: lead_credentials (kein leads-Update mehr).
       await supabase.from("lead_credentials").upsert({
         lead_id: lead.id,
         generated_password: password,
