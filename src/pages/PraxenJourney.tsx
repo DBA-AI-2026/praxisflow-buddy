@@ -903,7 +903,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
                       <span className="text-muted-foreground/40">—</span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                  <td className="py-3 px-4 text-center hidden xl:table-cell" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-1">
                       <QodiaLeadStatusCell synced={!!lead.qodia_synced} conflict={!!lead.qodia_conflict} />
                       {!lead.qodia_synced && lead.hfx_customer_number && (
