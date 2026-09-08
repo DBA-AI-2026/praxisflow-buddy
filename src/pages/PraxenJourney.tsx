@@ -8,7 +8,7 @@ import {
   Search, Users, FileText, Building2, CheckCircle2, XCircle,
   UserPlus, Phone, UserCheck, FilePlus, Upload, Ban, Send,
   Loader2, Globe, PenLine, ArrowRight, RefreshCw, AlertTriangle, Clock,
-  Flame, Eye, ChevronDown, CalendarCheck, Mail, FileCheck,
+  Eye, ChevronDown, CalendarCheck, Mail, FileCheck,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { isWaitingForMandate } from "@/lib/contractLifecycle";
@@ -309,30 +309,53 @@ function EmptyState({ icon: Icon, title, sub, action }: { icon: React.ComponentT
   );
 }
 
-// ─── Attention bar — compact info line above table ────────────────────────────
+// ─── Attention chips — inline in der Toolbar-Filtergruppe ────────────────────
+
+type AttentionTone = "destructive" | "warning" | "success";
 
 type AttentionItem = {
   icon: React.ReactNode;
   text: string;
-  cls?: string;
+  tone?: AttentionTone;
   onClick?: () => void;
   active?: boolean;
   /** Optionaler Tooltip (rückwärtskompatibel — bestehende Items ohne Tooltip bleiben unverändert). */
   tooltip?: string;
 };
 
-function AttentionBar({ items }: { items: AttentionItem[] }) {
+const ATTENTION_TONE_CLS: Record<AttentionTone, { base: string; active: string; hover: string }> = {
+  destructive: {
+    base: "bg-destructive/10 text-destructive border border-destructive/30",
+    active: "bg-destructive/20 ring-1 ring-destructive/40",
+    hover: "hover:bg-destructive/20",
+  },
+  warning: {
+    base: "bg-warning/10 text-warning border border-warning/30",
+    active: "bg-warning/20 ring-1 ring-warning/40",
+    hover: "hover:bg-warning/20",
+  },
+  success: {
+    base: "bg-success/10 text-success border border-success/30",
+    active: "bg-success/20 ring-1 ring-success/40",
+    hover: "hover:bg-success/20",
+  },
+};
+
+/**
+ * Rendert die Attention-Items als Pillen direkt in der linken Toolbar-Gruppe.
+ * Der führende Trennstrich wird nur gerendert, wenn mindestens ein Chip sichtbar ist.
+ */
+function AttentionChips({ items }: { items: AttentionItem[] }) {
   const visible = items.filter((i) => i.text);
   if (visible.length === 0) return null;
   return (
-    <div className="px-4 py-2.5 bg-warning/5 border-b border-warning/20 flex items-center gap-2 flex-wrap">
-      <Flame className="h-3.5 w-3.5 text-warning shrink-0" />
+    <>
+      <span className="h-5 w-px bg-border mx-1" />
       {visible.map((item, i) => {
-        const base = `inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md ${item.cls || "text-warning"}`;
+        const tone = ATTENTION_TONE_CLS[item.tone || "warning"];
+        const base = `inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${tone.base}`;
         const interactive = item.onClick
-          ? `cursor-pointer transition-colors hover:bg-warning/10 ${
-              item.active ? "ring-1 ring-warning/40 bg-warning/15" : ""
-            }`
+          ? `cursor-pointer transition-colors ${tone.hover} ${item.active ? tone.active : ""}`
           : "";
         const node = item.onClick ? (
           <button
@@ -361,9 +384,10 @@ function AttentionBar({ items }: { items: AttentionItem[] }) {
           </TooltipProvider>
         );
       })}
-    </div>
+    </>
   );
 }
+
 
 // ─── Testphasen-Monitoring: Frische-Guard ────────────────────────────────────
 /**
@@ -731,31 +755,6 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
 
   return (
     <div>
-      {/* Attention bar */}
-      {(statusFilter === "aktiv" || statusFilter === "qualifiziert") && (attentionMetrics.overdue14 > 0 || attentionMetrics.overdue7 > 0 || attentionMetrics.qualifiziert > 0 || attentionMetrics.testphaseInaktiv > 0) && (
-        <AttentionBar items={[
-          attentionMetrics.overdue14 > 0
-            ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.overdue14} Lead${attentionMetrics.overdue14 > 1 ? "s" : ""} über 14 Tage unbearbeitet`, cls: "text-destructive", onClick: () => toggleOverdue("overdue14"), active: overdueFilter === "overdue14" }
-            : { icon: null, text: "" },
-          attentionMetrics.overdue7 > 0
-            ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.overdue7} Lead${attentionMetrics.overdue7 > 1 ? "s" : ""} über 7 Tage unbearbeitet`, cls: "text-warning", onClick: () => toggleOverdue("overdue7"), active: overdueFilter === "overdue7" }
-            : { icon: null, text: "" },
-          attentionMetrics.testphaseInaktiv > 0
-            ? {
-                icon: <Ban className="h-3 w-3" />,
-                text: `${attentionMetrics.testphaseInaktiv} Testphase${attentionMetrics.testphaseInaktiv > 1 ? "n" : ""} inaktiv`,
-                cls: "text-destructive",
-                onClick: toggleInactive,
-                active: inactiveFilter,
-                tooltip: `Interessenten in Testphase ohne aktuelle Einreichungen (rot = ab ${leadThresholds.red_days} Tagen)`,
-              }
-            : { icon: null, text: "" },
-          attentionMetrics.qualifiziert > 0
-            ? { icon: <FilePlus className="h-3 w-3" />, text: `${attentionMetrics.qualifiziert} qualifiziert — bereit für Vertrag`, cls: "text-success", onClick: toggleQualifiziert, active: statusFilter === "qualifiziert" }
-            : { icon: null, text: "" },
-        ]} />
-      )}
-
       {/* Unified Toolbar */}
       <div className="p-4 border-b border-border flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <div className="flex items-center gap-2 flex-wrap">
@@ -764,6 +763,30 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
           <FilterPill active={statusFilter === "abgelehnt"} onClick={() => selectStatus("abgelehnt")} label="Abgelehnt" count={closedAblCount} />
           <FilterPill active={statusFilter === "dublette"} onClick={() => selectStatus("dublette")} label="Dublette" count={dubletteCount} />
           <FilterPill active={statusFilter === "alle"} onClick={() => selectStatus("alle")} label="Alle" count={teamLeads.length} />
+
+          {(statusFilter === "aktiv" || statusFilter === "qualifiziert") && (
+            <AttentionChips items={[
+              attentionMetrics.overdue14 > 0
+                ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.overdue14} über 14 T. unbearbeitet`, tone: "destructive", onClick: () => toggleOverdue("overdue14"), active: overdueFilter === "overdue14" }
+                : { icon: null, text: "" },
+              attentionMetrics.overdue7 > 0
+                ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.overdue7} über 7 T. unbearbeitet`, tone: "warning", onClick: () => toggleOverdue("overdue7"), active: overdueFilter === "overdue7" }
+                : { icon: null, text: "" },
+              attentionMetrics.testphaseInaktiv > 0
+                ? {
+                    icon: <Ban className="h-3 w-3" />,
+                    text: `${attentionMetrics.testphaseInaktiv} Testphase${attentionMetrics.testphaseInaktiv > 1 ? "n" : ""} inaktiv`,
+                    tone: "destructive",
+                    onClick: toggleInactive,
+                    active: inactiveFilter,
+                    tooltip: `Interessenten in Testphase ohne aktuelle Einreichungen (rot = ab ${leadThresholds.red_days} Tagen)`,
+                  }
+                : { icon: null, text: "" },
+              attentionMetrics.qualifiziert > 0
+                ? { icon: <FilePlus className="h-3 w-3" />, text: `${attentionMetrics.qualifiziert} qualifiziert`, tone: "success", onClick: toggleQualifiziert, active: statusFilter === "qualifiziert" }
+                : { icon: null, text: "" },
+            ]} />
+          )}
 
           <span className="h-5 w-px bg-border mx-1" />
 
@@ -779,6 +802,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
             </SelectContent>
           </Select>
         </div>
+
 
         <div className="flex items-center gap-2 shrink-0">
           <StatusLegend entries={LEAD_LEGEND_ENTRIES} title="Status-Legende — Interessenten" />
@@ -1149,21 +1173,6 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
 
   return (
     <div>
-      {/* Attention bar */}
-      {(attentionMetrics.missingEmail > 0 || attentionMetrics.waitingPayment > 0 || attentionMetrics.stale7 > 0) && (
-        <AttentionBar items={[
-          attentionMetrics.missingEmail > 0
-            ? { icon: <Mail className="h-3 w-3" />, text: `${attentionMetrics.missingEmail} Vertrag${attentionMetrics.missingEmail > 1 ? "e" : ""} ohne SEPA-Mandat-Versand`, cls: "text-destructive", onClick: () => toggleContractFilter("missing_email"), active: contractFilter === "missing_email" }
-            : { icon: null, text: "" },
-          attentionMetrics.waitingPayment > 0
-            ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.waitingPayment} warten auf Mandat-Erteilung`, cls: "text-warning", onClick: () => toggleContractFilter("waiting_payment"), active: contractFilter === "waiting_payment" }
-            : { icon: null, text: "" },
-          attentionMetrics.stale7 > 0
-            ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.stale7} seit >7 Tagen offen`, cls: "text-orange-600 dark:text-orange-400", onClick: toggleStale, active: staleFilter }
-            : { icon: null, text: "" },
-        ]} />
-      )}
-
       {/* Status filter pills */}
       <div className="p-4 border-b border-border flex flex-wrap gap-2 items-center">
         <FilterPill active={statusFilter === "alle"} onClick={() => selectStatus("alle")} label="Alle" count={teamContracts.length} />
@@ -1180,6 +1189,18 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
             />
           );
         })}
+        <AttentionChips items={[
+          attentionMetrics.missingEmail > 0
+            ? { icon: <Mail className="h-3 w-3" />, text: `${attentionMetrics.missingEmail} ohne SEPA-Versand`, tone: "destructive", onClick: () => toggleContractFilter("missing_email"), active: contractFilter === "missing_email" }
+            : { icon: null, text: "" },
+          attentionMetrics.waitingPayment > 0
+            ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.waitingPayment} warten auf Mandat`, tone: "warning", onClick: () => toggleContractFilter("waiting_payment"), active: contractFilter === "waiting_payment" }
+            : { icon: null, text: "" },
+          attentionMetrics.stale7 > 0
+            ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.stale7} seit >7 Tagen offen`, tone: "warning", onClick: toggleStale, active: staleFilter }
+            : { icon: null, text: "" },
+        ]} />
+
         <div className="ml-auto">
           <StatusLegend entries={CONTRACT_LEGEND_ENTRIES} title="Status-Legende — Verträge" />
         </div>
