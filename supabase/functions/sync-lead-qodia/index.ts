@@ -85,8 +85,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // If no password is stored, generate a new one and update it in Auth + DB
+    // Credential-Read: lead_credentials bevorzugen, Spalte bleibt Fallback (Bruecke/Gap).
     let password = lead.generated_password;
+    const { data: cred } = await supabase
+      .from("lead_credentials")
+      .select("generated_password")
+      .eq("lead_id", lead.id)
+      .maybeSingle();
+    if (cred?.generated_password) password = cred.generated_password;
+
+    // If no password is stored, generate a new one and update it in Auth + DB
     if (!password) {
       console.log(`No stored password for ${lead.hfx_customer_number}, generating new one...`);
       password = generatePassword(12);
@@ -98,8 +106,13 @@ Deno.serve(async (req) => {
         await supabase.auth.admin.updateUserById(authUser.id, { password });
       }
 
-      // Store the new password so future syncs can reuse it
+      // Store the new password so future syncs can reuse it (Dual-Write)
       await supabase.from("leads").update({ generated_password: password }).eq("id", lead.id);
+      await supabase.from("lead_credentials").upsert({
+        lead_id: lead.id,
+        generated_password: password,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "lead_id" });
       console.log(`New password generated and stored for ${lead.hfx_customer_number}`);
     }
 
