@@ -91,8 +91,7 @@ Deno.serve(async (req) => {
       .select("generated_password")
       .eq("lead_id", lead.id)
       .maybeSingle();
-    const password0 = cred?.generated_password ?? null;
-    let password = password0;
+    let password = cred?.generated_password ?? null;
 
     // If no password is stored, generate a new one and update it in Auth + DB
     if (!password) {
@@ -106,8 +105,7 @@ Deno.serve(async (req) => {
         await supabase.auth.admin.updateUserById(authUser.id, { password });
       }
 
-      // Store the new password so future syncs can reuse it (Dual-Write)
-      await supabase.from("leads").update({ generated_password: password }).eq("id", lead.id);
+      // Alleiniger Schreibpfad: lead_credentials (kein leads-Update mehr).
       await supabase.from("lead_credentials").upsert({
         lead_id: lead.id,
         generated_password: password,
