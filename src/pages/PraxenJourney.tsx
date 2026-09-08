@@ -800,12 +800,12 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
               <TH>Status</TH>
               <TH>Im System</TH>
               <TH>Nächster Schritt</TH>
-              <TH>Quelle</TH>
-              <TH>Interesse an</TH>
-              <TH>Abrechnungszentrum</TH>
-              <TH>PLZ / Ort</TH>
-              <TH>Betreuer</TH>
-              <TH right>Qodia</TH>
+              <TH tier="tertiary">Quelle</TH>
+              <TH tier="tertiary">Interesse an</TH>
+              <TH tier="tertiary">Abrechnungszentrum</TH>
+              <TH tier="tertiary">PLZ / Ort</TH>
+              <TH tier="secondary">Betreuer</TH>
+              <TH right tier="secondary">Qodia</TH>
               <TH>Aktivität</TH>
             </tr>
           </thead>
@@ -870,10 +870,10 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
                       </span>
                     ) : null}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 hidden 2xl:table-cell">
                     <SourceBadge source={src} />
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 hidden 2xl:table-cell">
                     {lead.interested_products && lead.interested_products.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {(lead.interested_products as string[]).map((p) => (
@@ -890,20 +890,20 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 hidden 2xl:table-cell">
                     <VorbezugBadge value={lead.abrechnungszentrum} />
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
+                  <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap hidden 2xl:table-cell">
                     {lead.plz}{lead.ort ? ` ${lead.ort}` : ""}
                   </td>
-                  <td className="py-3 px-4 text-xs text-muted-foreground">
+                  <td className="py-3 px-4 text-xs text-muted-foreground hidden xl:table-cell">
                     {betreuerName ? (
                       <span className="whitespace-nowrap">{betreuerName}</span>
                     ) : (
                       <span className="text-muted-foreground/40">—</span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                  <td className="py-3 px-4 text-center hidden xl:table-cell" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-1">
                       <QodiaLeadStatusCell synced={!!lead.qodia_synced} conflict={!!lead.qodia_conflict} />
                       {!lead.qodia_synced && lead.hfx_customer_number && (
