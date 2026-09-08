@@ -1628,6 +1628,35 @@ export type Database = {
           },
         ]
       }
+      lead_credentials: {
+        Row: {
+          created_at: string
+          generated_password: string | null
+          lead_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          generated_password?: string | null
+          lead_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          generated_password?: string | null
+          lead_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_credentials_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           abrechnungszentrum: string
