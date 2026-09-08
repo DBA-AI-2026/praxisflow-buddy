@@ -357,7 +357,15 @@ Deno.serve(async (req) => {
         const resendApiKey = Deno.env.get("RESEND_API_KEY");
         if (resendApiKey) {
           const resend = new Resend(resendApiKey);
-          const existingPassword = existingLead.generated_password || "Sie haben bereits ein eigenes Passwort vergeben. Falls Sie es nicht mehr wissen: „Passwort vergessen?\" in der Anwendung – die Schritte stehen oben.";
+          // Credential-Read: lead_credentials bevorzugen, Spalte bleibt Fallback (Bruecke/Gap).
+          let storedPassword = existingLead.generated_password;
+          const { data: cred } = await supabase
+            .from("lead_credentials")
+            .select("generated_password")
+            .eq("lead_id", existingLead.id)
+            .maybeSingle();
+          if (cred?.generated_password) storedPassword = cred.generated_password;
+          const existingPassword = storedPassword || "Sie haben bereits ein eigenes Passwort vergeben. Falls Sie es nicht mehr wissen: „Passwort vergessen?\" in der Anwendung – die Schritte stehen oben.";
           const { html: emailHtml, text: emailText } = buildConfirmationEmail({
             praxis_name: existingLead.praxis_name,
             vorname: existingLead.vorname,
