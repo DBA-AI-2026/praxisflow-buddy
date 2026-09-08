@@ -890,7 +890,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 hidden 2xl:table-cell">
                     <VorbezugBadge value={lead.abrechnungszentrum} />
                   </td>
                   <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
