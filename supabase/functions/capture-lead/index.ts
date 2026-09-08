@@ -508,6 +508,19 @@ Deno.serve(async (req) => {
 
     console.log(`Lead created: ${lead.hfx_customer_number} for ${email} (source: ${leadSource}, assignment: ${assignmentSource})`);
 
+    // Dual-Write: Credential zusaetzlich in die geschuetzte Tabelle lead_credentials.
+    // Best-effort — leads.generated_password bleibt in dieser Phase die Bruecke.
+    const { error: credErr } = await supabase
+      .from("lead_credentials")
+      .upsert({
+        lead_id: lead.id,
+        generated_password: generatedPassword,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "lead_id" });
+    if (credErr) console.error("lead_credentials upsert failed (non-fatal):", credErr);
+
+
+
     // Protokolliere Zuordnung im zentralen PLZ-Assignment-Log
     supabase.from("plz_assignment_log").insert({
       entity_type: "lead",
