@@ -873,7 +873,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
                   <td className="py-3 px-4 hidden 2xl:table-cell">
                     <SourceBadge source={src} />
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 hidden 2xl:table-cell">
                     {lead.interested_products && lead.interested_products.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {(lead.interested_products as string[]).map((p) => (
