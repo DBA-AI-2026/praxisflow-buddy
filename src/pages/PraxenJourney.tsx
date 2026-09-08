@@ -870,7 +870,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
                       </span>
                     ) : null}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 hidden 2xl:table-cell">
                     <SourceBadge source={src} />
                   </td>
                   <td className="py-3 px-4">
