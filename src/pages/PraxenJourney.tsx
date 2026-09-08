@@ -1173,21 +1173,6 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
 
   return (
     <div>
-      {/* Attention bar */}
-      {(attentionMetrics.missingEmail > 0 || attentionMetrics.waitingPayment > 0 || attentionMetrics.stale7 > 0) && (
-        <AttentionBar items={[
-          attentionMetrics.missingEmail > 0
-            ? { icon: <Mail className="h-3 w-3" />, text: `${attentionMetrics.missingEmail} Vertrag${attentionMetrics.missingEmail > 1 ? "e" : ""} ohne SEPA-Mandat-Versand`, cls: "text-destructive", onClick: () => toggleContractFilter("missing_email"), active: contractFilter === "missing_email" }
-            : { icon: null, text: "" },
-          attentionMetrics.waitingPayment > 0
-            ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.waitingPayment} warten auf Mandat-Erteilung`, cls: "text-warning", onClick: () => toggleContractFilter("waiting_payment"), active: contractFilter === "waiting_payment" }
-            : { icon: null, text: "" },
-          attentionMetrics.stale7 > 0
-            ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.stale7} seit >7 Tagen offen`, cls: "text-orange-600 dark:text-orange-400", onClick: toggleStale, active: staleFilter }
-            : { icon: null, text: "" },
-        ]} />
-      )}
-
       {/* Status filter pills */}
       <div className="p-4 border-b border-border flex flex-wrap gap-2 items-center">
         <FilterPill active={statusFilter === "alle"} onClick={() => selectStatus("alle")} label="Alle" count={teamContracts.length} />
@@ -1204,6 +1189,18 @@ function AbschlussphaseTab({ search, highlightId, missingEmailCount, matchesTeam
             />
           );
         })}
+        <AttentionChips items={[
+          attentionMetrics.missingEmail > 0
+            ? { icon: <Mail className="h-3 w-3" />, text: `${attentionMetrics.missingEmail} ohne SEPA-Versand`, tone: "destructive", onClick: () => toggleContractFilter("missing_email"), active: contractFilter === "missing_email" }
+            : { icon: null, text: "" },
+          attentionMetrics.waitingPayment > 0
+            ? { icon: <Clock className="h-3 w-3" />, text: `${attentionMetrics.waitingPayment} warten auf Mandat`, tone: "warning", onClick: () => toggleContractFilter("waiting_payment"), active: contractFilter === "waiting_payment" }
+            : { icon: null, text: "" },
+          attentionMetrics.stale7 > 0
+            ? { icon: <AlertTriangle className="h-3 w-3" />, text: `${attentionMetrics.stale7} seit >7 Tagen offen`, tone: "warning", onClick: toggleStale, active: staleFilter }
+            : { icon: null, text: "" },
+        ]} />
+
         <div className="ml-auto">
           <StatusLegend entries={CONTRACT_LEGEND_ENTRIES} title="Status-Legende — Verträge" />
         </div>
