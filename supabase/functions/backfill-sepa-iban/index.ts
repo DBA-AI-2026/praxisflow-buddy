@@ -20,6 +20,7 @@
  */
 import Stripe from "npm:stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireActiveRole } from "../_shared/auth.ts";
 import { formatStripeMaskedIban } from "../_shared/formatStripeMaskedIban.ts";
 
 const corsHeaders = {
@@ -47,6 +48,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
+  const guard = await requireActiveRole(req, ["admin"], corsHeaders);
+  if (guard instanceof Response) return guard;
 
   let body: { dryRun?: boolean; confirm?: string } = {};
   try {
