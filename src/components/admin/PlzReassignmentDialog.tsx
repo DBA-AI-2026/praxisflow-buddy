@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -80,7 +80,7 @@ export function PlzReassignmentDialog({ open, onOpenChange }: PlzReassignmentDia
       return (data ?? 0) as number;
     },
     onSuccess: (count) => {
-      queryClient.invalidateQueries({ queryKey: ["plz-reassignment-preview"] });
+      queryClient.resetQueries({ queryKey: ["plz-reassignment-preview"] });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       queryClient.invalidateQueries({ queryKey: ["journey-leads"] });
       queryClient.invalidateQueries({ queryKey: ["kpi-leads-all"] });
@@ -108,6 +108,10 @@ export function PlzReassignmentDialog({ open, onOpenChange }: PlzReassignmentDia
       setConfirmOpen(false);
     },
   });
+
+  useEffect(() => {
+    if (open) queryClient.resetQueries({ queryKey: ["plz-reassignment-preview"] });
+  }, [open, queryClient]);
 
   const handleOpenChange = (v: boolean) => {
     if (!v) {
