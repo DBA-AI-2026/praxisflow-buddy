@@ -1,0 +1,1 @@
+DELETE FROM vault.secrets WHERE name = 'email_queue_service_role_key';
