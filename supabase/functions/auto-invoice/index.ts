@@ -149,13 +149,12 @@ Deno.serve(async (req) => {
   }
 
   // Validate cron secret for security (consistent with usage-sync: CRON_SECRET_2)
+  // Removed validAnon fallback: the public anon key must never authorize a cron-style,
+  // invoice-creating endpoint. Only x-cron-secret (CRON_SECRET_2) is accepted.
   const cronSecret = req.headers.get("x-cron-secret") ?? "";
   const expectedSecret = Deno.env.get("CRON_SECRET_2") ?? "";
-  const authHeader = req.headers.get("authorization") || "";
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
   const validCron = cronSecret !== "" && cronSecret === expectedSecret;
-  const validAnon = authHeader === `Bearer ${anonKey}`;
-  if (!validCron && !validAnon) {
+  if (!validCron) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
