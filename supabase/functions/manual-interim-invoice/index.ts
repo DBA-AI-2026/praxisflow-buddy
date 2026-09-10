@@ -393,6 +393,18 @@ Deno.serve(async (req) => {
         bodyText,
       });
 
+      // ── PDF-Anhang (Design "design2", Spiegel von src/lib/generateInvoicePdfV2.ts) ──
+      // HARTE REGEL: Ein PDF-Fehler darf den Lauf NIEMALS brechen.
+      // Fallback = Mail ohne Anhang (Verhalten vor dieser Ergänzung).
+      // ROLLBACK: Diesen Block sowie `attachments` im send() entfernen → alter Stand.
+      let invoiceAttachments: { filename: string; content: string }[] = [];
+      try {
+        const pdfBase64 = await renderInvoicePdfBase64(invoice as any);
+        invoiceAttachments = [{ filename: `Rechnung-${invoice.invoice_number}.pdf`, content: pdfBase64 }];
+      } catch (pdfErr) {
+        console.error(`[manual-interim-invoice] PDF-Anhang fehlgeschlagen für Contract ${contract.id} (Invoice ${invoice.invoice_number}) – Mail wird ohne Anhang gesendet:`, String(pdfErr));
+      }
+
       sendResult = await resend.emails.send({
         from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
         reply_to: "info@hfx-honorarfuchs.de",
@@ -400,6 +412,7 @@ Deno.serve(async (req) => {
         subject: `Zwischenabrechnung ${invoice.invoice_number} – ${contract.customer_name}`,
         html: emailHtml,
         text: bodyText,
+        attachments: invoiceAttachments,
       });
 
       if (stripeChargeFailed) {
