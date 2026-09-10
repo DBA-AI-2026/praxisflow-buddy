@@ -13,6 +13,7 @@ import {
   renderStripeFailedBox,
   renderSepaOkBox,
 } from "../_shared/invoiceEmailParts.ts";
+import { renderInvoicePdfBase64 } from "../_shared/generateInvoicePdf.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY_V2") || "", {
@@ -1076,6 +1077,19 @@ Deno.serve(async (req) => {
           } else {
             const emailTo = contract.rechnungs_email || contract.email;
             const subjectSuffix = grossAmount === 0 ? " (kein Zahlbetrag)" : "";
+
+            // ── PDF-Anhang (Design "design2", Spiegel von src/lib/generateInvoicePdfV2.ts) ──
+            // HARTE REGEL: Ein PDF-Fehler darf den Abrechnungslauf NIEMALS brechen.
+            // Fallback = Mail ohne Anhang (Verhalten vor dieser Ergänzung).
+            // ROLLBACK: Diesen Block sowie `attachments` im send() entfernen → alter Stand.
+            let invoiceAttachments: { filename: string; content: string }[] = [];
+            try {
+              const pdfBase64 = await renderInvoicePdfBase64(invoice as any);
+              invoiceAttachments = [{ filename: `Rechnung-${invoice.invoice_number}.pdf`, content: pdfBase64 }];
+            } catch (pdfErr) {
+              console.error(`[auto-invoice] PDF-Anhang fehlgeschlagen für Contract ${contract.id} (Invoice ${invoice.invoice_number}) – Mail wird ohne Anhang gesendet:`, String(pdfErr));
+            }
+
             await resend.emails.send({
               from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
               reply_to: "info@hfx-honorarfuchs.de",
@@ -1083,6 +1097,7 @@ Deno.serve(async (req) => {
               subject: `Rechnung ${invoice.invoice_number} – ${contract.customer_name} – ${billingPeriod}${subjectSuffix}`,
               html: emailHtml,
               text: bodyText,
+              attachments: invoiceAttachments,
             });
 
             // A4: email_sent_at IMMER setzen (Kunden-Mail wurde versendet, ggf. mit Hinweisblock).

@@ -1,12 +1,30 @@
 /**
- * ⚠ SYNCHRONIZE MIT supabase/functions/_shared/generateInvoicePdf.ts
+ * ⚠ SYNCHRONIZE MIT src/lib/generateInvoicePdfV2.ts
  *
- * Der Edge-Renderer dort ist ein 1:1-Spiegel dieses Moduls (Design "design2")
- * und wird von auto-invoice + manual-interim-invoice für den PDF-Anhang
- * genutzt. Layout-, Text- oder Zahlenänderungen IMMER in beiden Dateien.
+ * Serverseitiger Spiegel des Client-Renderers "design2"
+ * (src/lib/generateInvoicePdfV2.ts). Layout, Maße, Farben, Texte und
+ * Reihenfolge sind 1:1 übernommen — Änderungen IMMER in beiden Dateien
+ * gleichzeitig durchführen.
+ *
+ * Bewusste Abweichungen (nur Runtime, kein Design):
+ *   - pdf-lib via npm:-Specifier statt Bundler-Import
+ *   - ENTITY_TAGLINE aus ./entityCanon.ts statt @/lib/entityCanon
+ *   - Logo wird hier per fetch(`${APP_URL}/logo.png`) geladen (siehe
+ *     fetchLogoBytes) statt im Browser per fetch("/logo.png")
+ *
+ * Bewusst NICHT umgebaut: StandardFonts Helvetica (kein Exo 2), keine
+ * pdfDesignTokens — beides wäre eine Design-Änderung.
+ *
+ * Bekannte Duplizierung: getGermanHolidays/addBusinessDays existieren
+ * zusätzlich in src/lib/generateInvoicePdf.ts, src/lib/generateInvoicePdfV2.ts
+ * und supabase/functions/send-invoice-email/index.ts. Konsolidierung ist ein
+ * eigener Hygiene-Auftrag.
  */
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import { ENTITY_TAGLINE } from "@/lib/entityCanon";
+import { PDFDocument, rgb, StandardFonts } from "npm:pdf-lib@1.17.1";
+import { ENTITY_TAGLINE } from "./entityCanon.ts";
+
+/** Gleiche hartkodierte Konstante wie in send-contract-confirmation/index.ts. */
+export const PDF_APP_URL = "https://praxisflow-buddy.lovable.app";
 
 interface InvoicePosition {
   description: string;
@@ -14,7 +32,7 @@ interface InvoicePosition {
   unit_price: number;
 }
 
-interface InvoicePdfData {
+export interface InvoicePdfData {
   invoice_number: string;
   customer_name: string;
   customer_number?: string | null;
@@ -83,9 +101,40 @@ function addBusinessDays(from: Date, days: number): Date {
   return result;
 }
 
-export async function generateInvoicePdfV2(
+/** Logo optional laden — Fehler bedeuten: ohne Logo weiterrendern. */
+export async function fetchLogoBytes(appUrl = PDF_APP_URL): Promise<ArrayBuffer | undefined> {
+  try {
+    const res = await fetch(`${appUrl}/logo.png`);
+    if (!res.ok) return undefined;
+    return await res.arrayBuffer();
+  } catch {
+    return undefined;
+  }
+}
+
+/** Uint8Array → base64 (chunked, damit große PDFs den Stack nicht sprengen). */
+export function toBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+/**
+ * Rendert das Rechnungs-PDF und liefert es base64-kodiert für Resend-Anhänge.
+ * Wirft bei Fehler — Aufrufer MUSS in try/catch kapseln und ohne Anhang senden.
+ */
+export async function renderInvoicePdfBase64(data: InvoicePdfData): Promise<string> {
+  const logoBytes = await fetchLogoBytes();
+  const bytes = await generateInvoicePdf(data, logoBytes);
+  return toBase64(bytes);
+}
+
+export async function generateInvoicePdf(
   data: InvoicePdfData,
-  logoBytes?: ArrayBuffer
+  logoBytes?: ArrayBuffer,
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
@@ -100,15 +149,11 @@ export async function generateInvoicePdfV2(
 
   // Colors - blue-based scheme
   const C_NAVY    = rgb(0.044, 0.212, 0.498); // #0b367f
-  const C_RED     = rgb(0.714, 0.098, 0.239);
   const C_TEXT    = rgb(0.12, 0.12, 0.14);
   const C_MUTED   = rgb(0.35, 0.37, 0.42);
   const C_LINE    = rgb(0.044, 0.212, 0.498); // blue lines
   const C_LINE_LIGHT = rgb(0.75, 0.80, 0.88);
-  const C_WHITE   = rgb(1, 1, 1);
-  const C_GREEN   = rgb(0.09, 0.56, 0.28);
   const C_BG_LIGHT = rgb(0.95, 0.96, 0.98);
-  const C_STATUS_RED = rgb(0.714, 0.098, 0.239);
 
   let page = doc.addPage([PAGE_W, PAGE_H]);
   let y = PAGE_H;
@@ -174,7 +219,6 @@ export async function generateInvoicePdfV2(
   y -= 14;
 
   // ===== TWO-COLUMN: RECIPIENT + METADATA =====
-  const leftColW = CW * 0.46;
   const rightColX = ML + CW * 0.50;
   const rightColW = CW * 0.50;
   const boxTop = y;
@@ -357,7 +401,6 @@ export async function generateInvoicePdfV2(
   // Totals (right side, table style with borders)
   let ty = payTop;
   const totalsRowH = 22;
-  const totalsLabelW = totalsW * 0.55;
 
   // Helper for totals row
   const drawTotalsRow = (label: string, value: string, isBold = false, topBorder = false) => {
