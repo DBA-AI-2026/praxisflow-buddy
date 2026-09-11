@@ -529,6 +529,7 @@ export type Database = {
           bic: string | null
           bsnr: string | null
           bsnr_count: number
+          cancellation_date: string | null
           cancellation_period_months: number
           confirmation_email_sent_at: string | null
           contract_number: string | null
@@ -547,6 +548,7 @@ export type Database = {
           document_name: string | null
           document_url: string | null
           duration_months: number
+          effective_end_date: string | null
           email: string | null
           end_date: string
           fachrichtung: string | null
@@ -611,6 +613,7 @@ export type Database = {
           bic?: string | null
           bsnr?: string | null
           bsnr_count?: number
+          cancellation_date?: string | null
           cancellation_period_months?: number
           confirmation_email_sent_at?: string | null
           contract_number?: string | null
@@ -629,6 +632,7 @@ export type Database = {
           document_name?: string | null
           document_url?: string | null
           duration_months?: number
+          effective_end_date?: string | null
           email?: string | null
           end_date: string
           fachrichtung?: string | null
@@ -693,6 +697,7 @@ export type Database = {
           bic?: string | null
           bsnr?: string | null
           bsnr_count?: number
+          cancellation_date?: string | null
           cancellation_period_months?: number
           confirmation_email_sent_at?: string | null
           contract_number?: string | null
@@ -711,6 +716,7 @@ export type Database = {
           document_name?: string | null
           document_url?: string | null
           duration_months?: number
+          effective_end_date?: string | null
           email?: string | null
           end_date?: string
           fachrichtung?: string | null
