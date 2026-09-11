@@ -84,7 +84,9 @@ export async function createGoaeCommissions(params: {
           .select("id", { count: "exact", head: true })
           .eq("sales_partner_id", contract.sales_partner_id)
           .or("product_name.ilike.%GOÄ%,product_name.ilike.%GOA%")
-          .in("status", ["aktiv", "gekündigt", "beendet"]);
+          // Sprint-Bonus zählt nur aktive Verträge; "gekündigt"/"beendet" sind kein aktiver Bestand.
+          .eq("status", "aktiv");
+
         if ((contractCount || 0) >= 25) {
           fixedAmount = 250;
         }
