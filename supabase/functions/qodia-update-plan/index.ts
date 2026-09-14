@@ -255,7 +255,7 @@ Deno.serve(async (req) => {
       for (let i = 0; i < (contracts ?? []).length; i++) {
         const c: any = contracts![i];
         try {
-          results.push(await processContract(supabase, c.id, apiKey, productNames));
+          results.push(await processContract(supabase, c.id, apiKey));
         } catch (e) {
           results.push({ contract_id: c.id, status: "error", detail: String(e).slice(0, 300) });
         }
@@ -270,7 +270,7 @@ Deno.serve(async (req) => {
     if (!contractId || typeof contractId !== "string") {
       return json(400, { success: false, error: "contractId fehlt" });
     }
-    const result = await processContract(supabase, contractId, apiKey, productNames);
+    const result = await processContract(supabase, contractId, apiKey);
     return json(200, { success: true, ...result });
   } catch (err) {
     console.error("[qodia-update-plan] Unbekannter Fehler:", err);
