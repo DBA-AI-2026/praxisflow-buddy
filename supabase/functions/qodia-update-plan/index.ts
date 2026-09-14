@@ -223,18 +223,21 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const productNames = await qodiaProductNames(supabase);
 
     if (body?.mode === "backfill") {
       const dryRun = body?.dryRun !== false;
-      if (productNames.length === 0) {
-        return json(200, { success: true, mode: "backfill", dryRun, contracts: [] });
+      // Auswahlkriterium: Status aktiv UND vorhandener Qodia-Eintrag in
+      // contract_provider_status. Kein Produktname, kein ilike — Verträge mit
+      // mehreren Produkten in einem Textfeld selektieren sonst falsch herum.
+      const ids = await qodiaContractIds(supabase);
+      if (ids.length === 0) {
+        return json(200, { success: true, mode: "backfill", dryRun, count: 0, contracts: [] });
       }
       const { data: contracts, error } = await supabase
         .from("contracts")
         .select("id, hfx_customer_number, customer_name, product_name, email")
         .eq("status", "aktiv")
-        .in("product_name", productNames)
+        .in("id", ids)
         .order("hfx_customer_number", { ascending: true });
       if (error) throw error;
 
