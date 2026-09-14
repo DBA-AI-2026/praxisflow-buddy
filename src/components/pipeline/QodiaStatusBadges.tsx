@@ -25,6 +25,34 @@ export interface ProviderStatusRow {
   manual_set_by?: string | null;
   manual_set_at?: string | null;
   auto_overridden_at?: string | null;
+  /** Plan-Upgrade (Qodia Pro) — fester Wertesatz, siehe Edge Function qodia-update-plan. */
+  plan_upgrade_status?: "success" | "error" | "rate_limited" | "unreachable" | null;
+  plan_upgrade_error?: string | null;
+  plan_upgraded_at?: string | null;
+  plan_upgrade_attempted_at?: string | null;
+}
+
+const planCfg = {
+  success:      { label: "Plan Pro",        cls: "bg-success/10 text-success" },
+  error:        { label: "Plan-Fehler",     cls: "bg-destructive/10 text-destructive" },
+  rate_limited: { label: "Plan: Limit",     cls: "bg-warning/15 text-warning" },
+  unreachable:  { label: "Plan: kein Kontakt", cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400" },
+} as const;
+
+/** Pill für das Plan-Upgrade; ohne Versuch wird nichts gerendert. */
+export function QodiaPlanPill({ row }: { row?: ProviderStatusRow | null }) {
+  const st = row?.plan_upgrade_status;
+  if (!st || !(st in planCfg)) return null;
+  const cfg = planCfg[st];
+  return (
+    <Pill
+      label={cfg.label}
+      cls={cfg.cls}
+      title={st === "success"
+        ? `Plan-Upgrade erfolgreich${row?.plan_upgraded_at ? ` am ${format(new Date(row.plan_upgraded_at), "dd.MM.yy HH:mm", { locale: de })}` : ""}`
+        : row?.plan_upgrade_error || "Plan-Upgrade fehlgeschlagen"}
+    />
+  );
 }
 
 const syncCfg = {
@@ -130,6 +158,7 @@ export function QodiaStatusCell({ row }: { row?: ProviderStatusRow | null }) {
           </TooltipTrigger>
           <TooltipContent>Registrierungsstatus bei Qodia</TooltipContent>
         </Tooltip>
+        <QodiaPlanPill row={row} />
       </div>
     </TooltipProvider>
   );
@@ -281,6 +310,20 @@ export function QodiaDetailBlock({ row }: { row?: ProviderStatusRow | null }) {
 
         <dt className="text-muted-foreground">Rechnungen aktueller Monat</dt>
         <dd className="text-foreground font-medium">{row.submitted_invoice_count_current_month}</dd>
+
+        <dt className="text-muted-foreground">Plan-Upgrade</dt>
+        <dd className={row.plan_upgrade_status && row.plan_upgrade_status !== "success" ? "text-destructive" : "text-foreground"}>
+          {row.plan_upgrade_status
+            ? `${planCfg[row.plan_upgrade_status].label} (Versuch: ${fmt(row.plan_upgrade_attempted_at ?? null)}${row.plan_upgraded_at ? `, erfolgreich: ${fmt(row.plan_upgraded_at)}` : ""})`
+            : "kein Versuch"}
+        </dd>
+
+        {row.plan_upgrade_error && (
+          <>
+            <dt className="text-destructive">Plan-Fehlermeldung</dt>
+            <dd className="text-destructive break-all">{row.plan_upgrade_error}</dd>
+          </>
+        )}
 
         <dt className="text-muted-foreground">Letzter Sync</dt>
         <dd className="text-foreground">{fmt(row.last_sync_at)}</dd>
