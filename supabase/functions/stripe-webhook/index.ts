@@ -17,6 +17,28 @@ const corsHeaders = {
 const log = (step: string, details?: unknown) =>
   console.log(`[stripe-webhook] ${step}${details ? " – " + JSON.stringify(details) : ""}`);
 
+/**
+ * Qodia-Plan-Upgrade anstoßen — strikt fire-and-forget (kein await auf das
+ * Ergebnis). Ein Fehlschlag darf eine Aktivierung niemals blockieren; er wird
+ * in contract_provider_status.plan_upgrade_status festgehalten und ist dort
+ * im Dashboard sichtbar.
+ */
+const triggerQodiaPlanUpgrade = (contractId: string, origin: string) => {
+  try {
+    fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/qodia-update-plan`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify({ contractId }),
+    }).catch((e) => log("WARN: qodia-update-plan trigger failed", { origin, error: String(e) }));
+    log("qodia-update-plan triggered (fire-and-forget)", { contractId, origin });
+  } catch (e) {
+    log("WARN: could not trigger qodia-update-plan", { origin, error: String(e) });
+  }
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Idempotenz-Hilfsfunktionen
 //
@@ -602,6 +624,9 @@ async function handleDemoBooking(
     return;
   }
   log("demo_booking: contract created", contract.id);
+  // Auslösepunkt 2 von 5 (Demo-Buchung). Konto-Mail ist demo.email, dieselbe
+  // Adresse, unter der das Qodia-Konto angelegt wurde.
+  triggerQodiaPlanUpgrade(contract.id, "demo_booking");
 
   // Praxis-Eintrag (idempotent via name-Check)
   const { data: existingPraxis } = await supabase
@@ -740,6 +765,9 @@ async function handleContractActivation(
   }
 
   log("Contract activated via Stripe", contractId);
+
+  // Auslösepunkt 3 von 5.
+  triggerQodiaPlanUpgrade(contractId, "contract_activation");
 
   // ── customer_events: spiegele Status-Wechsel (Business-Event, additiv) ──
   // Quelle ist immer "eingegangen" → "aktiv" über diesen Flow. Fire-and-forget.
@@ -921,6 +949,9 @@ async function handleSepaMandateSetup(
     } else if (activatedRows && activatedRows.length > 0) {
       carrierJustActivated = true;
       log("Contract activated after SEPA mandate", { contractId, prev: existing.status });
+
+      // Auslösepunkt 4 von 5.
+      triggerQodiaPlanUpgrade(contractId, "sepa_mandate_activation");
 
       // ── AGB-Zustimmung revisionssicher schreiben (Träger-only) ───────────────
       // Gate: carrierJustActivated ist exactly-once → keine Dublette bei Re-Delivery.
@@ -1152,6 +1183,8 @@ async function handleSepaMandateSetup(
               } catch (e) {
                 log("WARN: could not trigger qodia-status-sync (sweep)", String(e));
               }
+              // Auslösepunkt 5 von 5 (Standort aus dem Geschwister-Sweep).
+              triggerQodiaPlanUpgrade(locId, "sibling_sweep");
             }
           }
         } else {
