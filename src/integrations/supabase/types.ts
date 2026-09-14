@@ -449,6 +449,10 @@ export type Database = {
           manual_set_at: string | null
           manual_set_by: string | null
           metadata: Json
+          plan_upgrade_attempted_at: string | null
+          plan_upgrade_error: string | null
+          plan_upgrade_status: string | null
+          plan_upgraded_at: string | null
           provider: string
           registration_status: Database["public"]["Enums"]["provider_registration_status"]
           submitted_invoice_count_current_month: number
@@ -470,6 +474,10 @@ export type Database = {
           manual_set_at?: string | null
           manual_set_by?: string | null
           metadata?: Json
+          plan_upgrade_attempted_at?: string | null
+          plan_upgrade_error?: string | null
+          plan_upgrade_status?: string | null
+          plan_upgraded_at?: string | null
           provider: string
           registration_status?: Database["public"]["Enums"]["provider_registration_status"]
           submitted_invoice_count_current_month?: number
@@ -491,6 +499,10 @@ export type Database = {
           manual_set_at?: string | null
           manual_set_by?: string | null
           metadata?: Json
+          plan_upgrade_attempted_at?: string | null
+          plan_upgrade_error?: string | null
+          plan_upgrade_status?: string | null
+          plan_upgraded_at?: string | null
           provider?: string
           registration_status?: Database["public"]["Enums"]["provider_registration_status"]
           submitted_invoice_count_current_month?: number
