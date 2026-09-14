@@ -25,6 +25,8 @@ import { useToast } from "@/hooks/use-toast";
 import type { KundenPhase } from "@/components/kunden/KundenDialog";
 import { LEAD_STATUS_TOOLTIPS, CONTRACT_STATUS_TOOLTIPS } from "@/lib/statusGlossary";
 import { isStandortHfx } from "@/lib/multiLocation";
+import { useProviderStatusMap } from "@/hooks/useProviderStatus";
+import type { ProviderStatusRow } from "@/components/pipeline/QodiaStatusBadges";
 
 export type KundenDialogInput =
   | { type: "hfx"; hfxNumber: string; forcePhase?: KundenPhase }
@@ -160,6 +162,7 @@ export interface UseKundenDialogDataResult {
   lead: LeadRow | null;
   customer: CustomerRow | null;
   contracts: ContractRow[];
+  qodiaStatusMap: Record<string, ProviderStatusRow>;
   cases: CaseRow[];
   events: EventRow[];
   ssot: "lead" | "customer";
@@ -371,6 +374,16 @@ export function useKundenDialogData(
       }
       return [] as ContractRow[];
     },
+  });
+
+  const dialogContractIds = useMemo(
+    () => (contractsQ.data ?? []).map((contract) => contract.id),
+    [contractsQ.data],
+  );
+  const { data: qodiaStatusMap = {} } = useProviderStatusMap({
+    contractIds: dialogContractIds,
+    provider: "qodia",
+    enabled,
   });
 
   /* ---- Schritt 4: Vorgänge (cases) laden ---- */
@@ -703,6 +716,7 @@ export function useKundenDialogData(
     lead: leadQ.data ?? null,
     customer: customerQ.data ?? null,
     contracts: contractsQ.data ?? [],
+    qodiaStatusMap,
     cases: casesQ.data ?? [],
     events: eventsQ.data ?? [],
     ssot,

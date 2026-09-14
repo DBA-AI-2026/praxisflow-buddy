@@ -1432,8 +1432,8 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
   const { data: qodiaFlags = {} } = useProductProviderFlags("qodia");
   const { data: honorarplusFlags = {} } = useProductProviderFlags("honorarplus");
   const qodiaContractIds = useMemo(
-    () => teamContracts.filter((c: any) => qodiaFlags[c.product_name]).map((c: any) => c.id),
-    [teamContracts, qodiaFlags],
+    () => teamContracts.map((c: any) => c.id),
+    [teamContracts],
   );
   const honorarplusContractIds = useMemo(
     () => teamContracts.filter((c: any) => honorarplusFlags[c.product_name]).map((c: any) => c.id),
@@ -1567,9 +1567,6 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
               const praxisLabel = c.praxis || c.customer_name || "–";
               const arztLabel = [c.vorname, c.nachname].filter(Boolean).join(" ");
               const sc = kundenStatusCfg[c.status] ?? kundenStatusCfg.aktiv;
-              const usesQodia = !!qodiaFlags[c.product_name];
-              const qodiaRow: ProviderStatusRow | null = usesQodia ? (qodiaStatusMap[c.id] ?? null) : null;
-
               // Build per-product onboarding inputs covering ALL products this customer has,
               // so Mix-contracts (GOÄ + EBM) show two rows per cell.
               const customerProductRows = c.customer_id ? (customerContractsMap[c.customer_id] ?? []) : [];
@@ -1577,9 +1574,9 @@ function KundenTab({ search, highlightId, matchesTeamFilter }: { search: string;
                 ? customerProductRows.map((row: any) => ({ id: row.id, product_name: row.product_name }))
                 : [{ id: c.id, product_name: c.product_name }];
               const onboardingProducts: ProductOnboardingInput[] = baseList
-                .filter((row: any) => qodiaFlags[row.product_name] || honorarplusFlags[row.product_name])
+                .filter((row: any) => qodiaStatusMap[row.id] || qodiaFlags[row.product_name] || honorarplusFlags[row.product_name])
                 .map((row: any) => {
-                  const provider = qodiaFlags[row.product_name] ? "qodia" : "honorarplus";
+                  const provider = qodiaStatusMap[row.id] || qodiaFlags[row.product_name] ? "qodia" : "honorarplus";
                   const status = provider === "qodia"
                     ? (qodiaStatusMap[row.id] ?? null)
                     : (honorarplusStatusMap[row.id] ?? null);

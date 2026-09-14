@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
 import type { ProviderStatusRow } from "@/components/pipeline/QodiaStatusBadges";
+import { QodiaPlanPill } from "@/components/pipeline/QodiaStatusBadges";
 import type { ActivityThresholds } from "@/hooks/useAppSettings";
 
 export type OnboardingStage = "offen" | "in_einrichtung" | "einsatzbereit" | "fehler";
@@ -228,18 +229,24 @@ export function OnboardingCell({
   return (
     <div className="flex flex-col gap-0.5 items-start">
       {products.map((p, i) => (
-        <OnboardingBadge
-          key={i}
-          productLabel={p.productLabel}
-          status={p.status}
-          manualSetByName={manualSetByName}
-          contractCreatedAt={p.contractCreatedAt}
-          showMarkReady={showMarkReady && p.provider === "honorarplus"}
-          contractId={p.contractId}
-          provider={p.provider}
-          customerLabel={p.customerLabel ?? customerLabel}
-          onMarkReady={onMarkReady}
-        />
+        <div key={i} className="flex flex-col items-start gap-0.5">
+          <OnboardingBadge
+            productLabel={p.productLabel}
+            status={p.status}
+            manualSetByName={manualSetByName}
+            contractCreatedAt={p.contractCreatedAt}
+            showMarkReady={showMarkReady && p.provider === "honorarplus"}
+            contractId={p.contractId}
+            provider={p.provider}
+            customerLabel={p.customerLabel ?? customerLabel}
+            onMarkReady={onMarkReady}
+          />
+          {p.provider === "qodia" && (
+            <div className="pl-8">
+              <QodiaPlanPill row={p.status} />
+            </div>
+          )}
+        </div>
       ))}
     </div>
   );
