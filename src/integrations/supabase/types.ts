@@ -575,6 +575,10 @@ export type Database = {
           paper_contract_pdf_path: string | null
           parent_contract_id: string | null
           payment_interval: string
+          plan_upgrade_attempted_at: string | null
+          plan_upgrade_error: string | null
+          plan_upgrade_status: string | null
+          plan_upgraded_at: string | null
           plz: string | null
           praxis: string | null
           praxisanschrift: string | null
@@ -659,6 +663,10 @@ export type Database = {
           paper_contract_pdf_path?: string | null
           parent_contract_id?: string | null
           payment_interval?: string
+          plan_upgrade_attempted_at?: string | null
+          plan_upgrade_error?: string | null
+          plan_upgrade_status?: string | null
+          plan_upgraded_at?: string | null
           plz?: string | null
           praxis?: string | null
           praxisanschrift?: string | null
@@ -743,6 +751,10 @@ export type Database = {
           paper_contract_pdf_path?: string | null
           parent_contract_id?: string | null
           payment_interval?: string
+          plan_upgrade_attempted_at?: string | null
+          plan_upgrade_error?: string | null
+          plan_upgrade_status?: string | null
+          plan_upgraded_at?: string | null
           plz?: string | null
           praxis?: string | null
           praxisanschrift?: string | null
