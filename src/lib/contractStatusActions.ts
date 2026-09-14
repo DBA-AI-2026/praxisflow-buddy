@@ -70,6 +70,19 @@ export async function changeContractStatus(
   const { error } = await supabase.from("contracts").update(updateData).eq("id", contractId);
   if (error) return { success: false, error: error.message };
 
+  // 2a) Qodia-Plan-Upgrade — Auslösepunkt 1 von 5, bewusst fire-and-forget:
+  // ein Fehlschlag darf die Aktivierung NIE blockieren. Das Ergebnis landet in
+  // contract_provider_status.plan_upgrade_status und ist im Dashboard sichtbar.
+  if (newStatus === "aktiv") {
+    try {
+      supabase.functions
+        .invoke("qodia-update-plan", { body: { contractId } })
+        .catch((e) => console.warn("[contractStatusActions] qodia-update-plan failed", String(e)));
+    } catch (e) {
+      console.warn("[contractStatusActions] qodia-update-plan raised", String(e));
+    }
+  }
+
   // 2b) Multi-Standort Self-Heal auf customers (idempotent, NULL-only):
   //  - stripe_customer_id: damit Standorte das geteilte Mandat finden
   //  - base_fee_contract_id: erster aktivierter Vertrag wird Träger der Grundgebühr

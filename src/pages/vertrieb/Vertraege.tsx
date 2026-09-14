@@ -441,6 +441,7 @@ export default function Vertraege() {
   const [resendingConfirmationId, setResendingConfirmationId] = useState<string | null>(null);
   const [syncingQodiaId, setSyncingQodiaId] = useState<string | null>(null);
   const [sendingStandortCredsId, setSendingStandortCredsId] = useState<string | null>(null);
+  const [planUpgradeId, setPlanUpgradeId] = useState<string | null>(null);
   const [leadTippgeberName, setLeadTippgeberName] = useState<string | null>(null);
   const [deleteContractTarget, setDeleteContractTarget] = useState<any | null>(null);
   const { user, profile } = useAuth();
@@ -455,6 +456,36 @@ export default function Vertraege() {
   const { teamFilter, setTeamFilter, matchesTeamFilter, teamFilterOptions, showTeamFilter } = useRegionalTeam();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  /**
+   * Qodia-Plan-Upgrade manuell auslösen. Bewusst immer klickbar (auch nach
+   * Erfolg): der Aufruf ist idempotent und es gibt keinen Retry im Server.
+   */
+  const triggerPlanUpgrade = async (contract: any) => {
+    setPlanUpgradeId(contract.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("qodia-update-plan", {
+        body: { contractId: contract.id },
+      });
+      if (error) throw error;
+      if (data?.skipped) {
+        toast({ title: "Übersprungen", description: `Kein Qodia-Produkt (${data.skipped}).` });
+      } else if (data?.status === "success") {
+        toast({ title: "Plan-Upgrade erfolgreich", description: `${contract.hfx_customer_number || contract.customer_name} ist auf Pro gesetzt.` });
+      } else {
+        toast({
+          title: `Plan-Upgrade: ${data?.status ?? "Fehler"}`,
+          description: data?.detail || data?.error || "Unbekannter Fehler",
+          variant: "destructive",
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["provider-status-map"] });
+    } catch (err: any) {
+      toast({ title: "Fehler", description: err.message || "Unbekannter Fehler", variant: "destructive" });
+    } finally {
+      setPlanUpgradeId(null);
+    }
+  };
 
   const syncLeadQodia = async (contract: any) => {
     if (!contract.hfx_customer_number) {
@@ -2912,6 +2943,22 @@ export default function Vertraege() {
                                   <CheckCircle className="h-4 w-4 mr-2 text-warning" />
                                 )}
                                 Bei Qodia registrieren
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {isAdmin && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => triggerPlanUpgrade(c)}
+                                disabled={planUpgradeId === c.id}
+                              >
+                                {planUpgradeId === c.id ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <GitMerge className="h-4 w-4 mr-2 text-primary" />
+                                )}
+                                Qodia-Plan-Upgrade auslösen
                               </DropdownMenuItem>
                             </>
                           )}
