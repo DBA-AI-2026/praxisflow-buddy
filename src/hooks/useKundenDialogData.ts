@@ -716,6 +716,7 @@ export function useKundenDialogData(
     lead: leadQ.data ?? null,
     customer: customerQ.data ?? null,
     contracts: contractsQ.data ?? [],
+    qodiaStatusMap,
     cases: casesQ.data ?? [],
     events: eventsQ.data ?? [],
     ssot,
