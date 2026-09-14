@@ -146,20 +146,21 @@ async function persist(
   }
 }
 
-async function qodiaProductNames(supabase: ReturnType<typeof createClient>): Promise<string[]> {
-  const { data, error } = await supabase.from("products").select("name, provider_flags");
+/** Contract-IDs mit vorhandenem Qodia-Provider-Eintrag (SSOT statt Produktname). */
+async function qodiaContractIds(supabase: ReturnType<typeof createClient>): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("contract_provider_status")
+    .select("contract_id")
+    .eq("provider", PROVIDER);
   if (error) throw error;
-  return (data ?? [])
-    .filter((p: any) => p.provider_flags && p.provider_flags[PROVIDER])
-    .map((p: any) => p.name as string);
+  return (data ?? []).map((r: any) => r.contract_id as string);
 }
 
-/** Führt einen Vertrag aus: prüft Produkt/E-Mail, ruft Qodia, schreibt Status. */
+/** Führt einen Vertrag aus: prüft E-Mail, ruft Qodia, schreibt Status. */
 async function processContract(
   supabase: ReturnType<typeof createClient>,
   contractId: string,
   apiKey: string,
-  productNames: string[],
 ): Promise<Record<string, unknown>> {
   const { data: contract, error } = await supabase
     .from("contracts")
@@ -169,9 +170,6 @@ async function processContract(
   if (error) throw error;
   if (!contract) return { contract_id: contractId, skipped: "contract_not_found" };
 
-  if (!productNames.includes((contract as any).product_name)) {
-    return { contract_id: contractId, skipped: "not_a_qodia_product" };
-  }
 
   const email = ((contract as any).email ?? "").trim();
   if (!email) {
@@ -225,18 +223,21 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const productNames = await qodiaProductNames(supabase);
 
     if (body?.mode === "backfill") {
       const dryRun = body?.dryRun !== false;
-      if (productNames.length === 0) {
-        return json(200, { success: true, mode: "backfill", dryRun, contracts: [] });
+      // Auswahlkriterium: Status aktiv UND vorhandener Qodia-Eintrag in
+      // contract_provider_status. Kein Produktname, kein ilike — Verträge mit
+      // mehreren Produkten in einem Textfeld selektieren sonst falsch herum.
+      const ids = await qodiaContractIds(supabase);
+      if (ids.length === 0) {
+        return json(200, { success: true, mode: "backfill", dryRun, count: 0, contracts: [] });
       }
       const { data: contracts, error } = await supabase
         .from("contracts")
         .select("id, hfx_customer_number, customer_name, product_name, email")
         .eq("status", "aktiv")
-        .in("product_name", productNames)
+        .in("id", ids)
         .order("hfx_customer_number", { ascending: true });
       if (error) throw error;
 
@@ -254,7 +255,7 @@ Deno.serve(async (req) => {
       for (let i = 0; i < (contracts ?? []).length; i++) {
         const c: any = contracts![i];
         try {
-          results.push(await processContract(supabase, c.id, apiKey, productNames));
+          results.push(await processContract(supabase, c.id, apiKey));
         } catch (e) {
           results.push({ contract_id: c.id, status: "error", detail: String(e).slice(0, 300) });
         }
@@ -269,7 +270,7 @@ Deno.serve(async (req) => {
     if (!contractId || typeof contractId !== "string") {
       return json(400, { success: false, error: "contractId fehlt" });
     }
-    const result = await processContract(supabase, contractId, apiKey, productNames);
+    const result = await processContract(supabase, contractId, apiKey);
     return json(200, { success: true, ...result });
   } catch (err) {
     console.error("[qodia-update-plan] Unbekannter Fehler:", err);
