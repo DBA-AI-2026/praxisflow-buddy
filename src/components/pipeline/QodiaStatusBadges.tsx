@@ -39,18 +39,27 @@ const planCfg = {
   unreachable:  { label: "Plan: kein Kontakt", cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400" },
 } as const;
 
-/** Pill für das Plan-Upgrade; ohne Versuch wird nichts gerendert. */
+/** Nur fehlgeschlagene oder unvollständige Versuche sind anzeigepflichtig. */
+export function hasPlanUpgradeProblem(row?: ProviderStatusRow | null): boolean {
+  if (!row) return false;
+  if (row.plan_upgrade_status === "error" || row.plan_upgrade_status === "rate_limited" || row.plan_upgrade_status === "unreachable") {
+    return true;
+  }
+  return !!row.plan_upgrade_attempted_at && !row.plan_upgraded_at;
+}
+
+/** Pill für problematische Plan-Upgrades; erfolgreiche Versuche bleiben unsichtbar. */
 export function QodiaPlanPill({ row }: { row?: ProviderStatusRow | null }) {
+  if (!hasPlanUpgradeProblem(row)) return null;
   const st = row?.plan_upgrade_status;
-  if (!st || !(st in planCfg)) return null;
-  const cfg = planCfg[st];
+  const cfg = st && st in planCfg
+    ? planCfg[st]
+    : { label: "Plan: unvollständig", cls: "bg-warning/15 text-warning" };
   return (
     <Pill
       label={cfg.label}
       cls={cfg.cls}
-      title={st === "success"
-        ? `Plan-Upgrade erfolgreich${row?.plan_upgraded_at ? ` am ${format(new Date(row.plan_upgraded_at), "dd.MM.yy HH:mm", { locale: de })}` : ""}`
-        : row?.plan_upgrade_error || "Plan-Upgrade fehlgeschlagen"}
+      title={row?.plan_upgrade_error || "Plan-Upgrade ohne bestätigten Erfolg"}
     />
   );
 }
@@ -270,7 +279,8 @@ export function QodiaWarningIcon({ row, contractStatus }: {
 }
 
 /** Detail block for contract-detail dialog */
-export function QodiaDetailBlock({ row }: { row?: ProviderStatusRow | null }) {
+export function QodiaDetailBlock({ row, planProblemsOnly = false }: { row?: ProviderStatusRow | null; planProblemsOnly?: boolean }) {
+  if (planProblemsOnly && !hasPlanUpgradeProblem(row)) return null;
   if (!row) {
     return (
       <div className="rounded-md border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
@@ -284,6 +294,25 @@ export function QodiaDetailBlock({ row }: { row?: ProviderStatusRow | null }) {
 
   const fmt = (v: string | null) =>
     v ? format(new Date(v), "dd.MM.yyyy HH:mm", { locale: de }) : "–";
+
+  if (planProblemsOnly) {
+    return (
+      <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold text-destructive">Qodia-Plan-Upgrade fehlgeschlagen</h3>
+          <QodiaPlanPill row={row} />
+        </div>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+          <dt className="text-muted-foreground">Versuchszeitpunkt</dt>
+          <dd className="text-foreground">{fmt(row.plan_upgrade_attempted_at ?? null)}</dd>
+          <dt className="text-muted-foreground">Erfolgszeitpunkt</dt>
+          <dd className="text-foreground">{fmt(row.plan_upgraded_at ?? null)}</dd>
+          <dt className="text-destructive">Rohfehlermeldung</dt>
+          <dd className="text-destructive break-all">{row.plan_upgrade_error || "Kein bestätigter Erfolg"}</dd>
+        </dl>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-md border border-border bg-card p-4 space-y-3">

@@ -108,6 +108,7 @@ import {
   createContractCase,
   CASE_TYPE_LABELS,
 } from "@/lib/contractCaseActions";
+import { QodiaDetailBlock, hasPlanUpgradeProblem } from "@/components/pipeline/QodiaStatusBadges";
 
 interface VertragTabProps {
   data: UseKundenDialogDataResult;
@@ -231,7 +232,15 @@ export function VertragTab({ data, onSwitchToTab }: VertragTabProps) {
       {hasContracts &&
         sorted.map((c) => {
           const isFinal = FINAL_STATUSES.includes((c.status ?? "").toLowerCase());
-          return <ContractCard key={c.id} contract={c} dimmed={isFinal} customer={customer} />;
+          return (
+            <ContractCard
+              key={c.id}
+              contract={c}
+              dimmed={isFinal}
+              customer={customer}
+              qodiaStatus={data.qodiaStatusMap[c.id]}
+            />
+          );
         })}
 
       <AddLocationButton customer={customer} contracts={contracts} />
@@ -626,10 +635,12 @@ function ContractCard({
   contract,
   dimmed,
   customer,
+  qodiaStatus,
 }: {
   contract: ContractRow;
   dimmed?: boolean;
   customer?: UseKundenDialogDataResult["customer"];
+  qodiaStatus?: UseKundenDialogDataResult["qodiaStatusMap"][string];
 }) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -756,6 +767,10 @@ function ContractCard({
         <Field label="Laufzeit" value={laufzeit} />
         <Field label="Start" value={start} />
       </div>
+
+      {hasPlanUpgradeProblem(qodiaStatus) && (
+        <QodiaDetailBlock row={qodiaStatus} planProblemsOnly />
+      )}
 
       <div className="flex flex-wrap gap-2 pt-1">
         <Button
