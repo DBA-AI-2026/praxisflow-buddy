@@ -206,7 +206,13 @@ Deno.serve(async (req) => {
   const internal = authHeader === `Bearer ${serviceKey}`;
 
   if (!internal) {
-    const guard = await requireActiveRole(req, ["admin"], corsHeaders);
+    // Admin-Button ist admin-only; die Aktivierungspfade laufen aber auch unter
+    // vertragsabteilung/sales_lead — sonst würde ein Upgrade dort still 403en.
+    const guard = await requireActiveRole(
+      req,
+      ["admin", "vertragsabteilung", "sales_lead"],
+      corsHeaders,
+    );
     if (guard instanceof Response) return guard;
   }
 
