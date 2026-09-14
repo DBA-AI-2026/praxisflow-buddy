@@ -146,20 +146,21 @@ async function persist(
   }
 }
 
-async function qodiaProductNames(supabase: ReturnType<typeof createClient>): Promise<string[]> {
-  const { data, error } = await supabase.from("products").select("name, provider_flags");
+/** Contract-IDs mit vorhandenem Qodia-Provider-Eintrag (SSOT statt Produktname). */
+async function qodiaContractIds(supabase: ReturnType<typeof createClient>): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("contract_provider_status")
+    .select("contract_id")
+    .eq("provider", PROVIDER);
   if (error) throw error;
-  return (data ?? [])
-    .filter((p: any) => p.provider_flags && p.provider_flags[PROVIDER])
-    .map((p: any) => p.name as string);
+  return (data ?? []).map((r: any) => r.contract_id as string);
 }
 
-/** Führt einen Vertrag aus: prüft Produkt/E-Mail, ruft Qodia, schreibt Status. */
+/** Führt einen Vertrag aus: prüft E-Mail, ruft Qodia, schreibt Status. */
 async function processContract(
   supabase: ReturnType<typeof createClient>,
   contractId: string,
   apiKey: string,
-  productNames: string[],
 ): Promise<Record<string, unknown>> {
   const { data: contract, error } = await supabase
     .from("contracts")
@@ -169,9 +170,6 @@ async function processContract(
   if (error) throw error;
   if (!contract) return { contract_id: contractId, skipped: "contract_not_found" };
 
-  if (!productNames.includes((contract as any).product_name)) {
-    return { contract_id: contractId, skipped: "not_a_qodia_product" };
-  }
 
   const email = ((contract as any).email ?? "").trim();
   if (!email) {
