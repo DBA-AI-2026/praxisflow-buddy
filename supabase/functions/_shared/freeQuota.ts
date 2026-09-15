@@ -8,6 +8,17 @@
 // SYNCHRONISATION: Der Description-Prefix "Freikontingent-Abzug" ist
 // API-relevant (Retry-Pfad processFailedInvoiceRetry in auto-invoice erkennt
 // diesen Posten per description.startsWith(...) + unit_price < 0).
+//
+// SYNCHRONIZE mit der SQL-RPC public.admin_get_free_quota_overview:
+// Die Saldo-Formel max(0, grantsTotal - usageInvoicedPrior) existiert dort
+// ein zweites Mal in SQL. Aendert sich die Formel hier im Motor, MUSS sie
+// in der RPC mitgeaendert werden, sonst zeigt die UI eine andere Zahl als
+// die naechste Rechnung.
+// Wichtiger Unterschied: Der Motor filtert usageInvoicedPrior zusaetzlich auf
+// period_from < periodStart (Periodenbezug). Die RPC zeigt den LEBENSSALDO
+// ohne Periodenfilter - Absicht: sie beantwortet "wie viel ist insgesamt
+// frei", nicht "was passiert auf der naechsten Rechnung". pending_offen
+// weist die RPC getrennt aus und rechnet es NICHT in den Saldo.
 
 export interface RawUsageCharge {
   id: string;
