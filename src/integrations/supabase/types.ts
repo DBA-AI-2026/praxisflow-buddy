@@ -609,6 +609,7 @@ export type Database = {
           telefon: string | null
           tippgeber_id: string | null
           updated_at: string
+          vermittler_id: string | null
           vertrieb_signature_data: string | null
           vorname: string | null
           weitere_bsnr: string | null
@@ -693,6 +694,7 @@ export type Database = {
           telefon?: string | null
           tippgeber_id?: string | null
           updated_at?: string
+          vermittler_id?: string | null
           vertrieb_signature_data?: string | null
           vorname?: string | null
           weitere_bsnr?: string | null
@@ -777,6 +779,7 @@ export type Database = {
           telefon?: string | null
           tippgeber_id?: string | null
           updated_at?: string
+          vermittler_id?: string | null
           vertrieb_signature_data?: string | null
           vorname?: string | null
           weitere_bsnr?: string | null
@@ -1714,6 +1717,7 @@ export type Database = {
           status: string
           tippgeber_id: string | null
           updated_at: string
+          vermittler_id: string | null
           vorname: string
         }
         Insert: {
@@ -1754,6 +1758,7 @@ export type Database = {
           status?: string
           tippgeber_id?: string | null
           updated_at?: string
+          vermittler_id?: string | null
           vorname: string
         }
         Update: {
@@ -1794,6 +1799,7 @@ export type Database = {
           status?: string
           tippgeber_id?: string | null
           updated_at?: string
+          vermittler_id?: string | null
           vorname?: string
         }
         Relationships: []
