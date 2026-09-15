@@ -231,6 +231,39 @@ export function FreiKontingentCard({ hfxNumber }: { hfxNumber: string | null }) 
             <span className="font-medium text-foreground">{data.pending_offen}</span>{" "}
             — nicht in „Frei verbleibend" enthalten.
           </div>
+
+          {data.historie.length > 0 && (
+            <Collapsible>
+              <CollapsibleTrigger className="group flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground">
+                <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+                Historie ({data.historie.length})
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="mt-1.5 max-h-48 overflow-y-auto divide-y rounded-md border bg-background">
+                  {data.historie.map((h, i) => (
+                    <div key={i} className="px-2 py-1.5 text-[11px] space-y-0.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-foreground">
+                          {h.menge} · {grantTypeLabel(h.grant_type)}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {h.created_at
+                            ? new Date(h.created_at).toLocaleDateString("de-DE")
+                            : "—"}
+                        </span>
+                      </div>
+                      <div className="text-muted-foreground">
+                        {h.quelle?.trim() ? h.quelle : "—"}
+                      </div>
+                      <div className="text-muted-foreground">
+                        Vergeber: {creatorLabel(h.created_by, creatorNames)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </>
       ) : null}
 
