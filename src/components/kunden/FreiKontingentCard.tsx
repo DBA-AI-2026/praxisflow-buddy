@@ -80,6 +80,24 @@ const GRANT_TYPES: { value: string; label: string }[] = [
   { value: "standort", label: "Standort" },
 ];
 
+/**
+ * Klartext-Label aus DERSELBEN Konstante wie das Vergabe-Formular.
+ * Rohwerte ausserhalb von GRANT_TYPES (z. B. 'trial' aus den automatischen
+ * Grants) werden unveraendert angezeigt — kein Fallback, kein Ausblenden.
+ */
+function grantTypeLabel(value: string): string {
+  return GRANT_TYPES.find((g) => g.value === value)?.label ?? value;
+}
+
+/** NULL → System/Migration; UUID ohne profiles-Treffer → gekuerzte UUID. */
+function creatorLabel(
+  createdBy: string | null,
+  names: Record<string, string> | undefined,
+): string {
+  if (!createdBy) return "System/Migration";
+  return names?.[createdBy] ?? `${createdBy.slice(0, 8)}…`;
+}
+
 export function FreiKontingentCard({ hfxNumber }: { hfxNumber: string | null }) {
   const { isAdmin } = useUserRole();
   const { toast } = useToast();
