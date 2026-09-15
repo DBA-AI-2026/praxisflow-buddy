@@ -18,7 +18,12 @@
  */
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Gift, Loader2, AlertTriangle } from "lucide-react";
+import { Gift, Loader2, AlertTriangle, ChevronDown } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,11 +57,20 @@ import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
 import { isStandortHfx } from "@/lib/multiLocation";
 
+interface GrantEntry {
+  menge: number;
+  grant_type: string;
+  quelle: string | null;
+  created_at: string | null;
+  created_by: string | null;
+}
+
 interface QuotaOverview {
   grants_total: number;
   usage_invoiced: number;
   saldo: number;
   pending_offen: number;
+  historie: GrantEntry[];
 }
 
 const GRANT_TYPES: { value: string; label: string }[] = [
@@ -65,6 +79,24 @@ const GRANT_TYPES: { value: string; label: string }[] = [
   { value: "kulanz", label: "Kulanz" },
   { value: "standort", label: "Standort" },
 ];
+
+/**
+ * Klartext-Label aus DERSELBEN Konstante wie das Vergabe-Formular.
+ * Rohwerte ausserhalb von GRANT_TYPES (z. B. 'trial' aus den automatischen
+ * Grants) werden unveraendert angezeigt — kein Fallback, kein Ausblenden.
+ */
+function grantTypeLabel(value: string): string {
+  return GRANT_TYPES.find((g) => g.value === value)?.label ?? value;
+}
+
+/** NULL → System/Migration; UUID ohne profiles-Treffer → gekuerzte UUID. */
+function creatorLabel(
+  createdBy: string | null,
+  names: Record<string, string> | undefined,
+): string {
+  if (!createdBy) return "System/Migration";
+  return names?.[createdBy] ?? `${createdBy.slice(0, 8)}…`;
+}
 
 export function FreiKontingentCard({ hfxNumber }: { hfxNumber: string | null }) {
   const { isAdmin } = useUserRole();
@@ -88,14 +120,49 @@ export function FreiKontingentCard({ hfxNumber }: { hfxNumber: string | null }) 
       });
       if (error) throw error;
       const o = (data ?? {}) as any;
+      const rawHistorie: any[] = Array.isArray(o.historie) ? o.historie : [];
       return {
         grants_total: Number(o.grants_total ?? 0),
         usage_invoiced: Number(o.usage_invoiced ?? 0),
         saldo: Number(o.saldo ?? 0),
         pending_offen: Number(o.pending_offen ?? 0),
+        historie: rawHistorie
+          .map((h) => ({
+            menge: Number(h?.menge ?? 0),
+            grant_type: String(h?.grant_type ?? ""),
+            quelle: h?.quelle ?? null,
+            created_at: h?.created_at ?? null,
+            created_by: h?.created_by ?? null,
+          }))
+          .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? "")),
       };
     },
   });
+
+  // Vergeber-Namen: profiles-Batch nach dem Muster aus PraxenJourney.tsx Z. 574.
+  // Rein additiv — schlägt die Abfrage fehl, bleibt die Historie sichtbar,
+  // nur ohne Namen (leere Map).
+  const creatorIds = Array.from(
+    new Set((data?.historie ?? []).map((h) => h.created_by).filter((id): id is string => !!id)),
+  );
+  const { data: creatorNames } = useQuery({
+    queryKey: ["free-quota-creators", creatorIds.slice().sort().join(",")],
+    enabled: isAdmin && creatorIds.length > 0,
+    queryFn: async (): Promise<Record<string, string>> => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", creatorIds);
+      if (error) {
+        console.warn("FreiKontingentCard: Vergeber-Namen nicht auflösbar", error);
+        return {};
+      }
+      const map: Record<string, string> = {};
+      for (const p of data ?? []) if (p.full_name) map[p.user_id] = p.full_name;
+      return map;
+    },
+  });
+
 
   if (!isAdmin || !hfxNumber) return null;
 
@@ -182,6 +249,39 @@ export function FreiKontingentCard({ hfxNumber }: { hfxNumber: string | null }) 
             <span className="font-medium text-foreground">{data.pending_offen}</span>{" "}
             — nicht in „Frei verbleibend" enthalten.
           </div>
+
+          {data.historie.length > 0 && (
+            <Collapsible>
+              <CollapsibleTrigger className="group flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground">
+                <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+                Historie ({data.historie.length})
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="mt-1.5 max-h-48 overflow-y-auto divide-y rounded-md border bg-background">
+                  {data.historie.map((h, i) => (
+                    <div key={i} className="px-2 py-1.5 text-[11px] space-y-0.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-foreground">
+                          {h.menge} · {grantTypeLabel(h.grant_type)}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {h.created_at
+                            ? new Date(h.created_at).toLocaleDateString("de-DE")
+                            : "—"}
+                        </span>
+                      </div>
+                      <div className="text-muted-foreground">
+                        {h.quelle?.trim() ? h.quelle : "—"}
+                      </div>
+                      <div className="text-muted-foreground">
+                        Vergeber: {creatorLabel(h.created_by, creatorNames)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </>
       ) : null}
 
