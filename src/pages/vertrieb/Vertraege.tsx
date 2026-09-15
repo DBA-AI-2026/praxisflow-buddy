@@ -562,6 +562,10 @@ export default function Vertraege() {
   const location = useLocation();
   // Also store lead_id for back-linking
   const [fromLeadId, setFromLeadId] = useState<string | null>(null);
+  // Vermittlung aus dem Lead: rein erfassend, set-once-at-creation im Vertrag.
+  // NICHT "betreut durch" (sales_partner_id) und NICHT tippgeber_id.
+  const [leadVermittlerId, setLeadVermittlerId] = useState<string | null>(null);
+
   const [sendingBuchungsmail, setSendingBuchungsmail] = useState<string | null>(null);
   const [autoOpenContractId, setAutoOpenContractId] = useState<string | null>(null);
   const [kundenDialogHfx, setKundenDialogHfx] = useState<string | null>(null);
