@@ -448,14 +448,18 @@ Deno.serve(async (req) => {
             }
 
           // ── Duplikat-Check: Robuste Prüfung über billing_period_month ──
-          const { data: existing } = await supabase
+          // A: Stornierte Rechnungen blockieren ihren Monat NICHT mehr. Der
+          // Partial-Unique-Index (… WHERE billing_period_month IS NOT NULL AND
+          // status <> 'storniert') spiegelt exakt diese Bedingung.
+          const { data: existingRows } = await supabase
             .from("invoices")
             .select("id")
             .eq("contract_id", contract.id)
             .eq("billing_period_month", periodMonthStr)
-            .maybeSingle();
+            .or("status.is.null,status.neq.storniert")
+            .limit(1);
 
-          if (existing) {
+          if (existingRows && existingRows.length > 0) {
             console.log(`[auto-invoice] Invoice already exists for contract ${contract.id} in ${periodMonthStr}, skipping.`);
             skipped++;
             continue;
