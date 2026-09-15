@@ -772,6 +772,9 @@ function ContractCard({
         <QodiaDetailBlock row={qodiaStatus} planProblemsOnly />
       )}
 
+      {/* Auftrag #21 P2 — admin-only, HFX des Vertrags (keine Träger-Umleitung). */}
+      <FreiKontingentCard hfxNumber={contract.hfx_customer_number ?? null} />
+
       <div className="flex flex-wrap gap-2 pt-1">
         <Button
           variant="outline"
