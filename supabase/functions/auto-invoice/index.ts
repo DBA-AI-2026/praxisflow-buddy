@@ -450,7 +450,12 @@ Deno.serve(async (req) => {
           // ── Duplikat-Check: Robuste Prüfung über billing_period_month ──
           // A: Stornierte Rechnungen blockieren ihren Monat NICHT mehr. Der
           // Partial-Unique-Index (… WHERE billing_period_month IS NOT NULL AND
-          // status <> 'storniert') spiegelt exakt diese Bedingung.
+          // status IS DISTINCT FROM 'storniert') spiegelt exakt diese Bedingung.
+          // Der .or("status.is.null,status.neq.storniert")-Zweig ist nötig, weil
+          // .neq() dem SQL-Operator <> entspricht und Zeilen mit status NULL
+          // nicht trifft – der Index aber NULL-Zeilen enthält, was beim Insert
+          // zu einem 23505-Konflikt führen würde.
+
           const { data: existingRows } = await supabase
             .from("invoices")
             .select("id")
