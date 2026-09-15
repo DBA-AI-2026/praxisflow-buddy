@@ -527,6 +527,8 @@ Deno.serve(async (req) => {
         interested_products: rawBody.interested_products || [],
         assigned_to: assignedTo,
         tippgeber_id: rawBody.tippgeber_id || null,
+        vermittler_id: vermittlerId,
+
         source: leadSource,
         assignment_source: assignmentSource,
       })
