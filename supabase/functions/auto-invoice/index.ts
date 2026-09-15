@@ -528,8 +528,17 @@ Deno.serve(async (req) => {
           if (isInWaiverPeriod) {
             console.log(`[auto-invoice] Waiver aktiv für Vertrag ${contract.id} (bis ${contract.base_fee_waived_until}) – alle Positionen 0 €`);
           }
-          const waiverHint = isInWaiverPeriod ? ` (Einführungsaktion – ausgesetzt bis ${waiverUntilFormatted})` : "";
-          const priceOrZero = (v: number) => (isInWaiverPeriod ? 0 : v);
+          // C: Abrechnungsmonate VOR dem Vertragsbeginn-Monat tragen keine
+          // Grundgebühr (und keine grundgebührartigen Monatspositionen).
+          const isPreContractStart = !!contractStartMonth && periodMonthStr < contractStartMonth;
+          if (isPreContractStart) {
+            console.log(`[auto-invoice] Vormonat ${periodMonthStr} liegt vor Vertragsbeginn ${contractStartMonth} (Vertrag ${contract.id}) – Grundgebühr entfällt`);
+          }
+          const noBaseFee = isInWaiverPeriod || isPreContractStart;
+          const preStartHint = isPreContractStart ? ` (vor Vertragsbeginn – keine Grundgebühr)` : "";
+          const waiverHint = (isInWaiverPeriod ? ` (Einführungsaktion – ausgesetzt bis ${waiverUntilFormatted})` : "") + preStartHint;
+          const priceOrZero = (v: number) => (noBaseFee ? 0 : v);
+
 
           // Build invoice positions
           const taxRate = 19;
