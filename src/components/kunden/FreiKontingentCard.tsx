@@ -14,8 +14,10 @@
  * „offen, noch nicht fakturiert" wird getrennt ausgewiesen und NICHT in
  * „frei verbleibend" eingerechnet — der Rechnungsmotor zählt nur invoiced.
  *
- * Die Historie kommt aus dem `historie`-Feld der Lese-RPC; die Vergeber-Namen
- * werden über einen Batch-Lookup auf `profiles` aufgelöst.
+ * Die Historie kommt aus dem `historie`-Feld derselben Lese-RPC, kein zweiter
+ * Abruf; die Vergeber-Namen werden über einen profiles-Batch im Frontend
+ * aufgelöst (created_by NULL → „System/Migration", UUID ohne Treffer →
+ * gekürzte UUID).
  */
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
