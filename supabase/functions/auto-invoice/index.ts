@@ -322,10 +322,14 @@ Deno.serve(async (req) => {
           }
         }
         const contractStartMonth = String(contract.start_date || "").slice(0, 7);
+        // B: Monate VOR Vertragsbeginn werden nicht mehr ausgeschlossen – vorhandener
+        // Verbrauch aus der Testphase muss abgerechnet (und gegen Freikontingent
+        // verrechnet) werden. Die Grundgebühr entfällt für diese Monate (siehe C).
         const monthsToBill = Array.from(candidateMonths)
-          .filter((m) => m <= regularPeriodMonthStr && m >= lookbackFloorStr && (!contractStartMonth || m >= contractStartMonth))
+          .filter((m) => m <= regularPeriodMonthStr && m >= lookbackFloorStr)
           .sort(); // CHRONOLOGISCH AUFSTEIGEND – nicht optional: sichert die korrekte
                    // Fortschreibung des Freikontingent-Saldos (.lt("period_from", periodStart)).
+
 
         if (monthsToBill.length > 1) {
           console.log(`[auto-invoice] Vertrag ${contract.id}: ${monthsToBill.length} abzurechnende Monate → ${monthsToBill.join(", ")}`);
