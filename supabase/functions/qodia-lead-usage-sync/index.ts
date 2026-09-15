@@ -11,13 +11,12 @@ const LOG = "[qodia-lead-usage-sync]";
 
 Deno.serve(async (req) => {
   try {
-    const authHeader = req.headers.get("Authorization") ?? "";
+    // Gate: nur gültiges x-cron-secret. KEIN anon-Key-Fallback (Härtung:
+    // der Authorization-Header der Cron-Jobs wird schlicht ignoriert).
     const cronSecret = req.headers.get("x-cron-secret") ?? "";
     const envCronSecret = Deno.env.get("CRON_SECRET_2") ?? "";
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const validCron = cronSecret !== "" && cronSecret === envCronSecret;
-    const validAnon = authHeader === `Bearer ${anonKey}`;
-    if (!validCron && !validAnon) {
+    if (!validCron) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { "Content-Type": "application/json" },
       });
