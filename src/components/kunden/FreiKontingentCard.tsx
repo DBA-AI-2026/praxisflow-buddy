@@ -102,14 +102,49 @@ export function FreiKontingentCard({ hfxNumber }: { hfxNumber: string | null }) 
       });
       if (error) throw error;
       const o = (data ?? {}) as any;
+      const rawHistorie: any[] = Array.isArray(o.historie) ? o.historie : [];
       return {
         grants_total: Number(o.grants_total ?? 0),
         usage_invoiced: Number(o.usage_invoiced ?? 0),
         saldo: Number(o.saldo ?? 0),
         pending_offen: Number(o.pending_offen ?? 0),
+        historie: rawHistorie
+          .map((h) => ({
+            menge: Number(h?.menge ?? 0),
+            grant_type: String(h?.grant_type ?? ""),
+            quelle: h?.quelle ?? null,
+            created_at: h?.created_at ?? null,
+            created_by: h?.created_by ?? null,
+          }))
+          .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? "")),
       };
     },
   });
+
+  // Vergeber-Namen: profiles-Batch nach dem Muster aus PraxenJourney.tsx Z. 574.
+  // Rein additiv — schlägt die Abfrage fehl, bleibt die Historie sichtbar,
+  // nur ohne Namen (leere Map).
+  const creatorIds = Array.from(
+    new Set((data?.historie ?? []).map((h) => h.created_by).filter((id): id is string => !!id)),
+  );
+  const { data: creatorNames } = useQuery({
+    queryKey: ["free-quota-creators", creatorIds.slice().sort().join(",")],
+    enabled: isAdmin && creatorIds.length > 0,
+    queryFn: async (): Promise<Record<string, string>> => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", creatorIds);
+      if (error) {
+        console.warn("FreiKontingentCard: Vergeber-Namen nicht auflösbar", error);
+        return {};
+      }
+      const map: Record<string, string> = {};
+      for (const p of data ?? []) if (p.full_name) map[p.user_id] = p.full_name;
+      return map;
+    },
+  });
+
 
   if (!isAdmin || !hfxNumber) return null;
 
