@@ -1147,6 +1147,10 @@ export default function Vertraege() {
         // schützt die spätere Bestandskorrektur vor stillem Reset auf den
         // aktuellen Produktwert.
         delete (restRecord as any).cancellation_period_months;
+        // Vermittlung ist set-once-at-creation und darf durch ein Bearbeiten-
+        // Speichern nie überschrieben werden.
+        delete (restRecord as any).vermittler_id;
+
         const { error } = await supabase.from("contracts").update(restRecord).eq("id", editId);
         if (error) throw error;
       } else {
