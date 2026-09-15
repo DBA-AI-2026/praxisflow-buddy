@@ -152,15 +152,30 @@ Deno.serve(async (req) => {
   // Validate cron secret for security (consistent with usage-sync: CRON_SECRET_2)
   // Removed validAnon fallback: the public anon key must never authorize a cron-style,
   // invoice-creating endpoint. Only x-cron-secret (CRON_SECRET_2) is accepted.
+  //
+  // ERGÄNZUNG (manueller Monatslauf aus der UI): Ein Aufruf mit { contract_id }
+  // sendet kein x-cron-secret. Für diesen Fall gilt zusätzlich eine verifizierte
+  // Admin-Rolle als Autorisierung (requireActiveRole, identisch zum
+  // { invoice_id }-Pfad). INVARIANTE: zugelassen sind AUSSCHLIESSLICH
+  // (a) gültiges x-cron-secret oder (b) verifizierte Admin-Rolle.
+  // KEIN anon-Key-Fallback, in keiner Form.
   const cronSecret = req.headers.get("x-cron-secret") ?? "";
   const expectedSecret = Deno.env.get("CRON_SECRET_2") ?? "";
   const validCron = cronSecret !== "" && cronSecret === expectedSecret;
-  if (!validCron) {
+
+  let adminVerified = false;
+  if (!validCron && body?.contract_id) {
+    const guard = await requireActiveRole(req, ["admin"], corsHeaders);
+    if (!(guard instanceof Response)) adminVerified = true;
+  }
+
+  if (!validCron && !adminVerified) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
