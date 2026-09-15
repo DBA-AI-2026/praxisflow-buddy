@@ -593,6 +593,9 @@ export default function Vertraege() {
         if (!lead) return;
         setFromLeadId(leadId);
         setLeadHfxNumber(lead.hfx_customer_number || null);
+        // B.3: Vermittlung mitführen (ID, nicht nur Name) — wird beim Vertrags-Insert geschrieben.
+        setLeadVermittlerId((lead as any).vermittler_id || null);
+
 
         // Resolve assigned sales partner name
         let partnerName = "";
