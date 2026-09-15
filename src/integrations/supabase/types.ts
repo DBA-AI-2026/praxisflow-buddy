@@ -2941,6 +2941,33 @@ export type Database = {
           praxis_name: string
         }[]
       }
+      admin_create_free_quota_grant: {
+        Args: {
+          p_grant_type: string
+          p_hfx_customer_number: string
+          p_menge: number
+          p_quelle: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          grant_type: string
+          hfx_customer_number: string
+          id: string
+          menge: number
+          quelle: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "free_quota_grants"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_get_free_quota_overview: {
+        Args: { p_hfx_customer_number: string }
+        Returns: Json
+      }
       apply_plz_reassignment: { Args: never; Returns: number }
       contract_uses_provider: {
         Args: { _contract_id: string; _provider: string }
