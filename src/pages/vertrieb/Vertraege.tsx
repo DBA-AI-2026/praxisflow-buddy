@@ -1947,7 +1947,10 @@ export default function Vertraege() {
         // Insert new contract as eingegangen
         const record: any = {
           customer_name: `${form.vorname} ${form.nachname}`.trim() || form.praxis || "Entwurf",
+          // Vermittlung aus dem Lead — set-once-at-creation (nur Insert-Zweig).
+          vermittler_id: leadVermittlerId,
           sales_partner_id: form.sales_partner_id || null,
+
           sales_partner_name: form.sales_partner_name || null,
           mp_nr: form.mp_nr || null,
           praxis: form.praxis || null,
