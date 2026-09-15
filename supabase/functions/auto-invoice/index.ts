@@ -631,12 +631,18 @@ Deno.serve(async (req) => {
                 unit_price: 0,
               });
             } else {
-              const baseNetAmount = isInWaiverPeriod ? 0 : contractMonthly;
+              const baseNetAmount = noBaseFee ? 0 : contractMonthly;
               if (baseNetAmount > 0) {
                 positions.push({
                   description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
                   quantity: contract.license_count || 1,
                   unit_price: baseNetAmount / (contract.license_count || 1),
+                });
+              } else if (isPreContractStart) {
+                positions.push({
+                  description: `Grundgebühr ${contract.product_name} – ${billingPeriod} (vor Vertragsbeginn – keine Grundgebühr)`,
+                  quantity: contract.license_count || 1,
+                  unit_price: 0,
                 });
               } else if (isInWaiverPeriod) {
                 positions.push({
