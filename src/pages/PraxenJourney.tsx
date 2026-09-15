@@ -438,6 +438,43 @@ const CLOSED_LEAD_STATUSES = ["kein_abschluss", "abgelehnt", "dublette"];
 type LeadSourceFilter = "alle" | "homepage" | "manuell" | "reservierung";
 type LeadStatusFilter = "aktiv" | "kein_abschluss" | "abgelehnt" | "dublette" | "alle" | "qualifiziert";
 
+type LeadRowTone = "red" | "yellow" | "green" | null;
+
+/**
+ * Row urgency tone — subtle left border + bg tint for attention items.
+ *
+ * Liegt eine sichtbare Aktivitäts-Ampel vor (displayedLeadAmpel), gewinnt sie:
+ * rot/gelb färben die Zeile, grün und grau lassen nur noch die
+ * qualifiziert-Regel zu. Das Lead-Alter wird dann NICHT mehr ausgewertet.
+ * Grund für Grau: die Schwellen sind über lead_activity_thresholds
+ * admin-konfigurierbar. Steht Gelb auf 30 Tagen, ist ein 20 Tage alter Lead
+ * grau ("noch nichts zu erwarten") — ein Altersrand ab 14 Tagen würde der
+ * Zelle direkt widersprechen. Nur ohne Ampel (null) gilt das Altersverhalten.
+ *
+ * SSOT für Zeilenfarbe UND Standardsortierung des Interessenten-Tabs —
+ * getRowUrgency und sorted konsumieren beide diese Funktion, nie
+ * getrennt nachrechnen.
+ *
+ * Zwei Zeitquellen, bewusst: ampelNow ist die Mount-Uhr und identisch mit
+ * der Uhr der Aktivitäts-Zelle; now ist die Live-Uhr und identisch mit der
+ * Uhr von attentionMetrics und dem Deep-Link-Filter. Beide Paare müssen
+ * synchron bleiben — nicht eigenmächtig vereinheitlichen.
+ */
+function leadRowTone(lead: any, thresholds: any, ampelNow: Date, now: Date): LeadRowTone {
+  if (CLOSED_LEAD_STATUSES.includes(lead.status)) return null;
+  const qualifiziertTone: LeadRowTone = lead.status === "qualifiziert" ? "green" : null;
+  const ampel = displayedLeadAmpel(lead, thresholds, ampelNow)?.color;
+  if (ampel) {
+    if (ampel === "red") return "red";
+    if (ampel === "yellow") return "yellow";
+    return qualifiziertTone;
+  }
+  const tier = leadOverdueTier(lead, now);
+  if (tier === "critical") return "red";
+  if (tier === "warning") return "yellow";
+  return qualifiziertTone;
+}
+
 function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, initialFilter, deepLinkLeadId, onClearDeepLink }: { search: string; highlightId?: string; teamFilter: string; matchesTeamFilter: (id?: string | null) => boolean; initialFilter?: string; deepLinkLeadId?: string; onClearDeepLink?: () => void }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -639,7 +676,7 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     );
   });
 
-  // Sort by priority: qualifiziert first, then by age (oldest first for attention)
+  // Standardsortierung: Rang aus leadRowTone (rot → gelb → grün → ruhig → geschlossen), innerhalb eines Rangs jüngste zuerst. Reihenfolge und Zeilenfarbe stammen aus derselben Funktion.
   const sorted = useMemo(() => {
     if (inactiveFilter) {
       // Rot vor Gelb; innerhalb gleicher Farbe älteste last_usage_at zuerst, NULL ans Ende
@@ -656,12 +693,24 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       });
     }
+    const now = new Date();
+    const toneRank = (l: any) => {
+      if (CLOSED_LEAD_STATUSES.includes(l.status)) return 4;
+      const tone = leadRowTone(l, leadThresholds, ampelNow, now);
+      if (tone === "red") return 0;
+      if (tone === "yellow") return 1;
+      if (tone === "green") return 2;
+      return 3;
+    };
     return [...filtered].sort((a, b) => {
-      const pa = (leadStatusCfg[a.status]?.priority ?? 99);
-      const pb = (leadStatusCfg[b.status]?.priority ?? 99);
-      if (pa !== pb) return pa - pb;
-      // Within same status, older first (needs attention sooner)
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      const ra = toneRank(a), rb = toneRank(b);
+      if (ra !== rb) return ra - rb;
+      if (ra === 4) {
+        const pa = (leadStatusCfg[a.status]?.priority ?? 99);
+        const pb = (leadStatusCfg[b.status]?.priority ?? 99);
+        if (pa !== pb) return pa - pb;
+      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   }, [filtered, inactiveFilter, leadThresholds, ampelNow]);
 
@@ -727,30 +776,13 @@ function InteressentenTab({ search, highlightId, teamFilter, matchesTeamFilter, 
     }
   };
 
-  /**
-   * Row urgency class — subtle left border + bg tint for attention items.
-   *
-   * Liegt eine sichtbare Aktivitäts-Ampel vor (displayedLeadAmpel), gewinnt sie:
-   * rot/gelb färben die Zeile, grün und grau lassen nur noch die
-   * qualifiziert-Regel zu. Das Lead-Alter wird dann NICHT mehr ausgewertet.
-   * Grund für Grau: die Schwellen sind über lead_activity_thresholds
-   * admin-konfigurierbar. Steht Gelb auf 30 Tagen, ist ein 20 Tage alter Lead
-   * grau ("noch nichts zu erwarten") — ein Altersrand ab 14 Tagen würde der
-   * Zelle direkt widersprechen. Nur ohne Ampel (null) gilt das Altersverhalten.
-   */
+  // Reine Abbildung von leadRowTone auf die Zeilenklassen — siehe leadRowTone (SSOT).
   const getRowUrgency = (lead: any) => {
-    if (CLOSED_LEAD_STATUSES.includes(lead.status)) return "";
-    const qualifiziertCls = lead.status === "qualifiziert" ? "border-l-2 border-l-success bg-success/[0.02]" : "";
-    const ampel = displayedLeadAmpel(lead, leadThresholds, ampelNow)?.color;
-    if (ampel) {
-      if (ampel === "red") return "border-l-2 border-l-destructive bg-destructive/[0.03]";
-      if (ampel === "yellow") return "border-l-2 border-l-warning bg-warning/[0.03]";
-      return qualifiziertCls;
-    }
-    const tier = leadOverdueTier(lead, new Date());
-    if (tier === "critical") return "border-l-2 border-l-destructive bg-destructive/[0.03]";
-    if (tier === "warning") return "border-l-2 border-l-warning bg-warning/[0.03]";
-    return qualifiziertCls;
+    const tone = leadRowTone(lead, leadThresholds, ampelNow, new Date());
+    if (tone === "red") return "border-l-2 border-l-destructive bg-destructive/[0.03]";
+    if (tone === "yellow") return "border-l-2 border-l-warning bg-warning/[0.03]";
+    if (tone === "green") return "border-l-2 border-l-success bg-success/[0.02]";
+    return "";
   };
 
   return (
