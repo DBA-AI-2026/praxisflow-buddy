@@ -109,6 +109,7 @@ import {
   CASE_TYPE_LABELS,
 } from "@/lib/contractCaseActions";
 import { QodiaDetailBlock, hasPlanUpgradeProblem } from "@/components/pipeline/QodiaStatusBadges";
+import { FreiKontingentCard } from "@/components/kunden/FreiKontingentCard";
 
 interface VertragTabProps {
   data: UseKundenDialogDataResult;
