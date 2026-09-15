@@ -562,6 +562,10 @@ export default function Vertraege() {
   const location = useLocation();
   // Also store lead_id for back-linking
   const [fromLeadId, setFromLeadId] = useState<string | null>(null);
+  // Vermittlung aus dem Lead: rein erfassend, set-once-at-creation im Vertrag.
+  // NICHT "betreut durch" (sales_partner_id) und NICHT tippgeber_id.
+  const [leadVermittlerId, setLeadVermittlerId] = useState<string | null>(null);
+
   const [sendingBuchungsmail, setSendingBuchungsmail] = useState<string | null>(null);
   const [autoOpenContractId, setAutoOpenContractId] = useState<string | null>(null);
   const [kundenDialogHfx, setKundenDialogHfx] = useState<string | null>(null);
@@ -589,6 +593,9 @@ export default function Vertraege() {
         if (!lead) return;
         setFromLeadId(leadId);
         setLeadHfxNumber(lead.hfx_customer_number || null);
+        // B.3: Vermittlung mitführen (ID, nicht nur Name) — wird beim Vertrags-Insert geschrieben.
+        setLeadVermittlerId((lead as any).vermittler_id || null);
+
 
         // Resolve assigned sales partner name
         let partnerName = "";
@@ -1018,7 +1025,10 @@ export default function Vertraege() {
 
       const record = {
         customer_name: `${data.vorname} ${data.nachname}`.trim() || data.praxis || "Entwurf",
+        // Vermittlung aus dem Lead — set-once-at-creation, im Update-Zweig entfernt.
+        vermittler_id: leadVermittlerId,
         sales_partner_id: data.sales_partner_id || null,
+
         sales_partner_name: data.sales_partner_name || null,
         mp_nr: data.mp_nr || null,
         praxis: data.praxis || null,
@@ -1137,6 +1147,10 @@ export default function Vertraege() {
         // schützt die spätere Bestandskorrektur vor stillem Reset auf den
         // aktuellen Produktwert.
         delete (restRecord as any).cancellation_period_months;
+        // Vermittlung ist set-once-at-creation und darf durch ein Bearbeiten-
+        // Speichern nie überschrieben werden.
+        delete (restRecord as any).vermittler_id;
+
         const { error } = await supabase.from("contracts").update(restRecord).eq("id", editId);
         if (error) throw error;
       } else {
@@ -1933,7 +1947,10 @@ export default function Vertraege() {
         // Insert new contract as eingegangen
         const record: any = {
           customer_name: `${form.vorname} ${form.nachname}`.trim() || form.praxis || "Entwurf",
+          // Vermittlung aus dem Lead — set-once-at-creation (nur Insert-Zweig).
+          vermittler_id: leadVermittlerId,
           sales_partner_id: form.sales_partner_id || null,
+
           sales_partner_name: form.sales_partner_name || null,
           mp_nr: form.mp_nr || null,
           praxis: form.praxis || null,
