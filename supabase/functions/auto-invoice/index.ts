@@ -322,10 +322,14 @@ Deno.serve(async (req) => {
           }
         }
         const contractStartMonth = String(contract.start_date || "").slice(0, 7);
+        // B: Monate VOR Vertragsbeginn werden nicht mehr ausgeschlossen – vorhandener
+        // Verbrauch aus der Testphase muss abgerechnet (und gegen Freikontingent
+        // verrechnet) werden. Die Grundgebühr entfällt für diese Monate (siehe C).
         const monthsToBill = Array.from(candidateMonths)
-          .filter((m) => m <= regularPeriodMonthStr && m >= lookbackFloorStr && (!contractStartMonth || m >= contractStartMonth))
+          .filter((m) => m <= regularPeriodMonthStr && m >= lookbackFloorStr)
           .sort(); // CHRONOLOGISCH AUFSTEIGEND – nicht optional: sichert die korrekte
                    // Fortschreibung des Freikontingent-Saldos (.lt("period_from", periodStart)).
+
 
         if (monthsToBill.length > 1) {
           console.log(`[auto-invoice] Vertrag ${contract.id}: ${monthsToBill.length} abzurechnende Monate → ${monthsToBill.join(", ")}`);
@@ -444,14 +448,18 @@ Deno.serve(async (req) => {
             }
 
           // ── Duplikat-Check: Robuste Prüfung über billing_period_month ──
-          const { data: existing } = await supabase
+          // A: Stornierte Rechnungen blockieren ihren Monat NICHT mehr. Der
+          // Partial-Unique-Index (… WHERE billing_period_month IS NOT NULL AND
+          // status <> 'storniert') spiegelt exakt diese Bedingung.
+          const { data: existingRows } = await supabase
             .from("invoices")
             .select("id")
             .eq("contract_id", contract.id)
             .eq("billing_period_month", periodMonthStr)
-            .maybeSingle();
+            .or("status.is.null,status.neq.storniert")
+            .limit(1);
 
-          if (existing) {
+          if (existingRows && existingRows.length > 0) {
             console.log(`[auto-invoice] Invoice already exists for contract ${contract.id} in ${periodMonthStr}, skipping.`);
             skipped++;
             continue;
@@ -520,8 +528,17 @@ Deno.serve(async (req) => {
           if (isInWaiverPeriod) {
             console.log(`[auto-invoice] Waiver aktiv für Vertrag ${contract.id} (bis ${contract.base_fee_waived_until}) – alle Positionen 0 €`);
           }
-          const waiverHint = isInWaiverPeriod ? ` (Einführungsaktion – ausgesetzt bis ${waiverUntilFormatted})` : "";
-          const priceOrZero = (v: number) => (isInWaiverPeriod ? 0 : v);
+          // C: Abrechnungsmonate VOR dem Vertragsbeginn-Monat tragen keine
+          // Grundgebühr (und keine grundgebührartigen Monatspositionen).
+          const isPreContractStart = !!contractStartMonth && periodMonthStr < contractStartMonth;
+          if (isPreContractStart) {
+            console.log(`[auto-invoice] Vormonat ${periodMonthStr} liegt vor Vertragsbeginn ${contractStartMonth} (Vertrag ${contract.id}) – Grundgebühr entfällt`);
+          }
+          const noBaseFee = isInWaiverPeriod || isPreContractStart;
+          const preStartHint = isPreContractStart ? ` (vor Vertragsbeginn – keine Grundgebühr)` : "";
+          const waiverHint = (isInWaiverPeriod ? ` (Einführungsaktion – ausgesetzt bis ${waiverUntilFormatted})` : "") + preStartHint;
+          const priceOrZero = (v: number) => (noBaseFee ? 0 : v);
+
 
           // Build invoice positions
           const taxRate = 19;
@@ -614,12 +631,18 @@ Deno.serve(async (req) => {
                 unit_price: 0,
               });
             } else {
-              const baseNetAmount = isInWaiverPeriod ? 0 : contractMonthly;
+              const baseNetAmount = noBaseFee ? 0 : contractMonthly;
               if (baseNetAmount > 0) {
                 positions.push({
                   description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
                   quantity: contract.license_count || 1,
                   unit_price: baseNetAmount / (contract.license_count || 1),
+                });
+              } else if (isPreContractStart) {
+                positions.push({
+                  description: `Grundgebühr ${contract.product_name} – ${billingPeriod} (vor Vertragsbeginn – keine Grundgebühr)`,
+                  quantity: contract.license_count || 1,
+                  unit_price: 0,
                 });
               } else if (isInWaiverPeriod) {
                 positions.push({
