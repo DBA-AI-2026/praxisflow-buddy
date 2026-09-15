@@ -1,5 +1,5 @@
 /**
- * FreiKontingentCard — Auftrag #21 P2.
+ * FreiKontingentCard — Auftrag #21 P2 + P3.
  *
  * Admin-only Anzeige des Freikontingent-Saldos je Vertrag plus manuelle
  * Vergabe über die SECURITY-DEFINER-RPCs aus P1:
@@ -14,7 +14,8 @@
  * „offen, noch nicht fakturiert" wird getrennt ausgewiesen und NICHT in
  * „frei verbleibend" eingerechnet — der Rechnungsmotor zählt nur invoiced.
  *
- * Nicht in P2: Historie, created_by, Namensauflösung (→ P3).
+ * Die Historie kommt aus dem `historie`-Feld der Lese-RPC; die Vergeber-Namen
+ * werden über einen Batch-Lookup auf `profiles` aufgelöst.
  */
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
