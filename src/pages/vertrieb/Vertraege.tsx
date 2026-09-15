@@ -1025,7 +1025,10 @@ export default function Vertraege() {
 
       const record = {
         customer_name: `${data.vorname} ${data.nachname}`.trim() || data.praxis || "Entwurf",
+        // Vermittlung aus dem Lead — set-once-at-creation, im Update-Zweig entfernt.
+        vermittler_id: leadVermittlerId,
         sales_partner_id: data.sales_partner_id || null,
+
         sales_partner_name: data.sales_partner_name || null,
         mp_nr: data.mp_nr || null,
         praxis: data.praxis || null,
