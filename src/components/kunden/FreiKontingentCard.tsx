@@ -57,11 +57,20 @@ import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
 import { isStandortHfx } from "@/lib/multiLocation";
 
+interface GrantEntry {
+  menge: number;
+  grant_type: string;
+  quelle: string | null;
+  created_at: string | null;
+  created_by: string | null;
+}
+
 interface QuotaOverview {
   grants_total: number;
   usage_invoiced: number;
   saldo: number;
   pending_offen: number;
+  historie: GrantEntry[];
 }
 
 const GRANT_TYPES: { value: string; label: string }[] = [
