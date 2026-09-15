@@ -1058,11 +1058,15 @@ export default function Buchhaltung() {
             <Select value={billingContractId} onValueChange={setBillingContractId}>
               <SelectTrigger><SelectValue placeholder="Vertrag wählen..." /></SelectTrigger>
               <SelectContent>
-                {activeContracts.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.customer_name} ({c.hfx_customer_number}) – {c.product_name}
-                  </SelectItem>
-                ))}
+                {activeContracts.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">Keine aktiven Verträge gefunden.</div>
+                ) : (
+                  activeContracts.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.customer_name} ({c.hfx_customer_number}) – {c.product_name}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -1174,7 +1178,7 @@ export default function Buchhaltung() {
             <Receipt className="h-4 w-4 mr-2" />Zwischenabrechnung jetzt
           </Button>
         )}
-        <Button variant="outline" size="sm" onClick={() => setBillingDialogOpen(true)}>
+        <Button variant="outline" size="sm" onClick={() => { loadActiveContracts(); setBillingDialogOpen(true); }}>
           <Receipt className="h-4 w-4 mr-2" />Abrechnung auslösen
         </Button>
       </div>
