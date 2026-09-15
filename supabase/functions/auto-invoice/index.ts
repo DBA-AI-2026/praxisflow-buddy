@@ -1127,7 +1127,11 @@ Deno.serve(async (req) => {
             // ROLLBACK: Diesen Block sowie `attachments` im send() entfernen → alter Stand.
             let invoiceAttachments: { filename: string; content: string }[] = [];
             try {
-              const pdfBase64 = await renderInvoicePdfBase64(invoice as any);
+              // notes: null beim Renderer – das notes-Feld ist eine interne Spur (Abrechnungsmetadata,
+              // Waiver-Gründe, Stripe-Fehlerspuren) und gehört NICHT in den kundenseitigen PDF-Beleg.
+              // Der Datenbank-Eintrag bleibt unberührt; nur die Render-Sicht wird gekappt.
+              // ROLLBACK: `{ ...invoice, notes: null }` → `invoice` (aber: notes erscheint dann wieder im PDF).
+              const pdfBase64 = await renderInvoicePdfBase64({ ...invoice, notes: null } as any);
               invoiceAttachments = [{ filename: `Rechnung-${invoice.invoice_number}.pdf`, content: pdfBase64 }];
             } catch (pdfErr) {
               console.error(`[auto-invoice] PDF-Anhang fehlgeschlagen für Contract ${contract.id} (Invoice ${invoice.invoice_number}) – Mail wird ohne Anhang gesendet:`, String(pdfErr));
