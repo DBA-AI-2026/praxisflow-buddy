@@ -3205,8 +3205,20 @@ export default function Vertraege() {
                        <Lightbulb className="h-3.5 w-3.5 text-warning" />
                        Tippgeber
                      </Label>
-                     <div className="mt-1.5 flex items-center gap-2 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm">
-                       <span className="font-medium text-foreground">{leadTippgeberName}</span>
+                      <div className="mt-1.5 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium text-foreground">{leadTippgeberName}</span>
+                          {leadTippgeberFromFallback && (
+                            <Badge variant="outline" className="border-warning/40 bg-warning/10 text-warning">
+                              nicht zugeordnet – keine Provision
+                            </Badge>
+                          )}
+                        </div>
+                        {leadTippgeberFromFallback && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Name über E-Mail oder Praxisname vermutet, nicht über die Tippgeber-Zuordnung des Interessenten. Der Vertrag wird ohne Tippgeber gespeichert.
+                          </p>
+                        )}
                      </div>
                    </div>
                  )}
