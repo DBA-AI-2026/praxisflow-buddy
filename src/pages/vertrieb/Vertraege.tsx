@@ -565,6 +565,10 @@ export default function Vertraege() {
   // Vermittlung aus dem Lead: rein erfassend, set-once-at-creation im Vertrag.
   // NICHT "betreut durch" (sales_partner_id) und NICHT tippgeber_id.
   const [leadVermittlerId, setLeadVermittlerId] = useState<string | null>(null);
+  // Tippgeber aus dem Lead: ausschließlich aus lead.tippgeber_id, set-once-at-creation.
+  // Der tipp_leads-Namensfallback setzt diese ID bewusst NICHT (Vermutung, geldrelevant).
+  const [leadTippgeberId, setLeadTippgeberId] = useState<string | null>(null);
+  const [leadTippgeberFromFallback, setLeadTippgeberFromFallback] = useState(false);
 
   const [sendingBuchungsmail, setSendingBuchungsmail] = useState<string | null>(null);
   const [autoOpenContractId, setAutoOpenContractId] = useState<string | null>(null);
@@ -609,7 +613,7 @@ export default function Vertraege() {
         }
 
         // Resolve tippgeber name
-        const tippgeberId = lead.tippgeber_id;
+        const tippgeberId = (lead as any).tippgeber_id;
         if (tippgeberId) {
           const { data: tippProfile } = await supabase
             .from("profiles")
@@ -617,6 +621,9 @@ export default function Vertraege() {
             .eq("user_id", tippgeberId)
             .maybeSingle();
           setLeadTippgeberName(tippProfile?.full_name || null);
+          // Nur die echte lead.tippgeber_id wird in den Vertrag durchgereicht.
+          setLeadTippgeberId(tippgeberId);
+          setLeadTippgeberFromFallback(false);
         } else {
           // Check tipp_leads table for match
           const { data: tippMatch } = await supabase
@@ -624,6 +631,9 @@ export default function Vertraege() {
             .select("created_by")
             .or(`email.eq.${lead.email},praxis_name.eq.${lead.praxis_name}`)
             .limit(1);
+          // Fallback-Treffer sind eine Vermutung (E-Mail/Praxisname) — es wird
+          // bewusst KEINE ID in das provisionsrelevante Feld abgeleitet.
+          setLeadTippgeberId(null);
           if (tippMatch && tippMatch.length > 0) {
             const { data: tippProfile } = await supabase
               .from("profiles")
@@ -631,8 +641,10 @@ export default function Vertraege() {
               .eq("user_id", tippMatch[0].created_by)
               .maybeSingle();
             setLeadTippgeberName(tippProfile?.full_name || null);
+            setLeadTippgeberFromFallback(!!tippProfile?.full_name);
           } else {
             setLeadTippgeberName(null);
+            setLeadTippgeberFromFallback(false);
           }
         }
 
@@ -1027,6 +1039,9 @@ export default function Vertraege() {
         customer_name: `${data.vorname} ${data.nachname}`.trim() || data.praxis || "Entwurf",
         // Vermittlung aus dem Lead — set-once-at-creation, im Update-Zweig entfernt.
         vermittler_id: leadVermittlerId,
+        // Tippgeber aus dem Lead (nur echte lead.tippgeber_id, kein tipp_leads-Fallback)
+        // — set-once-at-creation, im Update-Zweig entfernt.
+        tippgeber_id: leadTippgeberId,
         sales_partner_id: data.sales_partner_id || null,
 
         sales_partner_name: data.sales_partner_name || null,
@@ -1150,6 +1165,8 @@ export default function Vertraege() {
         // Vermittlung ist set-once-at-creation und darf durch ein Bearbeiten-
         // Speichern nie überschrieben werden.
         delete (restRecord as any).vermittler_id;
+        // Tippgeber ist ebenfalls set-once-at-creation (provisionsrelevant).
+        delete (restRecord as any).tippgeber_id;
 
         const { error } = await supabase.from("contracts").update(restRecord).eq("id", editId);
         if (error) throw error;
@@ -1555,6 +1572,8 @@ export default function Vertraege() {
     setLocationContext(null);
     setForceCreateDuplicate(false);
     setLeadTippgeberName(null);
+    setLeadTippgeberId(null);
+    setLeadTippgeberFromFallback(false);
     setFromLeadId(null);
     setForm(emptyForm);
     setFile(null);
@@ -1949,6 +1968,8 @@ export default function Vertraege() {
           customer_name: `${form.vorname} ${form.nachname}`.trim() || form.praxis || "Entwurf",
           // Vermittlung aus dem Lead — set-once-at-creation (nur Insert-Zweig).
           vermittler_id: leadVermittlerId,
+          // Tippgeber aus dem Lead (nur echte lead.tippgeber_id) — set-once-at-creation.
+          tippgeber_id: leadTippgeberId,
           sales_partner_id: form.sales_partner_id || null,
 
           sales_partner_name: form.sales_partner_name || null,
