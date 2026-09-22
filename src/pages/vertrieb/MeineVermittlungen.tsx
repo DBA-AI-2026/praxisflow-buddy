@@ -79,15 +79,8 @@ export default function MeineVermittlungen() {
   }, []);
 
   return (
-    <MainLayout>
+    <MainLayout title="Meine Vermittlungen" subtitle="Interessenten, die Sie vermittelt haben.">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Meine Vermittlungen</h1>
-          <p className="text-sm text-muted-foreground">
-            Interessenten, die Sie vermittelt haben.
-          </p>
-        </div>
-
         <Card>
           <CardContent className="p-0">
             {loading ? (
