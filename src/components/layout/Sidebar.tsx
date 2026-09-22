@@ -57,6 +57,7 @@ const operativNav: NavItem[] = [
   { name: "Provisionen", href: "/vertrieb/provisionen", icon: BarChart3 },
   { name: "Umsätze", href: "/umsaetze", icon: TrendingUp },
   { name: "Tipp-Leads", href: "/tipp-leads", icon: Lightbulb },
+  { name: "Meine Vermittlungen", href: "/meine-vermittlungen", icon: Users },
 ];
 
 // ─── BLOCK 2: Vertriebssteuerung ──────────────────────────────────────────────

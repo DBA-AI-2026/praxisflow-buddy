@@ -44,6 +44,9 @@ export const routePermissions: RoutePermission[] = [
   { path: "/vertrieb/vertraege", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
   { path: "/vertrieb/provisionen", allowedRoles: ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] },
 
+  // Meine Vermittlungen – ausschließlich Vertriebspartner (Daten nur über get_my_referred_leads)
+  { path: "/meine-vermittlungen", allowedRoles: ["sales_partner"] },
+
   // Rechnungen - Admin only
   { path: "/rechnungen", allowedRoles: ["admin"] },
 
