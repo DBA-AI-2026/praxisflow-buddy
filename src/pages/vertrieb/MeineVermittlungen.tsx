@@ -11,7 +11,9 @@
  */
 import { useEffect, useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { supabase } from "@/integrations/supabase/client";
+// Invariante: App-Code nutzt ausschließlich den authentifizierten Client,
+// damit die RPC `auth.uid()` sieht. @/integrations/supabase/client nur für öffentliche Aufrufe.
+import { supabase } from "@/lib/supabaseClient";
 import { LEAD_STATUS_CONFIG, type LeadStatus } from "@/lib/statusConfig";
 import {
   Table,
