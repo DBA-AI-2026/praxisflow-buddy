@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Sales partners can view own referred leads" ON public.leads;
