@@ -559,6 +559,14 @@ Deno.serve(async (req) => {
           const waiverHint = (isInWaiverPeriod ? ` (Einführungsaktion – ausgesetzt bis ${waiverUntilFormatted})` : "") + preStartHint;
           const priceOrZero = (v: number) => (noBaseFee ? 0 : v);
 
+          // [REVIEW REQUIRED] Grundgebühr-Basis auf Funktionsebene (vorher nur im else-Zweig
+          // der Positionsbildung deklariert → ReferenceError in Provisions- und FiBu-Block).
+          // Standort-GOÄ und Waiver/Vormonat tragen keine Grundgebühr; im EBM-Pfad entspricht
+          // die Summe durch die Korrekturposition ebenfalls contract.monthly_price.
+          // ROLLBACK: diese Zeile entfernen und in Z. ~654 wieder lokal deklarieren.
+          const baseNetAmount = (isLocationGoae || noBaseFee) ? 0 : contractMonthly;
+
+
 
           // Build invoice positions
           const taxRate = 19;
@@ -651,7 +659,7 @@ Deno.serve(async (req) => {
                 unit_price: 0,
               });
             } else {
-              const baseNetAmount = noBaseFee ? 0 : contractMonthly;
+              // baseNetAmount ist jetzt auf Funktionsebene deklariert (Z. ~561).
               if (baseNetAmount > 0) {
                 positions.push({
                   description: `Grundgebühr ${contract.product_name} – ${billingPeriod}`,
@@ -1109,6 +1117,13 @@ Deno.serve(async (req) => {
 
           const nowTs = new Date().toISOString();
 
+          // [REVIEW REQUIRED] Funktionsebene statt Zweig-Scope (Verhalten vor 0ee90c74):
+          // `sendResult` hält das Ergebnis des Mailversands, `emailTo` den Empfänger.
+          // Bei unterdrückter 0-€-Mail bleiben beide null/undefined – die spätere Prüfung
+          // greift dann nicht auf eine nicht existierende Mail zu.
+          let sendResult: any = null;
+          let emailTo: string | null = null;
+
           if (suppressZeroInvoiceMail) {
             // Suppress-Pfad: Beleg wurde angelegt, usage_charges wurden auf 'invoiced' markiert (Z. 583–588),
             // nur die Kundenmail wird unterdrückt. Status bleibt 'entwurf', email_sent_at bleibt leer.
@@ -1118,7 +1133,7 @@ Deno.serve(async (req) => {
               console.log(`[auto-invoice] Grundgebühr-Waiver 0 € – ohne Versand – Contract ${contract.id}, Periode ${periodMonthStr} (Invoice ${invoice.invoice_number})`);
             }
           } else {
-            const emailTo = contract.rechnungs_email || contract.email;
+            emailTo = contract.rechnungs_email || contract.email;
             const subjectSuffix = grossAmount === 0 ? " (kein Zahlbetrag)" : "";
 
             // ── PDF-Anhang (Design "design2", Spiegel von src/lib/generateInvoicePdfV2.ts) ──
@@ -1137,7 +1152,7 @@ Deno.serve(async (req) => {
               console.error(`[auto-invoice] PDF-Anhang fehlgeschlagen für Contract ${contract.id} (Invoice ${invoice.invoice_number}) – Mail wird ohne Anhang gesendet:`, String(pdfErr));
             }
 
-            await resend.emails.send({
+            sendResult = await resend.emails.send({
               from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
               reply_to: "info@hfx-honorarfuchs.de",
               to: [emailTo],
@@ -1389,12 +1404,19 @@ Deno.serve(async (req) => {
           }
           } // end if (!stripeChargeFailed) — fibu/commissions block
 
-          if (sendResult.error) {
+          // [REVIEW REQUIRED] Wiederherstellung des Verhaltens vor Commit 0ee90c74 (30.06.):
+          // Das Ergebnis des Mailversands (Z. ~1140) wird wieder in `sendResult` gehalten und
+          // `emailTo` außerhalb des Versandzweigs deklariert. Bei unterdrückter 0-€-Mail
+          // (suppressZeroInvoiceMail) bleibt `sendResult` null – es wird KEIN Mailergebnis geprüft,
+          // und der Lauf zählt die Rechnung trotzdem als verarbeitet (processed++).
+          // ROLLBACK: diesen Block und die Deklarationen vor dem suppressZeroInvoiceMail-Zweig
+          // entfernen → alter (fehlerhafter) Stand mit ReferenceError.
+          if (sendResult?.error) {
             errors.push(`Invoice email [${invoice.invoice_number}]: ${sendResult.error.message}`);
             continue;
           }
 
-          console.log(`[auto-invoice] ✓ Invoice ${invoice.invoice_number} sent to ${emailTo}${stripeInvoiceId ? ` | Stripe: ${stripeInvoiceId}` : ""} | Zeitraum: ${billingPeriod}`);
+          console.log(`[auto-invoice] ✓ Invoice ${invoice.invoice_number} ${emailTo ? `sent to ${emailTo}` : "(0-€-Beleg, Mailversand unterdrückt)"}${stripeInvoiceId ? ` | Stripe: ${stripeInvoiceId}` : ""} | Zeitraum: ${billingPeriod}`);
           processed++;
           } catch (monthErr) {
             console.error(`[auto-invoice] Error processing contract ${contract.id} for ${periodMonthStr}:`, monthErr);
