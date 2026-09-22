@@ -3060,6 +3060,17 @@ export type Database = {
         Args: { p_column: string; p_table: string }
         Returns: boolean
       }
+      get_my_referred_leads: {
+        Args: never
+        Returns: {
+          erfasst_am: string
+          lead_status: string
+          ort: string
+          praxis_name: string
+          provisionshinweis: string
+          vertrag_entstanden: boolean
+        }[]
+      }
       get_public_contract_booking: {
         Args: { p_contract_id: string }
         Returns: {
