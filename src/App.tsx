@@ -18,6 +18,7 @@ import Reservierungen from "./pages/Reservierungen";
 import DemoTracking from "./pages/DemoTracking";
 // Interessenten.tsx removed – Pipeline Tab "Interessenten" replaces it
 import Provisionen from "./pages/vertrieb/Provisionen";
+import MeineVermittlungen from "./pages/vertrieb/MeineVermittlungen";
 import Rechnungen from "./pages/Rechnungen";
 import Vertraege from "./pages/vertrieb/Vertraege";
 import Vertriebler from "./pages/vertrieb/Vertriebler";
@@ -106,6 +107,7 @@ const App = () => (
             {/* Vertragsdetail – kontextbezogen erreichbar, kein Nav-Eintrag */}
             <Route path="/vertrieb/vertraege" element={<ProtectedRoute><Vertraege /></ProtectedRoute>} />
             <Route path="/vertrieb/provisionen" element={<ProtectedRoute><Provisionen /></ProtectedRoute>} />
+            <Route path="/meine-vermittlungen" element={<ProtectedRoute><MeineVermittlungen /></ProtectedRoute>} />
             <Route path="/rechnungen" element={<ProtectedRoute><Rechnungen /></ProtectedRoute>} />
             <Route path="/admin/access-requests" element={<ProtectedRoute><AccessRequests /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
