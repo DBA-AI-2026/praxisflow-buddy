@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1793190529384,
+      "tag": "0000_security_phase1_a_revoke_usage_rpc",
+      "breakpoints": true
+    }
+  ]
+}

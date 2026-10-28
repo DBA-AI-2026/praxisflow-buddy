@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.recompute_contract_provider_usage(uuid,text) FROM PUBLIC, anon, authenticated;
