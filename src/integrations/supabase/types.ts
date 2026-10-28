@@ -3109,6 +3109,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_current_agb_path: { Args: { p_path: string }; Returns: boolean }
       is_in_regional_lead_team: {
         Args: { _regional_lead_id: string; _user_id: string }
         Returns: boolean

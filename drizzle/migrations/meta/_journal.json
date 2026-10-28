@@ -22,6 +22,13 @@
       "when": 1793193020844,
       "tag": "0002_security_phase1_restore_abc",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793195910030,
+      "tag": "0003_anon_agb_current_only",
+      "breakpoints": true
     }
   ]
 }
