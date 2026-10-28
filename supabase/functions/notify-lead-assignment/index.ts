@@ -1,6 +1,6 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
 import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
+import { requireActiveRole } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,17 +13,17 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const resendApiKey = Deno.env.get("RESEND_API_KEY")!;
+    const guard = await requireActiveRole(req, ["admin", "sales_lead", "regional_lead", "user"], corsHeaders);
+    if (guard instanceof Response) return guard;
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = guard.admin;
 
-    const { leadId, assignedToUserId } = await req.json();
+    const { leadId } = await req.json();
 
-    if (!leadId || !assignedToUserId) {
+    if (typeof leadId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(leadId)) {
       return new Response(
-        JSON.stringify({ error: "leadId and assignedToUserId are required" }),
+        JSON.stringify({ error: "Valid leadId is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -56,11 +56,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch AD profile (email + name)
+    // Request assignedToUserId is deliberately ignored; only the persisted assignment authorizes the recipient.
+    if (!lead.assigned_to) {
+      return new Response(
+        JSON.stringify({ success: true, message: "Lead has no assigned AD" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch AD profile (email + name) exclusively from leads.assigned_to.
     const { data: adProfile } = await supabase
       .from("profiles")
       .select("full_name, email")
-      .eq("user_id", assignedToUserId)
+      .eq("user_id", lead.assigned_to)
       .maybeSingle();
 
     if (!adProfile?.email) {

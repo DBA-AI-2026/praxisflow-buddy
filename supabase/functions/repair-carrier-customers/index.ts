@@ -29,8 +29,8 @@
 //   POST { "dryRun": true, "hfxNumbers": ["HFX-I01079"] }  -> Subset
 // -----------------------------------------------------------------------------
 
-import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { requireActiveRole } from "../_shared/auth.ts";
 import { ensureCarrierCustomer } from "../_shared/ensureCarrierCustomer.ts";
 import { isGoaeProduct } from "../_shared/multiLocation.ts";
 
@@ -54,10 +54,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const guard = await requireActiveRole(req, ["admin"], corsHeaders);
+    if (guard instanceof Response) return guard;
+    const supabase = guard.admin;
 
     let body: { dryRun?: boolean; hfxNumbers?: string[] } = {};
     try {
