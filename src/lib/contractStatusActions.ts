@@ -62,7 +62,7 @@ export async function changeContractStatus(
   }
 
   // 2) UPDATE contracts
-  const updateData: Record<string, any> = { status: newStatus };
+  const updateData: { status: string; approved_by?: string | null; approved_at?: string } = { status: newStatus };
   if (newStatus === "aktiv") {
     updateData.approved_by = userId;
     updateData.approved_at = new Date().toISOString();

@@ -16,7 +16,7 @@ function load(name: string, dependencies: Record<string, unknown> = {}, secret =
     Deno: { serve: (fn: Handler) => { handler = fn; }, env: { get: (key: string) => key === "CRON_SECRET_2" ? secret : "offline-test-value" } },
     createClient: vi.fn(() => { throw new Error("Unexpected database access"); }),
     requireActiveRole: vi.fn(async () => new Response("Denied", { status: 403 })),
-    corsHeaders: {}, encode: () => "offline", base64UrlEncode: () => "offline",
+    ...(name === "repair-carrier-customers" ? { corsHeaders: {} } : {}), encode: () => "offline", base64UrlEncode: () => "offline",
     ensureCarrierCustomer: vi.fn(), isGoaeProduct: () => true,
     renderBrandedEmail: (value: { bodyHtml: string; bodyText: string }) => ({ html: value.bodyHtml, text: value.bodyText }),
     Resend: class { emails = { send: vi.fn() }; },
@@ -79,7 +79,7 @@ function notificationFixture(options: { age?: number; status?: string; claimed?:
   let claimed = options.claimed ?? false;
   const row = { id: leadId, email: "stored@example.test", full_name: "Stored Name", company: "Stored Company", message: "Stored Message" };
   const updates: Record<string, unknown>[] = [];
-  const send = vi.fn(async () => ({ data: { id: "offline" }, error: options.mailError ? { message: "offline failure" } : null }));
+  const send = vi.fn(async (_payload: Record<string, unknown>, _options?: Record<string, unknown>) => ({ data: { id: "offline" }, error: options.mailError ? { message: "offline failure" } : null }));
   const client = { from: (table: string) => {
     const filters: Record<string, unknown> = {};
     const chain: Record<string, unknown> = {};
@@ -140,7 +140,7 @@ describe("Public notification DB claim", () => {
 });
 
 it("assignment notification ignores request recipient and uses leads.assigned_to", async () => {
-  const send = vi.fn(async () => ({ error: null }));
+  const send = vi.fn(async (_payload: Record<string, unknown>) => ({ error: null }));
   const lookups: unknown[][] = [];
   const client = { from: (table: string) => {
     const chain: Record<string, unknown> = {};
