@@ -15,6 +15,13 @@
       "when": 1793190572840,
       "tag": "0001_security_phase1_c_notification_claim",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793193020844,
+      "tag": "0002_security_phase1_restore_abc",
+      "breakpoints": true
     }
   ]
 }
