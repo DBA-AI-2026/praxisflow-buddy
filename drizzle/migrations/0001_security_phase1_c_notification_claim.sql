@@ -1,0 +1,1 @@
+ALTER TABLE public.registration_requests ADD COLUMN notification_claimed_at timestamptz NULL;

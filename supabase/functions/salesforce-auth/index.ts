@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encode as base64UrlEncode } from "https://deno.land/std@0.208.0/encoding/base64url.ts";
+import { requireActiveRole } from "../_shared/auth.ts";
 
 const ALLOWED_ORIGINS = [
   "https://sales.hfx-honorarfuchs.de",
@@ -42,6 +43,9 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const guard = await requireActiveRole(req, ["admin"], corsHeaders);
+    if (guard instanceof Response) return guard;
+
     const SALESFORCE_CLIENT_ID = Deno.env.get("SALESFORCE_CLIENT_ID");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");

@@ -2342,6 +2342,7 @@ export type Database = {
           id: string
           last_attempt_at: string | null
           message: string | null
+          notification_claimed_at: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
@@ -2355,6 +2356,7 @@ export type Database = {
           id?: string
           last_attempt_at?: string | null
           message?: string | null
+          notification_claimed_at?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -2368,6 +2370,7 @@ export type Database = {
           id?: string
           last_attempt_at?: string | null
           message?: string | null
+          notification_claimed_at?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string

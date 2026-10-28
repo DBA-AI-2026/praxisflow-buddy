@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireActiveRole } from "../_shared/auth.ts";
 
 const ALLOWED_ORIGINS = [
   "https://sales.hfx-honorarfuchs.de",
@@ -11,7 +12,7 @@ function getCorsHeaders(origin: string | null) {
   const allowedOrigin = ALLOWED_ORIGINS.includes(origin || "") ? origin! : ALLOWED_ORIGINS[0];
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
     "Access-Control-Allow-Credentials": "true",
   };
 }
@@ -70,6 +71,14 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const cronSecret = req.headers.get("x-cron-secret") ?? "";
+    const expectedSecret = Deno.env.get("CRON_SECRET_2") ?? "";
+    const validCron = cronSecret !== "" && cronSecret === expectedSecret;
+    if (!validCron) {
+      const guard = await requireActiveRole(req, ["admin"], corsHeaders);
+      if (guard instanceof Response) return guard;
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 

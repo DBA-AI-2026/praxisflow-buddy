@@ -1,8 +1,9 @@
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireActiveRole } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
 };
 
 interface PraxisData {
@@ -122,6 +123,14 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const cronSecret = req.headers.get("x-cron-secret") ?? "";
+    const expectedSecret = Deno.env.get("CRON_SECRET_2") ?? "";
+    const validCron = cronSecret !== "" && cronSecret === expectedSecret;
+    if (!validCron) {
+      const guard = await requireActiveRole(req, ["admin"], corsHeaders);
+      if (guard instanceof Response) return guard;
+    }
+
     console.log("Starting automatic Salesforce price sync...");
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
