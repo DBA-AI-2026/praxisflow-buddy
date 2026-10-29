@@ -232,6 +232,21 @@ function renderEvent(event: EventRow): {
         detail: d.source ? `(${d.source})` : undefined,
       };
     }
+    case "LEAD_REFERRER_CHANGED": {
+      const n = (v: unknown) => (v ? String(v) : "keiner");
+      const parts: string[] = [];
+      if ((d.old_vermittler_id ?? null) !== (d.new_vermittler_id ?? null)) {
+        parts.push(`Vermittler: ${n(d.old_vermittler_name ?? d.old_vermittler_id)} → ${n(d.new_vermittler_name ?? d.new_vermittler_id)}`);
+      }
+      if ((d.old_tippgeber_id ?? null) !== (d.new_tippgeber_id ?? null)) {
+        parts.push(`Tippgeber: ${n(d.old_tippgeber_name ?? d.old_tippgeber_id)} → ${n(d.new_tippgeber_name ?? d.new_tippgeber_id)}`);
+      }
+      return {
+        icon: <Tag className="h-4 w-4 text-primary" />,
+        label: parts.join(" · ") || "Vermittler/Tippgeber geändert",
+        detail: `durch ${d.changed_by_name ?? event.created_by ?? "unbekannt"}`,
+      };
+    }
     case "CONTRACT_STATUS_CHANGED": {
       const oldS = String(d.old_status ?? "");
       const newS = String(d.new_status ?? "");

@@ -41,13 +41,13 @@ type AdOption = {
   user_id: string;
   full_name: string;
   email: string | null;
-  role: "sales_partner" | "user" | "regional_lead";
+  role: "user" | "regional_lead" | "sales_lead";
 };
 
 const roleLabel: Record<string, string> = {
-  sales_partner: "Vertriebspartner",
   user: "Gebietsleiter",
   regional_lead: "Regionalleiter",
+  sales_lead: "Vertriebsleitung",
 };
 
 interface Props {
@@ -83,12 +83,12 @@ export function ReassignLeadAdDialog({
     }
   }, [open, currentAssignedTo]);
 
-  // Same source query as CreateLeadDialog: user_roles(role in sales_partner|user|regional_lead) + active + profiles
+  // Same source query as CreateLeadDialog: user_roles(role in user|regional_lead|sales_lead) + active + profiles
   const { data: ads = [], isLoading } = useQuery({
     queryKey: ["assignable-ads-for-lead-reassign"],
     queryFn: async (): Promise<AdOption[]> => {
-      type AllowedRole = "sales_partner" | "user" | "regional_lead";
-      const ALLOWED: AllowedRole[] = ["sales_partner", "user", "regional_lead"];
+      type AllowedRole = "user" | "regional_lead" | "sales_lead";
+      const ALLOWED: AllowedRole[] = ["user", "regional_lead", "sales_lead"];
       const { data: roles, error } = await supabase
         .from("user_roles")
         .select("user_id, role, is_active")

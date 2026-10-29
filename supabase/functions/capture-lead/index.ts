@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
 import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
 import { isStandortHfx } from "../_shared/multiLocation.ts";
+import { bodyTargetIds, decideAssignment } from "./assignmentPolicy.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -420,9 +421,8 @@ Deno.serve(async (req) => {
     // Quelle ist ausschließlich das JWT aus dem Authorization-Header, niemals der
     // Body. Extern = hat Rolle sales_partner und KEINE interne Rolle
     // (user, regional_lead, sales_lead, admin). Mehrfachrollen sind möglich.
-    const INTERNAL_ROLES = ["user", "regional_lead", "sales_lead", "admin"];
     let callerId: string | null = null;
-    let callerIsExternalPartner = false;
+    let callerRoles: string[] = [];
     {
       const authHeader = req.headers.get("authorization") ?? "";
       if (authHeader) {
@@ -443,12 +443,8 @@ Deno.serve(async (req) => {
             if (roleErr) {
               console.error("Rollen-Lookup fehlgeschlagen:", roleErr.message);
             } else {
-              const roles = (roleRows || []).map((r: any) => r.role);
-              callerIsExternalPartner =
-                roles.includes("sales_partner") &&
-                !roles.some((r: string) => INTERNAL_ROLES.includes(r));
+              callerRoles = (roleRows || []).map((r: any) => r.role);
             }
-            console.log(`Caller ${user.id} – extern: ${callerIsExternalPartner}`);
           }
         } catch (e) {
           console.error("Caller-Identität konnte nicht ermittelt werden:", e);
@@ -456,15 +452,33 @@ Deno.serve(async (req) => {
       }
     }
 
+    // [REVIEW REQUIRED] Zuordnungsfelder aus dem Body nur nach Rollenprüfung
+    // (Aufrufer + Ziel) übernehmen. Regeln: ./assignmentPolicy.ts.
+    // Rollback: diesen Block und den Import entfernen, vorherige Inline-Logik wiederherstellen.
+    const targetRoles: Record<string, string[]> = {};
+    const targetIds = callerId ? bodyTargetIds(rawBody) : [];
+    if (targetIds.length > 0) {
+      const { data: tRows, error: tErr } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .in("user_id", targetIds)
+        .eq("is_active", true);
+      if (tErr) console.error("Ziel-Rollen-Lookup fehlgeschlagen:", tErr.message);
+      for (const r of (tRows || []) as any[]) (targetRoles[r.user_id] ||= []).push(r.role);
+    }
+    const decision = decideAssignment({ callerId, callerRoles, body: rawBody, targetRoles });
+    const callerIsExternalPartner = decision.callerIsExternalPartner;
+    console.log(`Caller ${callerId ?? "anon"} – extern: ${callerIsExternalPartner}, intern: ${decision.callerHasInternalRole}`);
+
     // ── PLZ-Zuordnung: Zentrale Logik via DB-Funktion resolve_plz_ad() ────────
     // Manuelle Zuweisung überschreibt immer die Automatik.
     // Quelle: src-of-truth = plz_gebietsleiter_mapping, verwaltet via Admin > PLZ-Zuordnung
     // B.1b: Für externe Aufrufer wird ein im Body übergebenes assigned_to ignoriert —
     // die Zuweisung erfolgt dann ausschließlich über die PLZ-Automatik oder bleibt leer.
-    if (callerIsExternalPartner && rawBody.assigned_to) {
-      console.log("Externer Aufrufer: assigned_to aus dem Body wird ignoriert.");
+    if (rawBody.assigned_to && !decision.manualAssignedTo) {
+      console.log("assigned_to aus dem Body ignoriert (anonym, extern oder ungültiges Ziel) – PLZ-Automatik.");
     }
-    let assignedTo: string | null = callerIsExternalPartner ? null : (rawBody.assigned_to || null);
+    let assignedTo: string | null = decision.manualAssignedTo;
     const manualAssignment = !!assignedTo;
     let assignedName: string | null = null;
     let assignmentSource = manualAssignment ? "manual" : "none";
@@ -498,7 +512,7 @@ Deno.serve(async (req) => {
     // damit sie den eigenen Lead in der Liste sehen kann (RLS).
     // B.1: Für externe Aufrufer (sales_partner ohne interne Rolle) gilt der Fallback
     // NICHT mehr — ohne PLZ-Treffer bleibt der Lead unzugewiesen (Pool).
-    if (!assignedTo && leadSource === "manual" && callerId && !callerIsExternalPartner) {
+    if (!assignedTo && leadSource === "manual" && callerId && decision.callerHasInternalRole) {
       assignedTo = callerId;
       assignmentSource = "manual";
       console.log(`Fallback: assigned_to=creator ${callerId}`);
@@ -507,7 +521,7 @@ Deno.serve(async (req) => {
     // B.2: Vermittlung rein erfassend stempeln — ausschließlich aus der belegten
     // Aufrufer-Identität. Ein aus dem Body übergebenes vermittler_id wird ignoriert.
     // Anonyme/öffentliche und interne Anlage: NULL.
-    const vermittlerId: string | null = callerIsExternalPartner ? callerId : null;
+    const vermittlerId: string | null = decision.vermittlerId;
 
 
     const { data: lead, error: insertError } = await supabase
@@ -526,7 +540,7 @@ Deno.serve(async (req) => {
         ort: ort?.trim().slice(0, 100) || null,
         interested_products: rawBody.interested_products || [],
         assigned_to: assignedTo,
-        tippgeber_id: rawBody.tippgeber_id || null,
+        tippgeber_id: decision.tippgeberId,
         vermittler_id: vermittlerId,
 
         source: leadSource,

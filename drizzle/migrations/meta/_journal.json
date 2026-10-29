@@ -29,6 +29,20 @@
       "when": 1793195910030,
       "tag": "0003_anon_agb_current_only",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793271146872,
+      "tag": "0004_lead_referrer_rpc_and_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793271340904,
+      "tag": "0005_lead_referrer_event_names",
+      "breakpoints": true
     }
   ]
 }
