@@ -48,6 +48,7 @@
  * Serie feuern können.
  */
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { requireActiveRole } from "../_shared/auth.ts";
 
 const PROVIDER = "qodia";
 const QODIA_USERS_URL = "https://auth.qodia.de/api/external/users";
@@ -160,17 +161,14 @@ async function loadAllQodiaUsers(apiKey: string): Promise<{ byEmail: Map<string,
 
 Deno.serve(async (req) => {
   try {
-    const authHeader = req.headers.get("Authorization") ?? "";
+    // Phase 1b: anon-Key-Zugang entfernt. Zulässig nur gültiges x-cron-secret
+    // oder aktiver Admin (401/403 wie vom Helfer).
     const cronSecret = req.headers.get("x-cron-secret") ?? "";
     const envCronSecret = Deno.env.get("CRON_SECRET_2") ?? "";
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const validCron = cronSecret !== "" && cronSecret === envCronSecret;
-    const validAnon = authHeader === `Bearer ${anonKey}`;
-    if (!validCron && !validAnon) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
+    if (!validCron) {
+      const guard = await requireActiveRole(req, ["admin"], {});
+      if (guard instanceof Response) return guard;
     }
 
     const supabase = createClient(
