@@ -1339,7 +1339,7 @@ export default function Vertraege() {
           // Preserve the legacy payload; the generated table type excludes its extra contact fields.
           const praxisInsert = { ...praxisData, status: "aktiv" };
           const praxisTable = supabase.from("praxen");
-          await praxisTable.insert(praxisInsert as Parameters<typeof praxisTable.insert>[0]);
+          await praxisTable.insert(praxisInsert as unknown as Parameters<typeof praxisTable.insert>[0]);
           queryClient.invalidateQueries({ queryKey: ["praxen"] });
           toast({ title: "✅ Kunde angelegt", description: `${praxisData.name} wurde erfolgreich als Kunden hinterlegt.` });
         }
