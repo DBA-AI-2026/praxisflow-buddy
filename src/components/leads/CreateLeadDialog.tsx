@@ -56,6 +56,7 @@ const schema = z.object({
   interested_products: z.array(z.string()).default([]),
   assigned_to: z.string().nullable().default(null),
   tippgeber_id: z.string().nullable().default(null),
+  vermittler_id: z.string().nullable().default(null),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -198,12 +199,12 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
     },
   });
 
-  // Fetch assignable ADs (sales_partner, user, regional_lead roles) — only active
+  // Zuständiger AD: genau aktive user, regional_lead, sales_lead
   const { data: salesPartners = [] } = useQuery({
-    queryKey: ["sales-partners-for-lead"],
+    queryKey: ["ad-targets-for-lead"],
     queryFn: async () => {
-      type AllowedRole = "sales_partner" | "user" | "regional_lead";
-      const ALLOWED: AllowedRole[] = ["sales_partner", "user", "regional_lead"];
+      type AllowedRole = "user" | "regional_lead" | "sales_lead";
+      const ALLOWED: AllowedRole[] = ["user", "regional_lead", "sales_lead"];
       const { data, error } = await supabase
         .from("user_roles")
         .select("user_id, role, is_active")
@@ -224,6 +225,26 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
         ...p,
         role: pickPrimaryRole(grouped[p.user_id] ?? []) ?? undefined,
       }));
+    },
+    enabled: canAssign,
+  });
+
+  // Vermittler: aktive sales_partner
+  const { data: vermittlerList = [] } = useQuery({
+    queryKey: ["vermittler-for-lead"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "sales_partner")
+        .eq("is_active", true);
+      if (error) throw error;
+      if (!data?.length) return [];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .in("user_id", data.map((r) => r.user_id));
+      return (profiles || []).map((p) => ({ ...p, role: "sales_partner" as string }));
     },
     enabled: canAssign,
   });
@@ -287,6 +308,7 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
       interested_products: [],
       assigned_to: null,
       tippgeber_id: null,
+      vermittler_id: null,
     },
   });
 
@@ -310,6 +332,7 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
           interested_products: values.interested_products,
           assigned_to: values.assigned_to || undefined,
           tippgeber_id: values.tippgeber_id || undefined,
+          vermittler_id: values.vermittler_id || undefined,
         },
       });
 
@@ -519,7 +542,7 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
               />
             </div>
 
-            {/* Vertriebspartner & Tippgeber */}
+            {/* Zuständiger AD, Vermittler & Tippgeber */}
             {canAssign && (
               <div className="grid grid-cols-2 gap-3">
                 <FormField
@@ -529,14 +552,35 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
                     <FormItem>
                       <FormLabel className="flex items-center gap-2">
                         <Users className="h-4 w-4 text-primary" />
-                        Vertriebspartner
+                        Zuständiger AD
                       </FormLabel>
                       <FormControl>
                         <UserSearchSelect
                           value={field.value}
                           onChange={field.onChange}
                           users={salesPartners}
-                          placeholder="Kein Vertriebspartner"
+                          placeholder="Automatisch nach PLZ"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="vermittler_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-primary" />
+                        Vermittler
+                      </FormLabel>
+                      <FormControl>
+                        <UserSearchSelect
+                          value={field.value}
+                          onChange={field.onChange}
+                          users={vermittlerList}
+                          placeholder="Kein Vermittler"
                         />
                       </FormControl>
                       <FormMessage />
