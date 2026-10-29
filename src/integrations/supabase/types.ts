@@ -3152,6 +3152,14 @@ export type Database = {
         Args: { p_product_id: string; p_version: number }
         Returns: undefined
       }
+      set_lead_referrer: {
+        Args: {
+          p_lead_id: string
+          p_tippgeber_id: string
+          p_vermittler_id: string
+        }
+        Returns: undefined
+      }
       submit_registration_request: {
         Args: {
           p_company?: string
