@@ -155,3 +155,36 @@ it("assignment notification ignores request recipient and uses leads.assigned_to
   expect(lookups).toContainEqual(["profiles", "user_id", "persisted-ad"]);
   expect(send.mock.calls[0]?.[0]).toMatchObject({ to: ["persisted@example.test"] });
 });
+describe("qodia-status-sync guard (Phase 1b)", () => {
+  const passed = (s: number) => s !== 401 && s !== 403;
+  it("accepts correct x-cron-secret without role lookup", async () => {
+    const guard = vi.fn();
+    const handler = load("qodia-status-sync", { requireActiveRole: guard });
+    const res = await handler(request({}, { "x-cron-secret": "test-cron-secret" }));
+    expect(passed(res.status)).toBe(true);
+    expect(guard).not.toHaveBeenCalled();
+  });
+  it("rejects Bearer <anon> alone with 401", async () => {
+    const guard = vi.fn(async () => new Response("Unauthorized", { status: 401 }));
+    const handler = load("qodia-status-sync", { requireActiveRole: guard });
+    expect((await handler(request({}, { authorization: "Bearer offline-test-value" }))).status).toBe(401);
+    expect(guard.mock.calls[0]?.slice(1, 2)).toEqual([["admin"]]);
+  });
+  it("rejects wrong secret with 401", async () => {
+    const guard = vi.fn(async () => new Response("Unauthorized", { status: 401 }));
+    const handler = load("qodia-status-sync", { requireActiveRole: guard });
+    expect((await handler(request({}, { "x-cron-secret": "wrong" }))).status).toBe(401);
+  });
+  it("user role gets 403", async () => {
+    const guard = vi.fn(async () => new Response("Forbidden", { status: 403 }));
+    const handler = load("qodia-status-sync", { requireActiveRole: guard });
+    expect((await handler(request({}, { authorization: "Bearer user-jwt" }))).status).toBe(403);
+  });
+  it("admin is accepted", async () => {
+    const guard = vi.fn(async () => ({ userId: "a", email: null, roles: ["admin"], admin: {} }));
+    const handler = load("qodia-status-sync", { requireActiveRole: guard });
+    const res = await handler(request({}, { authorization: "Bearer admin-jwt" }));
+    expect(passed(res.status)).toBe(true);
+    expect(guard).toHaveBeenCalledTimes(1);
+  });
+});
