@@ -41,6 +41,7 @@ import { Lock, UserCog, Link2, Activity } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { ReassignLeadAdDialog } from "@/components/leads/ReassignLeadAdDialog";
+import { LeadReferrerSection } from "@/components/kunden/LeadReferrerSection";
 import { copyKampagnenLink } from "@/lib/contractMailActions";
 import { toast } from "@/hooks/use-toast";
 import { useLeadActivityThresholds } from "@/hooks/useAppSettings";
@@ -179,6 +180,16 @@ export function StammdatenTab({ data }: StammdatenTabProps) {
               Ändern
             </Button>
           </div>
+        )}
+
+        {lead && (
+          <LeadReferrerSection
+            leadId={lead.id}
+            hfxNumber={lead.hfx_customer_number}
+            vermittlerId={lead.vermittler_id}
+            tippgeberId={lead.tippgeber_id}
+            hasContract={data.contracts.length > 0}
+          />
         )}
 
         {canCopyKampagne && lead && (
