@@ -70,7 +70,7 @@ export function LeadReferrerSection({ leadId, hfxNumber, vermittlerId, tippgeber
       p_lead_id: leadId,
       p_vermittler_id: vermittler === NONE ? null : vermittler,
       p_tippgeber_id: tippgeber === NONE ? null : tippgeber,
-    } as never);
+    });
     setSaving(false);
     if (error) {
       toast({ title: "Zuordnung nicht gespeichert", description: error.message, variant: "destructive" });
