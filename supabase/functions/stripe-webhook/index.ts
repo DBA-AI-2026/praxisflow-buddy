@@ -1176,7 +1176,7 @@ async function handleSepaMandateSetup(
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+                    "x-cron-secret": Deno.env.get("CRON_SECRET_2") ?? "",
                   },
                   body: "{}",
                 }).catch((e) => log("WARN: qodia-status-sync (sweep) trigger failed", String(e)));
@@ -1228,7 +1228,7 @@ async function handleSepaMandateSetup(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+        "x-cron-secret": Deno.env.get("CRON_SECRET_2") ?? "",
       },
       body: "{}",
     }).catch((e) => log("WARN: qodia-status-sync trigger failed", String(e)));
