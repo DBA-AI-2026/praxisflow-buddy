@@ -1,3 +1,4 @@
+// @vitest-environment node
 // Isolated PostgreSQL only: no connection to the live database or real contract INSERTs.
 import { PGlite } from '@electric-sql/pglite';
 import { readFileSync } from 'node:fs';
@@ -6,13 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 const sql = readFileSync('drizzle/migrations/0006_contracts_caretaker_from_lead.sql', 'utf8');
 const AD = '10000000-0000-0000-0000-000000000001';
 const OTHER = '10000000-0000-0000-0000-000000000002';
-// jsdom supplies a Blob without arrayBuffer; pass the local bundle using Node's Blob.
-import { Blob as NodeBlob } from 'node:buffer';
-import { createRequire } from 'node:module';
-import { dirname, join } from 'node:path';
-const require = createRequire(import.meta.url);
-const bundle = readFileSync(join(dirname(require.resolve('@electric-sql/pglite')), 'pglite.data'));
-const db = new PGlite({ fsBundle: new NodeBlob([bundle]) as Blob });
+const db = new PGlite();
 
 beforeAll(async () => {
   await db.exec(`
