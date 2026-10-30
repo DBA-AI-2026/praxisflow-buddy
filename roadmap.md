@@ -5,3 +5,10 @@
 - [x] C: Add nullable notification claim timestamp; verify schema and unchanged policies.
 - [x] D: Guard six approved functions; preserve excluded files and frontend callers.
 - [x] Run offline security tests and checks, deploy only six functions without live invocations, report evidence.
+
+# Betreut durch
+
+- [x] Apply approved idempotent BEFORE INSERT trigger; no backfill.
+- [x] Change only three internal contract labels.
+- [x] Verify trigger order, offline rule tests and read-only SQL simulation; record label lines.
+- [x] Prepare publish request and report automatic sync verification limits (repository status is not exposed).

@@ -244,7 +244,7 @@ function SalesPartnerCombobox({
               )}
             </span>
           ) : (
-            <span className="text-muted-foreground">Vertriebspartner auswählen...</span>
+            <span className="text-muted-foreground">Betreut durch auswählen...</span>
           )}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -2530,7 +2530,7 @@ export default function Vertraege() {
                    <th className="hidden 2xl:table-cell text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">E-Mail</th>
                    <th className="hidden 2xl:table-cell text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">MP-Nr.</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 max-w-[220px]">Produkt</th>
-                   <th className="hidden 2xl:table-cell text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Partner</th>
+                   <th className="hidden 2xl:table-cell text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4">Betreut durch</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 text-right">Monatspreis</th>
                    <th className="text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 text-center">Status</th>
                    <th className="hidden xl:table-cell text-xs font-semibold uppercase tracking-wider text-muted-foreground py-3 px-4 whitespace-nowrap">
@@ -3168,7 +3168,7 @@ export default function Vertraege() {
                   )}
                 </div>
                 <div>
-                   <Label>Vertriebspartner</Label>
+                   <Label>Betreut durch</Label>
                    {editId ? (
                      <div className="mt-1.5 flex items-center gap-2 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm">
                        <span className="flex-1 truncate font-medium text-foreground">

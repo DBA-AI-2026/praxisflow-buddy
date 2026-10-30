@@ -43,6 +43,13 @@
       "when": 1793271340904,
       "tag": "0005_lead_referrer_event_names",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793352721811,
+      "tag": "0006_contracts_caretaker_from_lead",
+      "breakpoints": true
     }
   ]
 }
