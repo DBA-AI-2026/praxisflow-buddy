@@ -10,10 +10,10 @@ Das Projekt wird mit [Lovable](https://lovable.dev) entwickelt und läuft auf ei
 
 ## ⚠️ Vor jeder KI-gestützten Änderung lesen
 
-Dieses Projekt enthält produktionskritische Bereiche (Zahlungs-Webhooks, Cron-Jobs, RLS-Policies, MFA-Auth, FiBu-Export). Damit KI-Tools (Lovable, Claude, Cursor, Copilot, etc.) diese nicht versehentlich beschädigen, gibt es zwei verbindliche Dokumente im Projekt-Root:
+Dieses Projekt enthält produktionskritische Bereiche (Zahlungs-Webhooks, Cron-Jobs, RLS-Policies, MFA-Auth, FiBu-Export). Damit KI-Tools (Lovable, Claude, Cursor, Copilot, etc.) diese nicht versehentlich beschädigen, gibt es zwei verbindliche Dokumente im Verzeichnis `files/`:
 
-- **[`AI_GUARDRAILS.md`](./AI_GUARDRAILS.md)** — Regeln für jede KI-Änderung. Enthält die "Do-Not-Modify"-Bereiche, Branch- und PR-Vorgaben, Smoke-Test-Pflichten und Rollback-Strategien. **Vor jeder Änderung zu lesen.**
-- **[`SAFE_CHANGE_PLAN.md`](./SAFE_CHANGE_PLAN.md)** — konkrete, nach Risiko sortierte Liste der erlaubten Änderungen in drei Kategorien:
+- **[`files/AI_GUARDRAILS.md`](./files/AI_GUARDRAILS.md)** — Regeln für jede KI-Änderung. Enthält die "Do-Not-Modify"-Bereiche, Branch- und PR-Vorgaben, Smoke-Test-Pflichten und Rollback-Strategien. **Vor jeder Änderung zu lesen.**
+- **[`files/SAFE_CHANGE_PLAN.md`](./files/SAFE_CHANGE_PLAN.md)** — konkrete, nach Risiko sortierte Liste der erlaubten Änderungen in drei Kategorien:
   - 🟢 **Sicher / sofort möglich** (z. B. README, `.gitignore`, Unit-Tests für Utilities, UI-Texte)
   - 🟡 **Vorsichtig / nur mit Review** (z. B. große Page-Komponenten refactoren, CORS prüfen, Console-Logs auditieren)
   - 🔴 **Tabu ohne Backup und Testplan** (Stripe-Webhook, Edge Functions, RLS-Policies, Auth/MFA, Cron-Jobs, Lexware/Salesforce/Qodia-Integrationen)
@@ -70,11 +70,11 @@ Der Dev-Server läuft anschließend unter `http://localhost:8080`.
 
 **Über Lovable:** Direkt im [Lovable-Projekt](https://lovable.dev) prompten. Änderungen werden automatisch in dieses Repo committet.
 
-**Lokal mit eigener IDE:** Repo klonen, Änderungen pushen — die werden ebenfalls in Lovable übernommen. Branch- und PR-Konventionen siehe `AI_GUARDRAILS.md` Abschnitt 5.
+**Lokal mit eigener IDE:** Repo klonen, Änderungen pushen — die werden ebenfalls in Lovable übernommen. Branch- und PR-Konventionen siehe `files/AI_GUARDRAILS.md` Abschnitt 5.
 
 **Direkt auf GitHub:** Bearbeiten via Pencil-Icon oder GitHub Codespaces.
 
-In allen Fällen gelten die Regeln aus `AI_GUARDRAILS.md` und `SAFE_CHANGE_PLAN.md`.
+In allen Fällen gelten die Regeln aus `files/AI_GUARDRAILS.md` und `files/SAFE_CHANGE_PLAN.md`.
 
 ---
 
@@ -101,7 +101,8 @@ Custom-Domain: Project → Settings → Domains → Connect Domain ([Doku](https
 │   ├── migrations/         ← Versionierte SQL-Migrationen
 │   └── config.toml         ← verify_jwt-Flags pro Function
 ├── docs/system/            ← Verbindliche Mermaid-Systemdiagramme
-├── AI_GUARDRAILS.md        ← Regeln für KI-Änderungen ⚠️
-├── SAFE_CHANGE_PLAN.md     ← Erlaubte Änderungskategorien ⚠️
+├── files/
+│   ├── AI_GUARDRAILS.md    ← Regeln für KI-Änderungen ⚠️
+│   └── SAFE_CHANGE_PLAN.md ← Erlaubte Änderungskategorien ⚠️
 └── README.md               ← diese Datei
 ```
