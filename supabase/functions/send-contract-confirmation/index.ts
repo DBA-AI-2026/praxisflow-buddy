@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireActiveRole, type ActiveRoleContext } from "../_shared/auth.ts";
+import { canAccessContract } from "../_shared/contractAccess.ts";
 import { PDFDocument, rgb } from "npm:pdf-lib@1.17.1";
 import { isContractPromoActive } from "../_shared/promoStatus.ts";
 import { embedExo2 } from "../_shared/pdfFontLoader.ts";
@@ -519,19 +521,12 @@ Deno.serve(async (req) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const isServiceRole = bearer === serviceRoleKey;
 
+  // Phase 2: Nutzerpfad mit aktiver Rolle + Vertragszuständigkeit; Service-Pfad unverändert.
+  let guard: ActiveRoleContext | null = null;
   if (!isServiceRole) {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
-    const { data: userData, error: authError } = await supabase.auth.getUser();
-    if (authError || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const g = await requireActiveRole(req, ["admin", "sales_lead", "regional_lead", "user"], corsHeaders);
+    if (g instanceof Response) return g;
+    guard = g;
   }
 
   const adminClient = createClient(
@@ -565,6 +560,13 @@ Deno.serve(async (req) => {
     if (contractError || !contract) {
       return new Response(JSON.stringify({ error: "Contract not found" }), {
         status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (guard && !(await canAccessContract(adminClient, guard.userId, guard.roles, contract))) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

@@ -10,6 +10,8 @@
 // nicht zu blockieren.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { requireActiveRole, type ActiveRoleContext } from "../_shared/auth.ts";
+import { canAccessContract } from "../_shared/contractAccess.ts";
 import Stripe from "npm:stripe@14.21.0";
 import { Resend } from "npm:resend@2.0.0";
 import { resolveAgbForCandidates } from "../_shared/agbResolver.ts";
@@ -98,18 +100,12 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const isServiceRole = token === serviceRoleKey;
 
+    // Phase 2: Nutzerpfad mit aktiver Rolle + Vertragszuständigkeit; Service-Pfad unverändert.
+    let guard: ActiveRoleContext | null = null;
     if (!isServiceRole) {
-      const userClient = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_ANON_KEY")!,
-        { global: { headers: { Authorization: authHeader } } }
-      );
-      const { data: userData, error: authErr } = await userClient.auth.getUser();
-      if (authErr || !userData?.user) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      const g = await requireActiveRole(req, ["admin", "sales_lead", "regional_lead", "user"], corsHeaders);
+      if (g instanceof Response) return g;
+      guard = g;
     }
 
     const admin = createClient(
@@ -138,6 +134,12 @@ Deno.serve(async (req) => {
     if (cErr || !contract) {
       return new Response(JSON.stringify({ error: "Contract not found" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (guard && !(await canAccessContract(admin, guard.userId, guard.roles, contract as any))) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
