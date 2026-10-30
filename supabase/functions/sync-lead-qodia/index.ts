@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isStandortHfx } from "../_shared/multiLocation.ts";
+import { requireActiveRole } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,27 +35,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    // Verify authenticated admin/sales_lead
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // Phase 2: aktive Rolle + serverseitige Zuständigkeit (sales_partner ausgeschlossen)
+    const guard = await requireActiveRole(req, ["admin", "sales_lead", "regional_lead", "user"], corsHeaders);
+    if (guard instanceof Response) return guard;
+    const user = { id: guard.userId };
+    const supabase = guard.admin;
 
     const { leadId } = await req.json();
     if (!leadId) {
@@ -67,13 +52,36 @@ Deno.serve(async (req) => {
     // Fetch lead
     const { data: lead, error: leadError } = await supabase
       .from("leads")
-      .select("id, hfx_customer_number, email, qodia_synced")
+      .select("id, hfx_customer_number, email, qodia_synced, assigned_to")
       .eq("id", leadId)
       .single();
 
     if (leadError || !lead) {
       return new Response(JSON.stringify({ error: "Lead nicht gefunden" }), {
         status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Zuständigkeit: admin/sales_lead alle; user nur assigned_to = eigene ID;
+    // regional_lead eigene oder Team-Leads.
+    let allowed = guard.roles.includes("admin") || guard.roles.includes("sales_lead");
+    if (!allowed && lead.assigned_to) {
+      if (guard.roles.includes("user") && lead.assigned_to === guard.userId) allowed = true;
+      if (!allowed && guard.roles.includes("regional_lead")) {
+        if (lead.assigned_to === guard.userId) allowed = true;
+        else {
+          const { data: inTeam, error: teamErr } = await supabase.rpc("is_in_regional_lead_team", {
+            _regional_lead_id: guard.userId,
+            _user_id: lead.assigned_to,
+          });
+          allowed = !teamErr && inTeam === true;
+        }
+      }
+    }
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

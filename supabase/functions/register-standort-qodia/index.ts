@@ -15,6 +15,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isStandortHfx } from "../_shared/multiLocation.ts";
+import { requireActiveRole } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,28 +51,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
-
-    // Auth-Level wie sync-lead-qodia: authentifizierter Nutzer reicht
-    // (UI-Button ist isAdmin-gegated; serverseitig keine Rollenprüfung nötig)
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // Phase 2: nur aktive Admins
+    const guard = await requireActiveRole(req, ["admin"], corsHeaders);
+    if (guard instanceof Response) return guard;
+    const supabase = guard.admin;
 
     const body = await req.json().catch(() => ({}));
     const contractId = body?.contractId;

@@ -8,6 +8,7 @@
 //  - MAIL_SENT_CREDENTIALS wird vom Aufrufer erst nach erfolgreichem Send geloggt.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
+import { requireActiveRole } from "../_shared/auth.ts";
 import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
 
 const corsHeaders = {
@@ -32,22 +33,10 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAdmin = createClient(
-      supabaseUrl,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { auth: { persistSession: false } },
-    );
-
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json(401, { error: "Unauthorized" });
-
-    const supabaseUser = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-      auth: { persistSession: false },
-    });
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
-    if (authError || !user) return json(401, { error: "Unauthorized" });
+    // Phase 2: nur aktive Admins
+    const guard = await requireActiveRole(req, ["admin"], corsHeaders);
+    if (guard instanceof Response) return guard;
+    const supabaseAdmin = guard.admin;
 
     const body = await req.json().catch(() => ({}));
     const contractId = body?.contractId;
