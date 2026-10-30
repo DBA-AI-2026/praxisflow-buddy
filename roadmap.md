@@ -8,7 +8,7 @@
 
 # Betreut durch
 
-- [ ] Apply approved idempotent BEFORE INSERT trigger; no backfill.
-- [ ] Change only three internal contract labels.
-- [ ] Verify trigger order, offline rule tests and read-only SQL simulation; record label lines.
+- [x] Apply approved idempotent BEFORE INSERT trigger; no backfill.
+- [x] Change only three internal contract labels.
+- [x] Verify trigger order, offline rule tests and read-only SQL simulation; record label lines.
 - [ ] Request publish and report automatic sync verification limits.
