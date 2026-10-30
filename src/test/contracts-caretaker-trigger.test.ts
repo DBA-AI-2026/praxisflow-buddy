@@ -6,7 +6,13 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 const sql = readFileSync('drizzle/migrations/0006_contracts_caretaker_from_lead.sql', 'utf8');
 const AD = '10000000-0000-0000-0000-000000000001';
 const OTHER = '10000000-0000-0000-0000-000000000002';
-const db = new PGlite();
+// jsdom supplies a Blob without arrayBuffer; pass the local bundle using Node's Blob.
+import { Blob as NodeBlob } from 'node:buffer';
+import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
+const require = createRequire(import.meta.url);
+const bundle = readFileSync(join(dirname(require.resolve('@electric-sql/pglite')), 'pglite.data'));
+const db = new PGlite({ fsBundle: new NodeBlob([bundle]) as Blob });
 
 beforeAll(async () => {
   await db.exec(`
