@@ -1466,8 +1466,7 @@ export default function Vertraege() {
             const customerName = [form.vorname, form.nachname].filter(Boolean).join(" ");
             await supabase.functions.invoke("send-contract-email", {
               body: {
-                email: null,
-                salesPartnerEmail: profile?.email || null,
+                contractId,
                 customerName,
                 pdfBase64,
                 products: form.selected_products.join(", "),
