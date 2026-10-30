@@ -1,5 +1,6 @@
 import { Resend } from "npm:resend@2.0.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireActiveRole } from "../_shared/auth.ts";
+import { canAccessContract } from "../_shared/contractAccess.ts";
 import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
 
 const ALLOWED_ORIGINS = [
@@ -29,38 +30,47 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    // Phase 2: aktive Rolle + Vertragszuständigkeit; Empfänger nur aus dem Vertrag.
+    const guard = await requireActiveRole(req, ["admin", "sales_lead", "regional_lead", "user"], corsHeaders);
+    if (guard instanceof Response) return guard;
+    const supabaseAdmin = guard.admin;
 
-    // Verify caller is authenticated
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    // salesPartnerEmail aus dem Request wird bewusst ignoriert.
+    const { contractId, customerName, pdfBase64, previewPdfBase64, products, startDate, hfxNumber } = await req.json();
+    if (!contractId) {
       return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "contractId is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-      auth: { persistSession: false },
-    });
-
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
-    if (authError || !user) {
+    const { data: contract, error: contractErr } = await supabaseAdmin
+      .from("contracts")
+      .select("id, created_by, sales_partner_id")
+      .eq("id", contractId)
+      .single();
+    if (contractErr || !contract) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Contract not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (!(await canAccessContract(supabaseAdmin, guard.userId, guard.roles, contract))) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { salesPartnerEmail, customerName, pdfBase64, previewPdfBase64, products, startDate, hfxNumber } = await req.json();
+    // Empfänger: Betreuer (sales_partner_id), Fallback Ersteller.
+    let salesPartnerEmail: string | null = null;
+    for (const pid of [contract.sales_partner_id, contract.created_by]) {
+      if (!pid) continue;
+      const { data: prof } = await supabaseAdmin.from("profiles").select("email").eq("id", pid).maybeSingle();
+      if (prof?.email) { salesPartnerEmail = prof.email; break; }
+    }
 
     // Check email notification settings
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
     const { data: emailSettings } = await supabaseAdmin
       .from("email_notification_settings")
       .select("setting_key, is_enabled")
@@ -70,7 +80,7 @@ Deno.serve(async (req) => {
 
     if (!salesPartnerEmail) {
       return new Response(
-        JSON.stringify({ error: "salesPartnerEmail is required" }),
+        JSON.stringify({ error: "No recipient email on contract" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
