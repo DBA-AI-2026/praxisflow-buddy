@@ -82,7 +82,7 @@ describe("Phase 2 Häppchen 2 — contract action guards", () => {
   for (const f of FUNCS) {
     describe(f.name, () => {
       it("uses requireActiveRole with the four internal roles", async () => {
-        const { guard, res } = run(f, ["admin"], {});
+        const { guard, res } = run(f, ["admin"], { created_by: OTHER });
         expect((await res).status).toBe(f.ok);
         expect(guard.mock.calls[0][1]).toEqual(ROLES);
       });
