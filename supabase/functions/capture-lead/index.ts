@@ -449,7 +449,7 @@ Deno.serve(async (req) => {
 
     // MP-Nummer is optional for CareCapital/privadis – log a warning but don't reject
     if ((abrechnungszentrum === "CareCapital" || abrechnungszentrum === "privadis") && !mp_nummer) {
-      console.log(`MP-Nummer missing for ${abrechnungszentrum} – accepting lead without it`);
+      // MP-Nummer fehlt – Lead wird trotzdem angenommen.
     }
 
 
