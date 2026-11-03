@@ -28,44 +28,50 @@ Deno.serve(async (req) => {
   try {
     const guard = await requireActiveRole(req, ["admin"], corsHeaders);
     if (guard instanceof Response) return guard;
-    const { userId: adminUserId, admin: supabaseAdmin } = guard;
+    const { userId: adminUserId, email: adminEmail, admin: supabaseAdmin } = guard;
     const user = { id: adminUserId };
 
 
-    // Get request body
+    const json = (status: number, body: Record<string, unknown>) =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+
+    // Serverseitiges Protokoll (best effort, darf die Aktion nicht kippen)
+    const audit = async (action: string, success: boolean, details: Record<string, unknown>) => {
+      const { error } = await supabaseAdmin.from("audit_logs").insert({
+        user_id: adminUserId,
+        user_email: adminEmail,
+        action,
+        resource_path: `/admin/access-requests/${details.request_id ?? ""}`,
+        user_role: "admin",
+        success,
+        details: JSON.stringify(details),
+      });
+      if (error) console.error("audit_logs insert failed:", error);
+    };
+
     const body = await req.json();
     const { requestId, action } = body;
     const rawRole = body.role;
 
-    // ──────────────────────────────────────────────────────────────
-    // SECURITY: Explicit role whitelist — never pass unvalidated role to DB
-    // vertragsabteilung is decommissioned and excluded from this list
-    // ──────────────────────────────────────────────────────────────
-    const ALLOWED_ROLES = [
-      "sales_partner",
-      "user",
-      "sales_lead",
-      "regional_lead",
-      "tippgeber",
-      "admin",
-    ] as const;
-    type AllowedRole = typeof ALLOWED_ROLES[number];
-
-    const role: AllowedRole = ALLOWED_ROLES.includes(rawRole as AllowedRole)
-      ? (rawRole as AllowedRole)
-      : "sales_partner"; // safe default
-
-    if (rawRole && !ALLOWED_ROLES.includes(rawRole as AllowedRole)) {
-      console.warn(`Rejected invalid role parameter: "${rawRole}", defaulting to sales_partner`);
+    if (!requestId || !action) {
+      return json(400, { error: "Missing requestId or action" });
+    }
+    if (action !== "approve" && action !== "reject") {
+      return json(400, { error: "Invalid action" });
     }
 
-    console.log(`Processing ${action} for request ${requestId} with role ${role}`);
-
-    if (!requestId || !action) {
-      return new Response(
-        JSON.stringify({ error: "Missing requestId or action" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Whitelist ohne tippgeber (Tippgeber brauchen eine Partnerzuordnung vor der Rolle)
+    const ALLOWED_ROLES = ["user", "sales_partner", "sales_lead", "regional_lead", "admin"] as const;
+    type AllowedRole = typeof ALLOWED_ROLES[number];
+    let role: AllowedRole | null = null;
+    if (action === "approve") {
+      if (!ALLOWED_ROLES.includes(rawRole as AllowedRole)) {
+        return json(400, { error: "Ungültige oder fehlende Rolle" });
+      }
+      role = rawRole as AllowedRole;
     }
 
     // Get the registration request
@@ -109,6 +115,7 @@ Deno.serve(async (req) => {
         );
       }
 
+      await audit("ACCESS_REQUEST_REJECT", true, { request_id: requestId, email: request.email });
       console.log(`Request ${requestId} rejected successfully`);
       return new Response(
         JSON.stringify({ success: true, message: "Request rejected" }),
@@ -133,7 +140,7 @@ Deno.serve(async (req) => {
       if (createError) {
         console.error("Failed to create user:", createError);
         return new Response(
-          JSON.stringify({ error: `Failed to create user: ${createError.message}` }),
+          JSON.stringify({ error: "Benutzer konnte nicht angelegt werden" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -148,9 +155,18 @@ Deno.serve(async (req) => {
           role: role,
         });
 
+      const rollback = async (step: string, err: unknown) => {
+        console.error(`approve-user: ${step} failed, rolling back auth user:`, err);
+        const { error: delError } = await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
+        if (delError) console.error("approve-user: rollback deleteUser failed:", delError);
+        await audit("ACCESS_REQUEST_APPROVE", false, {
+          request_id: requestId, email: request.email, role, failed_step: step, rolled_back: !delError,
+        });
+        return json(500, { error: "Freigabe fehlgeschlagen, es wurde kein Konto angelegt" });
+      };
+
       if (roleInsertError) {
-        console.error("Failed to assign role:", roleInsertError);
-        // Continue anyway, role can be assigned later
+        return await rollback("role_insert", roleInsertError);
       }
 
       // Update request status to approved
@@ -164,10 +180,12 @@ Deno.serve(async (req) => {
         .eq("id", requestId);
 
       if (updateError) {
-        console.error("Failed to update request status:", updateError);
-        // User was created, so we continue
+        return await rollback("status_update", updateError);
       }
 
+      await audit("ACCESS_REQUEST_APPROVE", true, {
+        request_id: requestId, email: request.email, new_user_id: newUser.user.id, role,
+      });
       console.log(`Request ${requestId} approved successfully`);
       return new Response(
         JSON.stringify({

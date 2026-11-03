@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
+import { requireActiveRole } from "../_shared/auth.ts";
 import { renderBrandedEmail, renderBrandedButton } from "../_shared/email-templates/baseEmailLayout.ts";
 
 const corsHeaders = {
@@ -37,53 +38,42 @@ Deno.serve(async (req) => {
       auth: { persistSession: false },
     });
 
-    // Verify the caller is authenticated
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const guard = await requireActiveRole(req, ["admin"], corsHeaders);
+    if (guard instanceof Response) return guard;
+    const { userId: callerId, email: callerEmail } = guard;
 
-    const supabaseUser = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-      auth: { persistSession: false },
-    });
-
-    const { data: { user: caller }, error: authError } = await supabaseUser.auth.getUser();
-    if (authError || !caller) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Check if caller is admin
-    const { data: adminRole } = await supabaseAdmin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", caller.id)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    if (!adminRole) {
-      return new Response(
-        JSON.stringify({ error: "Only admins can create users" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Serverseitiges Protokoll jeder Rollenvergabe/-änderung (best effort)
+    const auditRole = async (action: string, details: Record<string, unknown>) => {
+      const { error } = await supabaseAdmin.from("audit_logs").insert({
+        user_id: callerId,
+        user_email: callerEmail,
+        action,
+        resource_path: `/admin/users/${details.target_user_id ?? ""}`,
+        user_role: "admin",
+        success: true,
+        details: JSON.stringify(details),
+      });
+      if (error) console.error("audit_logs insert failed:", error);
+    };
 
     // Parse request body
     const { 
       email, 
       fullName, 
-      role = "user", 
+      role, 
       sendEmail = true, 
       checkOnly = false,
       confirmReset = false,
       notifyBeforeReset = false,
     } = await req.json();
+
+    const VALID_ROLES = ["admin", "sales_partner", "user", "sales_lead", "regional_lead", "tippgeber"];
+    if (!checkOnly && (typeof role !== "string" || !VALID_ROLES.includes(role))) {
+      return new Response(
+        JSON.stringify({ error: "Ungültige oder fehlende Rolle" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!email || !fullName) {
       return new Response(
@@ -216,6 +206,7 @@ Deno.serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
+        await auditRole("ROLE_GRANT", { target_user_id: userId, email, role, source: "create-user", existing_user: true });
       } else if (currentRoles.length === 1) {
         const existing = currentRoles[0];
         if (existing !== role) {
@@ -232,6 +223,7 @@ Deno.serve(async (req) => {
               { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
+          await auditRole("ROLE_CHANGE", { target_user_id: userId, email, old_role: existing, new_role: role, source: "create-user" });
         }
         // else: identical → no-op
       } else {
@@ -275,6 +267,7 @@ Deno.serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      await auditRole("ROLE_GRANT", { target_user_id: userId, email, role, source: "create-user", existing_user: false });
     }
 
     // Temporary password is no longer stored in DB for security reasons
