@@ -26,3 +26,11 @@
 - [x] api-referenz.md: offene Punkte Link-Ablauf, Kampagnen-Code nach Einlösung.
 - [x] Nur lesen: letzte Nutzung initiate-booking/salesforce-disconnect, Verlinkung alte Buchung.
 - [x] Lokale Tests, Deploy, Publish.
+
+# initiate-booking abschalten
+
+- [x] Verweise geprüft (keine), Code nach docs/vorlagen, Deployment löschen, Referenz.
+
+# Auftrag 3: capture-lead
+
+- [ ] Plan nach SAFE_CHANGE_PLAN (nur Plan).
