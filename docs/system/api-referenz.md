@@ -158,7 +158,7 @@ Je Eintrag: Zweck · Aufrufberechtigung · Eingaben · Ergebnis · Auslöser. �
 | send-contract-confirmation | Service-Key **oder** obige Rollen + Zuständigkeit | contract_id, force | Bestätigungsmail mit Dokumenten |
 | send-zugang-info | admin, sales_lead, regional_lead, user, vertragsabteilung | mode, HFX-Nummer(n) | Mail „Zugang einrichten"; Nicht-Admins nur `send` mit genau einer Nummer, sonst 403; 412/502 |
 | commission-forecast | admin, sales_lead, regional_lead, user, sales_partner | — | Provisions-Vorschau, nur lesend |
-| create-contract-subscription | angemeldet (getUser), **keine Rollenprüfung** | contract_id, success_path, cancel_path | Stripe-Checkout-URL |
+| create-contract-subscription | admin, sales_lead, regional_lead, user + `_shared/contractAccess.ts` | contract_id (Pflicht), success_path/cancel_path (nur relative Pfade) | Stripe-Checkout-URL; Rücksprung fest auf https://sales.hfx-honorarfuchs.de; 400/401/403/404 |
 | salesforce-sync-price | admin, sales_lead | mpNr, preis | Preis in Salesforce |
 | campaign-token-issue | admin, sales_lead | Lead | Kampagnen-Link (idempotent) |
 | qodia-usage-query | admin, sales_lead | startDate, endDate, hfx_customer_number, source | Verbrauchsdaten von Qodia |
@@ -172,7 +172,7 @@ Je Eintrag: Zweck · Aufrufberechtigung · Eingaben · Ergebnis · Auslöser. �
 | approve-user | Zugangsanfrage freigeben/ablehnen, Rolle Pflicht (ohne tippgeber), atomar, audit_logs | requestId, action, role |
 | create-user | Konto anlegen/Rolle ändern, audit_logs | E-Mail, Name, role |
 | admin-delete-auth-user | Auth-Konto löschen | user_id |
-| reset-user-mfa | MFA eines Kontos zurücksetzen (eigene Prüfung über user_roles, nicht gemeinsamer Guard) | targetUserId |
+| reset-user-mfa | MFA eines Kontos zurücksetzen (gemeinsamer Guard, nur admin) | targetUserId |
 | ban-ghost-users | nie genutzte Konten ohne Rolle sperren | Modus |
 | register-standort-qodia | Qodia-Konto für Standort (-NN) | contractId |
 | send-standort-credentials | Zugangsdaten an Standort-Mail | contractId |
@@ -180,7 +180,7 @@ Je Eintrag: Zweck · Aufrufberechtigung · Eingaben · Ergebnis · Auslöser. �
 | manual-interim-invoice | Zwischenrechnung mit Stripe-Einzug (geldwirksam); 409 bei Doppellauf | contract_id |
 | send-invoice-email | Rechnungsmail mit PDF | invoiceId, pdfBase64 |
 | lexware-integration | connect / disconnect / get-settings / update-settings / export, an eigene Integration gebunden | action, Daten |
-| salesforce-auth, salesforce-disconnect | Salesforce verbinden/trennen (disconnect mit eigener Prüfung) | — |
+| salesforce-auth, salesforce-disconnect | Salesforce verbinden/trennen (beide gemeinsamer Guard, nur admin) | — |
 | campaign-mail-send, campaign-mint-runner | Kampagnenversand / Vertragsanlage, Modi dry_run/canary/batch | Modus, Liste |
 | edit-email-template | Mail-Vorlage per KI umschreiben (429/402 bei Limit/Guthaben) | html, instruction |
 | contract-merge-diagnose | Zusammenführungsplan, nur lesend | HFX-Nummer |
@@ -188,9 +188,9 @@ Je Eintrag: Zweck · Aufrufberechtigung · Eingaben · Ergebnis · Auslöser. �
 | backfill-sepa-iban, repair-carrier-customers | einmalige Datenreparaturen | Modus |
 
 ## Auffällig (nur benannt, nichts geändert)
-- `create-contract-subscription`: jede angemeldete Person, keine Rollen- oder Zuständigkeitsprüfung.
-- `reset-user-mfa`, `salesforce-disconnect`: eigene Admin-Prüfung statt gemeinsamem Guard.
-- `buchen-submit`, `initiate-booking`, `mandate-link`, `campaign-start`: öffentlich, nur per Vertrags-ID bzw. Token, ohne Rate-Limit.
+- `buchen-submit`, `initiate-booking`, `mandate-link`, `campaign-start`: öffentlich, nur per Vertrags-ID (UUID) bzw. Kampagnen-Code (32 Zufallsbytes) — nicht erratbar, aber ohne Rate-Limit (bewusst nicht gebaut, 03.11.2026).
+- **Offen:** Links haben kein Ablaufdatum (gültig, solange der Vertragsstatus passt).
+- **Offen:** Kampagnen-Code bleibt nach Einlösung gültig.
 - Öffentliche Functions mit `Access-Control-Allow-Origin: *`; Origin-Whitelist nur bei zugang-anfrage, notify-new-request, salesforce-callback.
 
 ## creditreform-check — abgeschaltet (03.11.2026)
