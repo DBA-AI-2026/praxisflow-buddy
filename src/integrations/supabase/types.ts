@@ -2978,6 +2978,10 @@ export type Database = {
         Returns: Json
       }
       apply_plz_reassignment: { Args: never; Returns: number }
+      can_write_customer_event: {
+        Args: { p_contract_id: string; p_lead_id: string }
+        Returns: boolean
+      }
       contract_uses_provider: {
         Args: { _contract_id: string; _provider: string }
         Returns: boolean
