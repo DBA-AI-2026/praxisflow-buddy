@@ -1,49 +1,73 @@
-# Plan: Bonitätsprüfung (creditreform-check) absichern
+# Plan: Bezahlseite, Admin-Funktionen, öffentliche Links
 
-Einordnung nach SAFE_CHANGE_PLAN: **Kategorie 2 (Vorsichtig, nur mit Review)**, weil eine Function und ein neues Protokoll betroffen sind. Kein Geld, keine Kundendaten, kein Cron.
+Einordnung nach SAFE_CHANGE_PLAN: Teil 1 und 2 sind **Kategorie 2** (Functions mit Review, Tests offline). Teil 3, die Begrenzung, ist **Kategorie 3**, weil Kundenstrecken mit Geldbezug betroffen sind. Bis zur Freigabe ändere ich nichts.
 
-## Bestand (nur gelesen)
+## 1. create-contract-subscription (Bezahlseite für einen Vertrag)
 
-- **Die Function ist eine Attrappe.** Sie fragt Creditreform gar nicht ab, sondern würfelt einen Score anhand des Namens (`[MOCK]`, `creditreform-check/index.ts:35–58`). Es entstehen keine Kosten und es fließen keine echten Auskunftsdaten.
-- **Einziger Aufrufer:** `src/components/dashboard/PendingContractApprovals.tsx:91` (Knopf „Bonität prüfen"). Dieser Baustein ist **nirgends im Portal eingebunden**, keine Seite zeigt ihn an. Heute ruft also keine Rolle die Prüfung auf.
-- **Bisherige Nutzung:** 0 Verträge mit Prüfdatum, 0 Prüfer. Es gibt keine Datenbasis für einen Tageswert.
-- **Absicherung heute:** keine. Anmeldung ist abgeschaltet (`verify_jwt = false`), es gibt keine Rollenprüfung und keine Begrenzung. Nur die erlaubten Herkunftsadressen sind festgelegt, und die schützen Aufrufe außerhalb eines Browsers nicht.
-- **Eingaben:** `contractId` und `customerName`. Die Prüfung bezieht sich auf einen **Vertrag, nicht auf einen Lead**. Der Name kommt ungeprüft vom Aufrufer.
+**Bestand:** Die Function prüft nur, ob jemand angemeldet ist (`index.ts:59–63`). Danach lädt sie **jeden** Vertrag mit Service-Zugang (:73–80) und erzeugt eine Stripe-Bezahlseite. Bei Fehlern kommt immer 500 mit Fehlertext, nie 401/403/404. Aufrufer ist nur `src/pages/vertrieb/Vertraege.tsx:2104`.
 
-## Vorschlag
+**Vorschlag (wie Häppchen 2):**
+- `requireActiveRole(req, ["admin","sales_lead","regional_lead","user"])`. sales_partner, tippgeber und vertragsabteilung bekommen 403.
+- Zuständigkeit über `_shared/contractAccess.ts`:
+  - admin und sales_lead dürfen alle Verträge.
+  - user: Ersteller oder Betreuer.
+  - regional_lead: zusätzlich das eigene Team.
+  - Bei einem fremden Vertrag gibt es 403.
+- Fehlende `contract_id` ergibt 400, ein unbekannter Vertrag 404.
+- Unverändert bleiben die Stripe-Positionen, die Rücksprungadressen und die Wiederverwendung offener Sessions.
+- Benannt, nicht im Umfang: Die Rücksprungadresse wird aus dem `origin`-Header gebaut (:143). Außerdem ist `esm.sh`/`serve` nicht prüfbar, weil der Import oben nicht gelesen wurde.
 
-1. **Anmeldung Pflicht** über die gemeinsame Rollenprüfung `requireActiveRole`. Weil heute niemand aufruft, schlage ich die Rollen vor, die Verträge freigeben: **admin** und **sales_lead**. Zur Entscheidung: soll `vertragsabteilung` dazu?
-2. **Name aus der Datenbank** statt vom Aufrufer: Die Function liest Vertrag und Kundennamen selbst. Ein unbekannter Vertrag ergibt 404.
-3. **Begrenzung pro Nutzer und Tag:** Mangels Nutzung schlage ich **20 Prüfungen je Nutzer und Tag** vor, mit höchstens **1 Prüfung je Vertrag und Tag**. Gezählt wird im Protokoll, nicht im Speicher, damit die Zahl auch über Neustarts gilt. Über dem Limit gibt es **429** mit einer deutschen Meldung.
-4. **Protokoll** in `audit_logs`, serverseitig: Aktion `CREDITREFORM_CHECK`, wer (ID, E-Mail, Rolle), wann, Vertrags-ID, HFX-Nummer, Erfolg ja/nein. Score und Rating stehen **nicht** im Protokoll. Abgelehnte Aufrufe (Limit, Rolle) werden mit `success=false` protokolliert.
-5. **Score speichern** übernimmt künftig die Function, nicht der Browser (heute `PendingContractApprovals.tsx:103`). So passen Protokoll und Ergebnis zusammen.
-6. `verify_jwt` bleibt abgeschaltet, wie bei den anderen Functions mit gemeinsamer Rollenprüfung. Die Prüfung macht der Guard.
+## 2. reset-user-mfa und salesforce-disconnect
+
+**Bestand:** Beide prüfen den Admin richtig, nämlich die aktive Rolle (`reset-user-mfa/index.ts:30–60`, `salesforce-disconnect/index.ts:20–50`), aber jeweils mit eigenem Code. reset-user-mfa wird von `admin/Users.tsx:363` aufgerufen. Für salesforce-disconnect gibt es **keinen Aufrufer** im Portal.
+
+**Vorschlag:**
+- Beide bekommen `requireActiveRole(req, ["admin"], corsHeaders)`, der eigene Prüfcode entfällt.
+- Fachlich ändert sich nichts. Die Rückmeldungen für Nicht-Admins kommen dann vom Guard (401/403 mit dessen Text). Die deutsche Meldung „Nur Administratoren können MFA zurücksetzen." entfällt. Bitte entscheiden, ob das so bleiben darf.
+
+## 3. Öffentliche Links: erratbar?
+
+| Link | Erkennungsmerkmal | Erratbar? |
+|---|---|---|
+| Buchen-Knopf (buchen-submit) | Vertrags-ID (UUID, `gen_random_uuid()`), nur Status `eingegangen` | nein, 122 Zufallsbits |
+| Ältere Buchung (initiate-booking) | dieselbe Vertrags-ID, nur `eingegangen` | nein |
+| Mandats-Link (mandate-link) | Vertrags-ID, Status `eingegangen`, `wartend_auf_mandat` oder `aktiv` | nein |
+| Kampagnen-Link (campaign-start) | Code `hfxc_` + 32 Zufallsbytes (`_shared/campaign.ts:52–55`) | nein |
+
+Die IDs lassen sich nicht erraten. Das echte Risiko ist ein **weitergegebener oder mitgelesener Link**: Er läuft nie ab und ist mehrfach nutzbar.
+- Mit einem bekannten Link kann man Stammdaten und AGB-Zustimmung beliebig oft überschreiben. Heute gibt es bis zu 4 AGB-Einträge je Vertrag.
+- Man kann wiederholt Mandats-Mails und Stripe-Sitzungen auslösen.
+- Beim Mandats-Link lässt sich auch an aktiven Verträgen eine neue Sitzung erzeugen, die in Gate 6 aber abgefangen wird.
+
+Bestand heute: 6 Verträge im Status `eingegangen`, 1 Kampagnen-Code, 0 eingelöst.
+
+**Begrenzung, Vorschlag.** Wichtig: Der Server hat **keine fertige Bremse für Aufrufe**, das wäre eine Eigenlösung. Ich schlage deshalb eine Zählung in der Datenbank vor, je Vertrag bzw. Code und nicht je IP-Adresse, weil sie dauerhaft gilt:
+- buchen-submit und initiate-booking: höchstens **5 Absendungen je Vertrag und Stunde**, darüber 429.
+- mandate-link: höchstens **10 neue Stripe-Sitzungen je Vertrag und Tag**. Darüber leitet der Link auf die bestehende Info-Seite um, wie heute bei Fehlern.
+- campaign-start: höchstens **10 Aufrufe je Code und Tag**, darüber geht es auf die Info-Seite.
+- Gezählt wird über `customer_events`, das schreiben buchen-submit und campaign-start schon. Alternativ kommt eine kleine neue Zähltabelle hinzu, nur für den Server. Das braucht eine Migration.
+
+Echte Nutzung ist 1–4 Absendungen je Vertrag insgesamt, deshalb stören diese Werte normale Kunden nicht.
+
+**Nicht im Vorschlag (benannt):** Ablaufdatum der Links, Code nach Einlösung ungültig machen, ältere Buchungsstrecke abschalten (wird sie noch gebraucht?).
 
 ## Was brechen könnte
 
-- **Im laufenden Betrieb nichts**, weil kein Bildschirm die Prüfung aufruft.
-- Wird `PendingContractApprovals` später eingebunden, können nur noch die freigegebenen Rollen prüfen. Alle anderen bekommen 403.
-- Externe Skripte oder Tests, die die Function ohne Anmeldung aufrufen, bekommen 401. Laut Code gibt es keine.
-- Das Speichern im Browser (Punkt 5) fällt weg. Bei einer späteren Einbindung muss der Knopf das Ergebnis aus der Antwort anzeigen, statt selbst zu schreiben.
-
-## Nur benannt, nicht im Umfang
-
-- Die Attrappe selbst: Eine echte Creditreform-Anbindung fehlt.
-- `PendingContractApprovals.tsx` ist nicht eingebunden (toter Baustein). Ob er eingebunden oder gelöscht wird, entscheiden wir gemeinsam.
+- Bezahlseite: Wer einen fremden Vertrag öffnet, bekommt 403 statt einer Bezahlseite. Das betrifft auch vertragsabteilung, falls diese Rolle den Knopf nutzt. Bitte entscheiden, ob vertragsabteilung dazugehört.
+- MFA-Reset: Die Meldungstexte ändern sich, sonst nichts.
+- Begrenzung: Ein Kunde, der sehr oft neu lädt oder neu absendet, sieht eine Hinweis-Seite. Kampagnen-Massenaufrufe sind nicht betroffen, weil sie über campaign-mint-runner laufen, nicht über campaign-start.
 
 ## Abnahme
 
-- Lokale Tests mit nachgebauter Datenbank, keine Live-Aufrufe. Geprüft wird:
-  - ohne Anmeldung 401
-  - falsche Rolle 403
-  - erlaubte Rolle 200 mit Protokolleintrag ohne Score
-  - 21. Aufruf am Tag 429
-  - zweite Prüfung desselben Vertrags am selben Tag 429
-  - unbekannter Vertrag 404
+- Lokale Tests mit nachgebauter Datenbank, keine Live-Aufrufe:
+  - Bezahlseite: je Rolle eigener, fremder und Betreuer-Vertrag; sales_partner 403; ohne Anmeldung 401.
+  - MFA und Salesforce: Admin erlaubt, alle anderen 403.
+  - Begrenzung: der jeweils erste Aufruf über dem Limit wird abgewiesen.
 - Datei:Zeile der Prüfungen, danach Publish und Sync.
 
-## Technische Details
+## Offene Entscheidungen
 
-- `supabase/functions/creditreform-check/index.ts`: `requireActiveRole(req, ["admin","sales_lead"], corsHeaders)`. Dann Zählung `audit_logs` mit `action='CREDITREFORM_CHECK' AND user_id=… AND created_at >= heute (Europe/Berlin)`. Dann das Update der `creditreform_*`-Felder auf `contracts` über den Service-Zugang.
-- Keine Migration nötig, `audit_logs` besteht bereits.
-- Neue Testdatei `src/test/security-creditreform-check.test.ts`, gleiches Muster wie die Phase-2-Tests.
+1. vertragsabteilung bei der Bezahlseite: ja oder nein?
+2. Deutsche Meldung beim MFA-Reset behalten (eigene Antwort nach dem Guard) oder Guard-Standard?
+3. Begrenzung bauen (Eigenlösung, Kategorie 3) oder erst einmal nur Teil 1 und 2?
+4. Zähler über `customer_events` oder eigene Zähltabelle?
