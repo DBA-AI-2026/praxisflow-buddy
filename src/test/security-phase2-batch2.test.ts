@@ -32,12 +32,18 @@ function db(contract: Record<string, unknown>, teamError = false) {
   const rpc = vi.fn(async (_fn: string, args: { _user_id: string }) =>
     teamError ? { data: null, error: { message: "x" } } : { data: args._user_id === TEAM, error: null });
   const from = (table: string) => {
+    let col: string | undefined;
     let id: unknown;
     const chain: Record<string, unknown> = {};
     for (const m of ["select", "in", "update", "is", "order", "limit"]) chain[m] = () => chain;
-    chain.eq = (_c: string, v: unknown) => { id = v; return chain; };
+    chain.eq = (c: string, v: unknown) => { col = c; id = v; return chain; };
     chain.single = async () => ({ data: contract, error: null });
-    chain.maybeSingle = async () => ({ data: table === "profiles" ? { email: `${id}@example.test` } : null, error: null });
+    // Profiles: row id differs from user_id (`profile-<uid>`); only a user_id lookup finds the row.
+    chain.maybeSingle = async () => {
+      if (table !== "profiles") return { data: null, error: null };
+      if (col === "user_id") return { data: { id: `profile-${id}`, user_id: id, email: `${id}@example.test` }, error: null };
+      return { data: null, error: null };
+    };
     chain.then = (r: (v: unknown) => unknown) => r({ data: [], error: null });
     return chain;
   };
