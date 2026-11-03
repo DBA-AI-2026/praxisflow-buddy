@@ -139,7 +139,7 @@ describe("Phase 2 Häppchen 2 — contract action guards", () => {
   describe("send-contract-email recipient", () => {
     async function send(owner: { created_by?: string | null; sales_partner_id?: string | null }, body: Record<string, unknown>) {
       const d = db({ id: "c", created_by: null, sales_partner_id: null, ...owner });
-      const mail = vi.fn(async () => ({ id: "m" }));
+      const mail = vi.fn(async (_msg: { to: string[] }) => ({ id: "m" }));
       const handler = load("send-contract-email", { requireActiveRole: guardFor(["admin"], d) }, mail);
       return { res: await handler(post(body)), mail };
     }
