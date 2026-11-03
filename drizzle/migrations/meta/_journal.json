@@ -50,6 +50,13 @@
       "when": 1793352721811,
       "tag": "0006_contracts_caretaker_from_lead",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793703337836,
+      "tag": "0007_phase3_2_event_log_insert_guards",
+      "breakpoints": true
     }
   ]
 }
