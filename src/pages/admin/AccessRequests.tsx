@@ -94,6 +94,7 @@ export default function AccessRequests() {
       queryClient.invalidateQueries({ queryKey: ["registration-requests"] });
       setApproveDialogOpen(false);
       setSelectedRequest(null);
+      setSelectedRole("");
       
       if (data.credentials) {
         setCredentials(data.credentials);
