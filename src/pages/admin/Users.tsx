@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabaseClient";
+import { logAuditEvent } from "@/hooks/useAuditLog";
 import {
   ROLE_PRIORITY,
   sortRolesByPriority,
@@ -221,6 +222,7 @@ export default function AdminUsers() {
       const { error } = await supabase
         .from("user_roles")
         .insert({ user_id: userId, role, is_active: true });
+      await logAuditEvent({ action: "ROLE_GRANT", resourcePath: `/admin/users/${userId}`, success: !error, details: JSON.stringify({ target_user_id: userId, role, error: error?.message }) });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -240,6 +242,7 @@ export default function AdminUsers() {
         .update({ is_active: false })
         .eq("user_id", userId)
         .eq("role", role);
+      await logAuditEvent({ action: "ROLE_REVOKE", resourcePath: `/admin/users/${userId}`, success: !error, details: JSON.stringify({ target_user_id: userId, role, error: error?.message }) });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -260,6 +263,7 @@ export default function AdminUsers() {
         .update({ is_active: false })
         .eq("user_id", userId)
         .eq("is_active", true);
+      await logAuditEvent({ action: "ROLE_REVOKE_ALL", resourcePath: `/admin/users/${userId}`, success: !error, details: JSON.stringify({ target_user_id: userId, error: error?.message }) });
       if (error) throw error;
     },
     onSuccess: () => {
