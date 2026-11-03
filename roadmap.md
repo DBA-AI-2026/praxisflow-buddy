@@ -33,7 +33,7 @@
 
 # Auftrag 3: capture-lead
 
-- [ ] Plan nach SAFE_CHANGE_PLAN (nur Plan).
-- [ ] Texte (erneuter Versand, AD-Hinweis Qodia-Fehlschlag) zur Freigabe vorlegen.
-- [ ] Nach Text-Freigabe bauen: Qodia zuerst, 24h-Sperre, IP-Grenze still 200, schlankes Protokoll, Dubletten, Migration.
-- [ ] api-referenz.md: Qodia-Einladungslink (Weg c) anfragen, dann Passwort aus Erstmail entfernen.
+- [x] Plan nach SAFE_CHANGE_PLAN (nur Plan).
+- [x] Texte (erneuter Versand, AD-Hinweis Qodia-Fehlschlag) zur Freigabe vorlegen.
+- [x] Nach Text-Freigabe bauen: Qodia zuerst, 24h-Sperre, IP-Grenze still 200, schlankes Protokoll, Dubletten, Migration.
+- [x] api-referenz.md: Qodia-Einladungslink (Weg c) anfragen, dann Passwort aus Erstmail entfernen.

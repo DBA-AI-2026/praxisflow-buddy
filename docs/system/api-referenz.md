@@ -8,6 +8,15 @@ Basis-URL aller Functions: `https://<backend>/functions/v1/<name>`
 
 ## capture-lead
 
+> **Geändert am 03.11.2026 (Auftrag 3).** Diese Punkte gehen den Abschnitten unten vor. Felder, Antworten (200 / 200 duplicate / 400 / 500) und CORS sind unverändert.
+> - **Reihenfolge:** Zuerst kommt der Qodia-Sign-up (15 s Zeitlimit), danach die Zugangsmail. Scheitert Qodia, geht **keine** Mail an den Interessenten. Der Lead bekommt dann `qodia_synced=false`, `qodia_signup_error` und bei 409 `qodia_conflict=true`. Dazu kommt das Ereignis `QODIA_SIGNUP_FAILED`. Die AD-Mail erhält einen Warnkasten, der Betreff endet auf „– Zugang nicht angelegt". Die Eingangsbestätigung an den Interessenten verschickt in diesem Fall HubSpot.
+> - **Erstmail** enthält weiter das Passwort, `lead_credentials` bleibt wie bisher.
+> - **Erneuter Versand** bei bekannter E-Mail: höchstens einmal in 24 Stunden (`credentials_sent_at`), **ohne Passwort**, nur mit dem Weg über „Passwort vergessen". Betreff: „Ihr Zugang zu HFX.GOÄ – HFX Honorarfuchs". Die Antwort bleibt gleich, auch wenn nichts verschickt wird.
+> - **`source: "manual"`** gilt nur für angemeldete Aufrufe mit aktiver Rolle, von außen gilt immer `homepage`. Auch bei manueller Anlage gibt es **keinen** zweiten Lead mit derselben E-Mail, sondern `200 duplicate` mit der vorhandenen HFX-Nummer, ohne Mail.
+> - **IP-Grenze** (nur öffentliche Aufrufe): 5 je Stunde und 20 je Tag. Darüber kommt still 200 `{"success": true, "message": "Ihre Anfrage wurde erfolgreich übermittelt."}` ohne Wirkung. Die Zählung läuft in `capture_lead_rate`, nur über einen SHA-256-Hash der IP. Einträge älter als 2 Tage werden gelöscht. Ist die Zählung nicht möglich, wird der Aufruf zugelassen.
+> - **Protokoll:** Kein Request, keine E-Mail und keine Namen mehr. Je Aufruf steht dort eine JSON-Zeile mit `result`, `lead_id` und dem Ergebnis von Qodia, Mail und Salesforce.
+> - **Offen (später):** Bei Qodia einen Einladungslink anfragen (Weg c). Sobald es ihn gibt, das Passwort aus der Erstmail entfernen und `lead_credentials` nicht mehr beschreiben.
+
 Nimmt Interessenten-Anmeldungen entgegen — von der WordPress-Homepage (Contact Form 7) und aus der internen Lead-Anlage im Portal. Legt den Lead an, erzeugt Zugangsdaten, verschickt Mails und meldet den Lead an Salesforce und Qodia.
 
 Datei: `supabase/functions/capture-lead/index.ts` (Ablauf), `assignmentPolicy.ts` (Zuordnungsregeln)
