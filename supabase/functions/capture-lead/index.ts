@@ -72,6 +72,16 @@ function generatePassword(length = 12): string {
   return result.join("");
 }
 
+const CONTACT_EMAIL = "info@hfx-honorarfuchs.de";
+const RESEND_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const RATE_PER_HOUR = 5;
+const RATE_PER_DAY = 20;
+
+async function sha256Hex(v: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(v));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 const DOWNLOAD_URL_MAC = "https://download.qodia.de/production/hfx/latest/mac/hfx-desktop.dmg";
 const DOWNLOAD_URL_WIN = "https://download.qodia.de/production/hfx/latest/windows/hfx-desktop.exe";
 
@@ -86,7 +96,7 @@ function buildConfirmationEmail(fields: {
   mp_nummer?: string | null;
   nachricht?: string | null;
   hfx_customer_number: string;
-  generated_password: string;
+  generated_password: string | null; // null = erneuter Versand ohne Passwort
 }): { html: string; text: string } {
   const { praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht, hfx_customer_number, generated_password } = fields;
 
@@ -100,18 +110,33 @@ function buildConfirmationEmail(fields: {
     <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${nachricht}&nbsp;</td>
   </tr>` : "";
 
-  const bodyHtml = `<table align="center" border="0" cellpadding="0" cellspacing="0" width="100%">
-<tr><td align="left" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt; color:#444444;">
-<strong>Danke für Ihr Interesse am HFX Honorarfuchs!<br>Entdecken Sie, was KI aus Ihrer Privatabrechnung holt.</strong>
+  const accessBlockHtml = generated_password === null
+    ? `<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Ihr Zugang zu HFX.GOÄ</strong><br>Sie haben sich erneut angemeldet. Für diese E-Mail-Adresse besteht bereits ein Zugang.</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
+<tr><td>
+<table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8; border-radius:8px; border:1px solid #d0d5dd;">
+<tr>
+<td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;">
+<strong>Anmelde-E-Mail-Adresse:</strong> ${email}<br>
+<strong>HFX-Kundennummer:</strong> ${hfx_customer_number}
+</td>
+</tr>
+</table>
 </td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="30">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Mit HFX.GOÄ gewinnen Sie schnell Klarheit über Ihre Abrechnung. Erkennen Sie Optimierungspotenziale, prüfen Sie Ihre Daten strukturiert und verschaffen Sie sich ein besseres Gefühl für Ihre Privatliquidation – ganz ohne Aufwand.</td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Das erwartet Sie:</strong><br>Einfacher Import Ihrer Abrechnungsdaten<br>Verständliche Analyse statt komplizierter Prüfung<br>Mehr Transparenz und Sicherheit bei der GOÄ-Abrechnung</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Aus Sicherheitsgründen senden wir Ihr Passwort nicht erneut. So vergeben Sie ein neues:</td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Sie nutzen noch kein Abrechnungszentrum?</strong><br>Für die Nutzung von HFX.GOÄ benötigen Sie eine PAD- oder PADnext-Datei. Wenn Ihnen das gerade nichts sagt, kümmern wir uns darum: Ein Mitarbeiter meldet sich zeitnah bei Ihnen und begleitet Sie Schritt für Schritt durch die technischen Voraussetzungen.</td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="30">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Ihr Zugang zu HFX.GOÄ:</strong></td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">
+1. HFX.GOÄ öffnen und Ihre Anmelde-E-Mail-Adresse in das Feld „E-Mail" eintragen.<br>
+2. Auf „Passwort vergessen?" klicken.<br>
+3. Den 6-stelligen Code aus Ihrem Postfach eingeben und ein neues Passwort vergeben. Kein Code da? Bitte auch den Spam-Ordner prüfen.
+</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Die Kundennummer brauchen Sie nur für Rückfragen. Sie ist kein Benutzername.</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Fragen? <a href="mailto:${CONTACT_EMAIL}" style="color:#444444;">${CONTACT_EMAIL}</a></td></tr>
+`
+    : `<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Ihr Zugang zu HFX.GOÄ:</strong></td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
 <tr><td>
 <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8; border-radius:8px; border:1px solid #d0d5dd;">
@@ -134,7 +159,20 @@ function buildConfirmationEmail(fields: {
 2. Auf „Passwort vergessen?" klicken. Der Link wird aktiv, sobald die Adresse im Feld steht.<br>
 3. Den 6-stelligen Code aus Ihrem Postfach eingeben (ggf. Spam-Ordner prüfen) und ein eigenes Passwort vergeben.
 </td></tr>
-<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td></tr>
+`;
+
+  const bodyHtml = `<table align="center" border="0" cellpadding="0" cellspacing="0" width="100%">
+<tr><td align="left" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt; color:#444444;">
+<strong>Danke für Ihr Interesse am HFX Honorarfuchs!<br>Entdecken Sie, was KI aus Ihrer Privatabrechnung holt.</strong>
+</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="30">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Mit HFX.GOÄ gewinnen Sie schnell Klarheit über Ihre Abrechnung. Erkennen Sie Optimierungspotenziale, prüfen Sie Ihre Daten strukturiert und verschaffen Sie sich ein besseres Gefühl für Ihre Privatliquidation – ganz ohne Aufwand.</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Das erwartet Sie:</strong><br>Einfacher Import Ihrer Abrechnungsdaten<br>Verständliche Analyse statt komplizierter Prüfung<br>Mehr Transparenz und Sicherheit bei der GOÄ-Abrechnung</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Sie nutzen noch kein Abrechnungszentrum?</strong><br>Für die Nutzung von HFX.GOÄ benötigen Sie eine PAD- oder PADnext-Datei. Wenn Ihnen das gerade nichts sagt, kümmern wir uns darum: Ein Mitarbeiter meldet sich zeitnah bei Ihnen und begleitet Sie Schritt für Schritt durch die technischen Voraussetzungen.</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="30">&nbsp;</td></tr>
+${accessBlockHtml}<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="40">&nbsp;</td></tr>
 <tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:16pt; line-height:24pt; color:#444444;"><strong>Jetzt Testversion downloaden und starten!</strong></td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="5">&nbsp;</td></tr>
 <tr><td align="center" valign="top" style="font-family:verdana, geneva, sans-serif; font-size:10pt; line-height:12pt; color:#444444;">Sie benötigen dafür eine PAD/PAD.next-Schnittstelle.</td></tr>
@@ -224,12 +262,23 @@ ${nachrichtSection}` : ""}
 </td></tr>
 </table>`;
 
-  const bodyText = [
-    "Danke für Ihr Interesse am HFX Honorarfuchs!",
-    "Entdecken Sie, was KI aus Ihrer Privatabrechnung holt.",
+  const accessBlockText: string[] = generated_password === null ? [
+    "Ihr Zugang zu HFX.GOÄ",
+    "Sie haben sich erneut angemeldet. Für diese E-Mail-Adresse besteht bereits ein Zugang.",
     "",
-    "Mit HFX.GOÄ gewinnen Sie schnell Klarheit über Ihre Abrechnung. Erkennen Sie Optimierungspotenziale, prüfen Sie Ihre Daten strukturiert und verschaffen Sie sich ein besseres Gefühl für Ihre Privatliquidation – ganz ohne Aufwand.",
+    `Anmelde-E-Mail-Adresse: ${email}`,
+    `HFX-Kundennummer: ${hfx_customer_number}`,
     "",
+    "Aus Sicherheitsgründen senden wir Ihr Passwort nicht erneut. So vergeben Sie ein neues:",
+    "",
+    "1. HFX.GOÄ öffnen und Ihre Anmelde-E-Mail-Adresse in das Feld „E-Mail\" eintragen.",
+    "2. Auf „Passwort vergessen?\" klicken.",
+    "3. Den 6-stelligen Code aus Ihrem Postfach eingeben und ein neues Passwort vergeben. Kein Code da? Bitte auch den Spam-Ordner prüfen.",
+    "",
+    "Die Kundennummer brauchen Sie nur für Rückfragen. Sie ist kein Benutzername.",
+    "",
+    `Fragen? ${CONTACT_EMAIL}`,
+  ] : [
     "Ihr Zugang zu HFX.GOÄ:",
     "",
     `Anmelde-E-Mail-Adresse: ${email}`,
@@ -243,6 +292,15 @@ ${nachrichtSection}` : ""}
     "1. Anwendung öffnen und Ihre Anmelde-E-Mail-Adresse in das Feld „E-Mail\" eintragen.",
     "2. Auf „Passwort vergessen?\" klicken. Der Link wird aktiv, sobald die Adresse im Feld steht.",
     "3. Den 6-stelligen Code aus Ihrem Postfach eingeben (ggf. Spam-Ordner prüfen) und ein eigenes Passwort vergeben.",
+  ];
+
+  const bodyText = [
+    "Danke für Ihr Interesse am HFX Honorarfuchs!",
+    "Entdecken Sie, was KI aus Ihrer Privatabrechnung holt.",
+    "",
+    "Mit HFX.GOÄ gewinnen Sie schnell Klarheit über Ihre Abrechnung. Erkennen Sie Optimierungspotenziale, prüfen Sie Ihre Daten strukturiert und verschaffen Sie sich ein besseres Gefühl für Ihre Privatliquidation – ganz ohne Aufwand.",
+    "",
+    ...accessBlockText,
     "",
     "Jetzt Testversion downloaden und starten (PAD/PAD.next-Schnittstelle erforderlich):",
     `Download MacOS: ${DOWNLOAD_URL_MAC}`,
@@ -260,7 +318,7 @@ ${nachrichtSection}` : ""}
     nachricht ? `Nachricht: ${nachricht}` : null,
   ].filter(Boolean).join("\n");
 
-  return renderBrandedEmail({ subheadline: "Ihre Zugangsdaten", bodyHtml, bodyText });
+  return renderBrandedEmail({ subheadline: generated_password === null ? "Ihr Zugang zu HFX.GOÄ" : "Ihre Zugangsdaten", bodyHtml, bodyText });
 }
 
 Deno.serve(async (req) => {
@@ -273,12 +331,80 @@ Deno.serve(async (req) => {
   try {
     const rawBody = await req.json();
     
-    // Detect whether this is a manual internal entry or a homepage submission
-    const leadSource: string = rawBody.source === "manual" ? "manual" : "homepage";
-    // Confirmation email is ALWAYS sent, regardless of source or parameter
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    // Schlankes Protokoll: kein Request, keine E-Mail — nur Lead-ID und Ergebnis.
+    const done = (result: string, extra: Record<string, unknown> = {}) =>
+      console.log(JSON.stringify({ fn: "capture-lead", result, ...extra }));
+
+    // ── Aufrufer-Identität + Rollen (serverseitig belegt) ─────────────────────
+    // Quelle ist ausschließlich das JWT aus dem Authorization-Header, niemals der
+    // Body. Extern = hat Rolle sales_partner und KEINE interne Rolle
+    // (user, regional_lead, sales_lead, admin). Mehrfachrollen sind möglich.
+    let callerId: string | null = null;
+    let callerRoles: string[] = [];
+    {
+      const authHeader = req.headers.get("authorization") ?? "";
+      if (authHeader) {
+        try {
+          const userClient = createClient(
+            Deno.env.get("SUPABASE_URL")!,
+            Deno.env.get("SUPABASE_ANON_KEY")!,
+            { global: { headers: { authorization: authHeader } } }
+          );
+          const { data: { user } } = await userClient.auth.getUser();
+          if (user) {
+            callerId = user.id;
+            const { data: roleRows, error: roleErr } = await supabase
+              .from("user_roles")
+              .select("role")
+              .eq("user_id", user.id)
+              .eq("is_active", true);
+            if (roleErr) {
+              console.error("Rollen-Lookup fehlgeschlagen:", roleErr.message);
+            } else {
+              callerRoles = (roleRows || []).map((r: any) => r.role);
+            }
+          }
+        } catch (_e) {
+          console.error("Caller-Identität konnte nicht ermittelt werden");
+        }
+      }
+    }
+    // Portal-Aufruf = angemeldet mit mindestens einer aktiven Rolle.
+    const isPortalCaller = !!callerId && callerRoles.length > 0;
+
+    // "manual" nur für Portal-Aufrufe; von außen gilt immer "homepage".
+    const leadSource: string = rawBody?.source === "manual" && isPortalCaller ? "manual" : "homepage";
     const sendConfirmationEmail = true;
-    console.log(`Lead request – source: ${leadSource}, sendEmail: always true`);
-    console.log(`Raw body received:`, JSON.stringify(rawBody));
+
+    // ── IP-Grenze (nur öffentliche Aufrufe): über der Grenze still 200 ohne Wirkung ──
+    if (!isPortalCaller) {
+      try {
+        const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+        const ipHash = await sha256Hex(`capture-lead:${ip}`);
+        const now = Date.now();
+        const dayAgo = new Date(now - 24 * 3600 * 1000).toISOString();
+        const hourAgo = new Date(now - 3600 * 1000).toISOString();
+        const [{ count: perDay }, { count: perHour }] = await Promise.all([
+          supabase.from("capture_lead_rate").select("id", { count: "exact", head: true }).eq("ip_hash", ipHash).gte("created_at", dayAgo),
+          supabase.from("capture_lead_rate").select("id", { count: "exact", head: true }).eq("ip_hash", ipHash).gte("created_at", hourAgo),
+        ]);
+        if ((perHour ?? 0) >= RATE_PER_HOUR || (perDay ?? 0) >= RATE_PER_DAY) {
+          done("rate_limited");
+          return new Response(
+            JSON.stringify({ success: true, message: "Ihre Anfrage wurde erfolgreich übermittelt." }),
+            { status: 200, headers: { ...headers, "Content-Type": "application/json" } }
+          );
+        }
+        await supabase.from("capture_lead_rate").insert({ ip_hash: ipHash });
+        await supabase.from("capture_lead_rate").delete().lt("created_at", new Date(now - 2 * 24 * 3600 * 1000).toISOString());
+      } catch (_e) {
+        console.error("IP-Grenze nicht prüfbar – Aufruf wird zugelassen");
+      }
+    }
 
     // Map CF7 field names to our internal format
     const {
@@ -318,87 +444,88 @@ Deno.serve(async (req) => {
     const knownAbrechnungszentren = ["nein", "keins", "CareCapital", "privadis", "anderes", "ZAB", "PVS", "DZR", "ARZ", "Sonstiges"];
     const normalizedAz = knownAbrechnungszentren.includes(abrechnungszentrum) ? abrechnungszentrum : abrechnungszentrum;
     // Log if we received an unknown but accepted value
-    if (!knownAbrechnungszentren.includes(abrechnungszentrum)) {
-      console.log(`Abrechnungszentrum "${abrechnungszentrum}" is not in known list – accepting as free-text value`);
-    }
 
     // MP-Nummer validation: must be exactly 5 digits if provided (homepage only; manual entries allow free text)
-    if (leadSource === "homepage" && mp_nummer && !/^\d{5}$/.test(mp_nummer.trim())) {
-      console.log(`MP-Nummer "${mp_nummer}" is not 5 digits – accepting anyway for homepage lead`);
-    }
 
     // MP-Nummer is optional for CareCapital/privadis – log a warning but don't reject
     if ((abrechnungszentrum === "CareCapital" || abrechnungszentrum === "privadis") && !mp_nummer) {
       console.log(`MP-Nummer missing for ${abrechnungszentrum} – accepting lead without it`);
     }
 
-    // Save to database using service role
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
 
     // Check if email already exists
     const normalizedEmail = email.trim().toLowerCase();
     const { data: existingLead } = await supabase
       .from("leads")
-      .select("id, hfx_customer_number, praxis_name, vorname, nachname, registration_attempts")
+      .select("id, hfx_customer_number, praxis_name, vorname, nachname, registration_attempts, credentials_sent_at")
       .eq("email", normalizedEmail)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    // For homepage submissions we keep strict deduplication by email.
-    // For manual internal entries we allow a new lead row, even with same email.
-    if (existingLead && leadSource === "homepage") {
-      console.log(`Duplicate registration attempt for ${normalizedEmail}, resending credentials for ${existingLead.hfx_customer_number}`);
+    // Dublette: bei Homepage UND manueller Anlage kein neuer Lead (keine Ausnahme).
+    if (existingLead && leadSource === "manual") {
+      done("duplicate_manual", { lead_id: existingLead.id });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          duplicate: true,
+          hfx_customer_number: existingLead.hfx_customer_number,
+          message: "Ein Interessent mit dieser E-Mail-Adresse existiert bereits.",
+        }),
+        { status: 200, headers: { ...headers, "Content-Type": "application/json" } }
+      );
+    }
 
-      // Resend existing credentials
-      try {
-        const resendApiKey = Deno.env.get("RESEND_API_KEY");
-        if (resendApiKey) {
-          const resend = new Resend(resendApiKey);
-          // Credential-Read: ausschliesslich aus der geschuetzten Tabelle lead_credentials.
-          const { data: cred } = await supabase
-            .from("lead_credentials")
-            .select("generated_password")
-            .eq("lead_id", existingLead.id)
-            .maybeSingle();
-          const storedPassword = cred?.generated_password ?? null;
-          const existingPassword = storedPassword || "Sie haben bereits ein eigenes Passwort vergeben. Falls Sie es nicht mehr wissen: „Passwort vergessen?\" in der Anwendung – die Schritte stehen oben.";
-          const { html: emailHtml, text: emailText } = buildConfirmationEmail({
-            praxis_name: existingLead.praxis_name,
-            vorname: existingLead.vorname,
-            nachname: existingLead.nachname,
-            email: normalizedEmail,
-            plz,
-            mobilnummer,
-            abrechnungszentrum,
-            mp_nummer,
-            nachricht,
-            hfx_customer_number: existingLead.hfx_customer_number,
-            generated_password: existingPassword,
-          });
-
-          await resend.emails.send({
-            from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
-            to: [normalizedEmail],
-            subject: `Ihre bestehenden Zugangsdaten – HFX Honorarfuchs`,
-            html: emailHtml,
-            text: emailText,
-          });
-          console.log(`Existing credentials resent to ${normalizedEmail}`);
+    if (existingLead) {
+      // Erneuter Versand ohne Passwort, höchstens einmal in 24 Stunden.
+      const lastSent = existingLead.credentials_sent_at ? new Date(existingLead.credentials_sent_at).getTime() : 0;
+      let mail = "skipped_24h";
+      if (Date.now() - lastSent >= RESEND_INTERVAL_MS) {
+        try {
+          const resendApiKey = Deno.env.get("RESEND_API_KEY");
+          if (!resendApiKey) {
+            mail = "no_key";
+          } else {
+            const resend = new Resend(resendApiKey);
+            const { html: emailHtml, text: emailText } = buildConfirmationEmail({
+              praxis_name: existingLead.praxis_name,
+              vorname: existingLead.vorname,
+              nachname: existingLead.nachname,
+              email: normalizedEmail,
+              plz,
+              mobilnummer,
+              abrechnungszentrum,
+              mp_nummer,
+              nachricht,
+              hfx_customer_number: existingLead.hfx_customer_number,
+              generated_password: null,
+            });
+            const sendResult = await resend.emails.send({
+              from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
+              to: [normalizedEmail],
+              subject: `Ihr Zugang zu HFX.GOÄ – HFX Honorarfuchs`,
+              html: emailHtml,
+              text: emailText,
+            });
+            if (sendResult?.error) {
+              mail = "failed";
+            } else {
+              mail = "sent";
+              await supabase.from("leads").update({ credentials_sent_at: new Date().toISOString() }).eq("id", existingLead.id);
+            }
+          }
+        } catch (_emailErr) {
+          mail = "failed";
         }
-      } catch (emailErr) {
-        console.error("Error resending credentials:", emailErr);
       }
 
-      // Increment registration_attempts counter
       await supabase
         .from("leads")
         .update({ registration_attempts: (existingLead.registration_attempts ?? 1) + 1 })
         .eq("id", existingLead.id);
 
+      done("duplicate", { lead_id: existingLead.id, mail });
       return new Response(
         JSON.stringify({
           success: true,
@@ -410,47 +537,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (existingLead && leadSource === "manual") {
-      console.log(`Manual lead with existing email ${normalizedEmail} – creating a new lead record.`);
-    }
-
     // Generate password for Qodia access
     const generatedPassword = generatePassword(12);
-
-    // ── Aufrufer-Identität + Rollen (serverseitig belegt) ─────────────────────
-    // Quelle ist ausschließlich das JWT aus dem Authorization-Header, niemals der
-    // Body. Extern = hat Rolle sales_partner und KEINE interne Rolle
-    // (user, regional_lead, sales_lead, admin). Mehrfachrollen sind möglich.
-    let callerId: string | null = null;
-    let callerRoles: string[] = [];
-    {
-      const authHeader = req.headers.get("authorization") ?? "";
-      if (authHeader) {
-        try {
-          const userClient = createClient(
-            Deno.env.get("SUPABASE_URL")!,
-            Deno.env.get("SUPABASE_ANON_KEY")!,
-            { global: { headers: { authorization: authHeader } } }
-          );
-          const { data: { user } } = await userClient.auth.getUser();
-          if (user) {
-            callerId = user.id;
-            const { data: roleRows, error: roleErr } = await supabase
-              .from("user_roles")
-              .select("role")
-              .eq("user_id", user.id)
-              .eq("is_active", true);
-            if (roleErr) {
-              console.error("Rollen-Lookup fehlgeschlagen:", roleErr.message);
-            } else {
-              callerRoles = (roleRows || []).map((r: any) => r.role);
-            }
-          }
-        } catch (e) {
-          console.error("Caller-Identität konnte nicht ermittelt werden:", e);
-        }
-      }
-    }
 
     // [REVIEW REQUIRED] Zuordnungsfelder aus dem Body nur nach Rollenprüfung
     // (Aufrufer + Ziel) übernehmen. Regeln: ./assignmentPolicy.ts.
@@ -468,7 +556,6 @@ Deno.serve(async (req) => {
     }
     const decision = decideAssignment({ callerId, callerRoles, body: rawBody, targetRoles });
     const callerIsExternalPartner = decision.callerIsExternalPartner;
-    console.log(`Caller ${callerId ?? "anon"} – extern: ${callerIsExternalPartner}, intern: ${decision.callerHasInternalRole}`);
 
     // ── PLZ-Zuordnung: Zentrale Logik via DB-Funktion resolve_plz_ad() ────────
     // Manuelle Zuweisung überschreibt immer die Automatik.
@@ -497,15 +584,12 @@ Deno.serve(async (req) => {
           assignedName = resolved[0].gebietsleiter_name;
           matchedRule = resolved[0].matched_rule;
           assignmentSource = "plz_auto";
-          console.log(`Lead PLZ ${plz} → assigned to ${assignedName} (rule: ${matchedRule})`);
         } else {
-          console.log(`No GL mapping found for PLZ ${plz}`);
         }
       } catch (plzErr) {
         console.error("PLZ mapping lookup error:", plzErr);
       }
     } else {
-      console.log(`Manual assignment: assigned_to=${assignedTo}`);
     }
 
     // Fallback bei manuellem Lead ohne Treffer: anlegende Person wird assigned_to,
@@ -515,7 +599,6 @@ Deno.serve(async (req) => {
     if (!assignedTo && leadSource === "manual" && callerId && decision.callerHasInternalRole) {
       assignedTo = callerId;
       assignmentSource = "manual";
-      console.log(`Fallback: assigned_to=creator ${callerId}`);
     }
 
     // B.2: Vermittlung rein erfassend stempeln — ausschließlich aus der belegten
@@ -551,14 +634,13 @@ Deno.serve(async (req) => {
 
 
     if (insertError) {
-      console.error("Error inserting lead:", insertError);
+      console.error("Error inserting lead:", insertError.code ?? "unknown");
       return new Response(
         JSON.stringify({ error: "Fehler beim Speichern" }),
         { status: 500, headers: { ...headers, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Lead created: ${lead.hfx_customer_number} for ${email} (source: ${leadSource}, assignment: ${assignmentSource})`);
 
     // Credential-Speicherung: alleiniger Schreibpfad ist die geschuetzte Tabelle
     // lead_credentials. Ein Fehler hier ist hart (500) — ohne Credential ist der
@@ -573,7 +655,7 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString(),
       }, { onConflict: "lead_id" });
     if (credErr) {
-      console.error("lead_credentials upsert failed (fatal):", credErr);
+      console.error("lead_credentials upsert failed (fatal):", credErr.code ?? "unknown");
       return new Response(
         JSON.stringify({ error: "Fehler beim Speichern" }),
         { status: 500, headers: { ...headers, "Content-Type": "application/json" } }
@@ -597,17 +679,84 @@ Deno.serve(async (req) => {
 
 
 
-    // Send confirmation email via Resend (skipped if sendConfirmationEmail=false)
-    if (sendConfirmationEmail) {
+    // ── Qodia zuerst: Zugangsmail nur, wenn das Qodia-Konto angelegt ist ──────
+    let qodiaOk = false;
+    let qodiaConflict = false;
+    try {
+      const QODIA_SIGNUP_URL = "https://auth.qodia.de/api/external/sign-up";
+      const qodiaApiKey = Deno.env.get("QODIA_API_KEY");
+      const qodiaResponse = await fetch(QODIA_SIGNUP_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(qodiaApiKey ? { "x-api-key": qodiaApiKey } : {}),
+        },
+        body: JSON.stringify({
+          email: email,
+          password: generatedPassword,
+          name: lead.hfx_customer_number,
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (qodiaResponse.ok) {
+        qodiaOk = true;
+        await supabase.from("leads").update({ qodia_synced: true, qodia_conflict: false, qodia_signup_error: null }).eq("id", lead.id);
+
+        // Freikontingent-Trial-Grant (Phase 1): genau ein Auto-Trial über 200 Stück
+        // pro Basis-HFX-Nummer. Standorte (-NN) erhalten KEINEN Auto-Grant.
+        // Idempotenz via partiellem Unique-Index (grant_type='trial').
+        if (!isStandortHfx(lead.hfx_customer_number)) {
+          const { error: grantErr } = await supabase.from("free_quota_grants").insert({
+            hfx_customer_number: lead.hfx_customer_number,
+            grant_type: "trial",
+            menge: 200,
+            quelle: "qodia_signup_auto",
+            created_by: null,
+          });
+          if (grantErr && !String(grantErr.message || "").toLowerCase().includes("duplicate")) {
+            console.error("free_quota_grants insert error:", grantErr.code ?? "unknown");
+          }
+        }
+      } else {
+        qodiaConflict = qodiaResponse.status === 409;
+        await qodiaResponse.text().catch(() => "");
+        await markQodiaFailure(`HTTP ${qodiaResponse.status}`);
+      }
+    } catch (qodiaErr) {
+      const name = (qodiaErr as Error)?.name === "TimeoutError" ? "timeout" : "network";
+      await markQodiaFailure(name);
+    }
+
+    async function markQodiaFailure(reason: string) {
+      await supabase.from("leads").update({
+        qodia_synced: false,
+        ...(qodiaConflict ? { qodia_conflict: true } : {}),
+        qodia_signup_error: reason.slice(0, 200),
+      }).eq("id", lead.id);
+      const { error: evErr } = await supabase.from("customer_events").insert({
+        event_type: "QODIA_SIGNUP_FAILED",
+        entity_type: "lead",
+        entity_id: lead.id,
+        lead_id: lead.id,
+        hfx_customer_number: lead.hfx_customer_number,
+        event_data: { reason: reason.slice(0, 200), conflict: qodiaConflict },
+        created_by: null,
+      });
+      if (evErr) console.error("QODIA_SIGNUP_FAILED event insert error:", evErr.code ?? "unknown");
+    }
+
+    // Zugangsmail nur nach erfolgreichem Qodia-Sign-up.
+    let mailResult = "skipped_qodia_failed";
+    if (sendConfirmationEmail && qodiaOk) {
       try {
         const resendApiKey = Deno.env.get("RESEND_API_KEY");
         if (!resendApiKey) {
-          console.error("RESEND_API_KEY not configured – skipping confirmation email");
+          mailResult = "no_key";
         } else {
           const resend = new Resend(resendApiKey);
           const { html: emailHtml, text: emailText } = buildConfirmationEmail({ praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht, hfx_customer_number: lead.hfx_customer_number, generated_password: generatedPassword });
 
-          console.log(`Attempting to send confirmation email to ${email} from noreply@hfx-honorarfuchs.de`);
           const sendResult = await resend.emails.send({
             from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
             to: [email],
@@ -617,20 +766,18 @@ Deno.serve(async (req) => {
           });
 
           if (sendResult.error) {
-            console.error(`Resend API error for ${email}:`, JSON.stringify(sendResult.error));
+            mailResult = "failed";
           } else {
             await supabase
               .from("leads")
-              .update({ confirmation_email_sent: true })
+              .update({ confirmation_email_sent: true, credentials_sent_at: new Date().toISOString() })
               .eq("id", lead.id);
-            console.log(`Confirmation email sent successfully to ${email}, Resend ID: ${sendResult.data?.id}`);
+            mailResult = "sent";
           }
         }
       } catch (emailErr: any) {
-        console.error(`Exception sending confirmation email to ${email}:`, emailErr?.message || emailErr);
+        mailResult = "failed";
       }
-    } else {
-      console.log(`Confirmation email skipped (send_confirmation_email=false) for ${email}`);
     }
 
     // Notify assigned AD (Außendienst / Gebietsleiter) about the new lead
@@ -666,8 +813,17 @@ Deno.serve(async (req) => {
               anderes: "Anderes Abrechnungszentrum",
             };
 
+            const qodiaBoxHtml = qodiaOk ? "" : `
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff4e5;border:1px solid #f0a040;border-radius:8px;margin:0 0 16px 0;">
+          <tr><td style="padding:12px 16px;font-family:verdana,geneva,sans-serif;font-size:11pt;line-height:16pt;color:#8a4b00;">
+            <strong>Achtung: Der HFX.GOÄ-Zugang konnte nicht angelegt werden.</strong><br>
+            Der Interessent hat deshalb <strong>keine</strong> Zugangsdaten erhalten.<br>
+            Bitte zuerst im HFX-Portal unter <em>Interessenten</em> den Lead öffnen und den Qodia-Abgleich erneut starten. Erst danach Kontakt aufnehmen.${qodiaConflict ? "<br>Die E-Mail-Adresse ist bei Qodia bereits vergeben. Bitte mit dem Interessenten klären, ob schon ein Konto besteht." : ""}
+          </td></tr>
+        </table>`;
             const adBodyHtml = `
         <p style="margin:0 0 20px;font-size:15px;color:#374151;">Hallo <strong>${adName}</strong>,</p>
+        ${qodiaBoxHtml}
         <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
           ein neuer Interessent hat sich über die HFX-Webseite registriert und wurde dir automatisch aufgrund der PLZ-Zuordnung zugewiesen.
         </p>
@@ -690,13 +846,20 @@ Deno.serve(async (req) => {
             </table>
           </td></tr>
         </table>
-        <p style="margin:0 0 0;font-size:13px;color:#374151;line-height:1.6;background:#f0f5ff;border-left:3px solid #0b367f;padding:12px 16px;border-radius:0 4px 4px 0;">
+        ${qodiaOk ? `<p style="margin:0 0 0;font-size:13px;color:#374151;line-height:1.6;background:#f0f5ff;border-left:3px solid #0b367f;padding:12px 16px;border-radius:0 4px 4px 0;">
           <strong>Nächster Schritt:</strong> Bitte nimm zeitnah Kontakt mit dem Interessenten auf. Du findest den Lead im HFX-Portal unter <em>Interessenten</em>.
-        </p>`;
+        </p>` : ""}`;
 
             const adBodyText = [
               `Hallo ${adName},`,
               "",
+              ...(qodiaOk ? [] : [
+                "ACHTUNG: Der HFX.GOÄ-Zugang konnte nicht angelegt werden.",
+                "Der Interessent hat deshalb KEINE Zugangsdaten erhalten.",
+                "Bitte zuerst im HFX-Portal unter Interessenten den Lead öffnen und den Qodia-Abgleich erneut starten. Erst danach Kontakt aufnehmen.",
+                ...(qodiaConflict ? ["Die E-Mail-Adresse ist bei Qodia bereits vergeben. Bitte mit dem Interessenten klären, ob schon ein Konto besteht."] : []),
+                "",
+              ]),
               "ein neuer Interessent hat sich über die HFX-Webseite registriert und wurde dir automatisch aufgrund der PLZ-Zuordnung zugewiesen.",
               "",
               "Lead-Details:",
@@ -711,7 +874,7 @@ Deno.serve(async (req) => {
               nachricht ? `Nachricht: ${nachricht}` : null,
               `HFX-Nummer: ${lead.hfx_customer_number}`,
               "",
-              "Nächster Schritt: Bitte nimm zeitnah Kontakt mit dem Interessenten auf. Du findest den Lead im HFX-Portal unter Interessenten.",
+              qodiaOk ? "Nächster Schritt: Bitte nimm zeitnah Kontakt mit dem Interessenten auf. Du findest den Lead im HFX-Portal unter Interessenten." : null,
             ].filter(Boolean).join("\n");
 
             const { html: adNotificationHtml, text: adNotificationText } = renderBrandedEmail({
@@ -724,23 +887,22 @@ Deno.serve(async (req) => {
             await resend.emails.send({
               from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
               to: [adEmail],
-              subject: `🔔 Neuer Lead: ${praxis_name} (${plz})`,
+              subject: `🔔 Neuer Lead: ${praxis_name} (${plz})${qodiaOk ? "" : " – Zugang nicht angelegt"}`,
               html: adNotificationHtml,
               text: adNotificationText,
             });
-            console.log(`AD notification sent to ${adEmail} (${adName}) for lead ${lead.hfx_customer_number}`);
           } else {
-            console.log(`AD ${adName} has no email address, skipping notification`);
           }
         } else {
           console.log("AD notification disabled via email_notification_settings");
         }
       } catch (adNotifErr) {
-        console.error("Error sending AD notification:", adNotifErr);
+        console.error("Error sending AD notification");
       }
     }
 
-    // Sync to Salesforce (async, don't block response)
+    // Sync to Salesforce
+    let sfResult = "not_connected";
     try {
       const { data: sfConn } = await supabase
         .from("salesforce_connections")
@@ -774,64 +936,17 @@ Deno.serve(async (req) => {
             .from("leads")
             .update({ salesforce_synced: true, salesforce_id: sfData.id })
             .eq("id", lead.id);
-          console.log(`Lead synced to Salesforce: ${sfData.id}`);
+          sfResult = "ok";
         } else {
-          const errText = await sfResponse.text();
-          console.error("Salesforce sync failed:", errText);
+          await sfResponse.text().catch(() => "");
+          sfResult = `failed_${sfResponse.status}`;
         }
       }
     } catch (sfErr) {
-      console.error("Salesforce sync error:", sfErr);
+      sfResult = "error";
     }
 
-    // Sync to Qodia (HFX-Nummer + Passwort)
-    try {
-      const QODIA_SIGNUP_URL = "https://auth.qodia.de/api/external/sign-up";
-      const qodiaApiKey = Deno.env.get("QODIA_API_KEY");
-      const qodiaResponse = await fetch(QODIA_SIGNUP_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(qodiaApiKey ? { "x-api-key": qodiaApiKey } : {}),
-        },
-        body: JSON.stringify({
-          email: email,
-          password: generatedPassword,
-          name: lead.hfx_customer_number,
-        }),
-      });
-
-      if (qodiaResponse.ok) {
-        await supabase.from("leads").update({ qodia_synced: true, qodia_conflict: false }).eq("id", lead.id);
-        console.log(`Lead synced to Qodia: ${lead.hfx_customer_number}`);
-
-        // Freikontingent-Trial-Grant (Phase 1): genau ein Auto-Trial über 200 Stück
-        // pro Basis-HFX-Nummer. Standorte (-NN) erhalten KEINEN Auto-Grant.
-        // Idempotenz via partiellem Unique-Index (grant_type='trial').
-        if (!isStandortHfx(lead.hfx_customer_number)) {
-          const { error: grantErr } = await supabase.from("free_quota_grants").insert({
-            hfx_customer_number: lead.hfx_customer_number,
-            grant_type: "trial",
-            menge: 200,
-            quelle: "qodia_signup_auto",
-            created_by: null,
-          });
-          if (grantErr && !String(grantErr.message || "").toLowerCase().includes("duplicate")) {
-            console.error("free_quota_grants insert error:", grantErr);
-          }
-        }
-      } else {
-        const errText = await qodiaResponse.text();
-        console.error(`Qodia sync failed (${qodiaResponse.status}):`, errText);
-        // Mark conflict if Qodia reports email already exists (409)
-        if (qodiaResponse.status === 409) {
-          await supabase.from("leads").update({ qodia_conflict: true }).eq("id", lead.id);
-          console.log(`Qodia conflict (409) for ${lead.hfx_customer_number} – marked as conflict`);
-        }
-      }
-    } catch (qodiaErr) {
-      console.error("Qodia sync error:", qodiaErr);
-    }
+    done("created", { lead_id: lead.id, source: leadSource, qodia: qodiaOk ? "ok" : (qodiaConflict ? "conflict" : "failed"), mail: mailResult, salesforce: sfResult });
 
     return new Response(
       JSON.stringify({
@@ -842,7 +957,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...headers, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
-    console.error("Error in capture-lead:", error);
+    console.error("Error in capture-lead:", error?.message ?? "unknown");
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
