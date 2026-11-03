@@ -104,3 +104,93 @@ Bei einer bereits vorhandenen E-Mail (Homepage): kein neuer Lead, kein neues Pas
 ---
 
 <!-- Weitere Functions folgen nach Freigabe des Eintrags capture-lead. -->
+
+---
+
+# Übrige Functions (Kurzform)
+
+Je Eintrag: Zweck · Aufrufberechtigung · Eingaben · Ergebnis · Auslöser. „Rolle" heißt: `requireActiveRole` aus `_shared/auth.ts` (nur aktive Rolle zählt, sonst 401/403). „JWT aus" heißt: `verify_jwt = false` in `supabase/config.toml` — die Function prüft dann selbst oder gar nicht.
+
+## Öffentliche Eingänge (ohne Anmeldung)
+
+| Function | Zweck | Absicherung | Eingaben | Ergebnis / Auslöser |
+|---|---|---|---|---|
+| zugang-anfrage | Zugangsanfrage aus /zugang, nur Mail an info@hfx-honorarfuchs.de | Origin-Whitelist, Honeypot (stumm 200), 5 Anfragen/10 Min je IP (im Speicher) | Formularfelder | Mail; kein Lead, kein Konto. Auslöser: Seite /zugang |
+| notify-new-request | Mail über neue Registrierungsanfrage an Admin | Origin-Whitelist; atomarer Claim in DB vor Versand (nur einmal) | Anfrage-ID | 200/4xx/500. Auslöser: Registrierungsformular |
+| buchen-submit | Buchen-Knopf auf /buchen: speichert Fachrichtung/Rechtsform/BSNR/LANR, AGB-Zustimmung, ruft send-mandate-setup | keine (JWT aus); nur POST (405) | contract_id, Stammdaten, AGB | 200 mit `setup_url`; 400/404/500/502. Auslöser: Kundenseite |
+| initiate-booking | Ältere Buchungsstrecke: Stammdaten + AGB, Stripe-Session | keine (JWT aus); nur POST | contract_id, fachrichtung, rechtsform, bsnr, lanr, agb_accepted, agb_version | Stripe-URL; 400/404/500 |
+| mandate-link | Stabiler Link aus Mail 1 → frische Stripe-Setup-Session, Weiterleitung | keine; nur GET; kein Rate-Limit (Code-Kommentar :43) | `?contract_id=` | 302 zu Stripe. Auslöser: Kundenmail |
+| campaign-start | Kampagnen-Klick-Link: prüft Token, legt ggf. Vertrag via qodia-initiate-booking an | Token im Link; nur GET; kein Rate-Limit/keine Token-Härtung (:26) | `?token=hfxc_…` | Weiterleitung. Auslöser: Seite /kampagne |
+| salesforce-callback | OAuth-Rückkehr von Salesforce, speichert Tokens | Origin-Whitelist; OAuth-State | `code`, `state` | Weiterleitung ins Portal |
+| creditreform-check | Bonitätsprüfung zu einem Vertrag | **keine** (JWT aus, keine eigene Prüfung) | contractId, customerName | Prüfergebnis; 400/500 |
+| check-subscription, create-checkout | Alte Stripe-Welt, abgeschaltet 08.05.2026 | — | — | immer **410** |
+
+## Externe Systeme (Schlüssel im Header)
+
+| Function | Gegenstelle | Absicherung | Eingaben | Ergebnis |
+|---|---|---|---|---|
+| stripe-webhook | Stripe | Pflicht `stripe-signature` (:201–210), sonst 400/401; Idempotenz `processed_stripe_events` | Stripe-Ereignis | Vertragsaktivierung, Mandat, Rechnungsstatus, Mails; ruft auto-invoice mit `x-cron-secret` |
+| receive-usage | Qodia | `x-api-key` = `QODIA_API_KEY`, sonst 401 | hfx_customer_number, contract_id/product_name, Menge | Eintrag `usage_charges`; 400/404/500 |
+| qodia-initiate-booking | Qodia / intern | `x-api-key` = `QODIA_API_KEY` (:33), sonst 401; nur POST | hfx_customer_number, product_name, skip_mail | Vertrag angelegt 200; 409 bei aktivem Vertrag; 400/404/500 |
+| demo-import | Qodia | `x-api-key` = `DEMO_IMPORT_API_KEY` | Demo-Daten | Demo-Datensatz |
+| notify-demo-limit | Qodia | `x-api-key` = `DEMO_IMPORT_API_KEY` | hfx_customer_number, invoice_count | Status `limit_reached`, Mail |
+| auth-email-hook | Anmelde-Dienst | `Authorization: Bearer <Hook-Schlüssel>` (:95), sonst 401 | Auth-Mail-Ereignis | versendet gebrandete Auth-Mails |
+
+## Zeitgesteuert (nur `x-cron-secret`)
+
+| Function | Zweck | Zusätzlich erlaubt |
+|---|---|---|
+| auto-invoice | Monatsrechnung am 1., Stripe-Einzug, Rechnungsmail, Mandats-Recovery | aktiver admin (manueller Lauf) |
+| demo-reminder | Erinnerungsmails Demo-Ende | — |
+| qodia-auto-usage-sync | Verbrauch von Qodia abholen | — |
+| qodia-lead-usage-sync | Aktivität von Interessenten in Testphase (05:30 UTC), schreibt nur qodia_*-Spalten | — |
+| qodia-status-sync | Qodia-Kontostatus (04:30 UTC); ohne CORS-Handler | aktiver admin |
+| lexware-auto-sync | Belege an Lexware | aktiver admin |
+| salesforce-auto-sync | Abgleich mit Salesforce | aktiver admin |
+
+## Portal — Vertrieb
+
+| Function | Rolle | Eingaben | Ergebnis / Besonderheit |
+|---|---|---|---|
+| sync-lead-qodia | admin, sales_lead, regional_lead, user + Zuständigkeit aus DB | leadId | Qodia-Konto zum Lead; 403 bei fremdem Lead |
+| notify-lead-assignment | admin, sales_lead, regional_lead, user | leadId | Mail an zugewiesenen AD |
+| send-contract-email | admin, sales_lead, regional_lead, user + `_shared/contractAccess.ts` | contractId (Pflicht), PDF-Daten | Vertragskopie an Betreuer, sonst Ersteller; Empfänger aus Request ignoriert |
+| send-mandate-setup | Service-Key **oder** obige Rollen + Zuständigkeit | contract_id, force | Stripe-Setup-Session + Mail 1 |
+| send-contract-confirmation | Service-Key **oder** obige Rollen + Zuständigkeit | contract_id, force | Bestätigungsmail mit Dokumenten |
+| send-zugang-info | admin, sales_lead, regional_lead, user, vertragsabteilung | mode, HFX-Nummer(n) | Mail „Zugang einrichten"; Nicht-Admins nur `send` mit genau einer Nummer, sonst 403; 412/502 |
+| commission-forecast | admin, sales_lead, regional_lead, user, sales_partner | — | Provisions-Vorschau, nur lesend |
+| create-contract-subscription | angemeldet (getUser), **keine Rollenprüfung** | contract_id, success_path, cancel_path | Stripe-Checkout-URL |
+| salesforce-sync-price | admin, sales_lead | mpNr, preis | Preis in Salesforce |
+| campaign-token-issue | admin, sales_lead | Lead | Kampagnen-Link (idempotent) |
+| qodia-usage-query | admin, sales_lead | startDate, endDate, hfx_customer_number, source | Verbrauchsdaten von Qodia |
+| notify-tipp-status | admin, sales_lead | tippLeadId, newStatus | Statusmail an Tippgeber |
+| submit-tipp-lead | tippgeber, nur eigener Tipp (created_by) | tippLeadId | PLZ-Zuordnung, Mails, Salesforce; fremd 403 |
+
+## Portal — nur Admin
+
+| Function | Zweck | Eingaben |
+|---|---|---|
+| approve-user | Zugangsanfrage freigeben/ablehnen, Rolle Pflicht (ohne tippgeber), atomar, audit_logs | requestId, action, role |
+| create-user | Konto anlegen/Rolle ändern, audit_logs | E-Mail, Name, role |
+| admin-delete-auth-user | Auth-Konto löschen | user_id |
+| reset-user-mfa | MFA eines Kontos zurücksetzen (eigene Prüfung über user_roles, nicht gemeinsamer Guard) | targetUserId |
+| ban-ghost-users | nie genutzte Konten ohne Rolle sperren | Modus |
+| register-standort-qodia | Qodia-Konto für Standort (-NN) | contractId |
+| send-standort-credentials | Zugangsdaten an Standort-Mail | contractId |
+| qodia-update-plan | Qodia-Plan auf Partner-Standard heben (auch Service-Key) | contract |
+| manual-interim-invoice | Zwischenrechnung mit Stripe-Einzug (geldwirksam); 409 bei Doppellauf | contract_id |
+| send-invoice-email | Rechnungsmail mit PDF | invoiceId, pdfBase64 |
+| lexware-integration | connect / disconnect / get-settings / update-settings / export, an eigene Integration gebunden | action, Daten |
+| salesforce-auth, salesforce-disconnect | Salesforce verbinden/trennen (disconnect mit eigener Prüfung) | — |
+| campaign-mail-send, campaign-mint-runner | Kampagnenversand / Vertragsanlage, Modi dry_run/canary/batch | Modus, Liste |
+| edit-email-template | Mail-Vorlage per KI umschreiben (429/402 bei Limit/Guthaben) | html, instruction |
+| contract-merge-diagnose | Zusammenführungsplan, nur lesend | HFX-Nummer |
+| commission-testrun, seed-test-usage | Testwerkzeuge, nur Testverträge | Testdaten |
+| backfill-sepa-iban, repair-carrier-customers | einmalige Datenreparaturen | Modus |
+
+## Auffällig (nur benannt, nichts geändert)
+- `creditreform-check`: öffentlich ohne jede Prüfung.
+- `create-contract-subscription`: jede angemeldete Person, keine Rollen- oder Zuständigkeitsprüfung.
+- `reset-user-mfa`, `salesforce-disconnect`: eigene Admin-Prüfung statt gemeinsamem Guard.
+- `buchen-submit`, `initiate-booking`, `mandate-link`, `campaign-start`: öffentlich, nur per Vertrags-ID bzw. Token, ohne Rate-Limit.
+- Öffentliche Functions mit `Access-Control-Allow-Origin: *`; Origin-Whitelist nur bei zugang-anfrage, notify-new-request, salesforce-callback.
