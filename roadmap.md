@@ -18,3 +18,11 @@
 - [x] Function aus supabase/functions entfernen, Code als Vorlage unter docs/vorlagen behalten.
 - [x] Deployment löschen.
 - [x] api-referenz.md: Hinweis + Anforderungen für echte Anbindung.
+
+# Auftrag 2: Bezahlseite und Admin-Functions
+
+- [ ] create-contract-subscription: Rolle + Zuständigkeit, feste Rücksprungadresse, 400/401/403/404.
+- [ ] reset-user-mfa, salesforce-disconnect: requireActiveRole(["admin"]).
+- [ ] api-referenz.md: offene Punkte Link-Ablauf, Kampagnen-Code nach Einlösung.
+- [ ] Nur lesen: letzte Nutzung initiate-booking/salesforce-disconnect, Verlinkung alte Buchung.
+- [ ] Lokale Tests, Deploy, Publish.
