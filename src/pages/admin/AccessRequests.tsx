@@ -45,11 +45,10 @@ const statusConfig = {
   rejected: { label: "Abgelehnt", color: "bg-red-100 text-red-800", icon: XCircle },
 };
 
-// Wortlaut-Vorschlag, Freigabe ausstehend
 const ROLE_HINTS: Record<string, string> = {
-  user: "Gebietsleiter: sieht und bearbeitet die eigenen zugewiesenen Interessenten und Verträge.",
-  sales_partner: "Vertriebspartner (extern): sieht nur eigene Verträge und selbst vermittelte Interessenten.",
-  sales_lead: "Vertriebsleitung: sieht alle Interessenten und Verträge und kann Zuordnungen ändern.",
+  user: "Interner Vertrieb: sieht und bearbeitet die ihm zugewiesenen Interessenten und die Verträge, die er angelegt hat oder betreut.",
+  sales_partner: "Extern: sieht nur die selbst vermittelten Interessenten (Praxis, Ort, Status). Keine Kundendaten, keine Verträge.",
+  sales_lead: "Sieht alle Interessenten und Verträge, ändert Zuordnungen, Export und PLZ-Zuordnung.",
   regional_lead: "Regionalleiter: sieht eigene Daten und die seines Teams. Team-Zuordnung danach in der Benutzerverwaltung pflegen.",
   admin: "Admin: voller Zugriff inkl. Benutzerverwaltung und Finanzen. Nur für interne Verantwortliche.",
 };
