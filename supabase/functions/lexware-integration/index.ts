@@ -1,3 +1,4 @@
+import { requireActiveRole } from "../_shared/auth.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ALLOWED_ORIGINS = [
@@ -82,6 +83,10 @@ Deno.serve(async (req) => {
     }
 
     const userId = claimsData.claims.sub;
+
+    // Phase 2 / Häppchen 3: only active admins; integration stays bound to own user_id
+    const guard = await requireActiveRole(req, ["admin"], corsHeaders);
+    if (guard instanceof Response) return guard;
     const body: LexwareExportRequest = await req.json();
 
     switch (body.action) {

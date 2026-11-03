@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireActiveRole } from "../_shared/auth.ts";
 import { renderBrandedEmail } from "../_shared/email-templates/baseEmailLayout.ts";
 
 const corsHeaders = {
@@ -37,17 +38,10 @@ Deno.serve(async (req) => {
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 
-    // Auth: get calling user
-    const authHeader = req.headers.get("authorization") ?? "";
-    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { authorization: authHeader } },
-    });
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Nicht authentifiziert" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+    // Auth: only active tippgeber (Phase 2 / Häppchen 3)
+    const guard = await requireActiveRole(req, ["tippgeber"], corsHeaders);
+    if (guard instanceof Response) return guard;
+    const supabase = guard.admin;
 
     const body = await req.json();
     const { tippLeadId } = body;
@@ -63,6 +57,10 @@ Deno.serve(async (req) => {
       .single();
     if (tipError || !tip) {
       return new Response(JSON.stringify({ error: "Tipp nicht gefunden" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    // Responsibility: tip must be created by the caller
+    if (tip.created_by !== guard.userId) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Load tippgeber profile
