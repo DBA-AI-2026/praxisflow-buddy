@@ -29,7 +29,7 @@ Datei: `supabase/functions/capture-lead/index.ts` (Ablauf), `assignmentPolicy.ts
 | `nachname` | ja | `your-nachname`, `last-name`, `lastname`, `last_name`, `your-name` | 100 Zeichen |
 | `email` | ja | `your-email`, `mail` | Format `x@y.z` (:307), kleingeschrieben, 255 Zeichen |
 | `plz` | ja | `your-plz`, `postleitzahl`, `zip`, `postal_code` | 10 Zeichen; Format wird nicht geprüft |
-| `abrechnungszentrum` | ja* | `your-abrechnungszentrum`, `abrechnung` | *fehlt es, wird beim Umschlüsseln `"nein"` gesetzt — die Pflichtprüfung greift daher praktisch nur bei leerem String im direkt benannten Feld |
+| `abrechnungszentrum` | ja* | `your-abrechnungszentrum`, `abrechnung` | *bei direkt benannten Feldern (`praxis_name`/`vorname`/`nachname` vorhanden) → fehlt es: 400; bei CF7-Namen wird es beim Umschlüsseln still auf `"nein"` gesetzt |
 | `mobilnummer` | nein | `your-mobilnummer`, `telefon`, `phone`, `tel`, `your-tel`, `mobile` | 30 Zeichen; leer → `"nicht angegeben"` |
 | `mp_nummer` | nein | `your-mp-nummer`, `mp_nr`, `mpnummer` | 50 Zeichen; nicht 5-stellig → nur Log-Hinweis, kein Abweisen (:326) |
 | `nachricht` | nein | `your-message`, `message` | 2000 Zeichen |
