@@ -21,8 +21,8 @@
 
 # Auftrag 2: Bezahlseite und Admin-Functions
 
-- [ ] create-contract-subscription: Rolle + Zuständigkeit, feste Rücksprungadresse, 400/401/403/404.
-- [ ] reset-user-mfa, salesforce-disconnect: requireActiveRole(["admin"]).
-- [ ] api-referenz.md: offene Punkte Link-Ablauf, Kampagnen-Code nach Einlösung.
-- [ ] Nur lesen: letzte Nutzung initiate-booking/salesforce-disconnect, Verlinkung alte Buchung.
-- [ ] Lokale Tests, Deploy, Publish.
+- [x] create-contract-subscription: Rolle + Zuständigkeit, feste Rücksprungadresse, 400/401/403/404.
+- [x] reset-user-mfa, salesforce-disconnect: requireActiveRole(["admin"]).
+- [x] api-referenz.md: offene Punkte Link-Ablauf, Kampagnen-Code nach Einlösung.
+- [x] Nur lesen: letzte Nutzung initiate-booking/salesforce-disconnect, Verlinkung alte Buchung.
+- [x] Lokale Tests, Deploy, Publish.

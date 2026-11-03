@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireActiveRole } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,52 +12,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Nicht autorisiert" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    // Verify calling user is admin
-    const callerClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user: caller } } = await callerClient.auth.getUser();
-    if (!caller) {
-      return new Response(JSON.stringify({ error: "Nicht autorisiert" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Check caller is admin — multi-role safe: load all active roles, check via includes().
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
-    const { data: callerRoleRows, error: callerRoleErr } = await adminClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", caller.id)
-      .eq("is_active", true);
-
-    if (callerRoleErr) {
-      console.error("Role lookup failed:", callerRoleErr);
-      return new Response(JSON.stringify({ error: "Rollen-Prüfung fehlgeschlagen." }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const callerRoles = (callerRoleRows ?? []).map((r: { role: string }) => r.role);
-    if (!callerRoles.includes("admin")) {
-      return new Response(JSON.stringify({ error: "Nur Administratoren können MFA zurücksetzen." }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const guard = await requireActiveRole(req, ["admin"], corsHeaders);
+    if (guard instanceof Response) return guard;
+    const adminClient = guard.admin;
+    const caller = { id: guard.userId, email: guard.email };
 
     const { targetUserId } = await req.json();
     if (!targetUserId || typeof targetUserId !== "string") {
