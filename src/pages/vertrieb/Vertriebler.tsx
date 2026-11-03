@@ -12,6 +12,7 @@ import { Users, Euro, Check, ChevronsUpDown, Star, UserPlus, Search, Percent, Tr
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabaseClient";
+import { logAuditEvent } from "@/hooks/useAuditLog";
 import { PartnerCommissionDialog } from "@/components/vertrieb/PartnerCommissionDialog";
 import { CreatePartnerDialog } from "@/components/vertrieb/CreatePartnerDialog";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -93,6 +94,7 @@ const Vertriebler = () => {
         .from("user_roles")
         .update({ is_active: false })
         .eq("user_id", userId);
+      await logAuditEvent({ action: "SALES_USER_DEACTIVATE", resourcePath: `/vertrieb/vertriebler/${userId}`, success: !error, details: JSON.stringify({ target_user_id: userId, error: error?.message }) });
       if (error) throw error;
     },
     onSuccess: () => {

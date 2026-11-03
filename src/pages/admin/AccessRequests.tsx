@@ -45,6 +45,15 @@ const statusConfig = {
   rejected: { label: "Abgelehnt", color: "bg-red-100 text-red-800", icon: XCircle },
 };
 
+// Wortlaut-Vorschlag, Freigabe ausstehend
+const ROLE_HINTS: Record<string, string> = {
+  user: "Gebietsleiter: sieht und bearbeitet die eigenen zugewiesenen Interessenten und Verträge.",
+  sales_partner: "Vertriebspartner (extern): sieht nur eigene Verträge und selbst vermittelte Interessenten.",
+  sales_lead: "Vertriebsleitung: sieht alle Interessenten und Verträge und kann Zuordnungen ändern.",
+  regional_lead: "Regionalleiter: sieht eigene Daten und die seines Teams. Team-Zuordnung danach in der Benutzerverwaltung pflegen.",
+  admin: "Admin: voller Zugriff inkl. Benutzerverwaltung und Finanzen. Nur für interne Verantwortliche.",
+};
+
 export default function AccessRequests() {
   const [search, setSearch] = useState("");
   const [selectedRequest, setSelectedRequest] = useState<RegistrationRequest | null>(null);
@@ -52,7 +61,7 @@ export default function AccessRequests() {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
-  const [selectedRole, setSelectedRole] = useState<string>("sales_partner");
+  const [selectedRole, setSelectedRole] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -345,17 +354,19 @@ export default function AccessRequests() {
                 <Label>Rolle zuweisen</Label>
                 <Select value={selectedRole} onValueChange={setSelectedRole}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Rolle wählen…" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="user">Gebietsleiter</SelectItem>
                     <SelectItem value="sales_partner">Vertriebspartner</SelectItem>
                     <SelectItem value="sales_lead">Vertriebsleitung</SelectItem>
                     <SelectItem value="regional_lead">Regionalleiter</SelectItem>
-                    <SelectItem value="tippgeber">Tippgeber</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
+                {selectedRole && ROLE_HINTS[selectedRole] && (
+                  <p className="text-xs text-muted-foreground">{ROLE_HINTS[selectedRole]}</p>
+                )}
               </div>
             </div>
           )}
@@ -370,7 +381,7 @@ export default function AccessRequests() {
                   approveMutation.mutate({ requestId: selectedRequest.id, role: selectedRole });
                 }
               }}
-              disabled={approveMutation.isPending}
+              disabled={approveMutation.isPending || !selectedRole}
             >
               {approveMutation.isPending ? (
                 <>
