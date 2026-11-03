@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     let salesPartnerEmail: string | null = null;
     for (const pid of [contract.sales_partner_id, contract.created_by]) {
       if (!pid) continue;
-      const { data: prof } = await supabaseAdmin.from("profiles").select("email").eq("id", pid).maybeSingle();
+      const { data: prof } = await supabaseAdmin.from("profiles").select("email").eq("user_id", pid).maybeSingle();
       if (prof?.email) { salesPartnerEmail = prof.email; break; }
     }
 
