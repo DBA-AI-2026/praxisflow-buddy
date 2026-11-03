@@ -1,6 +1,9 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "npm:stripe@14.21.0";
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { requireActiveRole } from "../_shared/auth.ts";
+import { canAccessContract } from "../_shared/contractAccess.ts";
+
+// Feste Rücksprung-Domain (nicht aus dem origin-Header).
+const APP_ORIGIN = "https://sales.hfx-honorarfuchs.de";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,43 +45,39 @@ async function findExistingSession(
   return null;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-  );
+  const json = (status: number, body: Record<string, unknown>) =>
+    new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   try {
     log("Function invoked");
 
-    // Authenticate calling user
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header");
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError || !userData.user) throw new Error("Authentication failed");
-    log("User authenticated", { userId: userData.user.id });
+    const guard = await requireActiveRole(req, ["admin", "sales_lead", "regional_lead", "user"], corsHeaders);
+    if (guard instanceof Response) return guard;
 
-    const body = await req.json();
-    const { contract_id, success_path, cancel_path } = body;
-    if (!contract_id) throw new Error("contract_id is required");
-    log("Request parsed", { contract_id });
+    const body = await req.json().catch(() => null);
+    const contract_id = body?.contract_id;
+    if (!contract_id || typeof contract_id !== "string") return json(400, { error: "contract_id ist Pflicht" });
+    const { success_path, cancel_path } = body;
+    const safePath = (p: unknown, fallback: string) =>
+      typeof p === "string" && p.startsWith("/") && !p.startsWith("//") ? p : fallback;
 
-    // Load contract with admin privileges
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    const supabaseAdmin = guard.admin;
     const { data: contract, error: contractErr } = await supabaseAdmin
       .from("contracts")
       .select("*")
       .eq("id", contract_id)
       .maybeSingle();
-    if (contractErr || !contract) throw new Error("Contract not found");
+    if (contractErr) throw new Error("Vertrag konnte nicht geladen werden");
+    if (!contract) return json(404, { error: "Vertrag nicht gefunden" });
+
+    if (!(await canAccessContract(supabaseAdmin, guard.userId, guard.roles, contract))) {
+      return json(403, { error: "Forbidden" });
+    }
     log("Contract loaded", {
       contractId: contract.id,
       product: contract.product_name,
@@ -124,7 +123,7 @@ serve(async (req) => {
       });
     }
 
-    const customerEmail = contract.email || userData.user.email;
+    const customerEmail = contract.email || guard.email || undefined;
 
     // Find or reuse existing Stripe customer
     const customers = await stripe.customers.list({ email: customerEmail, limit: 1 });
@@ -140,7 +139,6 @@ serve(async (req) => {
     const mode = hasRecurring ? "subscription" : "payment";
     log("Checkout mode", { mode, hasRecurring });
 
-    const origin = req.headers.get("origin") || "https://praxisflow-buddy.lovable.app";
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -151,13 +149,13 @@ serve(async (req) => {
       allow_promotion_codes: true,
       billing_address_collection: "auto",
       payment_method_types: ["card", "sepa_debit"],
-      success_url: `${origin}${success_path || "/vertrieb/vertraege?checkout=success"}`,
-      cancel_url: `${origin}${cancel_path || "/vertrieb/vertraege?checkout=canceled"}`,
+      success_url: `${APP_ORIGIN}${safePath(success_path, "/vertrieb/vertraege?checkout=success")}`,
+      cancel_url: `${APP_ORIGIN}${safePath(cancel_path, "/vertrieb/vertraege?checkout=canceled")}`,
       metadata: {
         source: "contract_activation",
         contract_id,
         customer_name: contract.customer_name || "",
-        created_by: userData.user.id,
+        created_by: guard.userId,
       },
       subscription_data: hasRecurring ? {
         metadata: { contract_id },
