@@ -725,6 +725,7 @@ Deno.serve(async (req) => {
       }
     } catch (qodiaErr) {
       const name = (qodiaErr as Error)?.name === "TimeoutError" ? "timeout" : "network";
+      console.error("Qodia sign-up error:", (qodiaErr as Error)?.name ?? "unknown", (qodiaErr as Error)?.message ?? "");
       await markQodiaFailure(name);
     }
 
