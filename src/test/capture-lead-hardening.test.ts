@@ -131,6 +131,7 @@ describe("capture-lead: Qodia zuerst, Mail danach", () => {
   it("Qodia ok → AD-Mail ohne Warnung", async () => {
     const t = setup(base());
     await t.handler(post(BODY));
+    process.stdout.write("DBG " + JSON.stringify({logs: t.logs, ev: t.inserts.customer_events, calls: t.fetchMock.mock.calls.length}) + "\n");
     const ad = t.mails.find((m) => m.to.includes("ad@example.test"))!;
     expect(ad.subject).not.toContain("Zugang nicht angelegt");
     expect(ad.text).toContain("Nächster Schritt");
