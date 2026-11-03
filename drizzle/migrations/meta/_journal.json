@@ -57,6 +57,13 @@
       "when": 1793703337836,
       "tag": "0007_phase3_2_event_log_insert_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793715388003,
+      "tag": "0008_capture_lead_hardening",
+      "breakpoints": true
     }
   ]
 }

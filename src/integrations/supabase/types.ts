@@ -232,6 +232,24 @@ export type Database = {
         }
         Relationships: []
       }
+      capture_lead_rate: {
+        Row: {
+          created_at: string
+          id: number
+          ip_hash: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          ip_hash: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          ip_hash?: string
+        }
+        Relationships: []
+      }
       commission_payouts: {
         Row: {
           approved_at: string | null
@@ -1707,6 +1725,7 @@ export type Database = {
           qodia_invoice_count_month: number | null
           qodia_invoice_count_total: number | null
           qodia_last_usage_at: string | null
+          qodia_signup_error: string | null
           qodia_synced: boolean
           qodia_usage_error: string | null
           qodia_usage_synced_at: string | null
@@ -1748,6 +1767,7 @@ export type Database = {
           qodia_invoice_count_month?: number | null
           qodia_invoice_count_total?: number | null
           qodia_last_usage_at?: string | null
+          qodia_signup_error?: string | null
           qodia_synced?: boolean
           qodia_usage_error?: string | null
           qodia_usage_synced_at?: string | null
@@ -1789,6 +1809,7 @@ export type Database = {
           qodia_invoice_count_month?: number | null
           qodia_invoice_count_total?: number | null
           qodia_last_usage_at?: string | null
+          qodia_signup_error?: string | null
           qodia_synced?: boolean
           qodia_usage_error?: string | null
           qodia_usage_synced_at?: string | null
