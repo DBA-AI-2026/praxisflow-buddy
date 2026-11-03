@@ -118,7 +118,6 @@ Je Eintrag: Zweck · Aufrufberechtigung · Eingaben · Ergebnis · Auslöser. �
 | zugang-anfrage | Zugangsanfrage aus /zugang, nur Mail an info@hfx-honorarfuchs.de | Origin-Whitelist, Honeypot (stumm 200), 5 Anfragen/10 Min je IP (im Speicher) | Formularfelder | Mail; kein Lead, kein Konto. Auslöser: Seite /zugang |
 | notify-new-request | Mail über neue Registrierungsanfrage an Admin | Origin-Whitelist; atomarer Claim in DB vor Versand (nur einmal) | Anfrage-ID | 200/4xx/500. Auslöser: Registrierungsformular |
 | buchen-submit | Buchen-Knopf auf /buchen: speichert Fachrichtung/Rechtsform/BSNR/LANR, AGB-Zustimmung, ruft send-mandate-setup | keine (JWT aus); nur POST (405) | contract_id, Stammdaten, AGB | 200 mit `setup_url`; 400/404/500/502. Auslöser: Kundenseite |
-| initiate-booking | Ältere Buchungsstrecke: Stammdaten + AGB, Stripe-Session | keine (JWT aus); nur POST | contract_id, fachrichtung, rechtsform, bsnr, lanr, agb_accepted, agb_version | Stripe-URL; 400/404/500 |
 | mandate-link | Stabiler Link aus Mail 1 → frische Stripe-Setup-Session, Weiterleitung | keine; nur GET; kein Rate-Limit (Code-Kommentar :43) | `?contract_id=` | 302 zu Stripe. Auslöser: Kundenmail |
 | campaign-start | Kampagnen-Klick-Link: prüft Token, legt ggf. Vertrag via qodia-initiate-booking an | Token im Link; nur GET; kein Rate-Limit/keine Token-Härtung (:26) | `?token=hfxc_…` | Weiterleitung. Auslöser: Seite /kampagne |
 | salesforce-callback | OAuth-Rückkehr von Salesforce, speichert Tokens | Origin-Whitelist; OAuth-State | `code`, `state` | Weiterleitung ins Portal |
@@ -188,7 +187,7 @@ Je Eintrag: Zweck · Aufrufberechtigung · Eingaben · Ergebnis · Auslöser. �
 | backfill-sepa-iban, repair-carrier-customers | einmalige Datenreparaturen | Modus |
 
 ## Auffällig (nur benannt, nichts geändert)
-- `buchen-submit`, `initiate-booking`, `mandate-link`, `campaign-start`: öffentlich, nur per Vertrags-ID (UUID) bzw. Kampagnen-Code (32 Zufallsbytes) — nicht erratbar, aber ohne Rate-Limit (bewusst nicht gebaut, 03.11.2026).
+- `buchen-submit`, `mandate-link`, `campaign-start`: öffentlich, nur per Vertrags-ID (UUID) bzw. Kampagnen-Code (32 Zufallsbytes) — nicht erratbar, aber ohne Rate-Limit (bewusst nicht gebaut, 03.11.2026).
 - **Offen:** Links haben kein Ablaufdatum (gültig, solange der Vertragsstatus passt).
 - **Offen:** Kampagnen-Code bleibt nach Einlösung gültig.
 - Öffentliche Functions mit `Access-Control-Allow-Origin: *`; Origin-Whitelist nur bei zugang-anfrage, notify-new-request, salesforce-callback.
@@ -205,3 +204,7 @@ Vorlage: `docs/vorlagen/creditreform-check/index.ts.txt` (bewusst außerhalb von
 - Begrenzung je Nutzer und Tag (Vorschlag 20) und je Vertrag und Tag (Vorschlag 1), gezählt dauerhaft in der Datenbank, nicht im Speicher; über dem Limit 429.
 - Protokoll in `audit_logs`: wer, wann, welcher Vertrag/HFX-Nummer, Erfolg ja/nein — ohne Score/Rating; abgelehnte Aufrufe mit `success=false`.
 - Score/Rating speichert die Function selbst am Vertrag, nicht der Browser.
+
+## initiate-booking — abgeschaltet (03.11.2026)
+
+Ältere Buchungsstrecke, entfernt und nicht mehr bereitgestellt. Vor der Abschaltung geprüft: kein Aufrufer im Portal, kein Verweis in Mail-Vorlagen, `customer_events`, `audit_logs` oder `integration_sync_logs`. Der Buchen-Knopf (/buchen) nutzt `buchen-submit`. Vorlage: `docs/vorlagen/initiate-booking/index.ts.txt`.
