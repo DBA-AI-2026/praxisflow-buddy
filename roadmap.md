@@ -12,3 +12,9 @@
 - [x] Change only three internal contract labels.
 - [x] Verify trigger order, offline rule tests and read-only SQL simulation; record label lines.
 - [x] Prepare publish request and report automatic sync verification limits (repository status is not exposed).
+
+# creditreform-check abschalten
+
+- [x] Function aus supabase/functions entfernen, Code als Vorlage unter docs/vorlagen behalten.
+- [x] Deployment löschen.
+- [x] api-referenz.md: Hinweis + Anforderungen für echte Anbindung.

@@ -3,8 +3,6 @@ project_id = "gvsxentbbzuyanqbqvea"
 [functions]
   [functions.auth-email-hook]
     verify_jwt = false
-  [functions.creditreform-check]
-    verify_jwt = false
   [functions.demo-import]
     verify_jwt = false
   [functions.salesforce-auth]

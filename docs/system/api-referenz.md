@@ -122,7 +122,6 @@ Je Eintrag: Zweck · Aufrufberechtigung · Eingaben · Ergebnis · Auslöser. �
 | mandate-link | Stabiler Link aus Mail 1 → frische Stripe-Setup-Session, Weiterleitung | keine; nur GET; kein Rate-Limit (Code-Kommentar :43) | `?contract_id=` | 302 zu Stripe. Auslöser: Kundenmail |
 | campaign-start | Kampagnen-Klick-Link: prüft Token, legt ggf. Vertrag via qodia-initiate-booking an | Token im Link; nur GET; kein Rate-Limit/keine Token-Härtung (:26) | `?token=hfxc_…` | Weiterleitung. Auslöser: Seite /kampagne |
 | salesforce-callback | OAuth-Rückkehr von Salesforce, speichert Tokens | Origin-Whitelist; OAuth-State | `code`, `state` | Weiterleitung ins Portal |
-| creditreform-check | Bonitätsprüfung zu einem Vertrag | **keine** (JWT aus, keine eigene Prüfung) | contractId, customerName | Prüfergebnis; 400/500 |
 | check-subscription, create-checkout | Alte Stripe-Welt, abgeschaltet 08.05.2026 | — | — | immer **410** |
 
 ## Externe Systeme (Schlüssel im Header)
@@ -189,8 +188,20 @@ Je Eintrag: Zweck · Aufrufberechtigung · Eingaben · Ergebnis · Auslöser. �
 | backfill-sepa-iban, repair-carrier-customers | einmalige Datenreparaturen | Modus |
 
 ## Auffällig (nur benannt, nichts geändert)
-- `creditreform-check`: öffentlich ohne jede Prüfung.
 - `create-contract-subscription`: jede angemeldete Person, keine Rollen- oder Zuständigkeitsprüfung.
 - `reset-user-mfa`, `salesforce-disconnect`: eigene Admin-Prüfung statt gemeinsamem Guard.
 - `buchen-submit`, `initiate-booking`, `mandate-link`, `campaign-start`: öffentlich, nur per Vertrags-ID bzw. Token, ohne Rate-Limit.
 - Öffentliche Functions mit `Access-Control-Allow-Origin: *`; Origin-Whitelist nur bei zugang-anfrage, notify-new-request, salesforce-callback.
+
+## creditreform-check — abgeschaltet (03.11.2026)
+
+Die Function ist entfernt und nicht mehr bereitgestellt; die alte Adresse liefert 404. Sie war eine Attrappe (kein echter Creditreform-Abruf, Score aus dem Namen gewürfelt), öffentlich ohne Prüfung erreichbar und von keiner eingebundenen Seite aufgerufen (einziger Aufrufer `src/components/dashboard/PendingContractApprovals.tsx`, selbst nirgends eingebunden, bleibt vorerst unverändert).
+
+Vorlage: `docs/vorlagen/creditreform-check/index.ts.txt` (bewusst außerhalb von `supabase/functions/`, damit sie nicht wieder bereitgestellt wird).
+
+**Anforderungen für die echte Creditreform-Anbindung** (neu planen, Rollen dann entscheiden):
+- Anmeldung Pflicht über die gemeinsame Rollenprüfung `requireActiveRole`; Rollen festlegen (Vorschlag damals: admin, sales_lead; offen: vertragsabteilung).
+- Kundenname und Vertragsdaten liest die Function selbst aus der Datenbank; nur die Vertrags-ID kommt vom Aufrufer; unbekannter Vertrag → 404.
+- Begrenzung je Nutzer und Tag (Vorschlag 20) und je Vertrag und Tag (Vorschlag 1), gezählt dauerhaft in der Datenbank, nicht im Speicher; über dem Limit 429.
+- Protokoll in `audit_logs`: wer, wann, welcher Vertrag/HFX-Nummer, Erfolg ja/nein — ohne Score/Rating; abgelehnte Aufrufe mit `success=false`.
+- Score/Rating speichert die Function selbst am Vertrag, nicht der Browser.
