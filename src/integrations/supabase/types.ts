@@ -2998,6 +2998,10 @@ export type Database = {
         Args: { p_hfx_customer_number: string }
         Returns: Json
       }
+      apply_login_email_change: {
+        Args: { p_hfx: string; p_new: string; p_old: string }
+        Returns: undefined
+      }
       apply_plz_reassignment: { Args: never; Returns: number }
       can_write_customer_event: {
         Args: { p_contract_id: string; p_lead_id: string }
