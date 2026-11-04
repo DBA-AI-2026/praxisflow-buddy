@@ -162,7 +162,8 @@ function CustomerDetail({ customerId }: { customerId: string }) {
           praxis_name: editForm.praxis_name,
           vorname: editForm.vorname,
           nachname: editForm.nachname,
-          email: editForm.email,
+          // E-Mail = Login des Kunden: nur einmalig befüllbar, wenn noch leer.
+          ...((customer as any)?.email ? {} : { email: editForm.email }),
           telefon: editForm.telefon,
           adresse: editForm.adresse,
           plz: editForm.plz,
@@ -270,7 +271,8 @@ function CustomerDetail({ customerId }: { customerId: string }) {
                     </div>
                     <div className="space-y-1">
                       <Label>E-Mail</Label>
-                      <Input type="email" value={editForm.email || ""} onChange={e => setEditForm((f: any) => ({ ...f, email: e.target.value }))} />
+                      <Input type="email" value={editForm.email || ""} readOnly={!!(customer as any)?.email} onChange={e => setEditForm((f: any) => ({ ...f, email: e.target.value }))} />
+                      {!!(customer as any)?.email && <p className="text-xs text-muted-foreground">Die E-Mail ist zugleich der Login des Kunden und kann hier nicht geändert werden. Für Rechnungen bitte die Rechnungs-E-Mail nutzen.</p>}
                     </div>
                     <div className="space-y-1">
                       <Label>Telefon</Label>

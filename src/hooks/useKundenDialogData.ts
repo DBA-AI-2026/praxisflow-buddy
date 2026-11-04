@@ -627,7 +627,8 @@ export function useKundenDialogData(
             praxis_name: values.praxis_name,
             vorname: values.vorname,
             nachname: values.nachname,
-            email: values.email,
+            // E-Mail = Login: nur einmalig befüllbar, wenn noch leer.
+            ...(leadQ.data?.email ? {} : { email: values.email }),
             mobilnummer: values.telefon,
             plz: values.plz,
             ort: values.ort,
@@ -648,7 +649,8 @@ export function useKundenDialogData(
           praxis_name: values.praxis_name,
           vorname: values.vorname,
           nachname: values.nachname,
-          email: values.email,
+          // E-Mail = Login: nur einmalig befüllbar, wenn noch leer.
+          ...(customerQ.data?.email ? {} : { email: values.email }),
           telefon: values.telefon,
           plz: values.plz,
           ort: values.ort,
@@ -668,7 +670,8 @@ export function useKundenDialogData(
             praxis_name: values.praxis_name,
             vorname: values.vorname,
             nachname: values.nachname,
-            email: values.email,
+            // E-Mail = Login: nur einmalig befüllbar, wenn noch leer.
+            ...(leadQ.data?.email ? {} : { email: values.email }),
             mobilnummer: values.telefon,
             plz: values.plz,
             ort: values.ort,
