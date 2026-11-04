@@ -334,8 +334,11 @@ export function StammdatenTab({ data }: StammdatenTabProps) {
               <FormItem>
                 <FormLabel>E-Mail *</FormLabel>
                 <FormControl>
-                  <Input type="email" {...field} disabled={disabled} />
+                  <Input type="email" {...field} disabled={disabled} readOnly={!!initialValues?.email} />
                 </FormControl>
+                {!!initialValues?.email && (
+                  <p className="text-xs text-muted-foreground">Die E-Mail ist zugleich der Login des Kunden und kann hier nicht geändert werden. Für Rechnungen bitte die Rechnungs-E-Mail nutzen.</p>
+                )}
                 <FormMessage />
               </FormItem>
             )}
