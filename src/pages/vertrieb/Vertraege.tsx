@@ -1167,6 +1167,8 @@ export default function Vertraege() {
         delete (restRecord as any).vermittler_id;
         // Tippgeber ist ebenfalls set-once-at-creation (provisionsrelevant).
         delete (restRecord as any).tippgeber_id;
+        // E-Mail = Login des Kunden: nur einmalig befüllbar, wenn noch leer.
+        if ((before as any)?.email) delete (restRecord as any).email;
 
         const { error } = await supabase.from("contracts").update(restRecord).eq("id", editId);
         if (error) throw error;
@@ -1948,7 +1950,8 @@ export default function Vertraege() {
       if (editId) {
         const { error } = await supabase.from("contracts").update({
           status: "eingegangen",
-          email: form.email || null,
+          // E-Mail = Login des Kunden: nur mitschreiben, wenn bisher keine gespeichert ist.
+          ...(editingContract?.email ? {} : { email: form.email || null }),
           praxis: form.praxis || null,
           vorname: form.vorname || null,
           nachname: form.nachname || null,
@@ -3147,7 +3150,8 @@ export default function Vertraege() {
                  </div>
                  <div>
                    <Label>E-Mail-Adresse</Label>
-                   <Input value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="praxis@example.de" type="email" className={fieldErr("email") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                   <Input value={form.email} onChange={(e) => set("email", e.target.value)} readOnly={!!(editId && editingContract?.email)} placeholder="praxis@example.de" type="email" className={fieldErr("email") ? "border-destructive focus-visible:ring-destructive" : ""} />
+                   {!!(editId && editingContract?.email) && <p className="text-xs text-muted-foreground mt-1">Die E-Mail ist zugleich der Login des Kunden und kann hier nicht geändert werden. Für Rechnungen bitte die Rechnungs-E-Mail nutzen.</p>}
                    {fieldErr("email") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
                 </div>
                 <div>
