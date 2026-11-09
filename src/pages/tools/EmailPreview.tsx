@@ -61,7 +61,6 @@ const NO_LIVE_IDS: ReadonlySet<string> = new Set([
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const MOCK = {
   hfx_customer_number: "HFX-I01019",
-  generated_password: "Ya&P6*e9vmwL",
   praxis_name: "Testpraxis Dr. Müller",
   vorname: "Max",
   nachname: "Mustermann",
@@ -100,7 +99,7 @@ const TEMPLATES: Template[] = [
     subject: "Danke für Ihr Interesse am HFX Honorarfuchs!",
     from: "noreply@hfx-honorarfuchs.de",
     type: "email",
-    description: "E-Mail an neuen Interessenten mit Zugangsdaten",
+    description: "E-Mail an neuen Interessenten mit Zugang (ohne Passwort)",
     category: "kunden",
   },
   {
@@ -208,7 +207,7 @@ const TEMPLATES: Template[] = [
 
 // ─── HTML builders ────────────────────────────────────────────────────────────
 function buildLeadConfirmationHtml() {
-  const { hfx_customer_number, generated_password, praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum } = MOCK;
+  const { hfx_customer_number, praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum } = MOCK;
   const DOWNLOAD_URL_MAC = "https://hfx-honorarfuchs.de/download/mac";
   const DOWNLOAD_URL_WIN = "https://hfx-honorarfuchs.de/download/win";
   const bodyHtml = `<table align="center" border="0" cellpadding="0" cellspacing="0" width="100%">
@@ -222,19 +221,24 @@ function buildLeadConfirmationHtml() {
 <tr><td height="10" style="font-size:0;line-height:0;">&nbsp;</td></tr>
 <tr><td style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:18pt;"><strong>Sie nutzen noch kein Abrechnungszentrum?</strong><br>Für die Nutzung von HFX.GOÄ benötigen Sie eine PAD- oder PADnext-Datei. Wenn Ihnen das gerade nichts sagt, kümmern wir uns darum: Ein Mitarbeiter meldet sich zeitnah bei Ihnen und begleitet Sie Schritt für Schritt durch die technischen Voraussetzungen.</td></tr>
 <tr><td height="30" style="font-size:0;line-height:0;">&nbsp;</td></tr>
-<tr><td style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:18pt;"><strong>Ihre Zugangsdaten für HFX.GOÄ:</strong></td></tr>
+<tr><td style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:18pt;"><strong>Ihr Zugang zu HFX.GOÄ</strong><br>Ihr Zugang ist eingerichtet.</td></tr>
 <tr><td height="10" style="font-size:0;line-height:0;">&nbsp;</td></tr>
 <tr><td>
 <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8;border-radius:8px;border:1px solid #d0d5dd;">
 <tr><td style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:20pt;">
-<strong>Registrierte E-Mail-Adresse:</strong> ${email}<br>
-<strong>Benutzername:</strong> ${hfx_customer_number}<br>
-<strong>Passwort:</strong> <code style="background:#fff;padding:2px 8px;border-radius:4px;font-size:13pt;letter-spacing:1px;">${generated_password}</code>
+<strong>Anmelde-E-Mail-Adresse:</strong> ${email}<br>
+<strong>HFX-Kundennummer:</strong> ${hfx_customer_number}
 </td></tr>
 </table>
 </td></tr>
 <tr><td height="10" style="font-size:0;line-height:0;">&nbsp;</td></tr>
-<tr><td style="color:#888888;font-family:verdana,geneva,sans-serif;font-size:10pt;line-height:14pt;"><em>Bitte bewahren Sie diese Zugangsdaten sicher auf. Sie benötigen sie für die Anmeldung in HFX.GOÄ.</em></td></tr>
+<tr><td style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:18pt;">Ihr Passwort legen Sie bei der ersten Anmeldung selbst fest:</td></tr>
+<tr><td height="10" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:18pt;">1. HFX.GOÄ installieren und öffnen. Ihre Anmelde-E-Mail-Adresse in das Feld „E-Mail“ eintragen.<br>2. Auf „Passwort vergessen?“ klicken.<br>3. Den 6-stelligen Code aus Ihrem Postfach eingeben und Ihr Passwort vergeben. Der Code ist 5 Minuten gültig. Abgelaufen? Einfach erneut auf „Passwort vergessen?“ klicken. Kein Code da? Bitte auch den Spam-Ordner prüfen.</td></tr>
+<tr><td height="10" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:18pt;">Die Kundennummer brauchen Sie nur für Rückfragen. Sie ist kein Benutzername.</td></tr>
+<tr><td height="10" style="font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td style="color:#444444;font-family:verdana,geneva,sans-serif;font-size:12pt;line-height:18pt;">Fragen? <a href="mailto:info@hfx-honorarfuchs.de" style="color:#444444;">info@hfx-honorarfuchs.de</a></td></tr>
 <tr><td height="40" style="font-size:0;line-height:0;">&nbsp;</td></tr>
 <tr><td align="center" style="font-family:verdana,geneva,sans-serif;font-size:16pt;line-height:24pt;color:#444444;"><strong>Jetzt Testversion downloaden und starten!</strong></td></tr>
 <tr><td height="5" style="font-size:0;line-height:0;">&nbsp;</td></tr>
@@ -289,9 +293,9 @@ ${[
 </td></tr>
 </table>`;
   return renderBrandedEmail({
-    subheadline: "Ihre Zugangsdaten",
+    subheadline: "Ihr Zugang zu HFX.GOÄ",
     bodyHtml,
-    bodyText: `Danke für Ihr Interesse am HFX Honorarfuchs!\n\nIhre Zugangsdaten für HFX.GOÄ\nE-Mail: ${email}\nBenutzername: ${hfx_customer_number}\nPasswort: ${generated_password}\n\nDownload MacOS: ${DOWNLOAD_URL_MAC}\nDownload Windows: ${DOWNLOAD_URL_WIN}`,
+    bodyText: `Danke für Ihr Interesse am HFX Honorarfuchs!\n\nIhr Zugang zu HFX.GOÄ\nIhr Zugang ist eingerichtet.\nAnmelde-E-Mail-Adresse: ${email}\nHFX-Kundennummer: ${hfx_customer_number}\nIhr Passwort legen Sie bei der ersten Anmeldung selbst fest (über „Passwort vergessen?“).\n\nDownload MacOS: ${DOWNLOAD_URL_MAC}\nDownload Windows: ${DOWNLOAD_URL_WIN}`,
   }).html;
 }
 
