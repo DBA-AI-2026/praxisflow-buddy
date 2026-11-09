@@ -61,10 +61,10 @@ export default function RechnungsUebersicht() {
   }, []);
 
   const months = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.billing_period_month).filter(Boolean) as string[])).sort().reverse(),
+    () => [...new Set(rows.map((r) => r.billing_period_month).filter(Boolean) as string[])].sort().reverse(),
     [rows],
   );
-  const statuses = useMemo(() => Array.from(new Set(rows.map((r) => r.status))).sort(), [rows]);
+  const statuses = useMemo(() => [...new Set(rows.map((r) => r.status))].sort(), [rows]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -99,7 +99,7 @@ export default function RechnungsUebersicht() {
   };
 
   return (
-    <MainLayout>
+    <MainLayout title="Rechnungsübersicht">
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Rechnungsübersicht</h1>
 
