@@ -43,5 +43,6 @@
 - [x] Neue Function: aktive Rollen, JWT/RLS vor Kundendaten mit Service-Zugang, exakte HFX-Prüfungen, Anbieterwechsel und Rückabwicklung, customer_events.
 - [x] Gemeinsamer Dialog an drei freigegebenen E-Mail-Feldern; Sperren und Rechnungs-E-Mail unverändert.
 - [ ] Lokale Regressionstests und Browserprüfung.
-- [ ] Abnahme am Testcluster: Hauptnummer und -02 hin/zurück, 4b/4c, SQL + Anbieter-Konten; blockiert: Hauptnummer und -01 teilen ursprüngliche Adresse, Regel 4b verhindert Rückstellung. Kein Live-Wechsel ausgeführt. Vorschau-Anmeldung fehlt ebenfalls.
+- [ ] Standort -02: 4c/4b protokolliert ohne Anbieteraufruf, Wechsel und Rückstellung über Knopf, SQL und Anbieter-Konten prüfen.
+- [ ] Hauptnummer: Abnahme offen wegen gemeinsamer Adresse mit -01; nichts bereinigen, Anbieter-Konto -01 nur lesen.
 - [ ] Danach Publish anfordern; GitHub-Sync-Status nicht durch Agent einsehbar.

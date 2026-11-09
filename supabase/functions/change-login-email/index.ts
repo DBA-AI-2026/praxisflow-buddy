@@ -12,7 +12,7 @@ const schema = z.object({
   newEmail: z.string().trim().toLowerCase().email().max(255),
 });
 type Row = { id: string; email: string | null };
-type Result = { status: "success" | "error" | "not_found" | "rate_limited" | "unreachable" };
+type Result = { status: "success" | "error" | "not_found" | "rate_limited" | "unreachable" | "not_called" };
 const json = (status: number, body: Record<string, unknown>) => new Response(JSON.stringify(body), {
   status, headers: { ...corsHeaders, "Content-Type": "application/json" },
 });
@@ -66,23 +66,10 @@ Deno.serve(async (req) => {
     const rows: Row[][] = existing.map(r => r.data ?? []);
     const all = rows.flat();
     const oldEmail = all[0]?.email;
-    // 4a: compare EVERY existing row, including NULL/empty; RPC matches raw old email exactly.
-    if (!oldEmail || all.some(row => row.email !== oldEmail)) return json(409, {
-      error: "Die gespeicherten E-Mails dieses Kunden weichen voneinander ab. Bitte Admin informieren.",
-    });
-    const escapedEmail = newEmail.replace(/[\\%_]/g, "\\$&");
-    const duplicates = await Promise.all(TABLES.map(table => admin.from(table).select("id,hfx_customer_number").ilike("email", escapedEmail)));
-    if (duplicates.some(r => r.error)) return json(500, { error: ADMIN_ERROR });
-    if (duplicates.some(r => (r.data ?? []).some(row => row.hfx_customer_number !== hfx))) return json(409, {
-      error: "Diese E-Mail ist bereits einem anderen Kunden zugeordnet.",
-    });
-    if (newEmail === oldEmail.trim().toLowerCase()) return json(400, { error: "Die neue E-Mail entspricht der bisherigen E-Mail. Es wurde nichts geändert." });
     const leadId = rows[0][0]?.id ?? null;
     const contractId = rows[1][0]?.id ?? null;
-    // customer_events only supports lead/contract entities. Do not invent customer events.
+    // customer_events supports leads without customer and exact location contracts.
     if (!leadId && !contractId) return json(409, { error: "Protokollierung ohne Interessent oder Vertrag nicht möglich. Bitte Admin informieren." });
-    const apiKey = Deno.env.get("QODIA_API_KEY");
-    if (!apiKey) return json(500, { error: ADMIN_ERROR });
     const record = async (result: Result, outcome: string, rollback: Result | null = null) => {
       const { error } = await admin.from("customer_events").insert({
         event_type: "LOGIN_EMAIL_CHANGED", entity_type: leadId ? "lead" : "contract",
@@ -94,6 +81,22 @@ Deno.serve(async (req) => {
       if (error) console.error("[change-login-email] event insert failed");
       return !error;
     };
+    const abort = async (status: number, error: string, outcome: string) => {
+      const logged = await record({ status: "not_called" }, outcome);
+      return json(logged ? status : 500, { success: false, error: logged ? error : ADMIN_ERROR });
+    };
+    // 4a: compare EVERY existing row, including NULL/empty; RPC matches raw old email exactly.
+    if (!oldEmail || all.some(row => row.email !== oldEmail)) return abort(409,
+      "Die gespeicherten E-Mails dieses Kunden weichen voneinander ab. Bitte Admin informieren.", "inconsistent_emails");
+    const escapedEmail = newEmail.replace(/[\\%_]/g, "\\$&");
+    const duplicates = await Promise.all(TABLES.map(table => admin.from(table).select("id,hfx_customer_number").ilike("email", escapedEmail)));
+    if (duplicates.some(r => r.error)) return json(500, { error: ADMIN_ERROR });
+    if (duplicates.some(r => (r.data ?? []).some(row => row.hfx_customer_number !== hfx))) return abort(409,
+      "Diese E-Mail ist bereits einem anderen Kunden zugeordnet.", "duplicate_email");
+    if (newEmail === oldEmail.trim().toLowerCase()) return abort(400,
+      "Die neue E-Mail entspricht der bisherigen E-Mail. Es wurde nichts geändert.", "unchanged_email");
+    const apiKey = Deno.env.get("QODIA_API_KEY");
+    if (!apiKey) return json(500, { error: ADMIN_ERROR });
     const result = await updateLogin(oldEmail, newEmail, apiKey);
     if (result.status !== "success") {
       const logged = await record(result, "provider_failed");
