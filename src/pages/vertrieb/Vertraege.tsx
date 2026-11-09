@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { ChangeLoginEmail } from "@/components/kunden/ChangeLoginEmail";
 import { useCarrierMap } from "@/hooks/useCarrierMap";
 import { StandortBadge } from "@/components/contracts/StandortBadge";
 import { StandorteToggleBadge } from "@/components/multilocation/StandorteIndicator";
@@ -3152,6 +3153,12 @@ export default function Vertraege() {
                    <Label>E-Mail-Adresse</Label>
                    <Input value={form.email} onChange={(e) => set("email", e.target.value)} readOnly={!!(editId && editingContract?.email)} placeholder="praxis@example.de" type="email" className={fieldErr("email") ? "border-destructive focus-visible:ring-destructive" : ""} />
                    {!!(editId && editingContract?.email) && <p className="text-xs text-muted-foreground mt-1">Die E-Mail ist zugleich der Login des Kunden und kann hier nicht geändert werden. Für Rechnungen bitte die Rechnungs-E-Mail nutzen.</p>}
+                   {editId && <ChangeLoginEmail hfxNumber={editingContract?.hfx_customer_number} email={editingContract?.email} onChanged={async () => {
+                     const { data, error } = await supabase.from("contracts").select("*").eq("id", editId).single();
+                     if (error) throw error;
+                     setEditingContract(data);
+                     setForm(previous => ({ ...previous, email: data.email ?? "" }));
+                   }} />}
                    {fieldErr("email") && <p className="text-xs text-destructive mt-1">Pflichtfeld</p>}
                 </div>
                 <div>
