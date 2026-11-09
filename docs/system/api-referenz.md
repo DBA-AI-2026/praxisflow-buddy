@@ -61,7 +61,7 @@ Alle Antworten sind JSON mit den CORS-Headern.
 | E-Mail existiert bereits (nur `source` ≠ `manual`) | 200 | `{"success": true, "duplicate": true, "hfx_customer_number": "<bestehende Nummer>", "message": "Ein Konto mit dieser E-Mail-Adresse existiert bereits. Ihre Zugangsdaten wurden erneut zugesendet."}` |
 | Pflichtfeld fehlt | 400 | `{"error": "Fehlende Pflichtfelder", "details": {"praxis_name": bool, "vorname": bool, "nachname": bool, "email": bool, "plz": bool, "abrechnungszentrum": bool}}` (`true` = vorhanden) |
 | E-Mail-Format ungültig | 400 | `{"error": "Ungültige E-Mail-Adresse"}` |
-| Lead oder Zugangsdaten konnten nicht gespeichert werden | 500 | `{"error": "Fehler beim Speichern"}` |
+| Lead konnte nicht gespeichert werden | 500 | `{"error": "Fehler beim Speichern"}` |
 | Sonstiger Fehler (z. B. kein gültiges JSON) | 500 | `{"error": "<rohe Fehlermeldung>"}` (:846) |
 | `OPTIONS` | 200 | leerer Body |
 
@@ -102,7 +102,7 @@ Reihenfolge im Code:
 1. **Lead** in `leads` (Service-Rolle), HFX-Nummer wird von der Datenbank vergeben.
 2. **Passwort** (12 Zeichen, zufällig) nur für den Qodia-Sign-up; wird nicht gespeichert und nicht verschickt.
 3. **PLZ-Protokoll** in `plz_assignment_log` (nicht abgewartet).
-4. **Mail mit Zugangsdaten** an den Interessenten über Resend, Absender `noreply@hfx-honorarfuchs.de`, Betreff „Danke für Ihr Interesse am HFX Honorarfuchs!". Inhalt: E-Mail, Passwort im Klartext, HFX-Nummer, Download-Links Mac/Windows, übermittelte Daten. Erfolg → `confirmation_email_sent = true`. Immer, auch bei `source: "manual"` (:279).
+4. **Mail mit Zugangsdaten** an den Interessenten über Resend, Absender `noreply@hfx-honorarfuchs.de`, Betreff „Danke für Ihr Interesse am HFX Honorarfuchs!". Inhalt: Anmelde-E-Mail, HFX-Nummer, Weg über „Passwort vergessen?“ (kein Passwort, seit 09.11.2026), Download-Links Mac/Windows, übermittelte Daten. Erfolg → `confirmation_email_sent = true`. Immer, auch bei `source: "manual"` (:279).
 5. **Mail an zuständigen AD** (wenn zugewiesen, Einstellung `new_lead_ad_notification` nicht aus, Profil hat E-Mail), Betreff „🔔 Neuer Lead: <Praxis> (<PLZ>)".
 6. **Salesforce**: wenn `salesforce_connections` (id `default`) verbunden ist, wird ein Salesforce-Lead angelegt (`Company`, `FirstName`, `LastName`, `Email`, `PostalCode`, `MobilePhone`, `Description`, `LeadSource = "Website"`, `MPID__c`). Erfolg → `salesforce_synced = true`, `salesforce_id`. Kein Token-Refresh an dieser Stelle.
 7. **Qodia-Konto**: `POST https://auth.qodia.de/api/external/sign-up` mit `x-api-key` (falls gesetzt), Body `email`, `password` (dasselbe wie in der Mail), `name = HFX-Nummer`. Erfolg → `qodia_synced = true` und — außer bei Standort-Nummern (-NN) — einmalig 200 Freikontingent (`free_quota_grants`, `trial`). Status 409 → `qodia_conflict = true`.
