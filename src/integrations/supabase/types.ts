@@ -3092,6 +3092,28 @@ export type Database = {
         Args: { p_column: string; p_table: string }
         Returns: boolean
       }
+      get_invoices_readonly: {
+        Args: never
+        Returns: {
+          adresse: string
+          billing_period_month: string
+          customer_name: string
+          customer_number: string
+          due_date: string
+          email_sent_at: string
+          gross_amount: number
+          id: string
+          invoice_date: string
+          invoice_number: string
+          net_amount: number
+          ort: string
+          plz: string
+          positions: Json
+          status: string
+          tax_amount: number
+          tax_rate: number
+        }[]
+      }
       get_my_referred_leads: {
         Args: never
         Returns: {
