@@ -40,6 +40,7 @@ import { PdfViewerOverlay } from "@/components/PdfViewerOverlay";
 import Documentation from "./pages/admin/Documentation";
 import PlzMapping from "./pages/admin/PlzMapping";
 import Buchhaltung from "./pages/Buchhaltung";
+import RechnungsUebersicht from "./pages/RechnungsUebersicht";
 import Integrationen from "./pages/Integrationen";
 import PraxenJourney from "./pages/PraxenJourney";
 import DemoSuccess from "./pages/DemoSuccess";
@@ -109,6 +110,7 @@ const App = () => (
             <Route path="/vertrieb/provisionen" element={<ProtectedRoute><Provisionen /></ProtectedRoute>} />
             <Route path="/meine-vermittlungen" element={<ProtectedRoute><MeineVermittlungen /></ProtectedRoute>} />
             <Route path="/rechnungen" element={<ProtectedRoute><Rechnungen /></ProtectedRoute>} />
+            <Route path="/rechnungsuebersicht" element={<ProtectedRoute><RechnungsUebersicht /></ProtectedRoute>} />
             <Route path="/admin/access-requests" element={<ProtectedRoute><AccessRequests /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
