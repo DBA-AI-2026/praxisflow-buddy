@@ -2,7 +2,7 @@ import { useId, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { Mail, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
