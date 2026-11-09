@@ -68,6 +68,7 @@ const vertriebssteuerungNav: NavItem[] = [
 // ─── BLOCK 3: Buchhaltung ─────────────────────────────────────────────────────
 const buchhaltungNav: NavItem[] = [
   { name: "Rechnungen", href: "/rechnungen", icon: Receipt },
+  { name: "Rechnungsübersicht", href: "/rechnungsuebersicht", icon: FileText },
   { name: "Buchhaltung", href: "/buchhaltung", icon: FileSignature },
   { name: "Qodia-Verbrauch", href: "/qodia-verbrauch", icon: BarChart3 },
 ];

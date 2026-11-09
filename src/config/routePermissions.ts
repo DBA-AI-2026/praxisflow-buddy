@@ -50,6 +50,9 @@ export const routePermissions: RoutePermission[] = [
   // Rechnungen - Admin only
   { path: "/rechnungen", allowedRoles: ["admin"] },
 
+  // Rechnungsübersicht - nur lesen (Daten nur über get_invoices_readonly)
+  { path: "/rechnungsuebersicht", allowedRoles: ["sales_lead", "admin"] },
+
   // Admin routes - Admin only
   { path: "/admin/access-requests", allowedRoles: ["admin"] },
   { path: "/admin/users", allowedRoles: ["admin"] },

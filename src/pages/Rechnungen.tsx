@@ -65,6 +65,7 @@ import {
 import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
 import { generateInvoicePdfV2 } from "@/lib/generateInvoicePdfV2";
 import { openPdfBlob } from "@/lib/openPdfBlob";
+import { INVOICE_STATUS_CONFIG } from "@/lib/invoiceStatus";
 
 interface InvoicePosition {
   description: string;
@@ -129,13 +130,7 @@ interface UsageCharge {
   invoice_id: string | null;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ComponentType<any> }> = {
-  entwurf: { label: "Entwurf", variant: "outline", icon: FileText },
-  versendet: { label: "Versendet", variant: "secondary", icon: Send },
-  bezahlt: { label: "Bezahlt", variant: "default", icon: CheckCircle2 },
-  zahlung_fehlgeschlagen: { label: "Zahlung fehlgeschlagen", variant: "destructive", icon: XCircle },
-  storniert: { label: "Storniert", variant: "destructive", icon: XCircle },
-};
+const STATUS_CONFIG = INVOICE_STATUS_CONFIG;
 
 const EMPTY_POSITION: InvoicePosition = { description: "", quantity: 1, unit_price: 0 };
 
