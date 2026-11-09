@@ -97,14 +97,26 @@ beforeEach(() => vi.useFakeTimers({ toFake: ["Date"] }).setSystemTime(new Date("
 afterEach(() => vi.useRealTimers());
 
 describe("capture-lead: Qodia zuerst, Mail danach", () => {
-  it("Qodia ok → Zugangsmail mit Passwort, Antwort unverändert", async () => {
+  it("Qodia ok → Zugangsmail ohne Passwort, kein lead_credentials, Antwort unverändert", async () => {
     const t = setup(base());
     const res = await t.handler(post(BODY));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true, hfx_customer_number: "HFX-I09999", message: "Ihre Anfrage wurde erfolgreich übermittelt." });
     const welcome = t.mails.find((m) => m.subject === "Danke für Ihr Interesse am HFX Honorarfuchs!");
     expect(welcome).toBeDefined();
-    expect(welcome!.text).toMatch(/Passwort: \S{12}/);
+    const qodiaBody = JSON.parse((t.fetchMock.mock.calls[0] as any)[1].body);
+    expect(qodiaBody.password).toMatch(/^\S{12}$/);
+    for (const part of [welcome!.text, welcome!.html]) {
+      expect(part).not.toContain(qodiaBody.password);
+      expect(part).not.toMatch(/Passwort:/);
+    }
+    expect(welcome!.html.startsWith("Ihr Zugang zu HFX.GOÄ\n")).toBe(true);
+    expect(welcome!.text).toContain("Ihr Zugang ist eingerichtet.");
+    expect(welcome!.text).toContain("Ihr Passwort legen Sie bei der ersten Anmeldung selbst fest:");
+    expect(welcome!.text).toContain("1. HFX.GOÄ installieren und öffnen. Ihre Anmelde-E-Mail-Adresse in das Feld „E-Mail“ eintragen.");
+    expect(welcome!.text).toContain("Der Code ist 5 Minuten gültig. Abgelaufen? Einfach erneut auf „Passwort vergessen?“ klicken.");
+    expect(welcome!.text).toContain("Fragen? info@hfx-honorarfuchs.de");
+    expect(t.inserts.lead_credentials).toBeUndefined();
     const qodiaCall = t.fetchMock.mock.invocationCallOrder[0];
     expect(qodiaCall).toBeDefined();
     expect(t.updates.some((u) => u.v.credentials_sent_at)).toBe(true);
@@ -155,6 +167,7 @@ describe("capture-lead: erneuter Versand", () => {
     expect(m.text).toContain("Sie haben sich erneut angemeldet. Für diese E-Mail-Adresse besteht bereits ein Zugang.");
     expect(m.text).toContain("Aus Sicherheitsgründen senden wir Ihr Passwort nicht erneut.");
     expect(m.text).toContain("Fragen? info@hfx-honorarfuchs.de");
+    expect(m.text).toContain("Der Code ist 5 Minuten gültig. Abgelaufen? Einfach erneut auf „Passwort vergessen?“ klicken. Kein Code da? Bitte auch den Spam-Ordner prüfen.");
     expect(m.text).not.toMatch(/Passwort:/);
     expect(m.html).not.toMatch(/Passwort:<\/strong>/);
     expect(t.updates.some((u) => u.v.credentials_sent_at)).toBe(true);

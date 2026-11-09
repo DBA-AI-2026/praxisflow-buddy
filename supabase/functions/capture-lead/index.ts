@@ -96,9 +96,9 @@ function buildConfirmationEmail(fields: {
   mp_nummer?: string | null;
   nachricht?: string | null;
   hfx_customer_number: string;
-  generated_password: string | null; // null = erneuter Versand ohne Passwort
+  resend: boolean; // true = erneuter Versand bei bekannter E-Mail. Kein Passwort in Mails.
 }): { html: string; text: string } {
-  const { praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht, hfx_customer_number, generated_password } = fields;
+  const { praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht, hfx_customer_number, resend } = fields;
 
   const mpSection = mp_nummer ? `<tr>
     <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">Medizinpartner-Nummer (falls bekannt):</td>
@@ -110,7 +110,7 @@ function buildConfirmationEmail(fields: {
     <td align="left" valign="top" style="border-top:1px solid #444444; padding-top:6px; color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:16pt;">${nachricht}&nbsp;</td>
   </tr>` : "";
 
-  const accessBlockHtml = generated_password === null
+  const accessBlockHtml = resend
     ? `<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Ihr Zugang zu HFX.GOÄ</strong><br>Sie haben sich erneut angemeldet. Für diese E-Mail-Adresse besteht bereits ein Zugang.</td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
 <tr><td>
@@ -126,39 +126,36 @@ function buildConfirmationEmail(fields: {
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
 <tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Aus Sicherheitsgründen senden wir Ihr Passwort nicht erneut. So vergeben Sie ein neues:</td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">
-1. HFX.GOÄ öffnen und Ihre Anmelde-E-Mail-Adresse in das Feld „E-Mail" eintragen.<br>
-2. Auf „Passwort vergessen?" klicken.<br>
-3. Den 6-stelligen Code aus Ihrem Postfach eingeben und ein neues Passwort vergeben. Kein Code da? Bitte auch den Spam-Ordner prüfen.
-</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">1. HFX.GOÄ öffnen und Ihre Anmelde-E-Mail-Adresse in das Feld „E-Mail“ eintragen.<br>
+2. Auf „Passwort vergessen?“ klicken.<br>
+3. Den 6-stelligen Code aus Ihrem Postfach eingeben und ein neues Passwort vergeben. Der Code ist 5 Minuten gültig. Abgelaufen? Einfach erneut auf „Passwort vergessen?“ klicken. Kein Code da? Bitte auch den Spam-Ordner prüfen.</td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
 <tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Die Kundennummer brauchen Sie nur für Rückfragen. Sie ist kein Benutzername.</td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
 <tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Fragen? <a href="mailto:${CONTACT_EMAIL}" style="color:#444444;">${CONTACT_EMAIL}</a></td></tr>
 `
-    : `<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Ihr Zugang zu HFX.GOÄ:</strong></td></tr>
+    : `<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Ihr Zugang zu HFX.GOÄ</strong><br>Ihr Zugang ist eingerichtet.</td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
 <tr><td>
 <table border="0" cellpadding="8" cellspacing="0" width="100%" style="background-color:#f0f4f8; border-radius:8px; border:1px solid #d0d5dd;">
 <tr>
 <td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:20pt;">
 <strong>Anmelde-E-Mail-Adresse:</strong> ${email}<br>
-<strong>Passwort:</strong> <code style="background:#fff; padding:2px 8px; border-radius:4px; font-size:13pt; letter-spacing:1px;">${generated_password}</code><br>
-<strong>Ihre HFX-Kundennummer:</strong> ${hfx_customer_number}
+<strong>HFX-Kundennummer:</strong> ${hfx_customer_number}
 </td>
 </tr>
 </table>
 </td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Melden Sie sich in der Anwendung mit Ihrer Anmelde-E-Mail-Adresse und dem Passwort an. Die Kundennummer brauchen Sie nur für Rückfragen an uns – sie ist kein Benutzername.</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Ihr Passwort legen Sie bei der ersten Anmeldung selbst fest:</td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;"><strong>Sie möchten lieber ein eigenes Passwort?</strong> Das geht jederzeit direkt in der Anwendung:</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">1. HFX.GOÄ installieren und öffnen. Ihre Anmelde-E-Mail-Adresse in das Feld „E-Mail“ eintragen.<br>
+2. Auf „Passwort vergessen?“ klicken.<br>
+3. Den 6-stelligen Code aus Ihrem Postfach eingeben und Ihr Passwort vergeben. Der Code ist 5 Minuten gültig. Abgelaufen? Einfach erneut auf „Passwort vergessen?“ klicken. Kein Code da? Bitte auch den Spam-Ordner prüfen.</td></tr>
 <tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
-<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">
-1. Anwendung öffnen und Ihre Anmelde-E-Mail-Adresse in das Feld „E-Mail" eintragen.<br>
-2. Auf „Passwort vergessen?" klicken. Der Link wird aktiv, sobald die Adresse im Feld steht.<br>
-3. Den 6-stelligen Code aus Ihrem Postfach eingeben (ggf. Spam-Ordner prüfen) und ein eigenes Passwort vergeben.
-</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Die Kundennummer brauchen Sie nur für Rückfragen. Sie ist kein Benutzername.</td></tr>
+<tr><td align="left" valign="top" style="font-size:0; line-height:0;" height="10">&nbsp;</td></tr>
+<tr><td align="left" valign="top" style="color:#444444; font-family:verdana, geneva, sans-serif; font-size:12pt; line-height:18pt;">Fragen? <a href="mailto:${CONTACT_EMAIL}" style="color:#444444;">${CONTACT_EMAIL}</a></td></tr>
 `;
 
   const bodyHtml = `<table align="center" border="0" cellpadding="0" cellspacing="0" width="100%">
@@ -262,36 +259,38 @@ ${nachrichtSection}` : ""}
 </td></tr>
 </table>`;
 
-  const accessBlockText: string[] = generated_password === null ? [
-    "Ihr Zugang zu HFX.GOÄ",
-    "Sie haben sich erneut angemeldet. Für diese E-Mail-Adresse besteht bereits ein Zugang.",
-    "",
+  const accessBlockText: string[] = resend ? [
+    `Ihr Zugang zu HFX.GOÄ`,
+    `Sie haben sich erneut angemeldet. Für diese E-Mail-Adresse besteht bereits ein Zugang.`,
+    ``,
     `Anmelde-E-Mail-Adresse: ${email}`,
     `HFX-Kundennummer: ${hfx_customer_number}`,
-    "",
-    "Aus Sicherheitsgründen senden wir Ihr Passwort nicht erneut. So vergeben Sie ein neues:",
-    "",
-    "1. HFX.GOÄ öffnen und Ihre Anmelde-E-Mail-Adresse in das Feld „E-Mail\" eintragen.",
-    "2. Auf „Passwort vergessen?\" klicken.",
-    "3. Den 6-stelligen Code aus Ihrem Postfach eingeben und ein neues Passwort vergeben. Kein Code da? Bitte auch den Spam-Ordner prüfen.",
-    "",
-    "Die Kundennummer brauchen Sie nur für Rückfragen. Sie ist kein Benutzername.",
-    "",
+    ``,
+    `Aus Sicherheitsgründen senden wir Ihr Passwort nicht erneut. So vergeben Sie ein neues:`,
+    ``,
+    `1. HFX.GOÄ öffnen und Ihre Anmelde-E-Mail-Adresse in das Feld „E-Mail“ eintragen.`,
+    `2. Auf „Passwort vergessen?“ klicken.`,
+    `3. Den 6-stelligen Code aus Ihrem Postfach eingeben und ein neues Passwort vergeben. Der Code ist 5 Minuten gültig. Abgelaufen? Einfach erneut auf „Passwort vergessen?“ klicken. Kein Code da? Bitte auch den Spam-Ordner prüfen.`,
+    ``,
+    `Die Kundennummer brauchen Sie nur für Rückfragen. Sie ist kein Benutzername.`,
+    ``,
     `Fragen? ${CONTACT_EMAIL}`,
   ] : [
-    "Ihr Zugang zu HFX.GOÄ:",
-    "",
+    `Ihr Zugang zu HFX.GOÄ`,
+    `Ihr Zugang ist eingerichtet.`,
+    ``,
     `Anmelde-E-Mail-Adresse: ${email}`,
-    `Passwort: ${generated_password}`,
-    `Ihre HFX-Kundennummer: ${hfx_customer_number}`,
-    "",
-    "Melden Sie sich in der Anwendung mit Ihrer Anmelde-E-Mail-Adresse und dem Passwort an. Die Kundennummer brauchen Sie nur für Rückfragen an uns – sie ist kein Benutzername.",
-    "",
-    "Sie möchten lieber ein eigenes Passwort? Das geht jederzeit direkt in der Anwendung:",
-    "",
-    "1. Anwendung öffnen und Ihre Anmelde-E-Mail-Adresse in das Feld „E-Mail\" eintragen.",
-    "2. Auf „Passwort vergessen?\" klicken. Der Link wird aktiv, sobald die Adresse im Feld steht.",
-    "3. Den 6-stelligen Code aus Ihrem Postfach eingeben (ggf. Spam-Ordner prüfen) und ein eigenes Passwort vergeben.",
+    `HFX-Kundennummer: ${hfx_customer_number}`,
+    ``,
+    `Ihr Passwort legen Sie bei der ersten Anmeldung selbst fest:`,
+    ``,
+    `1. HFX.GOÄ installieren und öffnen. Ihre Anmelde-E-Mail-Adresse in das Feld „E-Mail“ eintragen.`,
+    `2. Auf „Passwort vergessen?“ klicken.`,
+    `3. Den 6-stelligen Code aus Ihrem Postfach eingeben und Ihr Passwort vergeben. Der Code ist 5 Minuten gültig. Abgelaufen? Einfach erneut auf „Passwort vergessen?“ klicken. Kein Code da? Bitte auch den Spam-Ordner prüfen.`,
+    ``,
+    `Die Kundennummer brauchen Sie nur für Rückfragen. Sie ist kein Benutzername.`,
+    ``,
+    `Fragen? ${CONTACT_EMAIL}`,
   ];
 
   const bodyText = [
@@ -318,7 +317,7 @@ ${nachrichtSection}` : ""}
     nachricht ? `Nachricht: ${nachricht}` : null,
   ].filter(Boolean).join("\n");
 
-  return renderBrandedEmail({ subheadline: generated_password === null ? "Ihr Zugang zu HFX.GOÄ" : "Ihre Zugangsdaten", bodyHtml, bodyText });
+  return renderBrandedEmail({ subheadline: "Ihr Zugang zu HFX.GOÄ", bodyHtml, bodyText });
 }
 
 Deno.serve(async (req) => {
@@ -499,7 +498,7 @@ Deno.serve(async (req) => {
               mp_nummer,
               nachricht,
               hfx_customer_number: existingLead.hfx_customer_number,
-              generated_password: null,
+              resend: true,
             });
             const sendResult = await resend.emails.send({
               from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",
@@ -537,7 +536,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generate password for Qodia access
+    // Zufallspasswort nur fuer den Qodia-Sign-up; wird nirgends gespeichert oder verschickt.
     const generatedPassword = generatePassword(12);
 
     // [REVIEW REQUIRED] Zuordnungsfelder aus dem Body nur nach Rollenprüfung
@@ -642,27 +641,8 @@ Deno.serve(async (req) => {
     }
 
 
-    // Credential-Speicherung: alleiniger Schreibpfad ist die geschuetzte Tabelle
-    // lead_credentials. Ein Fehler hier ist hart (500) — ohne Credential ist der
-    // Lead fachlich unvollstaendig. Kein Rollback des Lead-Inserts (bewusste
-    // Entscheidung): der Lead bleibt erhalten, das Passwort ist ueber den
-    // Sync-Pfad nachtraeglich erzeugbar.
-    const { error: credErr } = await supabase
-      .from("lead_credentials")
-      .upsert({
-        lead_id: lead.id,
-        generated_password: generatedPassword,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "lead_id" });
-    if (credErr) {
-      console.error("lead_credentials upsert failed (fatal):", credErr.code ?? "unknown");
-      return new Response(
-        JSON.stringify({ error: "Fehler beim Speichern" }),
-        { status: 500, headers: { ...headers, "Content-Type": "application/json" } }
-      );
-    }
-
-
+    // Kein Speichern des Passworts: es wird nur fuer den Qodia-Sign-up genutzt.
+    // Der Lead vergibt sein Passwort selbst ueber „Passwort vergessen?“.
 
     // Protokolliere Zuordnung im zentralen PLZ-Assignment-Log
     supabase.from("plz_assignment_log").insert({
@@ -756,7 +736,7 @@ Deno.serve(async (req) => {
           mailResult = "no_key";
         } else {
           const resend = new Resend(resendApiKey);
-          const { html: emailHtml, text: emailText } = buildConfirmationEmail({ praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht, hfx_customer_number: lead.hfx_customer_number, generated_password: generatedPassword });
+          const { html: emailHtml, text: emailText } = buildConfirmationEmail({ praxis_name, vorname, nachname, email, plz, mobilnummer, abrechnungszentrum, mp_nummer, nachricht, hfx_customer_number: lead.hfx_customer_number, resend: false });
 
           const sendResult = await resend.emails.send({
             from: "HFX Honorarfuchs <noreply@hfx-honorarfuchs.de>",

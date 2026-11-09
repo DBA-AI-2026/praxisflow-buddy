@@ -93,34 +93,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Credential-Read: ausschliesslich aus der geschuetzten Tabelle lead_credentials.
-    const { data: cred } = await supabase
-      .from("lead_credentials")
-      .select("generated_password")
-      .eq("lead_id", lead.id)
-      .maybeSingle();
-    let password = cred?.generated_password ?? null;
-
-    // If no password is stored, generate a new one and update it in Auth + DB
-    if (!password) {
-      console.log(`No stored password for ${lead.hfx_customer_number}, generating new one...`);
-      password = generatePassword(12);
-
-      // Find and update the auth user's password
-      const { data: listData } = await supabase.auth.admin.listUsers();
-      const authUser = listData?.users?.find((u: any) => u.email?.toLowerCase() === lead.email.toLowerCase());
-      if (authUser) {
-        await supabase.auth.admin.updateUserById(authUser.id, { password });
-      }
-
-      // Alleiniger Schreibpfad: lead_credentials (kein leads-Update mehr).
-      await supabase.from("lead_credentials").upsert({
-        lead_id: lead.id,
-        generated_password: password,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "lead_id" });
-      console.log(`New password generated and stored for ${lead.hfx_customer_number}`);
-    }
+    // Frisches Zufallspasswort nur fuer den Qodia-Sign-up; wird nirgends
+    // gespeichert oder verschickt. Der Lead vergibt sein Passwort selbst ueber
+    // „Passwort vergessen?“.
+    const password = generatePassword(12);
 
     const QODIA_SIGNUP_URL = "https://auth.qodia.de/api/external/sign-up";
     const qodiaApiKey = Deno.env.get("QODIA_API_KEY");
