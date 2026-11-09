@@ -40,8 +40,8 @@
 
 # Login-E-Mail ändern — Schritt 2
 
-- [ ] Neue Function: aktive Rollen, JWT/RLS vor Kundendaten mit Service-Zugang, exakte HFX-Prüfungen, Anbieterwechsel und Rückabwicklung, customer_events.
-- [ ] Gemeinsamer Dialog an drei freigegebenen E-Mail-Feldern; Sperren und Rechnungs-E-Mail unverändert.
+- [x] Neue Function: aktive Rollen, JWT/RLS vor Kundendaten mit Service-Zugang, exakte HFX-Prüfungen, Anbieterwechsel und Rückabwicklung, customer_events.
+- [x] Gemeinsamer Dialog an drei freigegebenen E-Mail-Feldern; Sperren und Rechnungs-E-Mail unverändert.
 - [ ] Lokale Regressionstests und Browserprüfung.
-- [ ] Abnahme am Testcluster: Hauptnummer und ein -NN-Standort, SQL-Gegenprobe; benötigt zwei freigegebene neue Login-Adressen.
+- [ ] Abnahme am Testcluster: Hauptnummer und -02 hin/zurück, 4b/4c, SQL + Anbieter-Konten; blockiert: Hauptnummer und -01 teilen ursprüngliche Adresse, Regel 4b verhindert Rückstellung. Kein Live-Wechsel ausgeführt. Vorschau-Anmeldung fehlt ebenfalls.
 - [ ] Danach Publish anfordern; GitHub-Sync-Status nicht durch Agent einsehbar.
