@@ -38,7 +38,7 @@ function setup(options: { role?: string; visible?: boolean; readError?: boolean;
   const admin = client(true);
   const guard = vi.fn(async (_req: Request, allowed: string[]) => allowed.includes(options.role ?? "admin")
     ? { admin, userId: "caller", roles: [options.role ?? "admin"] } : new Response("Forbidden", { status: 403 }));
-  const fetchMock = vi.fn(async () => {
+  const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => {
     sequence.push("provider");
     if (options.provider === "timeout") throw new DOMException("aborted", "AbortError");
     return new Response(JSON.stringify(options.provider === "body_error" ? { success: false, error: "Rejected" } : { success: true }), { status: typeof options.provider === "number" ? options.provider : 200 });
@@ -74,6 +74,11 @@ describe("change-login-email", () => {
   });
   it("duplicate email on another exact HFX aborts", async () => {
     const s = setup({ rows: [[row(), row(`${HFX}-01`, NEW)], [row()], [row()]] }); expect((await s.run()).status).toBe(409); expect(s.fetchMock).not.toHaveBeenCalled();
+  });
+  it("existing shared main/-01 address blocks restoration under rule 4b", async () => {
+    const s = setup({ rows: [[row(HFX, NEW)], [row(HFX, NEW), row(`${HFX}-01`, OLD)], [row(HFX, NEW)]] });
+    expect((await s.run({ hfx_customer_number: HFX, newEmail: OLD })).status).toBe(409);
+    expect(s.fetchMock).not.toHaveBeenCalled(); expect(s.rpc).not.toHaveBeenCalled();
   });
   it("same email aborts without any write", async () => { const s = setup(); expect((await s.run({ hfx_customer_number: HFX, newEmail: OLD })).status).toBe(400); expect(s.fetchMock).not.toHaveBeenCalled(); expect(s.events).toHaveLength(0); });
   it("normalizes new email and reads old email from DB", async () => {
