@@ -44,5 +44,5 @@
 - [x] Gemeinsamer Dialog an drei freigegebenen E-Mail-Feldern; Sperren und Rechnungs-E-Mail unverändert.
 - [x] Lokale Regressionstests (69/69) und angemeldete Browserprüfung; Desktop und kleines Display.
 - [x] Standort -02: 4c/4b protokolliert ohne Anbieteraufruf, Wechsel und Rückstellung über Knopf, SQL-Endzustand und Anbieter-Konten bestätigt. SQL-Zwischenzustand nicht separat abgefragt; isolierter Standortwechsel lokal getestet.
-- [ ] Hauptnummer: Abnahme offen wegen gemeinsamer Adresse mit -01; nichts bereinigen, Anbieter-Konto -01 nur lesen.
-- [ ] Danach Publish anfordern; GitHub-Sync-Status nicht durch Agent einsehbar.
+- [ ] Hauptnummer: Abnahme offen wegen gemeinsamer Adresse mit -01; nichts bereinigt. Anbieter-Liste gelesen: ein gemeinsamer Adresseintrag mit Name HFX-I01070, kein separat identifizierbares -01-Konto.
+- [x] Publish angefordert für https://sales.hfx-honorarfuchs.de; GitHub-Sync-Status nicht durch Agent einsehbar.
