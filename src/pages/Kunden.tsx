@@ -1,4 +1,5 @@
 import { Fragment, useState } from "react";
+import { ChangeLoginEmail } from "@/components/kunden/ChangeLoginEmail";
 import { useParams, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { supabase } from "@/lib/supabaseClient";
@@ -273,6 +274,7 @@ function CustomerDetail({ customerId }: { customerId: string }) {
                       <Label>E-Mail</Label>
                       <Input type="email" value={editForm.email || ""} readOnly={!!(customer as any)?.email} onChange={e => setEditForm((f: any) => ({ ...f, email: e.target.value }))} />
                       {!!(customer as any)?.email && <p className="text-xs text-muted-foreground">Die E-Mail ist zugleich der Login des Kunden und kann hier nicht geändert werden. Für Rechnungen bitte die Rechnungs-E-Mail nutzen.</p>}
+                      <ChangeLoginEmail hfxNumber={c.hfx_customer_number} email={c.email} onChanged={email => setEditForm((f: any) => ({ ...f, email }))} />
                     </div>
                     <div className="space-y-1">
                       <Label>Telefon</Label>
@@ -337,6 +339,7 @@ function CustomerDetail({ customerId }: { customerId: string }) {
                       <div>
                         <p className="text-xs text-muted-foreground">E-Mail</p>
                         <p className="text-sm font-medium">{c.email}</p>
+                        <ChangeLoginEmail hfxNumber={c.hfx_customer_number} email={c.email} />
                       </div>
                     </div>
                   )}

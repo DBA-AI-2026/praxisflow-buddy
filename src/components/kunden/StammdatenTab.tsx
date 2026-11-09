@@ -7,6 +7,7 @@
  * deaktiviert mit Tooltip.
  */
 import { useEffect, useState } from "react";
+import { ChangeLoginEmail } from "@/components/kunden/ChangeLoginEmail";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -339,6 +340,7 @@ export function StammdatenTab({ data }: StammdatenTabProps) {
                 {!!initialValues?.email && (
                   <p className="text-xs text-muted-foreground">Die E-Mail ist zugleich der Login des Kunden und kann hier nicht geändert werden. Für Rechnungen bitte die Rechnungs-E-Mail nutzen.</p>
                 )}
+                <ChangeLoginEmail hfxNumber={data.hfxNumber} email={initialValues.email} />
                 <FormMessage />
               </FormItem>
             )}

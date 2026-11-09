@@ -37,3 +37,11 @@
 - [x] Texte (erneuter Versand, AD-Hinweis Qodia-Fehlschlag) zur Freigabe vorlegen.
 - [x] Nach Text-Freigabe bauen: Qodia zuerst, 24h-Sperre, IP-Grenze still 200, schlankes Protokoll, Dubletten, Migration.
 - [x] api-referenz.md: Qodia-Einladungslink (Weg c) anfragen, dann Passwort aus Erstmail entfernen.
+
+# Login-E-Mail ändern — Schritt 2
+
+- [ ] Neue Function: aktive Rollen, JWT/RLS vor Kundendaten mit Service-Zugang, exakte HFX-Prüfungen, Anbieterwechsel und Rückabwicklung, customer_events.
+- [ ] Gemeinsamer Dialog an drei freigegebenen E-Mail-Feldern; Sperren und Rechnungs-E-Mail unverändert.
+- [ ] Lokale Regressionstests und Browserprüfung.
+- [ ] Abnahme am Testcluster: Hauptnummer und ein -NN-Standort, SQL-Gegenprobe; benötigt zwei freigegebene neue Login-Adressen.
+- [ ] Danach Publish anfordern; GitHub-Sync-Status nicht durch Agent einsehbar.
