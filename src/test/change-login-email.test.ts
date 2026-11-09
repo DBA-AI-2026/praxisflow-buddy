@@ -105,7 +105,7 @@ describe("change-login-email", () => {
   });
   it("lead without customer has valid lead event", async () => { const s = setup({ rows: [[row()], [], []] }); expect((await s.run()).status).toBe(200); expect(s.events[0]).toMatchObject({ entity_type: "lead", lead_id: HFX, contract_id: null }); });
   it("-NN changes only exact location contract, never main or siblings", async () => {
-    const s = setup({ rows: [[row()], [row(), row(`${HFX}-01`), row(`${HFX}-02`)], [row()]] });
+    const s = setup({ rows: [[row()], [row(), row(`${HFX}-01`), row(`${HFX}-02`, "loc02@example.test")], [row()]] });
     expect((await s.run({ hfx_customer_number: `${HFX}-02`, newEmail: NEW })).status).toBe(200);
     expect(s.rows[1].map(r => r.email)).toEqual([OLD, OLD, NEW]); expect(s.rows[0][0].email).toBe(OLD); expect(s.rows[2][0].email).toBe(OLD);
     expect(s.events[0]).toMatchObject({ entity_type: "contract", contract_id: `${HFX}-02`, lead_id: null });
