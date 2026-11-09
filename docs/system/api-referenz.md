@@ -10,12 +10,13 @@ Basis-URL aller Functions: `https://<backend>/functions/v1/<name>`
 
 > **Geändert am 03.11.2026 (Auftrag 3).** Diese Punkte gehen den Abschnitten unten vor. Felder, Antworten (200 / 200 duplicate / 400 / 500) und CORS sind unverändert.
 > - **Reihenfolge:** Zuerst kommt der Qodia-Sign-up (15 s Zeitlimit), danach die Zugangsmail. Scheitert Qodia, geht **keine** Mail an den Interessenten. Der Lead bekommt dann `qodia_synced=false`, `qodia_signup_error` und bei 409 `qodia_conflict=true`. Dazu kommt das Ereignis `QODIA_SIGNUP_FAILED`. Die AD-Mail erhält einen Warnkasten, der Betreff endet auf „– Zugang nicht angelegt". Die Eingangsbestätigung an den Interessenten verschickt in diesem Fall HubSpot.
-> - **Erstmail** enthält weiter das Passwort, `lead_credentials` bleibt wie bisher.
+> - **Erstmail** enthält **kein Passwort** mehr (seit 09.11.2026). Der Lead vergibt sein Passwort selbst über „Passwort vergessen?“ (Code 5 Minuten gültig). Betreff unverändert, Subheadline „Ihr Zugang zu HFX.GOÄ“.
 > - **Erneuter Versand** bei bekannter E-Mail: höchstens einmal in 24 Stunden (`credentials_sent_at`), **ohne Passwort**, nur mit dem Weg über „Passwort vergessen". Betreff: „Ihr Zugang zu HFX.GOÄ – HFX Honorarfuchs". Die Antwort bleibt gleich, auch wenn nichts verschickt wird.
 > - **`source: "manual"`** gilt nur für angemeldete Aufrufe mit aktiver Rolle, von außen gilt immer `homepage`. Auch bei manueller Anlage gibt es **keinen** zweiten Lead mit derselben E-Mail, sondern `200 duplicate` mit der vorhandenen HFX-Nummer, ohne Mail.
 > - **IP-Grenze** (nur öffentliche Aufrufe): 5 je Stunde und 20 je Tag. Darüber kommt still 200 `{"success": true, "message": "Ihre Anfrage wurde erfolgreich übermittelt."}` ohne Wirkung. Die Zählung läuft in `capture_lead_rate`, nur über einen SHA-256-Hash der IP. Einträge älter als 2 Tage werden gelöscht. Ist die Zählung nicht möglich, wird der Aufruf zugelassen.
 > - **Protokoll:** Kein Request, keine E-Mail und keine Namen mehr. Je Aufruf steht dort eine JSON-Zeile mit `result`, `lead_id` und dem Ergebnis von Qodia, Mail und Salesforce.
-> - **Offen (später):** Bei Qodia einen Einladungslink anfragen (Weg c). Sobald es ihn gibt, das Passwort aus der Erstmail entfernen und `lead_credentials` nicht mehr beschreiben.
+> - **Erledigt (09.11.2026):** Einladungslink — Qodia bietet keinen Einladungslink an, wir nutzen „Passwort vergessen?“. capture-lead und sync-lead-qodia übergeben beim Sign-up ein zufälliges Passwort, das nirgends gespeichert oder verschickt wird.
+> - **`lead_credentials`:** wird von keiner Function und keiner Seite mehr gelesen oder beschrieben; alle Passwörter auf NULL gesetzt, Zeilen bleiben. Keine Spalte wird mehr gebraucht (`credentials_sent_at` für die 24-Stunden-Sperre liegt in `leads`). **Tabelle kann später entfernt werden.**
 
 Nimmt Interessenten-Anmeldungen entgegen — von der WordPress-Homepage (Contact Form 7) und aus der internen Lead-Anlage im Portal. Legt den Lead an, erzeugt Zugangsdaten, verschickt Mails und meldet den Lead an Salesforce und Qodia.
 
@@ -99,7 +100,7 @@ Folgen aus dem Bestand: Jeder kann die Function von überall aufrufen und Leads 
 Reihenfolge im Code:
 
 1. **Lead** in `leads` (Service-Rolle), HFX-Nummer wird von der Datenbank vergeben.
-2. **Passwort** (12 Zeichen, zufällig) in `lead_credentials`. Fehler → 500, der Lead bleibt aber bestehen.
+2. **Passwort** (12 Zeichen, zufällig) nur für den Qodia-Sign-up; wird nicht gespeichert und nicht verschickt.
 3. **PLZ-Protokoll** in `plz_assignment_log` (nicht abgewartet).
 4. **Mail mit Zugangsdaten** an den Interessenten über Resend, Absender `noreply@hfx-honorarfuchs.de`, Betreff „Danke für Ihr Interesse am HFX Honorarfuchs!". Inhalt: E-Mail, Passwort im Klartext, HFX-Nummer, Download-Links Mac/Windows, übermittelte Daten. Erfolg → `confirmation_email_sent = true`. Immer, auch bei `source: "manual"` (:279).
 5. **Mail an zuständigen AD** (wenn zugewiesen, Einstellung `new_lead_ad_notification` nicht aus, Profil hat E-Mail), Betreff „🔔 Neuer Lead: <Praxis> (<PLZ>)".
