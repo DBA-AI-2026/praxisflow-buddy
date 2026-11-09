@@ -95,6 +95,12 @@ Deno.serve(async (req) => {
       "Diese E-Mail ist bereits einem anderen Kunden zugeordnet.", "duplicate_email");
     if (newEmail === oldEmail.trim().toLowerCase()) return abort(400,
       "Die neue E-Mail entspricht der bisherigen E-Mail. Es wurde nichts geändert.", "unchanged_email");
+    // 4d: provider identifies the account only by email; never touch an address shared with another HFX.
+    const escapedOld = oldEmail.trim().toLowerCase().replace(/[\\%_]/g, "\\$&");
+    const shared = await Promise.all(TABLES.map(table => admin.from(table).select("id,hfx_customer_number").ilike("email", escapedOld)));
+    if (shared.some(r => r.error)) return json(500, { error: ADMIN_ERROR });
+    if (shared.some(r => (r.data ?? []).some(row => row.hfx_customer_number !== hfx))) return abort(409,
+      "Die bisherige E-Mail ist auch bei einem anderen Kunden gespeichert. Bitte Admin informieren.", "shared_old_email");
     const apiKey = Deno.env.get("QODIA_API_KEY");
     if (!apiKey) return json(500, { error: ADMIN_ERROR });
     const result = await updateLogin(oldEmail, newEmail, apiKey);

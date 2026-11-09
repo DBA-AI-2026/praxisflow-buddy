@@ -76,6 +76,13 @@ describe("change-login-email", () => {
     const s = setup({ rows: [[row(), row(`${HFX}-01`, NEW)], [row()], [row()]] }); expect((await s.run()).status).toBe(409); expect(s.fetchMock).not.toHaveBeenCalled();
     expect(s.events[0].event_data).toMatchObject({ outcome: "duplicate_email", qodia_result: "not_called" });
   });
+  it("4d: old email shared with another HFX aborts before provider", async () => {
+    const s = setup({ rows: [[row()], [row(), row(`${HFX}-01`, OLD)], [row()]] });
+    const r = await s.run(); expect(r.status).toBe(409);
+    expect(await r.json()).toMatchObject({ error: "Die bisherige E-Mail ist auch bei einem anderen Kunden gespeichert. Bitte Admin informieren." });
+    expect(s.fetchMock).not.toHaveBeenCalled(); expect(s.rpc).not.toHaveBeenCalled();
+    expect(s.events[0].event_data).toMatchObject({ outcome: "shared_old_email", qodia_result: "not_called" });
+  });
   it("existing shared main/-01 address blocks restoration under rule 4b", async () => {
     const s = setup({ rows: [[row(HFX, NEW)], [row(HFX, NEW), row(`${HFX}-01`, OLD)], [row(HFX, NEW)]] });
     expect((await s.run({ hfx_customer_number: HFX, newEmail: OLD })).status).toBe(409);
@@ -98,7 +105,7 @@ describe("change-login-email", () => {
   });
   it("lead without customer has valid lead event", async () => { const s = setup({ rows: [[row()], [], []] }); expect((await s.run()).status).toBe(200); expect(s.events[0]).toMatchObject({ entity_type: "lead", lead_id: HFX, contract_id: null }); });
   it("-NN changes only exact location contract, never main or siblings", async () => {
-    const s = setup({ rows: [[row()], [row(), row(`${HFX}-01`), row(`${HFX}-02`)], [row()]] });
+    const s = setup({ rows: [[row()], [row(), row(`${HFX}-01`), row(`${HFX}-02`, "loc02@example.test")], [row()]] });
     expect((await s.run({ hfx_customer_number: `${HFX}-02`, newEmail: NEW })).status).toBe(200);
     expect(s.rows[1].map(r => r.email)).toEqual([OLD, OLD, NEW]); expect(s.rows[0][0].email).toBe(OLD); expect(s.rows[2][0].email).toBe(OLD);
     expect(s.events[0]).toMatchObject({ entity_type: "contract", contract_id: `${HFX}-02`, lead_id: null });
