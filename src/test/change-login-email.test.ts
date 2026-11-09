@@ -70,17 +70,18 @@ describe("change-login-email", () => {
   });
   it("RLS read error fails closed", async () => { const s = setup({ readError: true }); expect((await s.run()).status).toBe(403); expect(s.fetchMock).not.toHaveBeenCalled(); });
   for (const email of [null, "", "different@example.test"]) it(`4a rejects differing existing email ${email}`, async () => {
-    const s = setup({ rows: [[row()], [row(HFX, email)], [row()]] }); expect((await s.run()).status).toBe(409); expect(s.fetchMock).not.toHaveBeenCalled(); expect(s.rpc).not.toHaveBeenCalled(); expect(s.events).toHaveLength(0);
+    const s = setup({ rows: [[row()], [row(HFX, email)], [row()]] }); expect((await s.run()).status).toBe(409); expect(s.fetchMock).not.toHaveBeenCalled(); expect(s.rpc).not.toHaveBeenCalled(); expect(s.events[0].event_data).toMatchObject({ outcome: "inconsistent_emails", qodia_result: "not_called" });
   });
   it("duplicate email on another exact HFX aborts", async () => {
     const s = setup({ rows: [[row(), row(`${HFX}-01`, NEW)], [row()], [row()]] }); expect((await s.run()).status).toBe(409); expect(s.fetchMock).not.toHaveBeenCalled();
+    expect(s.events[0].event_data).toMatchObject({ outcome: "duplicate_email", qodia_result: "not_called" });
   });
   it("existing shared main/-01 address blocks restoration under rule 4b", async () => {
     const s = setup({ rows: [[row(HFX, NEW)], [row(HFX, NEW), row(`${HFX}-01`, OLD)], [row(HFX, NEW)]] });
     expect((await s.run({ hfx_customer_number: HFX, newEmail: OLD })).status).toBe(409);
     expect(s.fetchMock).not.toHaveBeenCalled(); expect(s.rpc).not.toHaveBeenCalled();
   });
-  it("same email aborts without any write", async () => { const s = setup(); expect((await s.run({ hfx_customer_number: HFX, newEmail: OLD })).status).toBe(400); expect(s.fetchMock).not.toHaveBeenCalled(); expect(s.events).toHaveLength(0); });
+  it("same email aborts with only an audit event", async () => { const s = setup(); expect((await s.run({ hfx_customer_number: HFX, newEmail: OLD })).status).toBe(400); expect(s.fetchMock).not.toHaveBeenCalled(); expect(s.rpc).not.toHaveBeenCalled(); expect(s.events[0].event_data).toMatchObject({ outcome: "unchanged_email", qodia_result: "not_called" }); });
   it("normalizes new email and reads old email from DB", async () => {
     const s = setup(); expect((await s.run({ hfx_customer_number: HFX, newEmail: ` ${NEW.toUpperCase()} ` })).status).toBe(200);
     expect(s.rpc).toHaveBeenCalledWith("apply_login_email_change", { p_hfx: HFX, p_old: OLD, p_new: NEW });
