@@ -76,6 +76,13 @@ describe("change-login-email", () => {
     const s = setup({ rows: [[row(), row(`${HFX}-01`, NEW)], [row()], [row()]] }); expect((await s.run()).status).toBe(409); expect(s.fetchMock).not.toHaveBeenCalled();
     expect(s.events[0].event_data).toMatchObject({ outcome: "duplicate_email", qodia_result: "not_called" });
   });
+  it("4d: old email shared with another HFX aborts before provider", async () => {
+    const s = setup({ rows: [[row()], [row(), row(`${HFX}-01`, OLD)], [row()]] });
+    const r = await s.run(); expect(r.status).toBe(409);
+    expect(await r.json()).toMatchObject({ error: "Die bisherige E-Mail ist auch bei einem anderen Kunden gespeichert. Bitte Admin informieren." });
+    expect(s.fetchMock).not.toHaveBeenCalled(); expect(s.rpc).not.toHaveBeenCalled();
+    expect(s.events[0].event_data).toMatchObject({ outcome: "shared_old_email", qodia_result: "not_called" });
+  });
   it("existing shared main/-01 address blocks restoration under rule 4b", async () => {
     const s = setup({ rows: [[row(HFX, NEW)], [row(HFX, NEW), row(`${HFX}-01`, OLD)], [row(HFX, NEW)]] });
     expect((await s.run({ hfx_customer_number: HFX, newEmail: OLD })).status).toBe(409);
