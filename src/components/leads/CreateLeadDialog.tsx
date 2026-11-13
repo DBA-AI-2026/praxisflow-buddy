@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { AbrechnungszentrumCombobox } from "@/components/shared/AbrechnungszentrumCombobox";
+import { ABRECHNUNGSZENTRUM_DEFAULT } from "@/lib/abrechnungszentren";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -50,7 +52,7 @@ const schema = z.object({
   plz: z.string().trim().min(4, "Pflichtfeld").max(10),
   ort: z.string().trim().max(100).default(""),
   adresse: z.string().trim().max(200).default(""),
-  abrechnungszentrum: z.string().default("keins"),
+  abrechnungszentrum: z.string().default(ABRECHNUNGSZENTRUM_DEFAULT),
   mp_nummer: z.string().trim().max(50).default(""),
   nachricht: z.string().trim().max(1000).default(""),
   interested_products: z.array(z.string()).default([]),
@@ -302,7 +304,7 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
       plz: "",
       ort: "",
       adresse: "",
-      abrechnungszentrum: "keins",
+      abrechnungszentrum: ABRECHNUNGSZENTRUM_DEFAULT,
       mp_nummer: "",
       nachricht: "",
       interested_products: [],
@@ -506,23 +508,9 @@ export function CreateLeadDialog({ open, onOpenChange }: CreateLeadDialogProps) 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Abrechnungszentrum</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                        <SelectContent>
-                          <SelectItem value="keins">Keins</SelectItem>
-                          <SelectItem value="CareCapital">CareCapital</SelectItem>
-                          <SelectItem value="privadis">privadis</SelectItem>
-                          <SelectItem value="ZAB">ZAB</SelectItem>
-                          <SelectItem value="PVS">PVS</SelectItem>
-                          <SelectItem value="DZR">DZR</SelectItem>
-                          <SelectItem value="ARZ">ARZ</SelectItem>
-                          <SelectItem value="Sonstiges">Sonstiges</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <AbrechnungszentrumCombobox value={field.value} onChange={field.onChange} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
