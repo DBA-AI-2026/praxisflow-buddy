@@ -7,6 +7,8 @@
  * deaktiviert mit Tooltip.
  */
 import { useEffect, useState } from "react";
+import { AbrechnungszentrumCombobox } from "@/components/shared/AbrechnungszentrumCombobox";
+import { ABRECHNUNGSZENTRUM_DEFAULT } from "@/lib/abrechnungszentren";
 import { ChangeLoginEmail } from "@/components/kunden/ChangeLoginEmail";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -61,7 +63,7 @@ const schema = z.object({
   plz: z.string().trim().min(4, "Pflichtfeld").max(10),
   ort: z.string().trim().max(100).default(""),
   adresse: z.string().trim().max(200).default(""),
-  abrechnungszentrum: z.string().default("nein"),
+  abrechnungszentrum: z.string().default(ABRECHNUNGSZENTRUM_DEFAULT),
   mp_nr: z.string().trim().max(50).default(""),
   notes: z.string().trim().max(1000).default(""),
 });
@@ -403,25 +405,9 @@ export function StammdatenTab({ data }: StammdatenTabProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Abrechnungszentrum</FormLabel>
-                <Select
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  disabled={disabled}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="nein">Nein</SelectItem>
-                    <SelectItem value="keins">Keins</SelectItem>
-                    <SelectItem value="pvs">PVS</SelectItem>
-                    <SelectItem value="medas">Medas</SelectItem>
-                    <SelectItem value="pad">PAD</SelectItem>
-                    <SelectItem value="sonstige">Sonstige</SelectItem>
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <AbrechnungszentrumCombobox value={field.value} onChange={field.onChange} disabled={disabled} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
