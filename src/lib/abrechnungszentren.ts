@@ -9,7 +9,7 @@ export const ABRECHNUNGSZENTREN = [
   "PVS", "PVS Ba-Wü", "PVS Bremen", "PVS Dental", "PVS Hannover", "PVS Limburg", "PVS MEFA",
   "PVS Mosel-Saar", "PVS Rhein-Ruhr", "PVS Sachsen", "PVS Schleswig-Holstein",
   "PVS Westfalen-Süd", "rodger", "S&F Süddeutsche Factoring", "SF Demedics", "Teamfactor",
-  "Unimed", "VfH", "ZAB", "ZAG",
+  "Unimed", "VfH", "ZA", "ZAB", "ZAG",
 ] as const;
 
 export const ABRECHNUNGSZENTRUM_DEFAULT = "nein";
